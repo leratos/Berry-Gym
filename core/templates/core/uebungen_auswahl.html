@@ -1,0 +1,156 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="de" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Übungen - HomeGym</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .exercise-card {
+            transition: all 0.2s;
+        }
+        .exercise-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+        .muscle-visual {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .muscle-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .muscle-dot.primary {
+            background-color: #198754;
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 0 8px rgba(25, 135, 84, 0.6);
+        }
+        .muscle-dot.secondary {
+            background-color: #0dcaf0;
+        }
+        .muscle-badge {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
+        }
+        .muscle-badge.primary {
+            background-color: #198754;
+        }
+        .muscle-badge.secondary {
+            background-color: rgba(13, 202, 240, 0.8);
+            border: 1px solid #0dcaf0;
+        }
+    </style>
+</head>
+<body class="bg-dark text-light">
+    <nav class="navbar navbar-dark bg-black border-bottom border-secondary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'dashboard' %}">
+                <i class="bi bi-house-door"></i> HomeGym
+            </a>
+            <span class="navbar-text">Übungs-Bibliothek</span>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h2 class="mb-3">
+                    <i class="bi bi-collection me-2"></i>Alle Übungen
+                </h2>
+                <p class="text-muted">
+                    Übersicht mit Haupt- und Hilfsmuskelgruppen
+                </p>
+            </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
+            </div>
+        </div>
+
+        <!-- Übungen nach Muskelgruppen -->
+        {% for gruppe, uebungen in uebungen_nach_gruppe.items %}
+        <div class="muscle-group-section mb-5">
+            <h4 class="text-secondary text-uppercase mb-3 border-bottom border-secondary pb-2">
+                <i class="bi bi-diagram-3 me-2"></i>{{ gruppe }}
+                <span class="badge bg-secondary ms-2">{{ uebungen|length }}</span>
+            </h4>
+            
+            <div class="row g-3">
+                {% for uebung in uebungen %}
+                <div class="col-lg-4 col-md-6 exercise-item" data-name="{{ uebung.bezeichnung|lower }}">
+                    <div class="card exercise-card bg-dark border-secondary h-100">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">
+                                {{ uebung.bezeichnung }}
+                            </h5>
+                            
+                            <!-- Muskelgruppen Visualisierung -->
+                            <div class="mb-3">
+                                <h6 class="text-muted small mb-2">
+                                    <i class="bi bi-bullseye me-1"></i>Muskelgruppen
+                                </h6>
+                                <div class="muscle-visual mb-2">
+                                    <span class="muscle-dot primary" title="Hauptmuskel"></span>
+                                    <span class="badge muscle-badge primary">
+                                        <i class="bi bi-star-fill"></i> {{ uebung.muskelgruppe_label }}
+                                    </span>
+                                </div>
+                                
+                                {% if uebung.hilfsmuskeln %}
+                                <div class="muscle-visual">
+                                    {% for hilfs in uebung.hilfsmuskeln %}
+                                    <span class="muscle-dot secondary" title="Hilfsmuskel"></span>
+                                    <span class="badge muscle-badge secondary">
+                                        <i class="bi bi-plus-circle"></i> {{ hilfs }}
+                                    </span>
+                                    {% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> Keine Hilfsmuskeln erfasst
+                                </small>
+                                {% endif %}
+                            </div>
+
+                            <!-- Zusatzinfos -->
+                            <div class="mt-auto pt-3 border-top border-secondary">
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-tag me-1"></i>{{ uebung.bewegungstyp }}
+                                </small>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-info-circle me-1"></i>{{ uebung.gewichts_typ }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('searchExercises').addEventListener('input', function(e) {
+            const search = e.target.value.toLowerCase();
+            document.querySelectorAll('.exercise-item').forEach(item => {
+                const name = item.dataset.name;
+                item.style.display = name.includes(search) ? 'block' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

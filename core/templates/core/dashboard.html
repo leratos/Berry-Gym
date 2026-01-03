@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="de" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HomeGym Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        .btn-action {
+            height: 80px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-stat {
+            background-color: #2b3035;
+            border: none;
+            height: 100%;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #adb5bd;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+    </style>
+  </head>
+  <body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow">
+      <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="#">
+            <i class="bi bi-activity"></i> HomeGym
+        </a>
+      </div>
+    </nav>
+
+    <div class="container pb-5">
+      
+      <!-- Sektion 1: Training -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="text-secondary ps-1 mb-0">TRAINING</h6>
+          <div class="d-flex gap-3">
+              <a href="{% url 'training_stats' %}" class="text-decoration-none small fw-bold text-info">
+                  <i class="bi bi-graph-up"></i> Statistiken
+              </a>
+              <a href="{% url 'training_list' %}" class="text-decoration-none small fw-bold text-primary">
+                  Alle anzeigen <i class="bi bi-chevron-right"></i>
+              </a>
+          </div>
+      </div>
+
+      <!-- Trainingsfrequenz & Streak -->
+      <div class="row g-3 mb-3">
+        <div class="col-6">
+          <div class="card card-stat text-white shadow-sm">
+            <div class="card-body text-center py-3">
+                <div class="stat-label mb-1"><i class="bi bi-calendar-week me-1"></i> Diese Woche</div>
+                <div class="display-4 fw-bold text-primary">{{ trainings_diese_woche }}</div>
+                <small class="text-muted">Trainings</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card card-stat text-white shadow-sm">
+            <div class="card-body text-center py-3">
+                <div class="stat-label mb-1"><i class="bi bi-fire me-1"></i> Streak</div>
+                <div class="display-4 fw-bold text-warning">{{ streak }}</div>
+                <small class="text-muted">Wochen</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Form-Index -->
+      {% if gesamt_trainings >= 4 %}
+      <div class="card bg-dark border-{{ form_color }} mb-3 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">
+                    <i class="bi bi-speedometer2 me-2"></i>Performance Form-Index
+                </h6>
+                <span class="badge bg-{{ form_color }} px-3 py-2" style="font-size: 1rem;">
+                    {{ form_rating }}
+                </span>
+            </div>
+            
+            <div class="progress mb-3" style="height: 30px;">
+                <div class="progress-bar bg-{{ form_color }}" role="progressbar" 
+                     style="width: {{ form_index }}%;" aria-valuenow="{{ form_index }}" 
+                     aria-valuemin="0" aria-valuemax="100">
+                    <strong>{{ form_index }}/100</strong>
+                </div>
+            </div>
+            
+            <div class="row g-2 small">
+                {% for factor, score in form_factors %}
+                <div class="col-6">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">{{ factor }}:</span>
+                        <strong class="text-{{ form_color }}">{{ score }}</strong>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-3 pt-3 border-top border-secondary">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Basiert auf Frequenz, Konsistenz, RPE und Volumen-Trends
+                </small>
+            </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card card-stat mb-4 text-white shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <div class="stat-label mb-1"><i class="bi bi-calendar-check me-1"></i> Letztes Workout</div>
+                <div class="stat-value">
+                    {% if letztes_training %}
+                        {{ letztes_training.datum|date:"d.m.Y" }}
+                    {% else %}
+                        --
+                    {% endif %}
+                </div>
+                <small class="text-muted">
+                    {% if letztes_training %}
+                        vor {{ letztes_training.datum|timesince }}
+                    {% else %}
+                        Noch kein Eintrag
+                    {% endif %}
+                </small>
+            </div>
+            <div class="text-end">
+                <!-- Kleines Icon je nach Zeit -->
+                <i class="bi bi-fire fs-1 text-danger opacity-50"></i>
+            </div>
+        </div>
+      </div>
+
+      <!-- Favoriten-Übungen -->
+      {% if favoriten %}
+      <div class="card card-stat mb-4 text-white shadow-sm">
+        <div class="card-body">
+            <div class="stat-label mb-3"><i class="bi bi-star-fill me-1"></i> Deine Top 3 Übungen</div>
+            <div class="list-group list-group-flush bg-transparent">
+                {% for fav in favoriten %}
+                <a href="{% url 'exercise_stats' fav.uebung__id %}" class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                    <span>{{ fav.uebung__bezeichnung }}</span>
+                    <span class="badge bg-primary rounded-pill">{{ fav.anzahl }}×</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Sektion 2: Körper-Analyse -->
+      <h6 class="text-secondary mb-3 ps-1">KÖRPER & VITALWERTE</h6>
+      
+      <!-- Link zu den Graphen -->
+      {% if letzter_koerperwert %}
+      <a href="{% url 'body_stats' %}" class="text-decoration-none">
+      {% endif %}
+      
+      <!-- Hauptwert Gewicht -->
+      <div class="card card-stat mb-3 text-white shadow-sm">
+        <div class="card-body text-center py-4">
+            <div class="stat-label mb-2">Aktuelles Gewicht</div>
+            <div class="display-3 fw-bold text-white">
+                {% if letzter_koerperwert %}
+                    {{ letzter_koerperwert.gewicht }} <span class="fs-4 text-muted">kg</span>
+                {% else %}
+                    --
+                {% endif %}
+            </div>
+            {% if letzter_koerperwert %}
+            <small class="text-info">
+                <i class="bi bi-graph-up-arrow"></i> Verlauf anzeigen
+            </small>
+            {% endif %}
+        </div>
+      </div>
+
+      {% if letzter_koerperwert %}
+      </a>
+      {% endif %}
+
+      <!-- Wöchentliches Volumen -->
+      {% if weekly_volumes %}
+      <div class="card bg-dark border-secondary mb-3 shadow-sm">
+        <div class="card-body">
+            <h6 class="mb-3">
+                <i class="bi bi-calendar-week me-2"></i>Wöchentliches Volumen
+            </h6>
+            <div class="row g-2">
+                {% for week in weekly_volumes %}
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-2 {% if week.week_num == 0 %}bg-primary bg-opacity-10 border border-primary{% else %}bg-secondary bg-opacity-10{% endif %} rounded">
+                        <small class="text-muted d-block" style="font-size: 0.7rem;">{{ week.label }}</small>
+                        <strong class="{% if week.week_num == 0 %}text-primary{% else %}text-white{% endif %}" style="font-size: 1.2rem;">
+                            {{ week.volume|floatformat:0 }}
+                        </strong>
+                        <small class="text-muted d-block">kg</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Ermüdungs-Index -->
+      {% if gesamt_trainings >= 4 %}
+      <div class="card bg-dark border-{{ fatigue_color }} mb-3 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">
+                    <i class="bi bi-battery-charging me-2"></i>Ermüdungs-Index
+                </h6>
+                <span class="badge bg-{{ fatigue_color }} px-3 py-2" style="font-size: 1rem;">
+                    {{ fatigue_rating }}
+                </span>
+            </div>
+            
+            <div class="progress mb-3" style="height: 25px;">
+                <div class="progress-bar bg-{{ fatigue_color }}" role="progressbar" 
+                     style="width: {{ fatigue_index }}%;" aria-valuenow="{{ fatigue_index }}" 
+                     aria-valuemin="0" aria-valuemax="100">
+                    <strong>{{ fatigue_index }}/100</strong>
+                </div>
+            </div>
+            
+            <p class="text-{{ fatigue_color }} mb-2">
+                <i class="bi bi-info-circle me-1"></i>{{ fatigue_message }}
+            </p>
+            
+            {% if fatigue_warnings %}
+            <div class="mt-2 pt-2 border-top border-secondary">
+                <small class="text-muted d-block mb-1">Faktoren:</small>
+                {% for warning in fatigue_warnings %}
+                <small class="badge bg-{{ fatigue_color }} bg-opacity-25 text-{{ fatigue_color }} me-1">
+                    {{ warning }}
+                </small>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Motivations-Quote -->
+      <div class="card bg-gradient text-center py-4 mb-4 shadow" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-body">
+            <h5 class="text-white mb-0">{{ motivation_quote }}</h5>
+        </div>
+      </div>
+
+      <!-- Körperwerte -->
+      {% if letzter_koerperwert %}
+      <!-- Detail-Kacheln für BMI, FFMI, Fett, Muskeln -->
+      <div class="row g-3 mb-4">
+          
+          <!-- BMI & FFMI -->
+          <div class="col-6">
+            <div class="card card-stat p-3 text-center">
+                <div class="stat-label mb-1">BMI</div>
+                <div class="stat-value text-info">
+                    {{ letzter_koerperwert.bmi|default:"--" }}
+                </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card card-stat p-3 text-center">
+                <div class="stat-label mb-1">FFMI</div>
+                <div class="stat-value text-success">
+                    {{ letzter_koerperwert.ffmi|default:"--" }}
+                </div>
+            </div>
+          </div>
+
+          <!-- Muskeln & Fett (wenn vorhanden) -->
+          {% if letzter_koerperwert.muskelmasse_kg %}
+          <div class="col-6">
+            <div class="card card-stat p-3 text-center">
+                <div class="stat-label mb-1">Muskeln</div>
+                <div class="stat-value text-warning">
+                    {{ letzter_koerperwert.muskelmasse_kg }} <small class="fs-6">kg</small>
+                </div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if letzter_koerperwert.koerperfett_prozent or letzter_koerperwert.fettmasse_kg %}
+          <div class="col-6">
+            <div class="card card-stat p-3 text-center">
+                <div class="stat-label mb-1">KFA / Fett</div>
+                <div class="stat-value text-danger">
+                    {% if letzter_koerperwert.koerperfett_prozent %}
+                        {{ letzter_koerperwert.koerperfett_prozent }}<small class="fs-6">%</small>
+                    {% else %}
+                        {{ letzter_koerperwert.fettmasse_kg }}<small class="fs-6">kg</small>
+                    {% endif %}
+                </div>
+            </div>
+          </div>
+          {% endif %}
+          
+      </div>
+      {% endif %}
+
+      <!-- Buttons -->
+      <div class="d-grid gap-3 mt-5">
+        <a href="{% url 'training_select_plan' %}" class="btn btn-success btn-action fw-bold rounded-4 shadow">
+            <i class="bi bi-play-circle-fill me-2"></i> Training starten
+        </a>
+        
+        <a href="{% url 'add_koerperwert' %}" class="btn btn-outline-secondary btn-action fw-bold rounded-4">
+            <i class="bi bi-smartwatch me-2"></i> Werte eintragen
+        </a>
+      </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

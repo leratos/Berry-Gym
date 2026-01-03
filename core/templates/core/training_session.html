@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="de" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Training läuft...</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .rest-timer {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            z-index: 1050;
+        }
+        .timer-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            border: 3px solid rgba(255,255,255,0.2);
+        }
+        .timer-circle small {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+        .timer-running {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+    </style>
+  </head>
+  <body>
+
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-3 sticky-top shadow">
+      <div class="container-fluid">
+        <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}">
+            <i class="bi bi-arrow-left"></i> Abbrechen
+        </a>
+        <span class="navbar-text text-white fw-bold">
+            Training #{{ training.id }}
+        </span>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-warning border-0" onclick="startRestTimer(90)" title="Pausenuhr starten">
+                <i class="bi bi-stopwatch"></i>
+            </button>
+            <a class="btn btn-success border-0 fw-bold" href="{% url 'finish_training' training.id %}">
+                <i class="bi bi-check-circle"></i> Fertig
+            </a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container pb-5 mb-5">
+      
+        <!-- Volumen-Anzeige -->
+        {% if saetze %}
+        <div class="alert alert-dark border-secondary d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Gesamtvolumen heute</small>
+                <div class="fs-4 fw-bold text-success">{{ total_volume|floatformat:0 }} kg</div>
+            </div>
+            <div class="text-end">
+                <small class="text-muted">{{ arbeitssaetze_count }} Arbeitssätze</small>
+            </div>
+        </div>
+        {% endif %}
+      
+        {% if not saetze %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-dumbbell display-1 opacity-25"></i>
+                <p class="mt-3">Drück auf +, um loszulegen!</p>
+            </div>
+        {% else %}
+            
+            {% regroup saetze by uebung as uebungs_liste %}
+
+            {% for uebung_group in uebungs_liste %}
+            <div class="card bg-dark border-secondary mb-3 shadow-sm">
+                <div class="card-header border-secondary d-flex justify-content-between align-items-center bg-secondary bg-opacity-10">
+                    <div class="d-flex align-items-center">
+                        <h5 class="mb-0 text-primary fw-bold me-2">{{ uebung_group.grouper }}</h5>
+                        <!-- NEU: Der Statistik-Link -->
+                        <a href="{% url 'exercise_stats' uebung_group.grouper.id %}" class="text-decoration-none text-info opacity-50">
+                            <i class="bi bi-graph-up"></i>
+                        </a>
+                    </div>
+                    <span class="badge bg-dark text-secondary">{{ uebung_group.list|length }} Sätze</span>
+                </div>
+
+                <div class="card-body p-0">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-3" style="width: 10%">#</th>
+                                <th style="width: 30%">kg</th>
+                                <th style="width: 30%">Wdh / Sek</th>
+                                <th class="text-end pe-3">Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for satz in uebung_group.list %}
+                            <tr class="{% if satz.ist_aufwaermsatz %}text-muted fst-italic{% endif %}">
+                                <td class="ps-3">
+                                    {% if satz.ist_aufwaermsatz %}
+                                        <i class="bi bi-fire text-warning small" title="Warmup"></i>
+                                    {% else %}
+                                        <span class="fw-bold text-secondary">{{ forloop.counter }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="fw-bold fs-5">{{ satz.gewicht }}</span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold fs-5">{{ satz.wiederholungen }}</span>
+                                    {% if satz.rpe %}
+                                        <small class="text-muted ms-1">@{{ satz.rpe }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-3 text-nowrap">
+                                    <!-- EDIT BUTTON -->
+                                    <button class="btn btn-link text-info opacity-75 text-decoration-none px-2" 
+                                            onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}')">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                    
+                                    <!-- DELETE BUTTON -->
+                                    <button class="btn btn-link text-danger opacity-50 text-decoration-none px-2" 
+                                            onclick="confirmDelete('{{ satz.id }}', '{{ satz.uebung.bezeichnung }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}')">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <div class="d-grid p-2 border-top border-secondary">
+                        <button class="btn btn-sm btn-outline-secondary border-0 text-start ps-3" 
+                                onclick="openModalWithExercise('{{ uebung_group.grouper.id }}')">
+                            <i class="bi bi-plus-circle me-2"></i> Weiteren Satz hinzufügen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+        {% endif %}
+
+        <div class="fixed-bottom p-3 text-end">
+            <button class="btn btn-primary rounded-circle shadow p-3" style="width: 60px; height: 60px;" onclick="openModalWithExercise('')">
+                <i class="bi bi-plus-lg fs-4"></i>
+            </button>
+        </div>
+
+        <!-- Rest Timer -->
+        <div class="rest-timer" id="restTimer" style="display: none;">
+            <div class="timer-circle bg-warning text-dark" id="timerDisplay" onclick="stopTimer()">
+                <div id="timerSeconds">90</div>
+                <small>Pause</small>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DAS MODAL -->
+    <div class="modal fade" id="addSetModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white shadow">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title" id="modalTitle">Satz hinzufügen</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <form method="post" id="setForm" action="">
+            {% csrf_token %}
+            <div class="modal-body">
+                
+                <div class="mb-3">
+                    <label class="form-label text-secondary small text-uppercase">1. Muskelgruppe</label>
+                    <select id="muscleFilter" class="form-select bg-dark text-white border-secondary mb-2">
+                        <option value="">-- Bitte wählen --</option>
+                        {% regroup uebungen by get_muskelgruppe_display as muskel_liste %}
+                        {% for group in muskel_liste %}
+                            <option value="{{ group.list.0.muskelgruppe }}">{{ group.grouper }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-secondary small text-uppercase">2. Übung</label>
+                    <select name="uebung" id="uebungSelect" class="form-select bg-dark text-white border-secondary" required disabled>
+                        <option value="" selected disabled>-- Erst Muskelgruppe wählen --</option>
+                    </select>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label text-secondary">Gewicht (kg)</label>
+                        <input type="number" step="0.5" name="gewicht" id="gewichtInput" class="form-control bg-dark text-white border-secondary" required placeholder="0.0">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-secondary">Wdh. / Sek.</label>
+                        <input type="number" name="wiederholungen" id="wdhInput" class="form-control bg-dark text-white border-secondary" required placeholder="0">
+                    </div>
+                </div>
+
+                <div class="row g-2 mt-2">
+                    <div class="col-6">
+                        <label class="form-label text-secondary">RPE</label>
+                        <input type="number" step="0.5" max="10" name="rpe" id="rpeInput" class="form-control bg-dark text-white border-secondary" placeholder="-">
+                    </div>
+                    <div class="col-6 d-flex align-items-end pb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="ist_aufwaermsatz" id="warmupCheck">
+                            <label class="form-check-label text-secondary" for="warmupCheck">Warmup</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progressive Overload Hinweis -->
+                <div id="progressionHint" class="alert alert-info mt-3 py-2 px-3" style="display: none;">
+                    <small>
+                        <i class="bi bi-lightbulb-fill me-1"></i>
+                        <strong>Tipp:</strong> <span id="progressionText"></span>
+                    </small>
+                </div>
+
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="submit" class="btn btn-primary w-100 fw-bold">Speichern</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-danger">
+          <div class="modal-header border-danger">
+            <h5 class="modal-title text-danger">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Satz löschen?
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-2">Möchtest du diesen Satz wirklich löschen?</p>
+            <div class="alert alert-secondary mb-0">
+                <strong id="deleteExerciseName"></strong><br>
+                <span id="deleteSetDetails" class="text-muted"></span>
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+            <a href="#" id="confirmDeleteBtn" class="btn btn-danger">
+                <i class="bi bi-trash-fill me-1"></i> Ja, löschen
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Daten für Filter
+        // FIX: |escapejs verhindert Abstürze bei Namen wie "Farmer's Walk"
+        const allExercises = [
+            {% for uebung in uebungen %}
+            {
+                id: "{{ uebung.id }}",
+                name: "{{ uebung.bezeichnung|escapejs }}",
+                muscleKey: "{{ uebung.muskelgruppe|escapejs }}"
+            },
+            {% endfor %}
+        ];
+
+        const myModalEl = document.getElementById('addSetModal');
+        const myModal = new bootstrap.Modal(myModalEl);
+        const deleteModalEl = document.getElementById('deleteModal');
+        const deleteModal = new bootstrap.Modal(deleteModalEl);
+        
+        const setForm = document.getElementById('setForm');
+        const modalTitle = document.getElementById('modalTitle');
+        
+        const muscleFilter = document.getElementById('muscleFilter');
+        const uebungSelect = document.getElementById('uebungSelect');
+        const gewichtInput = document.getElementById('gewichtInput');
+        const wdhInput = document.getElementById('wdhInput');
+        const rpeInput = document.getElementById('rpeInput');
+        const warmupCheck = document.getElementById('warmupCheck');
+        const progressionHint = document.getElementById('progressionHint');
+        const progressionText = document.getElementById('progressionText');
+
+        // URL Basis für POST
+        const addUrl = "{% url 'add_set' training.id %}";
+        
+        // Filter Logic
+        muscleFilter.addEventListener('change', function() {
+            updateExerciseDropdown(this.value);
+        });
+
+        function updateExerciseDropdown(muscleKey, preselectId = null) {
+            uebungSelect.innerHTML = '<option value="" selected disabled>-- Übung wählen --</option>';
+            if (!muscleKey) {
+                uebungSelect.disabled = true; return;
+            }
+            const filtered = allExercises.filter(ex => ex.muscleKey === muscleKey);
+            filtered.forEach(ex => {
+                const opt = document.createElement('option');
+                opt.value = ex.id; opt.text = ex.name;
+                uebungSelect.appendChild(opt);
+            });
+            uebungSelect.disabled = false;
+            
+            if (preselectId) {
+                uebungSelect.value = preselectId;
+                // Nur Ghosting bei NEUEN Sätzen (addUrl) triggern
+                if(setForm.action === addUrl) fetchGhostData(preselectId); 
+            }
+        }
+
+        // Ghosting Trigger
+        uebungSelect.addEventListener('change', function() {
+            if(this.value && setForm.action.includes('add_set')) fetchGhostData(this.value);
+        });
+
+        // MODUS 1: NEUEN SATZ ERSTELLEN
+        function openModalWithExercise(uebungId) {
+            modalTitle.innerText = "Satz hinzufügen";
+            setForm.action = addUrl;
+            
+            // Felder freischalten
+            muscleFilter.disabled = false;
+            
+            // Reset
+            gewichtInput.value = ""; wdhInput.value = ""; rpeInput.value = ""; warmupCheck.checked = false;
+            progressionHint.style.display = 'none';
+            
+            if (uebungId) {
+                const exData = allExercises.find(ex => ex.id === uebungId);
+                if (exData) {
+                    muscleFilter.value = exData.muscleKey;
+                    updateExerciseDropdown(exData.muscleKey, uebungId);
+                }
+            } else {
+                muscleFilter.value = "";
+                updateExerciseDropdown(null);
+            }
+            myModal.show();
+            setTimeout(() => { uebungId ? gewichtInput.focus() : muscleFilter.focus(); }, 500);
+        }
+
+        // MODUS 2: SATZ BEARBEITEN
+        function openEditModal(setId, uebungId, gewicht, wdh, rpe, isWarmup) {
+            modalTitle.innerText = "Satz bearbeiten";
+            // URL dynamisch anpassen
+            let updateUrl = "{% url 'update_set' 0 %}".replace('0', setId);
+            setForm.action = updateUrl;
+
+            // Werte füllen
+            const exData = allExercises.find(ex => ex.id === uebungId);
+            if (exData) {
+                muscleFilter.value = exData.muscleKey;
+                updateExerciseDropdown(exData.muscleKey, uebungId);
+            }
+
+            // Felder sperren: Übung darf beim Bearbeiten nicht geändert werden (Datenkonsistenz)
+            muscleFilter.disabled = true;
+            uebungSelect.disabled = true;
+
+            // Daten eintragen (mit Komma-Fix für deutsche Zahlen)
+            gewichtInput.value = gewicht.replace(',', '.');
+            wdhInput.value = wdh;
+            rpeInput.value = rpe;
+            warmupCheck.checked = (isWarmup === 'true');
+            
+            // Kein Progression Hint beim Bearbeiten
+            progressionHint.style.display = 'none';
+
+            myModal.show();
+            setTimeout(() => gewichtInput.focus(), 500);
+        }
+
+        // API Call
+        async function fetchGhostData(id) {
+            try {
+                const res = await fetch(`/api/last-set/${id}/`);
+                const data = await res.json();
+                if (data.success) {
+                    gewichtInput.value = data.gewicht;
+                    wdhInput.value = data.wiederholungen;
+                    if(data.rpe) rpeInput.value = data.rpe;
+                    
+                    // Progressive Overload Hinweis anzeigen
+                    if (data.progression_hint) {
+                        progressionText.innerText = data.progression_hint;
+                        
+                        // Vergleich mit letztem Mal anzeigen
+                        if (data.letztes_gewicht !== data.gewicht || data.letzte_wdh !== data.wiederholungen) {
+                            progressionText.innerText += ` (Letztes Mal: ${data.letztes_gewicht}kg × ${data.letzte_wdh})`;
+                        }
+                        
+                        progressionHint.style.display = 'block';
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Delete Confirmation
+        function confirmDelete(setId, exerciseName, weight, reps) {
+            document.getElementById('deleteExerciseName').innerText = exerciseName;
+            document.getElementById('deleteSetDetails').innerText = `${weight} kg × ${reps} Wdh`;
+            const deleteUrl = `/set/${setId}/delete/`;
+            document.getElementById('confirmDeleteBtn').href = deleteUrl;
+            deleteModal.show();
+        }
+
+        // ========== REST TIMER ==========
+        let timerInterval = null;
+        let timerSeconds = 90;
+        const restTimerEl = document.getElementById('restTimer');
+        const timerDisplayEl = document.getElementById('timerDisplay');
+        const timerSecondsEl = document.getElementById('timerSeconds');
+
+        function startRestTimer(seconds = 90) {
+            stopTimer(); // Stop any existing timer
+            timerSeconds = seconds;
+            timerSecondsEl.innerText = timerSeconds;
+            restTimerEl.style.display = 'block';
+            timerDisplayEl.classList.add('timer-running');
+            
+            timerInterval = setInterval(() => {
+                timerSeconds--;
+                timerSecondsEl.innerText = timerSeconds;
+                
+                // Farbwechsel bei wenig Zeit
+                if (timerSeconds <= 10) {
+                    timerDisplayEl.classList.remove('bg-warning');
+                    timerDisplayEl.classList.add('bg-danger', 'text-white');
+                }
+                
+                // Timer abgelaufen
+                if (timerSeconds <= 0) {
+                    stopTimer();
+                    // Optional: Sound oder Vibration
+                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    alert('⏰ Pause vorbei! Bereit für den nächsten Satz?');
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            restTimerEl.style.display = 'none';
+            timerDisplayEl.classList.remove('timer-running', 'bg-danger', 'text-white');
+            timerDisplayEl.classList.add('bg-warning', 'text-dark');
+        }
+
+        // Timer nach Satz-Speichern automatisch starten
+        const originalFormSubmit = setForm.onsubmit;
+        setForm.addEventListener('submit', function(e) {
+            // Nur bei neuen Sätzen (nicht beim Bearbeiten) Timer starten
+            if (setForm.action.includes('add_set') && !warmupCheck.checked) {
+                setTimeout(() => startRestTimer(90), 500);
+            }
+        });
+    </script>
+  </body>
+</html>

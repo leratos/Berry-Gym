@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="de" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ plan.name }} - Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  </head>
+  <body>
+
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4">
+      <div class="container-fluid">
+        <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}">
+            <i class="bi bi-arrow-left"></i> Zurück
+        </a>
+        <span class="navbar-text text-white fw-bold text-truncate" style="max-width: 200px;">
+            {{ plan.name }}
+        </span>
+        <div style="width: 40px;"></div>
+      </div>
+    </nav>
+
+    <div class="container pb-5">
+
+        <!-- Plan Info -->
+        <div class="card bg-dark border-primary mb-4 shadow">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-card-checklist fs-2 text-primary"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-white mb-1">{{ plan.name }}</h4>
+                        <small class="text-muted">
+                            <i class="bi bi-check2-square me-1"></i>{{ uebungen_mit_historie|length }} Übungen
+                        </small>
+                    </div>
+                </div>
+
+                {% if plan.beschreibung %}
+                <p class="text-muted mb-3">{{ plan.beschreibung }}</p>
+                {% endif %}
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-success btn-lg fw-bold">
+                        <i class="bi bi-play-circle-fill me-2"></i> Training starten
+                    </a>
+                    <div class="row g-2">
+                        <div class="col">
+                            <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info w-100">
+                                <i class="bi bi-pencil-square me-1"></i> Bearbeiten
+                            </a>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#deletePlanModal">
+                                <i class="bi bi-trash me-1"></i> Löschen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Übungen Liste -->
+        <h6 class="text-secondary mb-3 ps-1 text-uppercase">Übungsplan</h6>
+
+        {% for item in uebungen_mit_historie %}
+        <div class="card bg-dark border-secondary mb-3 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-2">{{ item.plan_uebung.reihenfolge }}</span>
+                        <h6 class="mb-0 text-white">{{ item.plan_uebung.uebung.bezeichnung }}</h6>
+                    </div>
+                    <a href="{% url 'exercise_stats' item.plan_uebung.uebung.id %}" 
+                       class="text-info text-decoration-none opacity-75">
+                        <i class="bi bi-graph-up"></i>
+                    </a>
+                </div>
+
+                <small class="text-muted d-block mb-3">
+                    <i class="bi bi-bullseye"></i> {{ item.plan_uebung.uebung.get_muskelgruppe_display }}
+                </small>
+
+                <!-- Ziel-Vorgaben -->
+                <div class="row g-2 mb-3">
+                    <div class="col-4">
+                        <div class="bg-secondary bg-opacity-10 rounded p-2 text-center">
+                            <small class="text-secondary d-block" style="font-size: 0.7rem;">SÄTZE</small>
+                            <strong class="text-white">{{ item.plan_uebung.saetze_ziel }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-secondary bg-opacity-10 rounded p-2 text-center">
+                            <small class="text-secondary d-block" style="font-size: 0.7rem;">WDH</small>
+                            <strong class="text-white">{{ item.plan_uebung.wiederholungen_ziel|default:"--" }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-secondary bg-opacity-10 rounded p-2 text-center">
+                            <small class="text-secondary d-block" style="font-size: 0.7rem;">TYP</small>
+                            <strong class="text-white">{{ item.plan_uebung.uebung.get_gewichts_typ_display|truncatewords:1 }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Letzte Performance -->
+                {% if item.letztes_gewicht %}
+                <div class="alert alert-dark border-secondary mb-0 py-2 px-3">
+                    <small class="text-muted">
+                        <i class="bi bi-clock-history me-1"></i>Letztes Mal: 
+                        <strong class="text-success">{{ item.letztes_gewicht }} kg</strong> × 
+                        <strong class="text-info">{{ item.letzte_wdh }}</strong> Wdh
+                    </small>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary mb-0 py-2 px-3">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>Noch nie trainiert
+                    </small>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <!-- Delete Plan Modal -->
+    <div class="modal fade" id="deletePlanModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark border-danger">
+                <div class="modal-header border-danger">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Plan löschen?
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Möchtest du den Trainingsplan <strong>"{{ plan.name }}"</strong> wirklich löschen?</p>
+                    <p class="text-warning small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Vergangene Trainings mit diesem Plan bleiben erhalten.
+                    </p>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <form method="post" action="{% url 'delete_plan' plan.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>Löschen
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
+
+        <!-- Nochmal Start Button unten -->
+        <div class="d-grid mt-4">
+            <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-success btn-lg fw-bold">
+                <i class="bi bi-play-circle-fill me-2"></i> Jetzt mit diesem Plan trainieren
+            </a>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
