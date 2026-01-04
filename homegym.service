@@ -1,0 +1,45 @@
+# HomeGym Gunicorn Systemd Service
+# Installation: sudo cp homegym.service /etc/systemd/system/
+# Enable: sudo systemctl enable homegym
+# Start: sudo systemctl start homegym
+
+[Unit]
+Description=HomeGym Fitness Tracker Gunicorn Daemon
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=notify
+User=lera
+Group=psaserv
+
+# Pfade anpassen!
+WorkingDirectory=/var/www/vhosts/last-strawberry.com/gym.last-strawberry.com
+Environment="PATH=/var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=config.settings"
+Environment="DJANGO_SECRET_KEY=25ZS)*SY=k7!v2@oB-eekivAAP!mk=+qia+cxwXfLFnMSC)NoG"
+Environment="DATABASE_NAME=gym_"
+Environment="DATABASE_USER=fit"
+Environment="DATABASE_PASSWORD=ykvpC7N9pK6d$$va"
+Environment="DATABASE_HOST=localhost"
+
+# Gunicorn mit 4 Workern
+ExecStartPre=/bin/mkdir -p /var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/logs
+ExecStart=/var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/venv/bin/gunicorn \
+    --workers 4 \
+    --bind unix:/var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/homegym.sock \
+    --timeout 60 \
+    --access-logfile /var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/logs/gunicorn-access.log \
+    --error-logfile /var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/logs/gunicorn-error.log \
+    --log-level info \
+    config.wsgi:application
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

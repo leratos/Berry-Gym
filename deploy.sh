@@ -82,21 +82,52 @@ python manage.py add_new_exercises
 echo -e "${YELLOW}📦 Sammle Static Files...${NC}"
 python manage.py collectstatic --noinput
 
-# 12. Superuser erstellen (optional)
-read -p "Superuser erstellen? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    python manage.py createsuperuser
+# 12. Datenbank-Import (User, Pläne, Training)
+if ls homegym_backup_*.json 1> /dev/null 2>&1; then
+    echo ""
+    echo -e "${YELLOW}📥 Backup-Datei gefunden!${NC}"
+    BACKUP_FILE=$(ls -t homegym_backup_*.json | head -1)
+    echo "Neueste Datei: $BACKUP_FILE"
+    echo ""
+    read -p "Datenbank importieren? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}⏳ Importiere Benutzerdaten...${NC}"
+        python import_db.py "$BACKUP_FILE"
+        echo -e "${GREEN}✅ Datenbank-Import abgeschlossen!${NC}"
+        echo ""
+        echo "ℹ️  Du kannst dich mit deinen lokalen Login-Daten einloggen!"
+    fi
+else
+    echo -e "${YELLOW}ℹ️  Kein Backup gefunden - überspringe Import${NC}"
 fi
 
-# 13. Gunicorn prüfen
+# 13. Superuser erstellen (optional - nur wenn kein Import)
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo ""
+    read -p "Superuser erstellen? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        python manage.py createsuperuser
+    fi
+# 13. Superuser erstellen (optional - nur wenn kein Import)
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+   4. Gunicorn prüfen
 if ! command -v gunicorn &> /dev/null; then
     echo -e "${RED}❌ Gunicorn nicht gefunden!${NC}"
     echo "Installiere gunicorn..."
     pip install gunicorn
 fi
 
-# 14. Gunicorn starten
+# 15
+# 14. Gunicorn prüfen
+if ! command -v gunicorn &> /dev/null; then
+    echo -e "${RED}❌ Gunicorn nicht gefunden!${NC}"
+    echo "Installiere gunicorn..."
+    pip install gunicorn
+fi
+
+# 15. Gunicorn starten
 echo -e "${YELLOW}🚀 Starte Gunicorn auf Port $PORT...${NC}"
 
 # Alte Prozesse killen
@@ -113,7 +144,7 @@ gunicorn --bind 127.0.0.1:$PORT \
 
 sleep 2
 
-# 15. Prüfen ob läuft
+# 16. Prüfen ob läuft
 if curl -s http://127.0.0.1:$PORT > /dev/null; then
     echo -e "${GREEN}✅ App läuft erfolgreich auf Port $PORT!${NC}"
 else
@@ -123,7 +154,7 @@ else
     exit 1
 fi
 
-# 16. Zusammenfassung
+# 17. Zusammenfassung
 echo ""
 echo -e "${GREEN}===================================="
 echo "✅ Deployment erfolgreich!"
@@ -134,12 +165,22 @@ echo "📁 Logs: $LOG_DIR"
 echo ""
 echo "🔧 Nützliche Befehle:"
 echo "  - Logs: tail -f $LOG_DIR/gunicorn-error.log"
-echo "  - Neustart: pkill -f 'gunicorn.*config.wsgi' && gunicorn ..."
-echo "  - Status: curl http://127.0.0.1:$PORT"
+echo "  - Neustart: sudo systemctl restart homegym"
+echo "  - Status: sudo systemctl status homegym"
 echo ""
-echo "📚 Nächste Schritte:"
-echo "  1. Nginx-Konfiguration anpassen (siehe DEPLOYMENT.md)"
-echo "  2. SSL/HTTPS einrichten"
-echo "  3. Systemd Service erstellen (optional)"
+echo "📚 Nächste Schritte für Production:"
+echo "  1. Systemd Service einrichten:"
+echo "     sudo cp homegym.service /etc/systemd/system/"
+echo "     sudo systemctl daemon-reload"
+echo "     sudo systemctl enable homegym"
+echo "     sudo systemctl start homegym"
+echo ""
+echo "  2. Nginx-Konfiguration:"
+echo "     sudo cp homegym.nginx /etc/nginx/sites-available/homegym"
+echo "     sudo ln -s /etc/nginx/sites-available/homegym /etc/nginx/sites-enabled/"
+echo "     sudo nginx -t && sudo systemctl reload nginx"
+echo ""
+echo "  3. SSL/HTTPS mit Let's Encrypt:"
+echo "     sudo certbot --nginx -d DEINE-DOMAIN.de"
 echo ""
 echo "🎉 Viel Erfolg mit der HomeGym App!"

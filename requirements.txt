@@ -1,8 +1,15 @@
+# Core Django
 Django==5.0.3
-Pillow==10.3.0
-mysqlclient==2.2.4
-python-dotenv==1.0.1
 gunicorn==22.0.0
+
+# Database
+mysqlclient==2.2.4
+
+# Image Processing (für PWA Icons)
+Pillow==12.1.0
+
+# Environment Variables
+python-dotenv==1.0.1
 
 # Optional: Redis für Caching & Sessions
 redis==5.0.1

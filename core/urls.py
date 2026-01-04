@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
     # Auth
-    path('register/', views.register, name='register'),
+    # path('register/', views.register, name='register'),  # DEAKTIVIERT - keine öffentliche Registrierung
     
     # Dashboard
     path('', views.dashboard, name='dashboard'),

@@ -1,0 +1,326 @@
+[
+  {
+    "model": "auth.user",
+    "fields": {
+      "password": "pbkdf2_sha256$720000$2uMDlBhHqUZ4EekNG3OmqF$ABl3IALnk7CsaMd/SGKr1UyH5Lqr9Nt1g6GZFuVlFvg=",
+      "last_login": "2026-01-02T10:06:31.200Z",
+      "is_superuser": true,
+      "username": "Leratos",
+      "first_name": "",
+      "last_name": "",
+      "email": "",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2026-01-01T21:15:02.930Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "core.koerperwerte",
+    "pk": 1,
+    "fields": {
+      "user": [
+        "Leratos"
+      ],
+      "datum": "2026-01-02",
+      "groesse_cm": 180,
+      "gewicht": "100.00",
+      "fettmasse_kg": "29.80",
+      "koerperfett_prozent": null,
+      "koerperwasser_kg": "51.40",
+      "muskelmasse_kg": "37.60",
+      "knochenmasse_kg": null,
+      "notiz": ""
+    }
+  },
+  {
+    "model": "core.plan",
+    "pk": 3,
+    "fields": {
+      "user": [
+        "Leratos"
+      ],
+      "name": "Training A",
+      "beschreibung": "Drücken + Rudern + Hinge",
+      "erstellt_am": "2026-01-03T19:20:06.212Z"
+    }
+  },
+  {
+    "model": "core.plan",
+    "pk": 4,
+    "fields": {
+      "user": [
+        "Leratos"
+      ],
+      "name": "Training B",
+      "beschreibung": "Beine + Schulterdrücken + Rücken",
+      "erstellt_am": "2026-01-03T20:39:59.383Z"
+    }
+  },
+  {
+    "model": "core.trainingseinheit",
+    "pk": 18,
+    "fields": {
+      "user": [
+        "Leratos"
+      ],
+      "plan": 3,
+      "datum": "2026-01-03T19:33:36.144Z",
+      "dauer_minuten": 57,
+      "kommentar": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 84,
+    "fields": {
+      "einheit": 18,
+      "uebung": 45,
+      "satz_nr": 1,
+      "gewicht": "10.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 85,
+    "fields": {
+      "einheit": 18,
+      "uebung": 45,
+      "satz_nr": 2,
+      "gewicht": "10.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 86,
+    "fields": {
+      "einheit": 18,
+      "uebung": 45,
+      "satz_nr": 3,
+      "gewicht": "10.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 87,
+    "fields": {
+      "einheit": 18,
+      "uebung": 15,
+      "satz_nr": 1,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "6.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 88,
+    "fields": {
+      "einheit": 18,
+      "uebung": 15,
+      "satz_nr": 2,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 89,
+    "fields": {
+      "einheit": 18,
+      "uebung": 15,
+      "satz_nr": 3,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 90,
+    "fields": {
+      "einheit": 18,
+      "uebung": 21,
+      "satz_nr": 1,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 91,
+    "fields": {
+      "einheit": 18,
+      "uebung": 21,
+      "satz_nr": 2,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 92,
+    "fields": {
+      "einheit": 18,
+      "uebung": 21,
+      "satz_nr": 3,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 93,
+    "fields": {
+      "einheit": 18,
+      "uebung": 7,
+      "satz_nr": 1,
+      "gewicht": "5.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 94,
+    "fields": {
+      "einheit": 18,
+      "uebung": 7,
+      "satz_nr": 2,
+      "gewicht": "5.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 95,
+    "fields": {
+      "einheit": 18,
+      "uebung": 54,
+      "satz_nr": 1,
+      "gewicht": "5.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 96,
+    "fields": {
+      "einheit": 18,
+      "uebung": 54,
+      "satz_nr": 2,
+      "gewicht": "5.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 97,
+    "fields": {
+      "einheit": 18,
+      "uebung": 99,
+      "satz_nr": 1,
+      "gewicht": "0.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 98,
+    "fields": {
+      "einheit": 18,
+      "uebung": 99,
+      "satz_nr": 2,
+      "gewicht": "0.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 99,
+    "fields": {
+      "einheit": 18,
+      "uebung": 99,
+      "satz_nr": 3,
+      "gewicht": "0.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 100,
+    "fields": {
+      "einheit": 18,
+      "uebung": 57,
+      "satz_nr": 1,
+      "gewicht": "10.00",
+      "wiederholungen": 8,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 101,
+    "fields": {
+      "einheit": 18,
+      "uebung": 57,
+      "satz_nr": 2,
+      "gewicht": "10.00",
+      "wiederholungen": 6,
+      "ist_aufwaermsatz": false,
+      "rpe": "10.0",
+      "notiz": null
+    }
+  }
+]

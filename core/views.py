@@ -1113,7 +1113,9 @@ def create_plan(request):
         # Hilfsmuskelgruppen-Labels abrufen
         hilfs_labels = []
         if uebung.hilfsmuskeln:
-            for hm in uebung.hilfsmuskeln:
+            # Sicherstellen dass hilfsmuskeln eine Liste ist
+            hilfsmuskeln = uebung.hilfsmuskeln if isinstance(uebung.hilfsmuskeln, list) else []
+            for hm in hilfsmuskeln:
                 hilfs_labels.append(dict(MUSKELGRUPPEN).get(hm, hm))
         
         uebungen_nach_gruppe[mg_label].append({
@@ -1176,7 +1178,9 @@ def edit_plan(request, plan_id):
         # Hilfsmuskelgruppen-Labels abrufen
         hilfs_labels = []
         if uebung.hilfsmuskeln:
-            for hm in uebung.hilfsmuskeln:
+            # Sicherstellen dass hilfsmuskeln eine Liste ist
+            hilfsmuskeln = uebung.hilfsmuskeln if isinstance(uebung.hilfsmuskeln, list) else []
+            for hm in hilfsmuskeln:
                 hilfs_labels.append(dict(MUSKELGRUPPEN).get(hm, hm))
         
         uebungen_nach_gruppe[mg_label].append({

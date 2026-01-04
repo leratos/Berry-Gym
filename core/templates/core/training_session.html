@@ -517,6 +517,39 @@
             });
         }
 
+        // Sound für Timer-Ende (Web Audio API)
+        function playTimerSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Drei Beeps: hoch-mittel-hoch
+                const beeps = [
+                    { freq: 800, start: 0, duration: 0.15 },
+                    { freq: 600, start: 0.2, duration: 0.15 },
+                    { freq: 800, start: 0.4, duration: 0.3 }
+                ];
+                
+                beeps.forEach(beep => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = beep.freq;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + beep.start);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + beep.start + beep.duration);
+                    
+                    oscillator.start(audioContext.currentTime + beep.start);
+                    oscillator.stop(audioContext.currentTime + beep.start + beep.duration);
+                });
+            } catch (e) {
+                console.log('Audio nicht verfügbar:', e);
+            }
+        }
+
         function startRestTimer(seconds = null) {
             stopTimer(); // Stop any existing timer
             timerSeconds = seconds !== null ? seconds : timerDuration;
@@ -540,12 +573,47 @@
                     timerDisplayEl.classList.add('bg-danger', 'text-white');
                 }
                 
+                // Countdown-Beeps bei letzten 3 Sekunden
+                if (timerSeconds > 0 && timerSeconds <= 3) {
+                    try {
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        oscillator.frequency.value = 600;
+                        oscillator.type = 'sine';
+                        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                        oscillator.start();
+                        oscillator.stop(audioContext.currentTime + 0.1);
+                    } catch (e) {}
+                }
+                
                 // Timer abgelaufen
                 if (timerSeconds <= 0) {
                     stopTimer();
-                    // Optional: Sound oder Vibration
-                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                    alert('⏰ Pause vorbei! Bereit für den nächsten Satz?');
+                    
+                    // Sound abspielen
+                    playTimerSound();
+                    
+                    // Vibration (wenn verfügbar)
+                    if (navigator.vibrate) {
+                        navigator.vibrate([200, 100, 200, 100, 200]);
+                    }
+                    
+                    // Notification zeigen (ohne alert - nicht-blockierend)
+                    const notification = document.createElement('div');
+                    notification.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #198754; color: white; padding: 2rem; border-radius: 1rem; font-size: 1.5rem; z-index: 10000; box-shadow: 0 0 20px rgba(0,0,0,0.5); text-align: center;';
+                    notification.innerHTML = '⏰<br><strong>Pause vorbei!</strong><br><small>Bereit für den nächsten Satz?</small>';
+                    document.body.appendChild(notification);
+                    
+                    // Auto-remove nach 3 Sekunden
+                    setTimeout(() => {
+                        notification.style.opacity = '0';
+                        notification.style.transition = 'opacity 0.5s';
+                        setTimeout(() => notification.remove(), 500);
+                    }, 3000);
                 }
             }, 1000);
         }

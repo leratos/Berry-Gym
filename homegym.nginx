@@ -1,0 +1,65 @@
+# HomeGym Nginx Konfiguration für PLESK
+# =======================================
+# Verwendung in Plesk:
+# 1. Websites & Domains → gym.last-strawberry.com → Apache & nginx Settings
+# 2. "Additional nginx directives" Feld (ganz unten)
+# 3. Kopiere die Direktiven unterhalb in das Feld
+# 4. "OK" klicken
+
+# WICHTIG: NUR die location-Blöcke in Plesk einfügen!
+# Plesk managed bereits server {}, listen, server_name, SSL etc.
+
+# ========== KOPIERE AB HIER IN PLESK ==========
+
+# Max Upload Size (für Progress Pics später)
+client_max_body_size 10M;
+
+# Static Files
+location /static/ {
+    alias /var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/staticfiles/;
+    expires 30d;
+    add_header Cache-Control "public, immutable";
+}
+
+# Media Files
+location /media/ {
+    alias /var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/media/;
+    expires 7d;
+}
+
+# Service Worker (keine Caching)
+location = /static/core/service-worker.js {
+    alias /var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/staticfiles/core/service-worker.js;
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+    add_header Pragma "no-cache";
+    add_header Expires "0";
+}
+
+# PWA Manifest
+location = /static/core/manifest.json {
+    alias /var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/staticfiles/core/manifest.json;
+    add_header Content-Type "application/manifest+json";
+}
+
+# Django App - Proxy zu Gunicorn Unix Socket
+location / {
+    proxy_pass http://unix:/var/www/vhosts/last-strawberry.com/gym.last-strawberry.com/homegym.sock;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_redirect off;
+    
+    # Timeouts
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+}
+
+# Security Headers
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header X-XSS-Protection "1; mode=block" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+# ========== KOPIERE BIS HIER ==========
