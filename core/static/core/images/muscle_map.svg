@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 1024" width="1100" height="1024">
+  <title>Muscle Map Front + Back (Stylized)</title>
+  <desc>Stylized human front and back muscle regions. Each region is a separate path with an id for highlighting.</desc>
+
+  <style>
+    .outline { fill: none; stroke: #111; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+    .muscle  { fill: #d9d9d9; stroke: #333; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+
+  <!-- ========= FRONT (left) ========= -->
+  <g id="front" transform="translate(50,0)">
+    <!-- BODY OUTLINE -->
+    <path class="outline" d="
+      M256 62
+      C215 62 188 86 182 116
+      C176 147 190 171 200 186
+      C182 198 156 216 140 240
+      C120 271 114 311 118 346
+      C123 393 139 423 153 448
+      C133 486 116 531 116 585
+      C116 650 140 705 160 750
+      C176 784 185 820 184 864
+      C183 925 198 970 256 970
+      C314 970 329 925 328 864
+      C327 820 336 784 352 750
+      C372 705 396 650 396 585
+      C396 531 379 486 359 448
+      C373 423 389 393 394 346
+      C398 311 392 271 372 240
+      C356 216 330 198 312 186
+      C322 171 336 147 330 116
+      C324 86 297 62 256 62
+      Z" />
+
+    <!-- Neck/Traps -->
+    <path id="front_neck" class="muscle" d="M224 176 C238 192 274 192 288 176 C284 206 280 226 256 226 C232 226 228 206 224 176 Z"/>
+    <path id="front_traps_left" class="muscle" d="M200 186 C182 198 168 214 162 232 C188 230 206 222 218 208 C212 200 206 192 200 186 Z"/>
+    <path id="front_traps_right" class="muscle" d="M312 186 C330 198 344 214 350 232 C324 230 306 222 294 208 C300 200 306 192 312 186 Z"/>
+
+    <!-- Delts -->
+    <path id="front_delt_left" class="muscle" d="M162 232 C144 258 144 296 158 318 C182 306 200 284 206 258 C198 244 184 236 162 232 Z"/>
+    <path id="front_delt_right" class="muscle" d="M350 232 C368 258 368 296 354 318 C330 306 312 284 306 258 C314 244 328 236 350 232 Z"/>
+
+    <!-- Chest -->
+    <path id="front_chest_left" class="muscle" d="M206 258 C196 284 200 316 214 338 C230 362 250 372 256 372 C256 338 256 294 256 256 C238 256 222 256 206 258 Z"/>
+    <path id="front_chest_right" class="muscle" d="M306 258 C316 284 312 316 298 338 C282 362 262 372 256 372 C256 338 256 294 256 256 C274 256 290 256 306 258 Z"/>
+
+    <!-- Serratus -->
+    <path id="front_serratus_left" class="muscle" d="M170 330 C182 352 200 368 220 380 C230 370 236 360 238 350 C216 342 196 332 170 330 Z"/>
+    <path id="front_serratus_right" class="muscle" d="M342 330 C330 352 312 368 292 380 C282 370 276 360 274 350 C296 342 316 332 342 330 Z"/>
+
+    <!-- Arms -->
+    <path id="front_biceps_left" class="muscle" d="M150 318 C132 338 128 380 140 410 C160 404 178 388 188 364 C180 344 168 328 150 318 Z"/>
+    <path id="front_biceps_right" class="muscle" d="M362 318 C380 338 384 380 372 410 C352 404 334 388 324 364 C332 344 344 328 362 318 Z"/>
+    <path id="front_forearm_left" class="muscle" d="M140 410 C132 448 140 488 156 516 C174 510 188 488 194 458 C184 440 164 420 140 410 Z"/>
+    <path id="front_forearm_right" class="muscle" d="M372 410 C380 448 372 488 356 516 C338 510 324 488 318 458 C328 440 348 420 372 410 Z"/>
+
+    <!-- Abs -->
+    <path id="front_abs_upper" class="muscle" d="M220 380 C232 410 240 444 256 444 C272 444 280 410 292 380 C278 378 268 374 256 372 C244 374 234 378 220 380 Z"/>
+    <path id="front_abs_mid" class="muscle" d="M224 444 C232 474 240 508 256 508 C272 508 280 474 288 444 C278 446 268 448 256 448 C244 448 234 446 224 444 Z"/>
+    <path id="front_abs_lower" class="muscle" d="M232 508 C236 548 242 585 256 585 C270 585 276 548 280 508 C272 512 264 514 256 514 C248 514 240 512 232 508 Z"/>
+
+    <!-- Obliques -->
+    <path id="front_oblique_left" class="muscle" d="M184 410 C172 452 176 510 198 566 C214 562 224 552 232 536 C216 492 206 452 206 414 C198 412 192 410 184 410 Z"/>
+    <path id="front_oblique_right" class="muscle" d="M328 410 C340 452 336 510 314 566 C298 562 288 552 280 536 C296 492 306 452 306 414 C314 412 320 410 328 410 Z"/>
+
+    <!-- Legs -->
+    <path id="front_quad_left" class="muscle" d="M184 566 C160 620 160 700 182 750 C206 742 224 716 232 676 C226 632 210 592 184 566 Z"/>
+    <path id="front_quad_right" class="muscle" d="M328 566 C352 620 352 700 330 750 C306 742 288 716 280 676 C286 632 302 592 328 566 Z"/>
+    <path id="front_adductor_left" class="muscle" d="M232 585 C220 620 214 660 216 704 C230 700 242 690 248 676 C246 642 242 610 232 585 Z"/>
+    <path id="front_adductor_right" class="muscle" d="M280 585 C292 620 298 660 296 704 C282 700 270 690 264 676 C266 642 270 610 280 585 Z"/>
+    <path id="front_calf_left" class="muscle" d="M182 750 C170 792 166 840 168 884 C190 884 206 862 212 830 C206 804 196 774 182 750 Z"/>
+    <path id="front_calf_right" class="muscle" d="M330 750 C342 792 346 840 344 884 C322 884 306 862 300 830 C306 804 316 774 330 750 Z"/>
+  </g>
+
+  <!-- ========= BACK (right) ========= -->
+  <g id="back" transform="translate(590,0)">
+    <!-- BODY OUTLINE (back silhouette) -->
+    <path class="outline" d="
+      M256 62
+      C215 62 188 86 182 116
+      C176 147 190 171 200 186
+      C178 202 154 226 142 250
+      C124 286 120 325 126 360
+      C134 408 152 438 168 464
+      C146 502 130 545 130 595
+      C130 665 156 720 178 765
+      C194 798 202 830 202 870
+      C202 932 214 970 256 970
+      C298 970 310 932 310 870
+      C310 830 318 798 334 765
+      C356 720 382 665 382 595
+      C382 545 366 502 344 464
+      C360 438 378 408 386 360
+      C392 325 388 286 370 250
+      C358 226 334 202 312 186
+      C322 171 336 147 330 116
+      C324 86 297 62 256 62
+      Z" />
+
+    <!-- Neck/Upper Traps (back) -->
+    <path id="back_neck" class="muscle" d="M224 176 C238 194 274 194 288 176 C290 206 282 232 256 232 C230 232 222 206 224 176 Z"/>
+    <path id="back_traps_left" class="muscle" d="M200 186 C178 204 166 220 160 242 C190 244 210 236 224 220 C214 206 208 196 200 186 Z"/>
+    <path id="back_traps_right" class="muscle" d="M312 186 C334 204 346 220 352 242 C322 244 302 236 288 220 C298 206 304 196 312 186 Z"/>
+
+    <!-- Rear Delts -->
+    <path id="back_delt_left" class="muscle" d="M160 242 C146 270 148 306 164 328 C186 320 202 300 208 272 C198 256 184 246 160 242 Z"/>
+    <path id="back_delt_right" class="muscle" d="M352 242 C366 270 364 306 348 328 C326 320 310 300 304 272 C314 256 328 246 352 242 Z"/>
+
+    <!-- Lats -->
+    <path id="back_lat_left" class="muscle" d="M170 328 C156 360 160 408 182 446 C204 484 230 500 246 504 C238 468 232 418 232 372 C214 356 196 342 170 328 Z"/>
+    <path id="back_lat_right" class="muscle" d="M342 328 C356 360 352 408 330 446 C308 484 282 500 266 504 C274 468 280 418 280 372 C298 356 316 342 342 328 Z"/>
+
+    <!-- Rhomboids / Mid back -->
+    <path id="back_midback" class="muscle" d="M214 300 C228 322 240 344 256 344 C272 344 284 322 298 300 C286 292 272 288 256 288 C240 288 226 292 214 300 Z"/>
+
+    <!-- Lower back (erectors) -->
+    <path id="back_erectors_left" class="muscle" d="M214 446 C202 490 202 540 214 590 C230 586 242 574 246 556 C240 520 236 486 238 456 C230 452 222 448 214 446 Z"/>
+    <path id="back_erectors_right" class="muscle" d="M298 446 C310 490 310 540 298 590 C282 586 270 574 266 556 C272 520 276 486 274 456 C282 452 290 448 298 446 Z"/>
+
+    <!-- Triceps/Arms (back) -->
+    <path id="back_triceps_left" class="muscle" d="M150 328 C134 350 132 392 146 424 C166 420 182 404 190 380 C184 360 172 342 150 328 Z"/>
+    <path id="back_triceps_right" class="muscle" d="M362 328 C378 350 380 392 366 424 C346 420 330 404 322 380 C328 360 340 342 362 328 Z"/>
+    <path id="back_forearm_left" class="muscle" d="M146 424 C138 460 146 500 162 528 C180 524 192 500 196 470 C186 452 170 434 146 424 Z"/>
+    <path id="back_forearm_right" class="muscle" d="M366 424 C374 460 366 500 350 528 C332 524 320 500 316 470 C326 452 342 434 366 424 Z"/>
+
+    <!-- Glutes -->
+    <path id="back_glute_left" class="muscle" d="M184 590 C168 622 170 660 190 690 C210 720 236 730 256 730 C244 680 234 636 232 600 C216 594 200 592 184 590 Z"/>
+    <path id="back_glute_right" class="muscle" d="M328 590 C344 622 342 660 322 690 C302 720 276 730 256 730 C268 680 278 636 280 600 C296 594 312 592 328 590 Z"/>
+
+    <!-- Hamstrings -->
+    <path id="back_hamstring_left" class="muscle" d="M190 690 C170 730 168 790 184 830 C206 826 222 802 230 770 C224 736 212 708 190 690 Z"/>
+    <path id="back_hamstring_right" class="muscle" d="M322 690 C342 730 344 790 328 830 C306 826 290 802 282 770 C288 736 300 708 322 690 Z"/>
+
+    <!-- Calves (back) -->
+    <path id="back_calf_left" class="muscle" d="M184 830 C176 868 174 910 176 944 C198 944 214 920 220 890 C214 866 204 846 184 830 Z"/>
+    <path id="back_calf_right" class="muscle" d="M328 830 C336 868 338 910 336 944 C314 944 298 920 292 890 C298 866 308 846 328 830 Z"/>
+  </g>
+
+  <!-- Optional labels (remove if you don't want any text) -->
+  <g font-family="Arial" font-size="22" fill="#111" opacity="0.85">
+    <text x="305" y="70" text-anchor="middle">Front</text>
+    <text x="845" y="70" text-anchor="middle">Back</text>
+  </g>
+</svg>

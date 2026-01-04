@@ -122,6 +122,7 @@ class KoerperWerte(models.Model):
 
 class Trainingseinheit(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="trainings", null=True)
+    plan = models.ForeignKey('Plan', on_delete=models.SET_NULL, related_name="trainings", null=True, blank=True, verbose_name="Trainingsplan")
     datum = models.DateTimeField(auto_now_add=True)
     dauer_minuten = models.PositiveIntegerField(blank=True, null=True, verbose_name="Dauer (Min)")
     kommentar = models.TextField(blank=True, null=True, verbose_name="Wie lief's?")

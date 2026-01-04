@@ -14,7 +14,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # 2. Konfiguration
-APP_DIR="/var/www/vhosts/last-strawberry.com/homegym"
+APP_DIR="/var/www/vhosts/last-strawberry.com/gym"
 VENV_DIR="$APP_DIR/venv"
 LOG_DIR="$APP_DIR/logs"
 STATIC_DIR="$APP_DIR/staticfiles"

@@ -55,12 +55,25 @@
     "model": "core.uebung",
     "pk": 45,
     "fields": {
-      "bezeichnung": "Floor Press (Kurzhantel/Langhantel)",
+      "bezeichnung": "Floor Press (Kurzhantel)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": "Trizeps, Schulter - Vordere",
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Rücken auf dem Boden. Kurzhanteln drücken wie beim Bankdrücken, aber Ellbogen stoppen am Boden (schont Schulter, fokussiert Trizeps).",
+      "erstellt_am": "2024-01-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 98,
+    "fields": {
+      "bezeichnung": "Floor Press (Langhantel)",
       "muskelgruppe": "BRUST",
       "hilfsmuskeln": "Trizeps, Schulter - Vordere",
       "gewichts_typ": "GESAMT",
       "bewegungstyp": "DRUECKEN",
-      "beschreibung": "Rücken auf dem Boden. Hanteln drücken wie beim Bankdrücken, aber Ellbogen stoppen am Boden (schont Schulter, fokussiert Trizeps).",
+      "beschreibung": "Rücken auf dem Boden. Langhantel drücken wie beim Bankdrücken, aber Ellbogen stoppen am Boden (schont Schulter, fokussiert Trizeps).",
       "erstellt_am": "2024-01-01T12:00:00Z"
     }
   },
@@ -678,19 +691,6 @@
   },
   {
     "model": "core.uebung",
-    "pk": 51,
-    "fields": {
-      "bezeichnung": "Seitheben (Kurzhantel)",
-      "muskelgruppe": "SCHULTER_SEIT",
-      "hilfsmuskeln": [],
-      "gewichts_typ": "PRO_SEITE",
-      "bewegungstyp": "ISOLATION",
-      "beschreibung": "Aufrecht stehen. Hanteln seitlich bis Schulterhöhe heben (Ellbogen leicht gebeugt), kontrolliert senken. Fokus auf seitliche Schulter.",
-      "erstellt_am": "2024-01-01T12:00:00Z"
-    }
-  },
-  {
-    "model": "core.uebung",
     "pk": 52,
     "fields": {
       "bezeichnung": "Seitheben (Kabelzug)",
@@ -743,19 +743,6 @@
   },
   {
     "model": "core.uebung",
-    "pk": 56,
-    "fields": {
-      "bezeichnung": "Hammer Curls (Kurzhantel)",
-      "muskelgruppe": "BIZEPS",
-      "hilfsmuskeln": ["UNTERARME"],
-      "gewichts_typ": "PRO_SEITE",
-      "bewegungstyp": "ISOLATION",
-      "beschreibung": "Hantel neutral halten (Daumen oben). Curlen mit fixen Ellbogen. Trainiert Bizeps und Brachialis.",
-      "erstellt_am": "2024-01-01T12:00:00Z"
-    }
-  },
-  {
-    "model": "core.uebung",
     "pk": 57,
     "fields": {
       "bezeichnung": "Concentration Curls (Kurzhantel)",
@@ -777,19 +764,6 @@
       "gewichts_typ": "GESAMT",
       "bewegungstyp": "ISOLATION",
       "beschreibung": "Kabelturm mit Stange oder Seil. Ellbogen fix an Seite, nach unten drücken. Volle Streckung am Ende.",
-      "erstellt_am": "2024-01-01T12:00:00Z"
-    }
-  },
-  {
-    "model": "core.uebung",
-    "pk": 59,
-    "fields": {
-      "bezeichnung": "Trizeps Overhead Extension (Kurzhantel)",
-      "muskelgruppe": "TRIZEPS",
-      "hilfsmuskeln": [],
-      "gewichts_typ": "PRO_SEITE",
-      "bewegungstyp": "ISOLATION",
-      "beschreibung": "Hantel über Kopf, Ellbogen fix. Hinter Kopf senken, dann nach oben strecken. Zielt auf langen Trizeps-Kopf.",
       "erstellt_am": "2024-01-01T12:00:00Z"
     }
   },
@@ -1284,6 +1258,45 @@
       "gewichts_typ": "KOERPERGEWICHT",
       "bewegungstyp": "BEUGEN",
       "beschreibung": "Plank-Position. Knie abwechselnd schnell zur Brust ziehen. Cardio und Hüftbeuger.",
+      "erstellt_am": "2024-01-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 99,
+    "fields": {
+      "bezeichnung": "Dead Bug (Körpergewicht)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": ["Hüftbeuger"],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Rückenlage, Arme nach oben gestreckt, Beine 90° angewinkelt. Abwechselnd gegenläufig Arm und Bein ausstrecken (rechter Arm + linkes Bein). Rücken bleibt flach am Boden, Bauchspannung halten.",
+      "erstellt_am": "2024-01-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 100,
+    "fields": {
+      "bezeichnung": "Crunch (Körpergewicht)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Rückenlage, Beine angewinkelt, Füße am Boden. Oberkörper kontrolliert aufrollen (Schultern vom Boden), oben kurz halten, langsam ablassen. Fokus auf obere Bauchmuskeln.",
+      "erstellt_am": "2024-01-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 101,
+    "fields": {
+      "bezeichnung": "Reverse Crunch (Körpergewicht)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": ["Hüftbeuger"],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Rückenlage, Arme neben dem Körper. Beine angewinkelt anheben, Becken aktiv nach oben kippen. Langsam zurück ohne Schwung. Fokus auf untere Bauchmuskeln.",
       "erstellt_am": "2024-01-01T12:00:00Z"
     }
   }

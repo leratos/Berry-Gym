@@ -437,12 +437,32 @@
         const timerDisplayEl = document.getElementById('timerDisplay');
         const timerSecondsEl = document.getElementById('timerSeconds');
 
+        // Timer-State beim Laden wiederherstellen
+        window.addEventListener('load', function() {
+            const savedTimer = localStorage.getItem('restTimer');
+            if (savedTimer) {
+                const data = JSON.parse(savedTimer);
+                const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
+                const remaining = data.duration - elapsed;
+                
+                if (remaining > 0) {
+                    startRestTimer(remaining);
+                }
+            }
+        });
+
         function startRestTimer(seconds = 90) {
             stopTimer(); // Stop any existing timer
             timerSeconds = seconds;
             timerSecondsEl.innerText = timerSeconds;
             restTimerEl.style.display = 'block';
             timerDisplayEl.classList.add('timer-running');
+            
+            // Timer-State in localStorage speichern
+            localStorage.setItem('restTimer', JSON.stringify({
+                startTime: Date.now(),
+                duration: seconds
+            }));
             
             timerInterval = setInterval(() => {
                 timerSeconds--;
@@ -469,17 +489,47 @@
                 clearInterval(timerInterval);
                 timerInterval = null;
             }
+            localStorage.removeItem('restTimer');
             restTimerEl.style.display = 'none';
             timerDisplayEl.classList.remove('timer-running', 'bg-danger', 'text-white');
             timerDisplayEl.classList.add('bg-warning', 'text-dark');
         }
 
-        // Timer nach Satz-Speichern automatisch starten
-        const originalFormSubmit = setForm.onsubmit;
-        setForm.addEventListener('submit', function(e) {
-            // Nur bei neuen Sätzen (nicht beim Bearbeiten) Timer starten
-            if (setForm.action.includes('add_set') && !warmupCheck.checked) {
-                setTimeout(() => startRestTimer(90), 500);
+        // AJAX Form Submit (verhindert Page Reload & behält Stoppuhr)
+        setForm.addEventListener('submit', async function(e) {
+            e.preventDefault(); // Verhindere normalen Form Submit
+            
+            const formData = new FormData(setForm);
+            const submitBtn = setForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Speichern...';
+            
+            try {
+                const response = await fetch(setForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    myModal.hide();
+                    
+                    // Seite neu laden um Sätze anzuzeigen (aber ohne die Stoppuhr zu stoppen)
+                    location.reload();
+                } else {
+                    alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Speichern';
+                }
+            } catch (error) {
+                console.error('Fehler beim Speichern:', error);
+                alert('Fehler beim Speichern. Bitte versuche es erneut.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Speichern';
             }
         });
     </script>

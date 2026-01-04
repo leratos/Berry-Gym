@@ -343,6 +343,8 @@ def training_start(request, plan_id=None):
     
     if plan_id:
         plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        training.plan = plan
+        training.save()
         # Wir gehen alle Übungen im Plan durch
         for plan_uebung in plan.uebungen.all().order_by('reihenfolge'):
             uebung = plan_uebung.uebung
@@ -390,9 +392,18 @@ def training_session(request, training_id):
     # Sortieren für Gruppierung: Erst Muskelgruppe, dann Übungsname
     uebungen = Uebung.objects.all().order_by('muskelgruppe', 'bezeichnung')
     
-    # WICHTIG: Damit 'regroup' im Template klappt, müssen wir nach Übung sortieren!
-    # Wir sortieren nach: Erstellungs-Reihenfolge der Übung im Training (damit die, die du als erstes gemacht hast, oben bleibt)
-    saetze = training.saetze.all().order_by('uebung__bezeichnung', 'satz_nr')
+    # Sortierung nach Plan-Reihenfolge wenn Training aus Plan gestartet wurde
+    if training.plan:
+        # Erstelle eine Map von uebung_id zu reihenfolge aus dem Plan
+        plan_reihenfolge = {pu.uebung_id: pu.reihenfolge for pu in training.plan.uebungen.all()}
+        # Hole alle Sätze und sortiere nach Plan-Reihenfolge, dann Satz-Nummer
+        saetze = sorted(
+            training.saetze.all(),
+            key=lambda s: (plan_reihenfolge.get(s.uebung_id, 999), s.satz_nr)
+        )
+    else:
+        # Fallback: alphabetisch nach Übungsname
+        saetze = training.saetze.all().order_by('uebung__bezeichnung', 'satz_nr')
 
     # Volumen berechnen (nur Arbeitssätze, keine Warmups)
     total_volume = 0
@@ -469,6 +480,10 @@ def add_set(request, training_id):
                     f'🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)'
                 )
         
+        # AJAX Request? Sende JSON
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'satz_id': neuer_satz.id})
+        
         return redirect('training_session', training_id=training_id)
     
     return redirect('training_session', training_id=training_id)
@@ -497,6 +512,10 @@ def update_set(request, set_id):
         satz.ist_aufwaermsatz = request.POST.get('ist_aufwaermsatz') == 'on'
         satz.save()
         
+        # AJAX Request? Sende JSON
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True})
+    
     return redirect('training_session', training_id=training_id)
 
 @login_required
@@ -791,13 +810,22 @@ def training_stats(request):
     
     # Muskelgruppen-Balance
     muskelgruppen_stats = {}
+    muskelgruppen_stats_code = {}  # Für SVG-Mapping
     for training in trainings:
         for satz in training.saetze.filter(ist_aufwaermsatz=False):
-            mg = satz.uebung.get_muskelgruppe_display()
-            if mg not in muskelgruppen_stats:
-                muskelgruppen_stats[mg] = {'saetze': 0, 'volumen': 0}
-            muskelgruppen_stats[mg]['saetze'] += 1
-            muskelgruppen_stats[mg]['volumen'] += float(satz.gewicht) * satz.wiederholungen
+            mg_display = satz.uebung.get_muskelgruppe_display()
+            mg_code = satz.uebung.muskelgruppe
+            volumen = float(satz.gewicht) * satz.wiederholungen
+            
+            if mg_display not in muskelgruppen_stats:
+                muskelgruppen_stats[mg_display] = {'saetze': 0, 'volumen': 0}
+            muskelgruppen_stats[mg_display]['saetze'] += 1
+            muskelgruppen_stats[mg_display]['volumen'] += volumen
+            
+            # Für SVG-Mapping
+            if mg_code not in muskelgruppen_stats_code:
+                muskelgruppen_stats_code[mg_code] = 0
+            muskelgruppen_stats_code[mg_code] += volumen
     
     # Sortieren nach Volumen
     muskelgruppen_sorted = sorted(
@@ -808,6 +836,45 @@ def training_stats(request):
     
     mg_labels = [mg[0] for mg in muskelgruppen_sorted]
     mg_data = [round(mg[1]['volumen'], 1) for mg in muskelgruppen_sorted]
+    
+    # SVG-Mapping: MUSKELGRUPPEN Code → Volumen
+    # Normalisiere Volumen für Farb-Intensität (0-1)
+    max_volumen = max(muskelgruppen_stats_code.values()) if muskelgruppen_stats_code else 1
+    muscle_intensity = {}
+    for code, volumen in muskelgruppen_stats_code.items():
+        muscle_intensity[code] = round(volumen / max_volumen, 2)
+    
+    # Muscle mapping für SVG (gleich wie in muscle_map view)
+    muscle_mapping = {
+        'BRUST': ['front_chest_left', 'front_chest_right'],
+        'TRIZEPS': ['back_triceps_left', 'back_triceps_right'],
+        'BIZEPS': ['front_biceps_left', 'front_biceps_right'],
+        'SCHULTER_VORN': ['front_delt_left', 'front_delt_right'],
+        'SCHULTER_SEIT': ['front_delt_left', 'front_delt_right'],  # Approximation
+        'SCHULTER_HINT': ['back_delt_left', 'back_delt_right'],
+        'RUECKEN_LAT': ['back_lat_left', 'back_lat_right'],
+        'RUECKEN_TRAPEZ': ['back_trap_left', 'back_trap_right'],
+        'RUECKEN_UNTEN': ['back_lower_back'],
+        'BEINE_QUAD': ['front_quad_left', 'front_quad_right'],
+        'BEINE_HAM': ['back_ham_left', 'back_ham_right'],
+        'WADEN': ['back_calves_left', 'back_calves_right'],
+        'PO': ['back_glutes_left', 'back_glutes_right'],
+        'BAUCH': ['front_abs'],
+        'UNTERARME': ['front_forearm_left', 'front_forearm_right'],
+        'ADDUKTOREN': ['front_quad_left', 'front_quad_right'],  # Approximation
+        'ABDUKTOREN': ['back_glutes_left', 'back_glutes_right'],  # Approximation
+    }
+    
+    # Erstelle JSON-Daten für SVG-Färbung
+    svg_muscle_data = {}
+    for code, intensity in muscle_intensity.items():
+        svg_ids = muscle_mapping.get(code, [])
+        for svg_id in svg_ids:
+            # Intensität akkumulieren falls mehrere Codes auf gleiche SVG-IDs mappen
+            if svg_id in svg_muscle_data:
+                svg_muscle_data[svg_id] = min(1.0, svg_muscle_data[svg_id] + intensity)
+            else:
+                svg_muscle_data[svg_id] = intensity
     
     # Gesamtstatistiken
     gesamt_volumen = sum(volumen_data)
@@ -877,6 +944,7 @@ def training_stats(request):
         'muskelgruppen_stats': muskelgruppen_sorted,
         'heatmap_data_json': json.dumps(heatmap_data),
         'deload_warnings': deload_warnings,
+        'svg_muscle_data_json': json.dumps(svg_muscle_data),
     }
     return render(request, 'core/training_stats.html', context)
 
@@ -1096,4 +1164,134 @@ def uebungen_auswahl(request):
         'uebungen_nach_gruppe': uebungen_nach_gruppe,
     }
     return render(request, 'core/uebungen_auswahl.html', context)
-    return render(request, 'core/training_finish.html', context)
+
+
+@login_required
+def muscle_map(request):
+    """Interaktive Muscle-Map mit klickbaren Muskelgruppen"""
+    # Filter nach Muskelgruppe (optional)
+    selected_group = request.GET.get('muskelgruppe', None)
+    
+    if selected_group:
+        uebungen = Uebung.objects.filter(muskelgruppe=selected_group).order_by('bezeichnung')
+        group_label = dict(MUSKELGRUPPEN).get(selected_group, selected_group)
+    else:
+        uebungen = None
+        group_label = None
+    
+    # Mapping: SVG-ID -> Muskelgruppe
+    muscle_mapping = {
+        'BRUST': ['front_chest_left', 'front_chest_right'],
+        'SCHULTER_VORN': ['front_delt_left', 'front_delt_right'],
+        'SCHULTER_SEIT': ['front_delt_left', 'front_delt_right'],  # Approximation
+        'SCHULTER_HINT': ['back_delt_left', 'back_delt_right'],
+        'BIZEPS': ['front_biceps_left', 'front_biceps_right'],
+        'TRIZEPS': ['back_triceps_left', 'back_triceps_right'],
+        'UNTERARME': ['front_forearm_left', 'front_forearm_right', 'back_forearm_left', 'back_forearm_right'],
+        'RUECKEN_LAT': ['back_lat_left', 'back_lat_right'],
+        'RUECKEN_TRAPEZ': ['back_traps_left', 'back_traps_right', 'front_traps_left', 'front_traps_right'],
+        'RUECKEN_OBERER': ['back_midback'],
+        'RUECKEN_UNTEN': ['back_erectors_left', 'back_erectors_right'],
+        'BAUCH': ['front_abs_upper', 'front_abs_mid', 'front_abs_lower', 'front_oblique_left', 'front_oblique_right'],
+        'BEINE_QUAD': ['front_quad_left', 'front_quad_right'],
+        'BEINE_HAM': ['back_hamstring_left', 'back_hamstring_right'],
+        'PO': ['back_glute_left', 'back_glute_right'],
+        'WADEN': ['front_calf_left', 'front_calf_right', 'back_calf_left', 'back_calf_right'],
+        'ADDUKTOREN': ['front_adductor_left', 'front_adductor_right'],
+        'ABDUKTOREN': [],  # Nicht direkt in SVG dargestellt
+        'GANZKOERPER': [],
+    }
+    
+    context = {
+        'uebungen': uebungen,
+        'selected_group': selected_group,
+        'group_label': group_label,
+        'muscle_mapping': json.dumps(muscle_mapping),
+        'muskelgruppen': MUSKELGRUPPEN,
+    }
+    return render(request, 'core/muscle_map.html', context)
+
+
+@login_required
+def uebung_detail(request, uebung_id):
+    """Detail-Ansicht einer Übung mit anatomischer Visualisierung"""
+    uebung = get_object_or_404(Uebung, id=uebung_id)
+    
+    # Mapping: Muskelgruppe -> SVG-IDs
+    muscle_mapping = {
+        'BRUST': ['front_chest_left', 'front_chest_right'],
+        'SCHULTER_VORN': ['front_delt_left', 'front_delt_right'],
+        'SCHULTER_SEIT': ['front_delt_left', 'front_delt_right'],
+        'SCHULTER_HINT': ['back_delt_left', 'back_delt_right'],
+        'BIZEPS': ['front_biceps_left', 'front_biceps_right'],
+        'TRIZEPS': ['back_triceps_left', 'back_triceps_right'],
+        'UNTERARME': ['front_forearm_left', 'front_forearm_right', 'back_forearm_left', 'back_forearm_right'],
+        'RUECKEN_LAT': ['back_lat_left', 'back_lat_right'],
+        'RUECKEN_TRAPEZ': ['back_traps_left', 'back_traps_right', 'front_traps_left', 'front_traps_right'],
+        'RUECKEN_OBERER': ['back_midback'],
+        'RUECKEN_UNTEN': ['back_erectors_left', 'back_erectors_right'],
+        'BAUCH': ['front_abs_upper', 'front_abs_mid', 'front_abs_lower', 'front_oblique_left', 'front_oblique_right'],
+        'BEINE_QUAD': ['front_quad_left', 'front_quad_right'],
+        'BEINE_HAM': ['back_hamstring_left', 'back_hamstring_right'],
+        'PO': ['back_glute_left', 'back_glute_right'],
+        'WADEN': ['front_calf_left', 'front_calf_right', 'back_calf_left', 'back_calf_right'],
+        'ADDUKTOREN': ['front_adductor_left', 'front_adductor_right'],
+        'ABDUKTOREN': [],
+        'GANZKOERPER': [],
+    }
+    
+    # Mapping: Text-Bezeichnung -> Muskelgruppen-Code
+    text_to_code = {
+        'Trizeps': 'TRIZEPS',
+        'Bizeps': 'BIZEPS',
+        'Brust': 'BRUST',
+        'Schulter - Vordere': 'SCHULTER_VORN',
+        'Schulter - Seitliche': 'SCHULTER_SEIT',
+        'Schulter - Hintere': 'SCHULTER_HINT',
+        'Bauch': 'BAUCH',
+        'Po': 'PO',
+        'Unterarme': 'UNTERARME',
+        'Rücken - Nacken/Trapez': 'RUECKEN_TRAPEZ',
+        'Rücken - Breiter Muskel': 'RUECKEN_LAT',
+        'Rücken - Latissimus': 'RUECKEN_LAT',
+        'Unterer Rücken': 'RUECKEN_UNTEN',
+        'Beine - Quadrizeps': 'BEINE_QUAD',
+        'Beine - Hamstrings': 'BEINE_HAM',
+        'Waden': 'WADEN',
+        'Adduktoren': 'ADDUKTOREN',
+    }
+    
+    # SVG-IDs für Hauptmuskel (rot)
+    main_muscle_ids = muscle_mapping.get(uebung.muskelgruppe, [])
+    
+    # SVG-IDs für Hilfsmuskeln (blau)
+    helper_muscle_ids = []
+    if uebung.hilfsmuskeln:
+        # Wenn hilfsmuskeln ein String ist, splitten wir ihn
+        if isinstance(uebung.hilfsmuskeln, str):
+            hilfs_texte = [h.strip() for h in uebung.hilfsmuskeln.split(',')]
+        else:
+            hilfs_texte = uebung.hilfsmuskeln
+        
+        for hilfs_text in hilfs_texte:
+            # Text bereinigen (z.B. "(Stabilisierung)" entfernen)
+            hilfs_text_clean = re.sub(r'\([^)]*\)', '', hilfs_text).strip()
+            # Code nachschlagen
+            code = text_to_code.get(hilfs_text_clean)
+            if code:
+                helper_muscle_ids.extend(muscle_mapping.get(code, []))
+    
+    # Statistiken zur Übung
+    alle_saetze = Satz.objects.filter(einheit__user=request.user, uebung=uebung, ist_aufwaermsatz=False)
+    max_gewicht = alle_saetze.aggregate(Max('gewicht'))['gewicht__max'] or 0
+    total_volumen = sum(float(s.gewicht) * s.wiederholungen for s in alle_saetze)
+    
+    context = {
+        'uebung': uebung,
+        'main_muscle_ids': json.dumps(main_muscle_ids),
+        'helper_muscle_ids': json.dumps(helper_muscle_ids),
+        'max_gewicht': max_gewicht,
+        'total_volumen': round(total_volumen, 1),
+        'anzahl_saetze': alle_saetze.count(),
+    }
+    return render(request, 'core/uebung_detail.html', context)

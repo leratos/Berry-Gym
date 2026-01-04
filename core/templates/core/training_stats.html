@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="de" data-bs-theme="dark">
   <head>
@@ -111,7 +112,27 @@
                     <h6 class="text-secondary text-uppercase mb-3">
                         <i class="bi bi-diagram-3 me-2"></i>Muskelgruppen-Balance
                     </h6>
-                    <canvas id="muskelgruppenChart" style="max-height: 350px;"></canvas>
+                    <div class="row">
+                        <!-- Chart auf der linken Seite -->
+                        <div class="col-md-7">
+                            <canvas id="muskelgruppenChart" style="max-height: 400px;"></canvas>
+                        </div>
+                        <!-- SVG auf der rechten Seite -->
+                        <div class="col-md-5">
+                            <div class="text-center mb-2">
+                                <small class="text-muted">Belastungsverteilung</small>
+                            </div>
+                            <div id="svgBalanceWrapper" style="max-width: 100%; height: 400px; overflow: hidden;">
+                                <!-- SVG wird hier dynamisch geladen -->
+                            </div>
+                            <div class="text-center mt-2">
+                                <small class="text-muted">
+                                    <span style="display: inline-block; width: 40px; height: 12px; background: linear-gradient(to right, #d9d9d9, #ff0000); border: 1px solid #666; border-radius: 2px; vertical-align: middle;"></span>
+                                    <span class="ms-2">Niedrig → Hoch</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -301,6 +322,58 @@
         
         html += '</div>';
         heatmapContainer.innerHTML = html;
+
+        // SVG Balance Visualization
+        const svgMuscleData = {{ svg_muscle_data_json|safe }};
+        
+        // Lade SVG
+        fetch("{% static 'core/images/muscle_map.svg' %}")
+            .then(response => response.text())
+            .then(svgText => {
+                const wrapper = document.getElementById('svgBalanceWrapper');
+                wrapper.innerHTML = svgText;
+                
+                const svg = wrapper.querySelector('svg');
+                if (svg) {
+                    svg.style.width = '100%';
+                    svg.style.height = '100%';
+                    svg.id = 'balanceSvg';
+                    
+                    // Färbe Muskeln basierend auf Intensität (grau → rot)
+                    Object.keys(svgMuscleData).forEach(muscleId => {
+                        const element = svg.getElementById(muscleId);
+                        if (element) {
+                            const intensity = svgMuscleData[muscleId]; // 0-1
+                            
+                            // Farbgradient: Grau (d9d9d9) bei 0 → Rot (ff0000) bei 1
+                            // Berechne RGB-Werte
+                            const grayR = 217, grayG = 217, grayB = 217;
+                            const redR = 255, redG = 0, redB = 0;
+                            
+                            const r = Math.round(grayR + (redR - grayR) * intensity);
+                            const g = Math.round(grayG + (redG - grayG) * intensity);
+                            const b = Math.round(grayB + (redB - grayB) * intensity);
+                            
+                            const color = `rgb(${r}, ${g}, ${b})`;
+                            
+                            element.style.fill = color;
+                            element.style.stroke = color;
+                            element.style.strokeWidth = intensity > 0.3 ? '3' : '2';
+                            element.style.opacity = intensity > 0 ? '1' : '0.5';
+                        }
+                    });
+                    
+                    // Alle nicht trainierten Muskeln grau lassen
+                    svg.querySelectorAll('.muscle').forEach(el => {
+                        if (!svgMuscleData[el.id]) {
+                            el.style.fill = '#d9d9d9';
+                            el.style.stroke = '#d9d9d9';
+                            el.style.opacity = '0.3';
+                        }
+                    });
+                }
+            })
+            .catch(error => console.error('Fehler beim Laden der SVG:', error));
     </script>
     {% endif %}
   </body>
