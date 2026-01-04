@@ -54,9 +54,30 @@
             Training #{{ training.id }}
         </span>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-warning border-0" onclick="startRestTimer(90)" title="Pausenuhr starten">
-                <i class="bi bi-stopwatch"></i>
-            </button>
+            <!-- Rest Timer Dropdown -->
+            <div class="btn-group">
+                <button class="btn btn-outline-warning border-0" onclick="startRestTimer()" title="Pausenuhr starten">
+                    <i class="bi bi-stopwatch"></i>
+                </button>
+                <button class="btn btn-outline-warning border-0 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="Timer-Dauer wählen">
+                    <span class="visually-hidden">Timer-Dauer</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                    <li><h6 class="dropdown-header">Pausendauer</h6></li>
+                    <li><a class="dropdown-item" href="#" onclick="setTimerDuration(60); return false;">
+                        <i class="bi bi-clock"></i> 60 Sekunden
+                    </a></li>
+                    <li><a class="dropdown-item active" href="#" onclick="setTimerDuration(90); return false;">
+                        <i class="bi bi-clock"></i> 90 Sekunden
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setTimerDuration(120); return false;">
+                        <i class="bi bi-clock"></i> 120 Sekunden
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setTimerDuration(180); return false;">
+                        <i class="bi bi-clock"></i> 180 Sekunden
+                    </a></li>
+                </ul>
+            </div>
             <a class="btn btn-success border-0 fw-bold" href="{% url 'finish_training' training.id %}">
                 <i class="bi bi-check-circle"></i> Fertig
             </a>
@@ -129,11 +150,16 @@
                                     {% if satz.rpe %}
                                         <small class="text-muted ms-1">@{{ satz.rpe }}</small>
                                     {% endif %}
+                                    {% if satz.notiz %}
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-chat-left-text me-1"></i>{{ satz.notiz|truncatewords:10 }}
+                                        </div>
+                                    {% endif %}
                                 </td>
                                 <td class="text-end pe-3 text-nowrap">
                                     <!-- EDIT BUTTON -->
                                     <button class="btn btn-link text-info opacity-75 text-decoration-none px-2" 
-                                            onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}')">
+                                            onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}', '{{ satz.notiz|default_if_none:''|escapejs }}')">
                                         <i class="bi bi-pencil-fill"></i>
                                     </button>
                                     
@@ -230,6 +256,15 @@
                     </div>
                 </div>
 
+                <!-- Notiz -->
+                <div class="mt-3">
+                    <label class="form-label text-secondary">
+                        <i class="bi bi-pencil-square me-1"></i>Notiz (optional)
+                    </label>
+                    <textarea name="notiz" id="notizInput" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', 'Neue Schuhe'..." maxlength="500"></textarea>
+                    <small class="text-muted">Max. 500 Zeichen</small>
+                </div>
+
                 <!-- Progressive Overload Hinweis -->
                 <div id="progressionHint" class="alert alert-info mt-3 py-2 px-3" style="display: none;">
                     <small>
@@ -303,6 +338,7 @@
         const wdhInput = document.getElementById('wdhInput');
         const rpeInput = document.getElementById('rpeInput');
         const warmupCheck = document.getElementById('warmupCheck');
+        const notizInput = document.getElementById('notizInput');
         const progressionHint = document.getElementById('progressionHint');
         const progressionText = document.getElementById('progressionText');
 
@@ -348,7 +384,7 @@
             muscleFilter.disabled = false;
             
             // Reset
-            gewichtInput.value = ""; wdhInput.value = ""; rpeInput.value = ""; warmupCheck.checked = false;
+            gewichtInput.value = ""; wdhInput.value = ""; rpeInput.value = ""; warmupCheck.checked = false; notizInput.value = "";
             progressionHint.style.display = 'none';
             
             if (uebungId) {
@@ -366,7 +402,7 @@
         }
 
         // MODUS 2: SATZ BEARBEITEN
-        function openEditModal(setId, uebungId, gewicht, wdh, rpe, isWarmup) {
+        function openEditModal(setId, uebungId, gewicht, wdh, rpe, isWarmup, notiz) {
             modalTitle.innerText = "Satz bearbeiten";
             // URL dynamisch anpassen
             let updateUrl = "{% url 'update_set' 0 %}".replace('0', setId);
@@ -387,6 +423,7 @@
             gewichtInput.value = gewicht.replace(',', '.');
             wdhInput.value = wdh;
             rpeInput.value = rpe;
+            notizInput.value = notiz || '';
             warmupCheck.checked = (isWarmup === 'true');
             
             // Kein Progression Hint beim Bearbeiten
@@ -433,12 +470,21 @@
         // ========== REST TIMER ==========
         let timerInterval = null;
         let timerSeconds = 90;
+        let timerDuration = 90; // Standard-Dauer
         const restTimerEl = document.getElementById('restTimer');
         const timerDisplayEl = document.getElementById('timerDisplay');
         const timerSecondsEl = document.getElementById('timerSeconds');
 
-        // Timer-State beim Laden wiederherstellen
+        // Timer-Dauer und State beim Laden wiederherstellen
         window.addEventListener('load', function() {
+            // Gespeicherte Timer-Dauer laden
+            const savedDuration = localStorage.getItem('timerDuration');
+            if (savedDuration) {
+                timerDuration = parseInt(savedDuration);
+                updateDropdownActive(timerDuration);
+            }
+            
+            // Laufenden Timer wiederherstellen
             const savedTimer = localStorage.getItem('restTimer');
             if (savedTimer) {
                 const data = JSON.parse(savedTimer);
@@ -451,9 +497,29 @@
             }
         });
 
-        function startRestTimer(seconds = 90) {
+        function setTimerDuration(seconds) {
+            timerDuration = seconds;
+            localStorage.setItem('timerDuration', seconds);
+            updateDropdownActive(seconds);
+        }
+
+        function updateDropdownActive(duration) {
+            // Entferne alle active-Klassen
+            document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            // Setze active für gewählte Dauer
+            document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
+                const onclick = item.getAttribute('onclick');
+                if (onclick && onclick.includes(`setTimerDuration(${duration})`)) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        function startRestTimer(seconds = null) {
             stopTimer(); // Stop any existing timer
-            timerSeconds = seconds;
+            timerSeconds = seconds !== null ? seconds : timerDuration;
             timerSecondsEl.innerText = timerSeconds;
             restTimerEl.style.display = 'block';
             timerDisplayEl.classList.add('timer-running');
@@ -461,7 +527,7 @@
             // Timer-State in localStorage speichern
             localStorage.setItem('restTimer', JSON.stringify({
                 startTime: Date.now(),
-                duration: seconds
+                duration: timerSeconds
             }));
             
             timerInterval = setInterval(() => {

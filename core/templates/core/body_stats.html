@@ -106,6 +106,7 @@
                                 <th>BMI</th>
                                 <th>FFMI</th>
                                 <th>KFA</th>
+                                <th class="text-end">Aktionen</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -116,6 +117,14 @@
                                 <td>{{ wert.bmi|default:"--" }}</td>
                                 <td>{{ wert.ffmi|default:"--" }}</td>
                                 <td>{{ wert.koerperfett_prozent|default:"--" }}{% if wert.koerperfett_prozent %}%{% endif %}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'edit_koerperwert' wert.id %}" class="btn btn-sm btn-outline-primary border-0" title="Bearbeiten">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger border-0" onclick="confirmDelete({{ wert.id }})" title="Löschen">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -213,6 +222,34 @@
             },
             options: chartDefaults
         });
+    </script>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Körperwert löschen</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Möchtest du diesen Körperwert wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Löschen</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function confirmDelete(wertId) {
+            const deleteUrl = "{% url 'delete_koerperwert' 0 %}".replace('0', wertId);
+            document.getElementById('confirmDeleteBtn').href = deleteUrl;
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            deleteModal.show();
+        }
     </script>
     {% endif %}
   </body>

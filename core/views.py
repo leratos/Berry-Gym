@@ -430,6 +430,7 @@ def add_set(request, training_id):
         wdh = request.POST.get('wiederholungen')
         rpe = request.POST.get('rpe')
         is_warmup = request.POST.get('ist_aufwaermsatz') == 'on'
+        notiz = request.POST.get('notiz', '').strip()
         
         uebung = get_object_or_404(Uebung, id=uebung_id)
         
@@ -445,7 +446,8 @@ def add_set(request, training_id):
             gewicht=gewicht,
             wiederholungen=wdh,
             ist_aufwaermsatz=is_warmup,
-            rpe=rpe if rpe else None
+            rpe=rpe if rpe else None,
+            notiz=notiz if notiz else None
         )
         
         # PR-Check (nur für Arbeitssätze)
@@ -510,6 +512,8 @@ def update_set(request, set_id):
         satz.wiederholungen = request.POST.get('wiederholungen')
         satz.rpe = request.POST.get('rpe') if request.POST.get('rpe') else None
         satz.ist_aufwaermsatz = request.POST.get('ist_aufwaermsatz') == 'on'
+        notiz = request.POST.get('notiz', '').strip()
+        satz.notiz = notiz if notiz else None
         satz.save()
         
         # AJAX Request? Sende JSON
@@ -598,6 +602,82 @@ def body_stats(request):
         'aenderung': round(float(werte.last().gewicht - werte.first().gewicht), 1) if werte.count() > 1 else 0,
     }
     return render(request, 'core/body_stats.html', context)
+
+@login_required
+def edit_koerperwert(request, wert_id):
+    """Körperwert bearbeiten."""
+    wert = get_object_or_404(KoerperWerte, id=wert_id, user=request.user)
+    
+    if request.method == 'POST':
+        # Update fields
+        wert.gewicht = request.POST.get('gewicht')
+        wert.groesse_cm = request.POST.get('groesse_cm') or None
+        wert.koerperfett_prozent = request.POST.get('koerperfett_prozent') or None
+        wert.fettmasse_kg = request.POST.get('fettmasse_kg') or None
+        wert.muskelmasse_kg = request.POST.get('muskelmasse_kg') or None
+        wert.save()
+        messages.success(request, 'Körperwert erfolgreich aktualisiert!')
+        return redirect('body_stats')
+    
+    context = {
+        'wert': wert,
+    }
+    return render(request, 'core/edit_koerperwert.html', context)
+
+@login_required
+def delete_koerperwert(request, wert_id):
+    """Körperwert löschen."""
+    wert = get_object_or_404(KoerperWerte, id=wert_id, user=request.user)
+    wert.delete()
+    messages.success(request, 'Körperwert erfolgreich gelöscht!')
+    return redirect('body_stats')
+
+@login_required
+def toggle_favorite(request, uebung_id):
+    """Toggle Favoriten-Status einer Übung."""
+    uebung = get_object_or_404(Uebung, id=uebung_id)
+    
+    if request.user in uebung.favoriten.all():
+        uebung.favoriten.remove(request.user)
+        is_favorite = False
+    else:
+        uebung.favoriten.add(request.user)
+        is_favorite = True
+    
+    return JsonResponse({'is_favorite': is_favorite})
+
+@login_required
+def export_training_csv(request):
+    """Export aller Trainings-Daten als CSV."""
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="training_export.csv"'
+    response.write('\ufeff')  # UTF-8 BOM für Excel
+    
+    writer = csv.writer(response)
+    writer.writerow(['Datum', 'Übung', 'Muskelgruppe', 'Satz Nr.', 'Gewicht (kg)', 'Wiederholungen', 'RPE', 'Volumen (kg)', 'Aufwärmsatz', 'Notiz'])
+    
+    trainings = Trainingseinheit.objects.filter(user=request.user).prefetch_related('saetze__uebung').order_by('-datum')
+    
+    for training in trainings:
+        for satz in training.saetze.all():
+            volumen = float(satz.gewicht) * satz.wiederholungen if satz.gewicht else 0
+            writer.writerow([
+                training.datum.strftime('%d.%m.%Y'),
+                satz.uebung.bezeichnung,
+                satz.uebung.get_muskelgruppe_display(),
+                satz.satznummer,
+                float(satz.gewicht) if satz.gewicht else '',
+                satz.wiederholungen,
+                satz.rpe if satz.rpe else '',
+                round(volumen, 1),
+                'Ja' if satz.ist_aufwaermsatz else 'Nein',
+                satz.notiz or ''
+            ])
+    
+    return response
 
 def training_list(request):
     """Zeigt eine Liste aller vergangenen Trainings."""
@@ -1146,8 +1226,46 @@ def uebungen_auswahl(request):
         # Hilfsmuskelgruppen-Labels abrufen
         hilfs_labels = []
         if uebung.hilfsmuskeln:
-            for hm in uebung.hilfsmuskeln:
-                hilfs_labels.append(dict(MUSKELGRUPPEN).get(hm, hm))
+            # Handle string format (comma-separated)
+            if isinstance(uebung.hilfsmuskeln, str):
+                hilfs_texte = [h.strip() for h in uebung.hilfsmuskeln.split(',')]
+            else:
+                hilfs_texte = uebung.hilfsmuskeln
+            
+            # Text-to-Code mapping (same as in uebung_detail)
+            text_to_code = {
+                'Trizeps': 'TRIZEPS',
+                'Bizeps': 'BIZEPS',
+                'Brust': 'BRUST',
+                'Schulter - Vordere': 'SCHULTER_VORN',
+                'Schulter - Seitliche': 'SCHULTER_SEIT',
+                'Schulter - Hintere': 'SCHULTER_HINT',
+                'Bauch': 'BAUCH',
+                'Po': 'PO',
+                'Unterarme': 'UNTERARME',
+                'Rücken - Nacken/Trapez': 'RUECKEN_TRAPEZ',
+                'Rücken - Breiter Muskel': 'RUECKEN_LAT',
+                'Rücken - Latissimus': 'RUECKEN_LAT',
+                'Unterer Rücken': 'RUECKEN_UNTEN',
+                'Beine - Quadrizeps': 'BEINE_QUAD',
+                'Beine - Hamstrings': 'BEINE_HAM',
+                'Waden': 'WADEN',
+                'Adduktoren': 'ADDUKTOREN',
+            }
+            
+            import re
+            for hilfs_text in hilfs_texte:
+                # Clean text (remove parentheses content)
+                hilfs_text_clean = re.sub(r'\([^)]*\)', '', hilfs_text).strip()
+                # Try to get code
+                code = text_to_code.get(hilfs_text_clean)
+                if code:
+                    # Get display label for the code
+                    label = dict(MUSKELGRUPPEN).get(code, hilfs_text_clean)
+                    hilfs_labels.append(label)
+                else:
+                    # Fallback: use text as-is
+                    hilfs_labels.append(hilfs_text_clean)
         
         uebungen_nach_gruppe[mg_label].append({
             'id': uebung.id,

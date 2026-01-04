@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
 **Stand:** 03.01.2026  
-**Version:** 0.2.0
+**Version:** 0.3.0
 
 ---
 
@@ -87,6 +87,7 @@
 - [x] **Wöchentliches Volumen** (letzte 12 Wochen als Bar-Chart)
 - [x] **Wöchentliches Volumen im Dashboard** (aktuelle Woche + letzte 3 Wochen)
 - [x] **Muskelgruppen-Balance Analyse** (Horizontal Bar Chart)
+- [x] **Muskelgruppen-Balance SVG-Visualisierung** (Anatomische Darstellung mit Farbgradient grau→rot)
 - [x] **Trainings-Heatmap** (90-Tage Kalender-Aktivität)
 - [x] **Performance Form-Index** (0-100 Score aus Frequenz, RPE, Volumen, Konsistenz)
 - [x] **Durchschnittliches RPE pro Übung** (mit Trend-Anzeige: improving/stable/declining)
@@ -114,34 +115,28 @@
 
 ---
 
-## 📅 PHASE 4: Ernährung & Lifestyle (0% - OFFEN)
+## ✅ PHASE 3.5: Anatomische Visualisierung (100% KOMPLETT)
 
-### Ernährungstracking
-- [ ] Makros erfassen (Protein, Carbs, Fett, Kalorien)
-- [ ] Kalorienrechner (TDEE, Ziele)
-- [ ] Mahlzeiten-Log mit Timestamp
-- [ ] Ernährungs-Dashboard
-- [ ] Gewicht-Korrelation mit Kalorien-Intake
-- [ ] Wöchentliche Durchschnitte
+### Interaktive Muskelgruppen-Map
+- [x] **SVG Anatomie-Grafik** (Vorder- & Rückseite, 50+ Muskelregionen)
+- [x] **Klickbare Muskelregionen** (Übungen nach Muskelgruppe filtern)
+- [x] **Übungs-Detail-Ansicht** (Hauptmuskel rot, Hilfsmuskeln blau)
+- [x] **Muskelgruppen-Navigation** (Quick-Select Buttons für alle MUSKELGRUPPEN)
+- [x] **Balance-Visualisierung** (SVG in Trainingsstatistik mit Farbgradient)
+- [x] **Belastungsverteilung** (Grau→Rot basierend auf Trainingsvolumen)
+- [x] **Übungsstatistiken** (Max Gewicht, Gesamt Volumen, Sätze pro Übung)
+- [x] **Text-zu-Code Mapping** (Automatische Konvertierung Hilfsmuskeln → SVG IDs)
 
-### Lifestyle-Tracking
-- [ ] Schlafqualität erfassen (1-10)
-- [ ] Schlafdauer tracken
-- [ ] Stresslevel erfassen
-- [ ] Energielevel vor/nach Training
-- [ ] Korrelations-Analyse Training ↔ Lifestyle
-- [ ] Warnung bei zu wenig Schlaf
-
-### Ernährungspläne
-- [ ] Meal-Prep Vorschläge
-- [ ] Rezepte-Datenbank
-- [ ] Favoriten-Rezepte
-- [ ] Einkaufsliste automatisch generieren
-- [ ] Makro-Ziele pro Mahlzeit
+### Visualisierungs-Features
+- [x] Color-Coding System (Rot = Hauptmuskel, Blau = Hilfsmuskel, Grau = Inaktiv)
+- [x] Hover-Effekte auf Muskelregionen
+- [x] Dynamisches SVG-Laden via Fetch API
+- [x] Responsive SVG-Darstellung
+- [x] Intensitäts-basierte Färbung (0-1 normalisiert)
 
 ---
 
-## 🚀 PHASE 5: Erweiterte Features (0% - OFFEN)
+## � PHASE 4: Erweiterte Features (0% - OFFEN)
 
 ### In-App Plan-Editor
 - [x] **Pläne in der App erstellen (ohne Admin)** ✅
@@ -153,6 +148,9 @@
 - [ ] Öffentliche Plan-Bibliothek
 
 ### Übungsdatenbank
+- [x] **Anatomische Muskelgruppen-Map** (SVG mit 50+ Regionen) ✅
+- [x] **Übungs-Detail-Ansicht mit SVG-Visualisierung** ✅
+- [x] **Muskelgruppen-Filter** ✅
 - [ ] Video-Anleitungen hochladen
 - [ ] Animationen für Übungen
 - [ ] Alternative Übungen vorschlagen
@@ -198,16 +196,16 @@
 ## 🎯 Quick Wins (Empfohlen als Nächstes)
 
 **Priorität HOCH (1-2h pro Feature):**
-- [ ] Dark/Light Mode Toggle (Theme-Switcher Button)
-- [ ] Übungs-Favoriten (Stern-Icon zum Markieren)
-- [ ] CSV Export für Trainings-Daten
-- [ ] Rest Timer Settings (60/90/120 Sek wählbar)
-- [ ] Körperwerte bearbeiten/löschen
+- [x] ~~Dark/Light Mode Toggle (Theme-Switcher Button)~~ ✅
+- [x] ~~Übungs-Favoriten (Stern-Icon zum Markieren)~~ ✅
+- [x] ~~CSV Export für Trainings-Daten~~ ✅
+- [x] ~~Rest Timer Settings (60/90/120 Sek wählbar)~~ ✅
+- [x] ~~Körperwerte bearbeiten/löschen~~ ✅
 
 **Priorität MITTEL (3-5h pro Feature):**
-- [ ] Volumen-Progression Chart (Wochen-Verlauf)
-- [ ] Heatmap für Trainingstage
-- [ ] In-App Plan-Editor (Basis-Version)
+- [x] ~~Volumen-Progression Chart (Wochen-Verlauf)~~ ✅
+- [x] ~~Heatmap für Trainingstage~~ ✅
+- [x] ~~In-App Plan-Editor (Basis-Version)~~ ✅
 - [ ] Übungs-Notizen pro Satz
 - [ ] Foto-Upload für Progress Pics
 
@@ -240,6 +238,10 @@
 - Keine CI/CD Pipeline
 - Keine Migrations-Strategie für Prod
 
+### Externe Systeme
+- **Ernährung & Lifestyle:** Wird über Samsung Uhr getrackt (Schlaf, Kalorien, Aktivität)
+- Keine API-Integration geplant - externe Daten bleiben außerhalb der App
+
 ### Performance
 - Lazy Loading für Bilder implementieren
 - Chart.js Daten cachen
@@ -253,5 +255,37 @@
 
 ---
 
+## 🎉 Neue Features in Version 0.3.0
+
+### Anatomische Visualisierung
+Die App verfügt jetzt über eine vollständige anatomische Visualisierung:
+
+1. **Interaktive Muskelgruppen-Map** (`/muscle-map/`)
+   - Klickbare SVG mit Vorder- & Rückansicht
+   - 50+ individuelle Muskelregionen
+   - Übungen nach Muskelgruppe filtern
+   - Quick-Select Buttons für alle Muskelgruppen
+
+2. **Übungs-Detail-Ansicht** (`/uebung/<id>/`)
+   - Anatomische Darstellung mit Color-Coding
+   - Hauptmuskel in Rot hervorgehoben
+   - Hilfsmuskeln in Blau hervorgehoben
+   - Statistiken: Max Gewicht, Volumen, Sätze
+
+3. **Balance-Visualisierung in Trainingsstatistik**
+   - SVG-Anatomie zeigt Belastungsverteilung
+   - Farbgradient: Grau (niedrig) → Rot (hoch)
+   - Basierend auf trainiertem Volumen
+   - Side-by-Side mit Chart-Darstellung
+
+### Technische Implementierung
+- Dynamisches SVG-Laden via Fetch API
+- Text-zu-Code Mapping für 16 Muskelgruppen
+- Intensitäts-Normalisierung (0-1)
+- RGB-Interpolation für Farbgradienten
+- Responsive Design für mobile Geräte
+
+---
+
 **Letzte Aktualisierung:** 03.01.2026  
-**Nächstes Review:** Nach Abschluss Phase 3
+**Nächstes Review:** Nach Abschluss Phase 4 (Erweiterte Features)

@@ -64,6 +64,9 @@ class Uebung(models.Model):
     bild = models.ImageField(upload_to='uebungen_bilder/', blank=True, null=True, verbose_name="Foto/Grafik")
     video_link = models.URLField(blank=True, null=True, verbose_name="YouTube Link")
 
+    # Favoriten
+    favoriten = models.ManyToManyField(User, related_name="favoriten_uebungen", blank=True)
+
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -157,6 +160,8 @@ class Satz(models.Model):
         verbose_name="RPE (1-10)",
         validators=[MinValueValidator(1.0), MaxValueValidator(10.0)]
     )
+    
+    notiz = models.TextField(blank=True, null=True, verbose_name="Notiz", max_length=500)
 
     class Meta:
         verbose_name = "Satz"

@@ -76,7 +76,15 @@
     <div class="detail-container">
         <!-- Header -->
         <div class="text-center mb-4">
-            <h1 class="display-4 text-white mb-2">{{ uebung.bezeichnung }}</h1>
+            <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+                <h1 class="display-4 text-white mb-0">{{ uebung.bezeichnung }}</h1>
+                <button class="btn btn-outline-warning btn-lg border-0 favorite-btn" 
+                        onclick="toggleFavorite({{ uebung.id }})" 
+                        id="favoriteBtn"
+                        title="Zu Favoriten hinzufügen">
+                    <i class="bi bi-star{% if request.user in uebung.favoriten.all %}-fill text-warning{% endif %}" id="favoriteIcon"></i>
+                </button>
+            </div>
             <div class="d-flex justify-content-center gap-2 mb-3">
                 <span class="badge bg-primary fs-6">{{ uebung.get_muskelgruppe_display }}</span>
                 <span class="badge bg-info fs-6">{{ uebung.get_bewegungstyp_display }}</span>
@@ -227,6 +235,29 @@
                     element.style.strokeWidth = '4';
                 }
             });
+        }
+
+        // Toggle Favorite
+        function toggleFavorite(uebungId) {
+            fetch(`/uebung/${uebungId}/toggle-favorite/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const icon = document.getElementById('favoriteIcon');
+                if (data.is_favorite) {
+                    icon.classList.remove('bi-star');
+                    icon.classList.add('bi-star-fill', 'text-warning');
+                } else {
+                    icon.classList.remove('bi-star-fill', 'text-warning');
+                    icon.classList.add('bi-star');
+                }
+            })
+            .catch(error => console.error('Fehler:', error));
         }
     </script>
 </body>

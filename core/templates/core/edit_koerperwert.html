@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Körperwert bearbeiten</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  </head>
+  <body>
+
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4">
+      <div class="container-fluid">
+        <a class="btn btn-outline-secondary border-0" href="{% url 'body_stats' %}">
+            <i class="bi bi-x-lg"></i>
+        </a>
+        <span class="navbar-text text-white fw-bold">Körperwert bearbeiten</span>
+        <div style="width: 40px;"></div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <form method="post">
+        {% csrf_token %}
+        
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Datum:</strong> {{ wert.datum|date:"d.m.Y" }}
+        </div>
+
+        <!-- Größe -->
+        <div class="mb-3">
+            <label class="form-label text-muted small">Größe (cm)</label>
+            <input type="number" name="groesse_cm" value="{{ wert.groesse_cm }}" class="form-control bg-dark text-white border-secondary" required>
+        </div>
+
+        <!-- Gewicht -->
+        <div class="card bg-dark border-secondary mb-3">
+            <div class="card-body text-center py-3">
+                <label class="form-label text-secondary text-uppercase fw-bold ls-1">Gewicht (kg)</label>
+                <div class="input-group justify-content-center">
+                    <input type="number" step="0.1" name="gewicht" value="{{ wert.gewicht }}" class="form-control form-control-lg bg-dark text-white text-center border-0 display-1 fw-bold" style="font-size: 3rem; max-width: 200px;" required autofocus>
+                </div>
+            </div>
+        </div>
+
+        <h6 class="text-secondary mb-3 ps-2 mt-4">Daten von der Uhr</h6>
+        
+        <!-- Reihe 1: Fett & Muskeln -->
+        <div class="row g-3 mb-3">
+            <div class="col-6">
+                <div class="p-3 bg-dark border border-secondary rounded-3">
+                    <label class="d-block text-muted small mb-1"><i class="bi bi-droplet-fill text-danger"></i> Fett (kg)</label>
+                    <input type="number" step="0.1" name="fettmasse_kg" value="{{ wert.fettmasse_kg|default:'' }}" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 bg-dark border border-secondary rounded-3">
+                    <label class="d-block text-muted small mb-1"><i class="bi bi-lightning-fill text-warning"></i> Muskeln (kg)</label>
+                    <input type="number" step="0.1" name="muskelmasse_kg" value="{{ wert.muskelmasse_kg|default:'' }}" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+                </div>
+            </div>
+        </div>
+
+        <!-- KFA % -->
+        <div class="mb-3">
+            <div class="p-3 bg-dark border border-secondary rounded-3">
+                <label class="d-block text-muted small mb-1">% KFA (Uhr)</label>
+                <input type="number" step="0.1" name="koerperfett_prozent" value="{{ wert.koerperfett_prozent|default:'' }}" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-5 pb-5">
+            <button type="submit" class="btn btn-primary btn-lg fw-bold p-3 rounded-4">
+                <i class="bi bi-check-lg me-2"></i>Änderungen speichern
+            </button>
+            <a href="{% url 'body_stats' %}" class="btn btn-secondary">
+                Abbrechen
+            </a>
+        </div>
+
+      </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
