@@ -126,6 +126,21 @@
 - ✅ **CSV Export** (Trainingshistorie)
 - ✅ **JSON Backup** (komplette DB-Migration)
 - ✅ **Trainings-Statistik Export** (auswählbar)
+- ✅ **PDF Export** (WeasyPrint, Trainingsreport mit Stats)
+
+### 📸 Fortschrittsfotos
+- ✅ **Foto-Upload** (mit Gewicht + Notiz)
+- ✅ **Timeline-Ansicht** (chronologisch sortiert)
+- ✅ **Foto-Details Modal** (Vollbild-Ansicht)
+- ✅ **Foto löschen** (mit Bestätigung)
+- ✅ **Privacy** (nur eigene Fotos sichtbar)
+- ✅ **Statistiken** (Gesamt, Zeitraum)
+
+### 🔗 Superset/Circuit Support
+- ✅ **Superset-Gruppen** (1-4 nummerierte Gruppen)
+- ✅ **Visuelle Kennzeichnung** (Border + Badge)
+- ✅ **Gruppierung in UI** (Farbcodierung)
+- ✅ **Dropdown im Modal** (einfache Auswahl)
 
 ---
 
@@ -388,12 +403,12 @@ python-dotenv==1.0.1
 ## 📋 Checkliste für Zukünftige Features
 
 ### Quick Wins (Recommended)
-- [ ] Sound-Einstellungen (Volume, On/Off)
-- [ ] PR-Benachrichtigungen (Toast alerts)
-- [ ] Trainings-Kalender/Heatmap
-- [ ] Fortschrittsfotos (Before/After)
-- [ ] Superset/Circuit Support
-- [ ] Exportieren als PDF
+- ✅ **Sound-Einstellungen** (Volume, On/Off) - Implementiert
+- ✅ **PR-Benachrichtigungen** (Toast alerts) - Implementiert
+- ✅ **Trainings-Kalender/Heatmap** - Implementiert
+- ✅ **Fortschrittsfotos** (Before/After) - Implementiert
+- ✅ **Superset/Circuit Support** - Implementiert
+- ✅ **PDF Export** - Implementiert
 
 ### Mittlere Priorität
 - [ ] Ernährungstracking (basic)

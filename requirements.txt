@@ -11,6 +11,10 @@ Pillow==12.1.0
 # Environment Variables
 python-dotenv==1.0.1
 
+# PDF Export (Hybrid: WeasyPrint für Linux, xhtml2pdf als Fallback)
+WeasyPrint==62.3
+xhtml2pdf==0.2.16
+
 # Optional: Redis für Caching & Sessions
 redis==5.0.1
 django-redis==5.4.0

@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Count, Max, Sum, Avg
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
-from .models import Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung, MUSKELGRUPPEN
+from django.template.loader import render_to_string
+from .models import Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung, ProgressPhoto, MUSKELGRUPPEN
 import re
 import json
 import random
@@ -285,6 +286,25 @@ def dashboard(request):
     else:
         motivation_quote = random.choice(motivational_quotes['need_motivation'])
     
+    # Trainings-Kalender Heatmap (365 Tage)
+    training_heatmap = {}
+    start_date = heute - timedelta(days=364)
+    
+    # Alle Trainings der letzten 365 Tage gruppiert nach Datum
+    trainings_by_date = Trainingseinheit.objects.filter(
+        user=request.user,
+        datum__gte=start_date
+    ).values('datum__date').annotate(count=Count('id'))
+    
+    # Dictionary mit Datum -> Anzahl Trainings erstellen
+    for entry in trainings_by_date:
+        date_str = entry['datum__date'].strftime('%Y-%m-%d')
+        training_heatmap[date_str] = entry['count']
+    
+    # JSON für Frontend vorbereiten
+    import json
+    training_heatmap_json = json.dumps(training_heatmap)
+    
     context = {
         'letztes_training': letztes_training,
         'letzter_koerperwert': letzter_koerperwert,
@@ -304,6 +324,7 @@ def dashboard(request):
         'fatigue_message': fatigue_message,
         'fatigue_warnings': fatigue_warnings,
         'motivation_quote': motivation_quote,
+        'training_heatmap_json': training_heatmap_json,
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -451,6 +472,7 @@ def add_set(request, training_id):
         )
         
         # PR-Check (nur für Arbeitssätze)
+        pr_message = None
         if not is_warmup and gewicht and wdh:
             # Berechne 1RM für diesen Satz (Epley-Formel)
             gewicht_float = float(gewicht)
@@ -471,20 +493,20 @@ def add_set(request, training_id):
                 # Neuer PR?
                 if current_1rm > max_alter_satz:
                     verbesserung = round(current_1rm - max_alter_satz, 1)
-                    messages.success(
-                        request, 
-                        f'🎉 NEUER REKORD! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM) - +{verbesserung} kg!'
-                    )
+                    pr_message = f'🎉 NEUER REKORD! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM) - +{verbesserung} kg!'
+                    messages.success(request, pr_message)
             else:
                 # Erster Satz für diese Übung = automatisch PR
-                messages.success(
-                    request,
-                    f'🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)'
-                )
+                pr_message = f'🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)'
+                messages.success(request, pr_message)
         
         # AJAX Request? Sende JSON
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'satz_id': neuer_satz.id})
+            return JsonResponse({
+                'success': True, 
+                'satz_id': neuer_satz.id,
+                'pr_message': pr_message  # Neu: PR-Message für Toast
+            })
         
         return redirect('training_session', training_id=training_id)
     
@@ -1417,3 +1439,380 @@ def uebung_detail(request, uebung_id):
         'anzahl_saetze': alle_saetze.count(),
     }
     return render(request, 'core/uebung_detail.html', context)
+
+
+@login_required
+def progress_photos(request):
+    """Zeigt alle Fortschrittsfotos des Users in einer Timeline."""
+    photos = ProgressPhoto.objects.filter(user=request.user).order_by('-datum')
+    
+    # Gewichtsverlauf für Timeline
+    koerperwerte = KoerperWerte.objects.filter(user=request.user).order_by('-datum')[:30]
+    
+    context = {
+        'photos': photos,
+        'koerperwerte': koerperwerte,
+    }
+    return render(request, 'core/progress_photos.html', context)
+
+
+@login_required
+def upload_progress_photo(request):
+    """Upload eines neuen Fortschrittsfotos."""
+    if request.method == 'POST':
+        foto = request.FILES.get('foto')
+        gewicht_kg = request.POST.get('gewicht_kg', '').strip()
+        notiz = request.POST.get('notiz', '').strip()
+        
+        if not foto:
+            messages.error(request, 'Bitte wähle ein Foto aus.')
+            return redirect('progress_photos')
+        
+        # Foto speichern
+        photo = ProgressPhoto.objects.create(
+            user=request.user,
+            foto=foto,
+            gewicht_kg=gewicht_kg if gewicht_kg else None,
+            notiz=notiz if notiz else None
+        )
+        
+        messages.success(request, 'Foto erfolgreich hochgeladen!')
+        return redirect('progress_photos')
+    
+    return redirect('progress_photos')
+
+
+@login_required
+def delete_progress_photo(request, photo_id):
+    """Löscht ein Fortschrittsfoto."""
+    photo = get_object_or_404(ProgressPhoto, id=photo_id, user=request.user)
+    
+    if request.method == 'POST':
+        # Datei löschen
+        if photo.foto:
+            photo.foto.delete()
+        
+        photo.delete()
+        messages.success(request, 'Foto gelöscht.')
+        return redirect('progress_photos')
+    
+    return redirect('progress_photos')
+
+
+@login_required
+def export_training_pdf(request):
+    """Exportiert Trainingsstatistiken als PDF (WeasyPrint auf Linux, xhtml2pdf auf Windows)."""
+    from io import BytesIO
+    
+    # Versuche WeasyPrint (beste Qualität, für Linux-Server)
+    use_weasyprint = False
+    try:
+        from weasyprint import HTML, CSS
+        use_weasyprint = True
+    except (ImportError, OSError):
+        pass
+    
+    # Fallback: xhtml2pdf (Windows-kompatibel, funktioniert immer)
+    if not use_weasyprint:
+        try:
+            from xhtml2pdf import pisa
+        except ImportError:
+            messages.error(request, 'PDF Export nicht verfügbar')
+            return redirect('training_stats')
+    
+    # Daten sammeln
+    heute = timezone.now()
+    letzte_30_tage = heute - timedelta(days=30)
+    
+    # Trainings
+    trainings = Trainingseinheit.objects.filter(
+        user=request.user,
+        datum__gte=letzte_30_tage
+    ).order_by('-datum')[:20]
+    
+    # Statistiken
+    alle_trainings = Trainingseinheit.objects.filter(user=request.user)
+    gesamt_trainings = alle_trainings.count()
+    
+    alle_saetze = Satz.objects.filter(
+        einheit__user=request.user,
+        ist_aufwaermsatz=False
+    )
+    gesamt_saetze = alle_saetze.count()
+    
+    # Volumen
+    gesamt_volumen = sum(
+        float(s.gewicht) * s.wiederholungen 
+        for s in alle_saetze if s.gewicht and s.wiederholungen
+    )
+    
+    # Top Übungen
+    top_uebungen = alle_saetze.values(
+        'uebung__bezeichnung'
+    ).annotate(
+        anzahl=Count('id'),
+        max_gewicht=Max('gewicht')
+    ).order_by('-anzahl')[:10]
+    
+    # Körperwerte
+    letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
+    
+    context = {
+        'user': request.user,
+        'datum': heute,
+        'trainings': trainings,
+        'gesamt_trainings': gesamt_trainings,
+        'gesamt_saetze': gesamt_saetze,
+        'gesamt_volumen': round(gesamt_volumen, 0),
+        'top_uebungen': top_uebungen,
+        'letzter_koerperwert': letzter_koerperwert,
+    }
+    
+    # HTML rendern
+    try:
+        html_string = render_to_string('core/training_pdf.html', context)
+    except Exception as e:
+        messages.error(request, f'Template-Fehler: {str(e)}')
+        return redirect('training_stats')
+    
+    # PDF generieren (je nach verfügbarer Library)
+    try:
+        if use_weasyprint:
+            # WeasyPrint (Linux-Server, hochwertige PDFs)
+            try:
+                css_string = '''
+                    @page { size: A4; margin: 2cm; }
+                    body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
+                    h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 10px; font-size: 24px; }
+                    h2 { color: #495057; margin-top: 25px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; font-size: 18px; }
+                    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                    th { background: #0d6efd; color: white; padding: 10px; text-align: left; }
+                    td { padding: 8px; border-bottom: 1px solid #dee2e6; }
+                    .stat-box { display: inline-block; padding: 15px 20px; margin: 10px 10px 10px 0; background: #f8f9fa; border-radius: 8px; min-width: 120px; }
+                    .stat-value { font-size: 28px; font-weight: bold; color: #0d6efd; }
+                    .stat-label { font-size: 11px; color: #6c757d; text-transform: uppercase; margin-top: 5px; }
+                '''
+                html = HTML(string=html_string)
+                pdf_file = html.write_pdf(stylesheets=[CSS(string=css_string)])
+                response = HttpResponse(pdf_file, content_type='application/pdf')
+            except Exception as weasy_error:
+                # WeasyPrint fehlgeschlagen, nutze xhtml2pdf
+                from xhtml2pdf import pisa
+                result = BytesIO()
+                pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
+                
+                if pdf.err:
+                    messages.error(request, 'Fehler beim PDF-Export')
+                    return redirect('training_stats')
+                
+                response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        else:
+            # xhtml2pdf (Windows-Fallback)
+            result = BytesIO()
+            pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
+            
+            if pdf.err:
+                messages.error(request, 'Fehler beim PDF-Export')
+                return redirect('training_stats')
+            
+            response = HttpResponse(result.getvalue(), content_type='application/pdf')
+    except Exception as e:
+        messages.error(request, f'PDF-Generierung fehlgeschlagen: {str(e)}')
+        return redirect('training_stats')
+    
+    response['Content-Disposition'] = f'attachment; filename="homegym_report_{heute.strftime("%Y%m%d")}.pdf"'
+    return response
+
+
+@login_required
+def workout_recommendations(request):
+    """Intelligente Trainingsempfehlungen basierend auf Datenanalyse."""
+    heute = timezone.now()
+    letzte_30_tage = heute - timedelta(days=30)
+    letzte_60_tage = heute - timedelta(days=60)
+    
+    # Alle Trainings des Users
+    alle_saetze = Satz.objects.filter(
+        einheit__user=request.user,
+        ist_aufwaermsatz=False
+    )
+    
+    letzte_30_tage_saetze = alle_saetze.filter(
+        einheit__datum__gte=letzte_30_tage
+    )
+    
+    letzte_60_tage_saetze = alle_saetze.filter(
+        einheit__datum__gte=letzte_60_tage
+    )
+    
+    empfehlungen = []
+    
+    # === 1. MUSKELGRUPPEN-BALANCE ANALYSE ===
+    muskelgruppen_volumen = {}
+    for gruppe_key, gruppe_name in MUSKELGRUPPEN:
+        volumen = sum(
+            float(s.gewicht) * s.wiederholungen
+            for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe=gruppe_key)
+            if s.gewicht and s.wiederholungen
+        )
+        if volumen > 0:
+            muskelgruppen_volumen[gruppe_key] = {
+                'name': gruppe_name,
+                'volumen': volumen
+            }
+    
+    if muskelgruppen_volumen:
+        # Finde untertrainierte Muskelgruppen
+        avg_volumen = sum(m['volumen'] for m in muskelgruppen_volumen.values()) / len(muskelgruppen_volumen)
+        
+        for gruppe_key, data in muskelgruppen_volumen.items():
+            if data['volumen'] < avg_volumen * 0.5:  # Weniger als 50% des Durchschnitts
+                # Finde passende Übungen
+                passende_uebungen = Uebung.objects.filter(muskelgruppe=gruppe_key)[:3]
+                
+                empfehlungen.append({
+                    'typ': 'muskelgruppe',
+                    'prioritaet': 'hoch',
+                    'titel': f'{data["name"]} untertrainiert',
+                    'beschreibung': f'Diese Muskelgruppe wurde in den letzten 30 Tagen unterdurchschnittlich trainiert (nur {int(data["volumen"])} kg Volumen vs. {int(avg_volumen)} kg Durchschnitt).',
+                    'empfehlung': f'Füge mehr Übungen für {data["name"]} hinzu',
+                    'uebungen': [{'id': u.id, 'name': u.bezeichnung} for u in passende_uebungen]
+                })
+    
+    # === 2. PUSH/PULL BALANCE ===
+    push_gruppen = ['BRUST', 'SCHULTER_VORN', 'SCHULTER_SEIT', 'TRIZEPS']
+    pull_gruppen = ['RUECKEN_LAT', 'RUECKEN_TRAPEZ', 'BIZEPS']
+    
+    push_volumen = sum(
+        float(s.gewicht) * s.wiederholungen
+        for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=push_gruppen)
+        if s.gewicht and s.wiederholungen
+    )
+    
+    pull_volumen = sum(
+        float(s.gewicht) * s.wiederholungen
+        for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=pull_gruppen)
+        if s.gewicht and s.wiederholungen
+    )
+    
+    if push_volumen > 0 and pull_volumen > 0:
+        ratio = push_volumen / pull_volumen if pull_volumen > 0 else 999
+        
+        if ratio > 1.5:  # Zu viel Push
+            empfehlungen.append({
+                'typ': 'balance',
+                'prioritaet': 'mittel',
+                'titel': 'Push/Pull Unbalance',
+                'beschreibung': f'Dein Push-Volumen ({int(push_volumen)} kg) ist {ratio:.1f}x höher als dein Pull-Volumen ({int(pull_volumen)} kg). Dies kann zu Haltungsschäden führen.',
+                'empfehlung': 'Mehr Zugübungen (Rücken, Bizeps) trainieren',
+                'uebungen': [{'id': u.id, 'name': u.bezeichnung} for u in Uebung.objects.filter(muskelgruppe__in=pull_gruppen)[:3]]
+            })
+        elif ratio < 0.67:  # Zu viel Pull
+            empfehlungen.append({
+                'typ': 'balance',
+                'prioritaet': 'mittel',
+                'titel': 'Push/Pull Unbalance',
+                'beschreibung': f'Dein Pull-Volumen ({int(pull_volumen)} kg) ist höher als dein Push-Volumen ({int(push_volumen)} kg).',
+                'empfehlung': 'Mehr Druckübungen (Brust, Schultern, Trizeps) einbauen',
+                'uebungen': [{'id': u.id, 'name': u.bezeichnung} for u in Uebung.objects.filter(muskelgruppe__in=push_gruppen)[:3]]
+            })
+    
+    # === 3. STAGNIERENDE ÜBUNGEN ===
+    haeufige_uebungen = letzte_60_tage_saetze.values('uebung').annotate(
+        anzahl=Count('id')
+    ).filter(anzahl__gte=5).values_list('uebung', flat=True)
+    
+    for uebung_id in haeufige_uebungen:
+        uebung = Uebung.objects.get(id=uebung_id)
+        
+        # Letzte 5 Trainings mit dieser Übung
+        letzte_saetze = alle_saetze.filter(uebung=uebung).order_by('-einheit__datum')[:10]
+        
+        if len(letzte_saetze) >= 5:
+            gewichte = [float(s.gewicht) for s in letzte_saetze[:5] if s.gewicht]
+            
+            if gewichte and max(gewichte) == min(gewichte):  # Kein Fortschritt
+                empfehlungen.append({
+                    'typ': 'stagnation',
+                    'prioritaet': 'niedrig',
+                    'titel': f'{uebung.bezeichnung}: Stagnation',
+                    'beschreibung': f'Bei dieser Übung gab es in den letzten 5 Trainings keinen Fortschritt (konstant {gewichte[0]} kg).',
+                    'empfehlung': 'Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren',
+                    'uebungen': []
+                })
+    
+    # === 4. TRAININGSFREQUENZ ===
+    trainings_letzte_woche = Trainingseinheit.objects.filter(
+        user=request.user,
+        datum__gte=heute - timedelta(days=7)
+    ).count()
+    
+    trainings_vorige_woche = Trainingseinheit.objects.filter(
+        user=request.user,
+        datum__gte=heute - timedelta(days=14),
+        datum__lt=heute - timedelta(days=7)
+    ).count()
+    
+    if trainings_letzte_woche == 0:
+        empfehlungen.append({
+            'typ': 'frequenz',
+            'prioritaet': 'hoch',
+            'titel': 'Keine Trainings diese Woche',
+            'beschreibung': 'Du hast diese Woche noch nicht trainiert!',
+            'empfehlung': 'Starte heute ein Training - Konsistenz ist der Schlüssel zum Erfolg!',
+            'uebungen': []
+        })
+    elif trainings_letzte_woche < trainings_vorige_woche - 1:
+        empfehlungen.append({
+            'typ': 'frequenz',
+            'prioritaet': 'mittel',
+            'titel': 'Trainingsfrequenz gesunken',
+            'beschreibung': f'Diese Woche: {trainings_letzte_woche} Trainings, letzte Woche: {trainings_vorige_woche} Trainings.',
+            'empfehlung': 'Versuche deine Konsistenz beizubehalten!',
+            'uebungen': []
+        })
+    
+    # === 5. RPE-BASIERTE EMPFEHLUNGEN ===
+    avg_rpe = letzte_30_tage_saetze.filter(rpe__isnull=False).aggregate(Avg('rpe'))['rpe__avg']
+    
+    if avg_rpe:
+        if avg_rpe < 6:
+            empfehlungen.append({
+                'typ': 'intensitaet',
+                'prioritaet': 'mittel',
+                'titel': 'Zu niedrige Trainingsintensität',
+                'beschreibung': f'Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}. Das Training könnte intensiver sein.',
+                'empfehlung': 'Steigere das Gewicht, bis du bei RPE 7-9 trainierst für optimalen Muskelaufbau',
+                'uebungen': []
+            })
+        elif avg_rpe > 9:
+            empfehlungen.append({
+                'typ': 'intensitaet',
+                'prioritaet': 'hoch',
+                'titel': 'Zu hohe Trainingsintensität',
+                'beschreibung': f'Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}. Du trainierst möglicherweise zu nah am Muskelversagen.',
+                'empfehlung': 'Reduziere das Gewicht leicht - Deload-Woche empfohlen!',
+                'uebungen': []
+            })
+    
+    # Keine Empfehlungen? Lob!
+    if not empfehlungen:
+        empfehlungen.append({
+            'typ': 'erfolg',
+            'prioritaet': 'info',
+            'titel': '✌️ Perfekt ausgewogenes Training!',
+            'beschreibung': 'Dein Training ist optimal ausbalanciert. Alle Muskelgruppen werden gleichmäßig trainiert!',
+            'empfehlung': 'Weiter so! Bleib konsistent und die Erfolge kommen.',
+            'uebungen': []
+        })
+    
+    # Sortiere nach Priorität
+    prioritaet_order = {'hoch': 0, 'mittel': 1, 'niedrig': 2, 'info': 3}
+    empfehlungen.sort(key=lambda x: prioritaet_order.get(x['prioritaet'], 99))
+    
+    context = {
+        'empfehlungen': empfehlungen,
+        'analysiert_tage': 30,
+    }
+    
+    return render(request, 'core/workout_recommendations.html', context)

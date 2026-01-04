@@ -17,9 +17,14 @@
             <i class="bi bi-arrow-left"></i> Dashboard
         </a>
         <span class="navbar-text text-white fw-bold">Statistiken</span>
-        <a href="{% url 'export_training_csv' %}" class="btn btn-outline-success border-0" title="Als CSV exportieren">
-            <i class="bi bi-download"></i>
-        </a>
+        <div>
+            <a href="{% url 'export_training_pdf' %}" class="btn btn-outline-danger border-0 me-2" title="Als PDF exportieren">
+                <i class="bi bi-file-pdf"></i> PDF
+            </a>
+            <a href="{% url 'export_training_csv' %}" class="btn btn-outline-success border-0" title="Als CSV exportieren">
+                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+            </a>
+        </div>
       </div>
     </nav>
 

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from .models import Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, MUSKELGRUPPEN
+from .models import Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, ProgressPhoto, MUSKELGRUPPEN
 
 # --- ÜBUNGEN ---
 class UebungAdminForm(forms.ModelForm):
@@ -86,3 +86,19 @@ class PlanAdmin(admin.ModelAdmin):
 class KoerperWerteAdmin(admin.ModelAdmin):
     list_display = ('datum', 'gewicht', 'bmi', 'ffmi')
     ordering = ('-datum',)
+
+
+# --- FORTSCHRITTSFOTOS ---
+@admin.register(ProgressPhoto)
+class ProgressPhotoAdmin(admin.ModelAdmin):
+    list_display = ('user', 'datum', 'gewicht_kg', 'notiz', 'foto_thumbnail')
+    list_filter = ('user', 'datum')
+    ordering = ('-datum',)
+    readonly_fields = ('erstellt_am',)
+    
+    def foto_thumbnail(self, obj):
+        if obj.foto:
+            return f'<img src="{obj.foto.url}" width="80" height="80" style="object-fit: cover; border-radius: 4px;" />'
+        return '-'
+    foto_thumbnail.short_description = 'Vorschau'
+    foto_thumbnail.allow_tags = True

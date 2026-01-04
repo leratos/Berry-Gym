@@ -34,4 +34,15 @@ urlpatterns = [
     path('training/<int:training_id>/finish/', views.finish_training, name='finish_training'),
     path('api/last-set/<int:uebung_id>/', views.get_last_set, name='get_last_set'),
     path('stats/exercise/<int:uebung_id>/', views.exercise_stats, name='exercise_stats'),
+    
+    # Progress Photos
+    path('progress-photos/', views.progress_photos, name='progress_photos'),
+    path('progress-photos/upload/', views.upload_progress_photo, name='upload_progress_photo'),
+    path('progress-photos/<int:photo_id>/delete/', views.delete_progress_photo, name='delete_progress_photo'),
+    
+    # PDF Export
+    path('export/training-pdf/', views.export_training_pdf, name='export_training_pdf'),
+    
+    # AI/ML Recommendations
+    path('recommendations/', views.workout_recommendations, name='workout_recommendations'),
 ]

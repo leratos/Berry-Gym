@@ -162,6 +162,13 @@ class Satz(models.Model):
     )
     
     notiz = models.TextField(blank=True, null=True, verbose_name="Notiz", max_length=500)
+    
+    # Superset/Circuit Support
+    superset_gruppe = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Superset-Gruppe",
+        help_text="0 = keine Gruppe, 1-9 = Gruppennummer für Supersätze"
+    )
 
     class Meta:
         verbose_name = "Satz"
@@ -201,3 +208,40 @@ class PlanUebung(models.Model):
         verbose_name = "Plan-Übung"
         verbose_name_plural = "Plan-Übungen"
         ordering = ['reihenfolge']
+
+
+class ProgressPhoto(models.Model):
+    """Fortschrittsfotos zur Dokumentation der Body Transformation."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="progress_photos")
+    foto = models.ImageField(upload_to='progress_photos/%Y/%m/', verbose_name="Foto")
+    datum = models.DateField(auto_now_add=True, verbose_name="Aufnahmedatum")
+    
+    gewicht_kg = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        blank=True, 
+        null=True, 
+        verbose_name="Gewicht (kg)",
+        help_text="Optional: Gewicht zum Zeitpunkt des Fotos"
+    )
+    
+    notiz = models.CharField(
+        max_length=200, 
+        blank=True, 
+        null=True, 
+        verbose_name="Notiz",
+        help_text="z.B. 'Start', 'Nach 3 Monaten', 'Bulking Phase'"
+    )
+    
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Fortschrittsfoto"
+        verbose_name_plural = "Fortschrittsfotos"
+        ordering = ['-datum']
+        indexes = [
+            models.Index(fields=['user', '-datum']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.datum.strftime('%d.%m.%Y')}"

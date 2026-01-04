@@ -62,7 +62,7 @@
                 <button class="btn btn-outline-warning border-0 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="Timer-Dauer wählen">
                     <span class="visually-hidden">Timer-Dauer</span>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width: 250px;">
                     <li><h6 class="dropdown-header">Pausendauer</h6></li>
                     <li><a class="dropdown-item" href="#" onclick="setTimerDuration(60); return false;">
                         <i class="bi bi-clock"></i> 60 Sekunden
@@ -76,6 +76,22 @@
                     <li><a class="dropdown-item" href="#" onclick="setTimerDuration(180); return false;">
                         <i class="bi bi-clock"></i> 180 Sekunden
                     </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Sound-Einstellungen</h6></li>
+                    <li class="px-3 py-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="soundToggle" checked onchange="toggleSound()">
+                            <label class="form-check-label" for="soundToggle">
+                                <i class="bi bi-volume-up"></i> Sound aktiv
+                            </label>
+                        </div>
+                    </li>
+                    <li class="px-3 py-2">
+                        <label for="volumeSlider" class="form-label small">
+                            <i class="bi bi-volume-down"></i> Lautstärke: <span id="volumeValue">30</span>%
+                        </label>
+                        <input type="range" class="form-range" id="volumeSlider" min="0" max="100" value="30" oninput="updateVolume(this.value)">
+                    </li>
                 </ul>
             </div>
             <a class="btn btn-success border-0 fw-bold" href="{% url 'finish_training' training.id %}">
@@ -134,9 +150,11 @@
                         </thead>
                         <tbody>
                             {% for satz in uebung_group.list %}
-                            <tr class="{% if satz.ist_aufwaermsatz %}text-muted fst-italic{% endif %}">
+                            <tr class="{% if satz.ist_aufwaermsatz %}text-muted fst-italic{% endif %} {% if satz.superset_gruppe > 0 %}border-start border-3 border-warning{% endif %}">
                                 <td class="ps-3">
-                                    {% if satz.ist_aufwaermsatz %}
+                                    {% if satz.superset_gruppe > 0 %}
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">S{{ satz.superset_gruppe }}</span>
+                                    {% elif satz.ist_aufwaermsatz %}
                                         <i class="bi bi-fire text-warning small" title="Warmup"></i>
                                     {% else %}
                                         <span class="fw-bold text-secondary">{{ forloop.counter }}</span>
@@ -190,6 +208,20 @@
             <button class="btn btn-primary rounded-circle shadow p-3" style="width: 60px; height: 60px;" onclick="openModalWithExercise('')">
                 <i class="bi bi-plus-lg fs-4"></i>
             </button>
+        </div>
+
+        <!-- PR Toast Container -->
+        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 11000;">
+            <div id="prToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-success text-white">
+                    <i class="bi bi-trophy-fill me-2"></i>
+                    <strong class="me-auto">Neuer Personal Record!</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body bg-dark text-white" id="prToastBody">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
         </div>
 
         <!-- Rest Timer -->
@@ -248,10 +280,25 @@
                         <label class="form-label text-secondary">RPE</label>
                         <input type="number" step="0.5" max="10" name="rpe" id="rpeInput" class="form-control bg-dark text-white border-secondary" placeholder="-">
                     </div>
-                    <div class="col-6 d-flex align-items-end pb-2">
+                    <div class="col-6">
+                        <label class="form-label text-secondary">Superset</label>
+                        <select name="superset_gruppe" id="supersetInput" class="form-select bg-dark text-white border-secondary">
+                            <option value="0">Keine</option>
+                            <option value="1">Gruppe 1</option>
+                            <option value="2">Gruppe 2</option>
+                            <option value="3">Gruppe 3</option>
+                            <option value="4">Gruppe 4</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row g-2 mt-2">
+                    <div class="col-12">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="ist_aufwaermsatz" id="warmupCheck">
-                            <label class="form-check-label text-secondary" for="warmupCheck">Warmup</label>
+                            <label class="form-check-label text-secondary" for="warmupCheck">
+                                <i class="bi bi-fire me-1"></i> Aufwärmsatz
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -497,6 +544,37 @@
             }
         });
 
+        // Sound-Settings (LocalStorage)
+        let soundEnabled = localStorage.getItem('soundEnabled') !== 'false'; // Default: true
+        let soundVolume = parseFloat(localStorage.getItem('soundVolume') || '0.3'); // Default: 30%
+
+        function showPRToast(message) {
+            const toastEl = document.getElementById('prToast');
+            const toastBody = document.getElementById('prToastBody');
+            toastBody.textContent = message;
+            const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+            toast.show();
+        }
+
+        function toggleSound() {
+            soundEnabled = document.getElementById('soundToggle').checked;
+            localStorage.setItem('soundEnabled', soundEnabled);
+        }
+
+        function updateVolume(value) {
+            soundVolume = value / 100; // 0-1 Range
+            localStorage.setItem('soundVolume', soundVolume);
+            document.getElementById('volumeValue').innerText = value;
+        }
+
+        // Settings beim Laden wiederherstellen
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('soundToggle').checked = soundEnabled;
+            const volumePercent = Math.round(soundVolume * 100);
+            document.getElementById('volumeSlider').value = volumePercent;
+            document.getElementById('volumeValue').innerText = volumePercent;
+        });
+
         function setTimerDuration(seconds) {
             timerDuration = seconds;
             localStorage.setItem('timerDuration', seconds);
@@ -519,6 +597,8 @@
 
         // Sound für Timer-Ende (Web Audio API)
         function playTimerSound() {
+            if (!soundEnabled) return; // Sound deaktiviert
+            
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
@@ -539,7 +619,7 @@
                     oscillator.frequency.value = beep.freq;
                     oscillator.type = 'sine';
                     
-                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + beep.start);
+                    gainNode.gain.setValueAtTime(soundVolume, audioContext.currentTime + beep.start);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + beep.start + beep.duration);
                     
                     oscillator.start(audioContext.currentTime + beep.start);
@@ -574,7 +654,7 @@
                 }
                 
                 // Countdown-Beeps bei letzten 3 Sekunden
-                if (timerSeconds > 0 && timerSeconds <= 3) {
+                if (soundEnabled && timerSeconds > 0 && timerSeconds <= 3) {
                     try {
                         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                         const oscillator = audioContext.createOscillator();
@@ -583,7 +663,7 @@
                         gainNode.connect(audioContext.destination);
                         oscillator.frequency.value = 600;
                         oscillator.type = 'sine';
-                        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(soundVolume, audioContext.currentTime);
                         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
                         oscillator.start();
                         oscillator.stop(audioContext.currentTime + 0.1);
@@ -650,6 +730,11 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    // PR-Toast anzeigen falls vorhanden
+                    if (data.pr_message) {
+                        showPRToast(data.pr_message);
+                    }
+                    
                     myModal.hide();
                     
                     // Seite neu laden um Sätze anzuzeigen (aber ohne die Stoppuhr zu stoppen)

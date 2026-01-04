@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>HomeGym Training Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333;
+            font-size: 12px;
+        }
+        h1 {
+            color: #0d6efd;
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 10px;
+            font-size: 24px;
+        }
+        h2 {
+            color: #495057;
+            margin-top: 25px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+            font-size: 18px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th {
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stat-box {
+            display: inline-block;
+            padding: 15px 20px;
+            margin: 10px 10px 10px 0;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            min-width: 120px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            color: #6c757d;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏋️ HomeGym Training Report</h1>
+    
+    <div style="margin-bottom: 30px;">
+        <p><strong>Benutzer:</strong> {{ user.username }}</p>
+        <p><strong>Erstellt am:</strong> {{ datum|date:"d.m.Y H:i" }} Uhr</p>
+    </div>
+
+    <!-- Statistiken -->
+    <h2>📊 Übersicht</h2>
+    
+    <div style="margin: 20px 0;">
+        <div class="stat-box">
+            <div class="stat-value">{{ gesamt_trainings }}</div>
+            <div class="stat-label">Trainings</div>
+        </div>
+        
+        <div class="stat-box">
+            <div class="stat-value">{{ gesamt_saetze }}</div>
+            <div class="stat-label">Sätze</div>
+        </div>
+        
+        <div class="stat-box">
+            <div class="stat-value">{{ gesamt_volumen|floatformat:0 }}</div>
+            <div class="stat-label">Volumen (kg)</div>
+        </div>
+    </div>
+
+    {% if letzter_koerperwert %}
+    <!-- Körperwerte -->
+    <h2>⚖️ Körperwerte</h2>
+    <table>
+        <tr>
+            <th>Messung</th>
+            <th>Wert</th>
+        </tr>
+        <tr>
+            <td>Gewicht</td>
+            <td>{{ letzter_koerperwert.gewicht }} kg</td>
+        </tr>
+        {% if letzter_koerperwert.bmi %}
+        <tr>
+            <td>BMI</td>
+            <td>{{ letzter_koerperwert.bmi }}</td>
+        </tr>
+        {% endif %}
+        {% if letzter_koerperwert.ffmi %}
+        <tr>
+            <td>FFMI</td>
+            <td>{{ letzter_koerperwert.ffmi }}</td>
+        </tr>
+        {% endif %}
+    </table>
+    {% endif %}
+
+    <!-- Top Übungen -->
+    <h2>💪 Top 10 Übungen</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Übung</th>
+                <th>Anzahl Sätze</th>
+                <th>Max Gewicht</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for uebung in top_uebungen %}
+            <tr>
+                <td>{{ uebung.uebung__bezeichnung }}</td>
+                <td>{{ uebung.anzahl }}</td>
+                <td>{{ uebung.max_gewicht|floatformat:1 }} kg</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Training Historie -->
+    <h2>📅 Letzte Trainings (max. 20)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Plan</th>
+                <th>Dauer</th>
+                <th>Sätze</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for training in trainings %}
+            <tr>
+                <td>{{ training.datum|date:"d.m.Y" }}</td>
+                <td>{{ training.plan.name|default:"Freies Training" }}</td>
+                <td>{{ training.dauer_minuten|default:"-" }} Min</td>
+                <td>{{ training.saetze.count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>HomeGym App © 2026 | Generiert mit ❤️</p>
+    </div>
+</body>
+</html>

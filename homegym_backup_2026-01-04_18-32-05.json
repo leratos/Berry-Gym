@@ -1,0 +1,2140 @@
+[
+  {
+    "model": "auth.user",
+    "fields": {
+      "password": "pbkdf2_sha256$720000$2uMDlBhHqUZ4EekNG3OmqF$ABl3IALnk7CsaMd/SGKr1UyH5Lqr9Nt1g6GZFuVlFvg=",
+      "last_login": "2026-01-02T10:06:31.200Z",
+      "is_superuser": true,
+      "username": "Leratos",
+      "first_name": "",
+      "last_name": "",
+      "email": "",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2026-01-01T21:15:02.930Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 1,
+    "fields": {
+      "bezeichnung": "Bankdrücken (Kurzhantel)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "TRIZEPS",
+        "SCHULTER_VORN"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Flach auf der Bank. Schulterblätter nach hinten/unten. Hanteln kontrolliert bis Brusthöhe senken (Ellbogen ca. 45°), dann hochdrücken ohne Schwung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 2,
+    "fields": {
+      "bezeichnung": "Bankdrücken (Langhantel)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "TRIZEPS",
+        "SCHULTER_VORN",
+        "RUECKEN_TRAPEZ"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Füße stabil, Schulterblätter fix. Stange zur unteren Brust senken, kontrolliert drücken. Po bleibt auf der Bank, keine 'Bounce'-Wdh.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 3,
+    "fields": {
+      "bezeichnung": "Schrägbankdrücken (Kurzhantel)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "SCHULTER_VORN",
+        "TRIZEPS"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Bank 20–35°. Schulterblätter fix. Hanteln zur oberen Brust senken, dann kontrolliert drücken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 4,
+    "fields": {
+      "bezeichnung": "Liegestütze (Push-ups)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "TRIZEPS",
+        "SCHULTER_VORN",
+        "BAUCH"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Körper steif, Hände unter/leicht vor Schulter. Brust kontrolliert runter, Ellbogen 30–60°, kraftvoll hoch.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 5,
+    "fields": {
+      "bezeichnung": "Schulterdrücken (Stehend, Langhantel)",
+      "muskelgruppe": "SCHULTER_VORN",
+      "hilfsmuskeln": [
+        "TRIZEPS",
+        "SCHULTER_SEIT",
+        "BAUCH"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Po/Bauch fest (kein Hohlkreuz). Stange von oberer Brust nach oben drücken, Kopf leicht 'durch', kontrolliert ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 6,
+    "fields": {
+      "bezeichnung": "Schulterdrücken (Sitzend, Kurzhantel)",
+      "muskelgruppe": "SCHULTER_VORN",
+      "hilfsmuskeln": [
+        "TRIZEPS",
+        "SCHULTER_SEIT"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Aufrecht sitzen, Bauch fest. Hanteln von Schulterhöhe nach oben drücken, kontrolliert ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 7,
+    "fields": {
+      "bezeichnung": "Seitheben (Kurzhantel)",
+      "muskelgruppe": "SCHULTER_SEIT",
+      "hilfsmuskeln": [
+        "RUECKEN_TRAPEZ"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Arme leicht gebeugt, Ellbogen führen. Bis Schulterhöhe, langsam ablassen. Kein Schwung, Nacken entspannt.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 8,
+    "fields": {
+      "bezeichnung": "Face Pulls (Seilzug)",
+      "muskelgruppe": "SCHULTER_HINT",
+      "hilfsmuskeln": [
+        "RUECKEN_TRAPEZ",
+        "RUECKEN_LAT"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Seil auf Augenhöhe. Ziehen Richtung Gesicht, Ellbogen hoch, Hände auseinander (Außenrotation). Schulter unten halten.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 9,
+    "fields": {
+      "bezeichnung": "Reverse Flys (Kurzhantel, vorgebeugt)",
+      "muskelgruppe": "SCHULTER_HINT",
+      "hilfsmuskeln": [
+        "RUECKEN_TRAPEZ"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Oberkörper vorgebeugt, Rücken neutral. Arme seitlich öffnen, Schulterblätter zusammen, kontrolliert ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 10,
+    "fields": {
+      "bezeichnung": "Trizepsdrücken am Kabel (Pushdown)",
+      "muskelgruppe": "TRIZEPS",
+      "hilfsmuskeln": [
+        "UNTERARME"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Ellenbogen am Körper fix. Runterdrücken bis Streckung, oben nur bis Spannung bleibt. Kein Schwingen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 11,
+    "fields": {
+      "bezeichnung": "Trizeps Overhead Extension (Kurzhantel)",
+      "muskelgruppe": "TRIZEPS",
+      "hilfsmuskeln": [
+        "SCHULTER_VORN",
+        "BAUCH"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Hantel über Kopf, Ellenbogen zeigen nach vorn. Unterarme beugen/strecken, Rücken neutral.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 12,
+    "fields": {
+      "bezeichnung": "Dips (Barren)",
+      "muskelgruppe": "TRIZEPS",
+      "hilfsmuskeln": [
+        "BRUST",
+        "SCHULTER_VORN"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Schulterblätter stabil. Kontrolliert absenken, Ellbogen nach hinten, hochdrücken ohne in die Schultern zu fallen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 13,
+    "fields": {
+      "bezeichnung": "Klimmzüge (Obergriff)",
+      "muskelgruppe": "RUECKEN_LAT",
+      "hilfsmuskeln": [
+        "BIZEPS",
+        "UNTERARME",
+        "BAUCH"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Schulterblätter zuerst aktivieren (runter). Brust zur Stange, kein Schwingen. Langsam ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 14,
+    "fields": {
+      "bezeichnung": "Latzug (Kabel/Maschine)",
+      "muskelgruppe": "RUECKEN_LAT",
+      "hilfsmuskeln": [
+        "BIZEPS",
+        "SCHULTER_HINT"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Brust hoch, leicht zurücklehnen. Stange zur oberen Brust ziehen, Schulterblätter nach unten. Kontrolliert hochlassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 15,
+    "fields": {
+      "bezeichnung": "Langhantel-Rudern (Vorgebeugt)",
+      "muskelgruppe": "RUECKEN_LAT",
+      "hilfsmuskeln": [
+        "BIZEPS",
+        "SCHULTER_HINT",
+        "BAUCH"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Hüfte nach hinten, Rücken neutral. Stange Richtung Bauchnabel ziehen, Schulterblätter zusammen. Ohne Schwung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 16,
+    "fields": {
+      "bezeichnung": "Sitzendes Kabelrudern (eng)",
+      "muskelgruppe": "RUECKEN_LAT",
+      "hilfsmuskeln": [
+        "BIZEPS",
+        "SCHULTER_HINT"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Neutraler Rücken. Griff zum Bauch ziehen, Schulterblätter zusammen. Langsame Exzentrik.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 17,
+    "fields": {
+      "bezeichnung": "Einarmiges Kurzhantelrudern",
+      "muskelgruppe": "RUECKEN_LAT",
+      "hilfsmuskeln": [
+        "BIZEPS",
+        "BAUCH"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Abstützen, Rücken neutral. Hantel Richtung Hüfte ziehen, oben kurz halten, langsam ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 18,
+    "fields": {
+      "bezeichnung": "Shrugs (Kurzhantel)",
+      "muskelgruppe": "RUECKEN_TRAPEZ",
+      "hilfsmuskeln": [
+        "UNTERARME"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Schultern gerade nach oben ziehen (nicht kreisen). Oben kurz halten, langsam ablassen. Nacken neutral.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 19,
+    "fields": {
+      "bezeichnung": "Y-Raises (Schrägbank/leichte DB)",
+      "muskelgruppe": "RUECKEN_TRAPEZ",
+      "hilfsmuskeln": [
+        "SCHULTER_HINT"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Brust auf Schrägbank. Arme in Y-Form anheben, Schulterblätter nach unten/hinten. Sehr leicht, sauber kontrolliert.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 20,
+    "fields": {
+      "bezeichnung": "Kreuzheben (Langhantel, Conventional)",
+      "muskelgruppe": "BEINE_HAM",
+      "hilfsmuskeln": [
+        "PO",
+        "RUECKEN_UNTEN",
+        "RUECKEN_TRAPEZ",
+        "UNTERARME"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Stange über Mittelfuß. Rücken neutral, Spannung aufbauen. Hoch über Beine/Hüfte, Stange eng am Körper. Kontrolliert absetzen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 21,
+    "fields": {
+      "bezeichnung": "Rumänisches Kreuzheben (RDL)",
+      "muskelgruppe": "BEINE_HAM",
+      "hilfsmuskeln": [
+        "PO",
+        "RUECKEN_UNTEN",
+        "UNTERARME"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Knie leicht gebeugt. Hüfte nach hinten, Stange nah am Körper. Dehnung in Hamstrings, dann Hüfte strecken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 22,
+    "fields": {
+      "bezeichnung": "Good Mornings (Langhantel, leicht)",
+      "muskelgruppe": "RUECKEN_UNTEN",
+      "hilfsmuskeln": [
+        "BEINE_HAM",
+        "PO",
+        "BAUCH"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Hinge mit Langhantel auf dem Rücken. Rücken neutral, Hüfte nach hinten. Nur so tief wie stabil.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 23,
+    "fields": {
+      "bezeichnung": "Kniebeuge (Langhantel, Back Squat)",
+      "muskelgruppe": "BEINE_QUAD",
+      "hilfsmuskeln": [
+        "PO",
+        "BAUCH",
+        "RUECKEN_UNTEN"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Core fest. Hüfte und Knie beugen, Knie folgen Zehen. Tief stabil, aus dem ganzen Fuß hochdrücken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 24,
+    "fields": {
+      "bezeichnung": "Frontkniebeuge (Langhantel, Front Squat)",
+      "muskelgruppe": "BEINE_QUAD",
+      "hilfsmuskeln": [
+        "BAUCH",
+        "RUECKEN_TRAPEZ",
+        "PO"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Ellbogen hoch, aufrecht bleiben. Knie/Zehen in Linie. Sauber tief, kontrolliert hoch.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 25,
+    "fields": {
+      "bezeichnung": "Goblet Squat (Kettlebell/DB)",
+      "muskelgruppe": "BEINE_QUAD",
+      "hilfsmuskeln": [
+        "PO",
+        "BAUCH",
+        "RUECKEN_UNTEN"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Gewicht vor der Brust. Knie nach außen, Brust hoch, tief so weit stabil. Gleichmäßig hochdrücken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 26,
+    "fields": {
+      "bezeichnung": "Beinpresse (Maschine)",
+      "muskelgruppe": "BEINE_QUAD",
+      "hilfsmuskeln": [
+        "PO",
+        "BEINE_HAM"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Rücken anlehnen. Tief nur so weit, dass Becken nicht abkippt. Nicht durchschlagen, kontrolliert.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 27,
+    "fields": {
+      "bezeichnung": "Bulgarian Split Squat (Kurzhantel)",
+      "muskelgruppe": "BEINE_QUAD",
+      "hilfsmuskeln": [
+        "PO",
+        "ADDUKTOREN",
+        "BAUCH"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Hinterer Fuß erhöht. Aufrecht, kontrolliert tief, aus dem vorderen Bein hoch. Seite für Seite.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 28,
+    "fields": {
+      "bezeichnung": "Ausfallschritte (Lunges, Kurzhantel)",
+      "muskelgruppe": "PO",
+      "hilfsmuskeln": [
+        "BEINE_QUAD",
+        "BEINE_HAM",
+        "WADEN",
+        "BAUCH"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Großer Schritt. Hinteres Knie fast zum Boden. Aufrecht bleiben. Über den vorderen Fuß hochdrücken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 29,
+    "fields": {
+      "bezeichnung": "Hip Thrust (Langhantel)",
+      "muskelgruppe": "PO",
+      "hilfsmuskeln": [
+        "BEINE_HAM",
+        "BAUCH"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Schulterblätter auf Bank. Rippen runter, Kinn leicht zur Brust. Hüfte hoch, oben Gesäß hart anspannen, kontrolliert runter.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 30,
+    "fields": {
+      "bezeichnung": "Glute Bridge (Körpergewicht)",
+      "muskelgruppe": "PO",
+      "hilfsmuskeln": [
+        "BEINE_HAM",
+        "BAUCH"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Rücken am Boden, Füße nah. Becken kippen, Hüfte hoch, oben 1 Sek halten, kontrolliert ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 31,
+    "fields": {
+      "bezeichnung": "Beinbeuger (Leg Curl, Maschine)",
+      "muskelgruppe": "BEINE_HAM",
+      "hilfsmuskeln": [
+        "WADEN"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Becken stabil. Fersen Richtung Po, oben kurz halten, langsam ablassen. Kein Hohlkreuz.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 32,
+    "fields": {
+      "bezeichnung": "Beinstrecker (Leg Extension, Maschine)",
+      "muskelgruppe": "BEINE_QUAD",
+      "hilfsmuskeln": "",
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Rücken anlehnen. Strecken bis knapp vor Lockout, oben kurz halten, langsam ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 33,
+    "fields": {
+      "bezeichnung": "Wadenheben (Stehend)",
+      "muskelgruppe": "WADEN",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Unten Dehnung, oben maximale Plantarflexion. Pause oben/unten, keine Bounce-Wdh.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 34,
+    "fields": {
+      "bezeichnung": "Adduktoren Maschine",
+      "muskelgruppe": "ADDUKTOREN",
+      "hilfsmuskeln": [
+        "PO",
+        "BAUCH"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Becken stabil. Knie/Polster kontrolliert zusammenführen, kurz halten, langsam öffnen ohne Schwung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 35,
+    "fields": {
+      "bezeichnung": "Abduktoren Maschine",
+      "muskelgruppe": "ABDUKTOREN",
+      "hilfsmuskeln": [
+        "PO",
+        "BAUCH"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Becken stabil. Knie/Polster kontrolliert nach außen, kurz halten, langsam zurück.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 36,
+    "fields": {
+      "bezeichnung": "Bizeps Curls (Langhantel)",
+      "muskelgruppe": "BIZEPS",
+      "hilfsmuskeln": [
+        "UNTERARME",
+        "BAUCH"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Ellenbogen am Körper. Kontrolliert hoch, oben kurz halten, langsam ablassen. Kein Schwung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 37,
+    "fields": {
+      "bezeichnung": "Hammer Curls (Kurzhantel)",
+      "muskelgruppe": "BIZEPS",
+      "hilfsmuskeln": [
+        "UNTERARME"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Neutralgriff. Ellenbogen fix, hochcurlen, langsam ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 38,
+    "fields": {
+      "bezeichnung": "Reverse Curls (Langhantel/EZ)",
+      "muskelgruppe": "UNTERARME",
+      "hilfsmuskeln": [
+        "BIZEPS"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Obergriff. Ellenbogen fix. Kontrolliert hoch, langsam runter. Fokus auf Unterarme/Brachioradialis.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 39,
+    "fields": {
+      "bezeichnung": "Wrist Curls (Unterarmbeuger)",
+      "muskelgruppe": "UNTERARME",
+      "hilfsmuskeln": "",
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Unterarme auf Bank/Oberschenkel ablegen. Handgelenke beugen/strecken in sauberer ROM, langsam und kontrolliert.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 40,
+    "fields": {
+      "bezeichnung": "Plank (Unterarmstütz)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [
+        "PO",
+        "SCHULTER_VORN",
+        "RUECKEN_TRAPEZ"
+      ],
+      "gewichts_typ": "ZEIT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Ellenbogen unter Schulter. Körper gerade Linie, Rippen runter, Po leicht anspannen. Zeit/„Wdh“ = Sekunden.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 41,
+    "fields": {
+      "bezeichnung": "Hanging Leg Raises (hängendes Beinheben)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [
+        "BEINE_QUAD"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Ohne Schwung. Becken aktiv kippen, Beine/Knie hoch, langsam ablassen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 42,
+    "fields": {
+      "bezeichnung": "Cable Crunch (kniend)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [
+        "RUECKEN_LAT"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Rippen runter. Wirbelsäule einrollen (Crunch), nicht aus der Hüfte ziehen. Langsam zurück.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 43,
+    "fields": {
+      "bezeichnung": "Farmer's Walk (Kurzhantel/Kettlebell)",
+      "muskelgruppe": "GANZKOERPER",
+      "hilfsmuskeln": [
+        "UNTERARME",
+        "RUECKEN_TRAPEZ",
+        "BAUCH",
+        "PO"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Aufrecht gehen, Rippen runter, Schulter tief. Strecke/„Wdh“ = Sekunden oder Meter (je nach Logging).",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 44,
+    "fields": {
+      "bezeichnung": "Ruderergometer (Concept2 o.ä.)",
+      "muskelgruppe": "GANZKOERPER",
+      "hilfsmuskeln": [
+        "BEINE_QUAD",
+        "RUECKEN_LAT",
+        "BAUCH",
+        "UNTERARME"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Technik: Beine drücken, dann Oberkörper, dann Arme. Rückweg: Arme, Oberkörper, Beine. Zeit/Distanz als Tracking in Einheit/Notiz.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 45,
+    "fields": {
+      "bezeichnung": "Floor Press (Kurzhantel)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "TRIZEPS",
+        "SCHULTER_VORN"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Rücken auf dem Boden. Kurzhanteln drücken wie beim Bankdrücken, aber Ellbogen stoppen am Boden (schont Schulter, fokussiert Trizeps).",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 46,
+    "fields": {
+      "bezeichnung": "Arnold Press (Kurzhantel)",
+      "muskelgruppe": "SCHULTER_VORN",
+      "hilfsmuskeln": [
+        "SCHULTER_SEIT",
+        "TRIZEPS"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Start mit Handflächen zum Gesicht. Beim Drücken Handgelenke drehen, bis Handflächen oben nach vorne zeigen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 47,
+    "fields": {
+      "bezeichnung": "Fliegende (Kurzhantel, flach)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Flach auf Bank. Hanteln mit fast gestreckten Armen zur Seite senken (leichte Beuge), dann zusammenführen. Fokus auf Brustdehnung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 48,
+    "fields": {
+      "bezeichnung": "Fliegende (Kurzhantel, Schrägbank)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Bank 20-35° schräg. Hanteln mit fast gestreckten Armen zur Seite senken, kontrolliert zusammenführen. Zielt auf obere Brust.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 49,
+    "fields": {
+      "bezeichnung": "Cable Crossover (Kabelzug)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Kabelgriffe von oben zur Mitte ziehen. Arme fast gestreckt, Bewegung kommt aus Schultergelenk. Konstante Spannung auf Brust.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 50,
+    "fields": {
+      "bezeichnung": "Butterfly / Pec Deck",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Maschine für Brustflys. Arme fast gestreckt, Polster zur Mitte führen. Fokus auf Kontraktion der Brustmuskeln.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 52,
+    "fields": {
+      "bezeichnung": "Seitheben (Kabelzug)",
+      "muskelgruppe": "SCHULTER_SEIT",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Kabelgriff seitlich bis Schulterhöhe ziehen. Konstante Spannung während der gesamten Bewegung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 53,
+    "fields": {
+      "bezeichnung": "Face Pulls (Kabelzug)",
+      "muskelgruppe": "SCHULTER_HINT",
+      "hilfsmuskeln": [
+        "RUECKEN_TRAPEZ"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Seil-Attachment auf Augenhöhe. Zum Gesicht ziehen, Ellbogen hoch, Schulterblätter zusammen. Wichtig für hintere Schulter und Haltung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 54,
+    "fields": {
+      "bezeichnung": "Vorgebeugtes Seitheben (Kurzhantel)",
+      "muskelgruppe": "SCHULTER_HINT",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Oberkörper 45-90° vorbeugen. Hanteln seitlich heben mit fast gestreckten Armen. Zielt auf hintere Schulter.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 55,
+    "fields": {
+      "bezeichnung": "Bizeps Curls (Kurzhantel)",
+      "muskelgruppe": "BIZEPS",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Stehend, Ellbogen fix an Seite. Hanteln kontrolliert hochcurlen, oben kurz halten, langsam ablassen. Kein Schwung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 57,
+    "fields": {
+      "bezeichnung": "Concentration Curls (Kurzhantel)",
+      "muskelgruppe": "BIZEPS",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Sitzend, Ellbogen am Innenschenkel abstützen. Langsame, kontrollierte Curls. Maximale Bizeps-Isolation.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 58,
+    "fields": {
+      "bezeichnung": "Trizeps Pushdown (Kabelzug)",
+      "muskelgruppe": "TRIZEPS",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Kabelturm mit Stange oder Seil. Ellbogen fix an Seite, nach unten drücken. Volle Streckung am Ende.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 60,
+    "fields": {
+      "bezeichnung": "Beinstrecker (Leg Extension Machine)",
+      "muskelgruppe": "BEINE_QUAD",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Quadrizeps-Isolation. Beine strecken gegen Widerstand, kontrolliert zurück. Nicht überstrecken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 61,
+    "fields": {
+      "bezeichnung": "Beinbeuger (Leg Curl Machine)",
+      "muskelgruppe": "BEINE_HAM",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Hamstring-Isolation. Fersen zu Po ziehen gegen Widerstand. Hüfte bleibt stabil.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 62,
+    "fields": {
+      "bezeichnung": "Wadenheben stehend (Calf Raises)",
+      "muskelgruppe": "WADEN",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Auf Zehenspitzen heben, volle ROM. Langsam senken für maximale Wadendehnung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 63,
+    "fields": {
+      "bezeichnung": "Lat Pulldown (breiter Griff)",
+      "muskelgruppe": "RUECKEN_LAT",
+      "hilfsmuskeln": [
+        "BIZEPS",
+        "RUECKEN_TRAPEZ"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Breiter Griff, zur oberen Brust ziehen. Schulterblätter zusammen, Ellbogen nach hinten/unten.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 64,
+    "fields": {
+      "bezeichnung": "Cable Crunches (Kabelzug)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Knieend, Seil über Kopf. Bauch anspannen und nach unten crunchen. Fokus auf Bauchkontraktion.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 65,
+    "fields": {
+      "bezeichnung": "Breites Rudern (Kurzhantel)",
+      "muskelgruppe": "RUECKEN_OBERER",
+      "hilfsmuskeln": [
+        "Bizeps",
+        "Rücken - Latissimus",
+        "Rücken - Nacken/Trapez"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Vorgebeugt, Hanteln seitlich zum Oberkörper ziehen. Ellbogen nach außen. Schulterblätter zusammenziehen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 66,
+    "fields": {
+      "bezeichnung": "T-Bar Row (Langhantel)",
+      "muskelgruppe": "RUECKEN_OBERER",
+      "hilfsmuskeln": [
+        "Bizeps",
+        "Rücken - Latissimus",
+        "Rücken - Nacken/Trapez"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Langhantel in Ecke. Vorgebeugt zur Brust ziehen. Schulterblätter zusammen, Rücken gerade.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 67,
+    "fields": {
+      "bezeichnung": "Seal Rows (Bank, Kurzhantel)",
+      "muskelgruppe": "RUECKEN_OBERER",
+      "hilfsmuskeln": [
+        "Bizeps",
+        "Rücken - Latissimus"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Bauchlage auf Bank. Hanteln vertikal hochziehen. Keine Schwungbewegung, isoliert oberen Rücken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 68,
+    "fields": {
+      "bezeichnung": "Inverted Rows (Körpergewicht)",
+      "muskelgruppe": "RUECKEN_OBERER",
+      "hilfsmuskeln": [
+        "Bizeps",
+        "Rücken - Latissimus",
+        "Bauch"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Unter Tisch/Stange. Körper steif, hochziehen bis Brust fast Stange berührt. Schulterblätter aktiv.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 69,
+    "fields": {
+      "bezeichnung": "Hyperextensions (Körpergewicht)",
+      "muskelgruppe": "RUECKEN_UNTEN",
+      "hilfsmuskeln": [
+        "Po",
+        "Beine - Oberschenkel hinten"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Bauchlage auf Bank. Oberkörper kontrolliert senken und heben. Rücken stabil, keine Überstreckung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 70,
+    "fields": {
+      "bezeichnung": "Superman Holds (Körpergewicht)",
+      "muskelgruppe": "RUECKEN_UNTEN",
+      "hilfsmuskeln": [
+        "Po",
+        "Rücken - Oberer"
+      ],
+      "gewichts_typ": "ZEIT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Bauchlage, Arme und Beine gestreckt anheben. Position halten. Fokus auf unteren Rücken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 71,
+    "fields": {
+      "bezeichnung": "Stiff Leg Deadlift (Kurzhantel)",
+      "muskelgruppe": "RUECKEN_UNTEN",
+      "hilfsmuskeln": [
+        "Po",
+        "Beine - Oberschenkel hinten"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Beine fast gestreckt, Hanteln vor Körper senken. Rücken gerade, Hüfte nach hinten. Dehnung in Hamstrings.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 72,
+    "fields": {
+      "bezeichnung": "Bird Dogs (Körpergewicht)",
+      "muskelgruppe": "RUECKEN_UNTEN",
+      "hilfsmuskeln": [
+        "Po",
+        "Bauch"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Vierfüßlerstand. Gegenarm und Bein strecken, halten, wechseln. Rücken stabil.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 73,
+    "fields": {
+      "bezeichnung": "Pike Push-ups (Körpergewicht)",
+      "muskelgruppe": "SCHULTER_VORN",
+      "hilfsmuskeln": [
+        "Trizeps",
+        "Brust"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "A-Position (Po hoch). Kopf zum Boden senken, hochdrücken. Fokus vordere Schulter.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 74,
+    "fields": {
+      "bezeichnung": "Front Raises (Kurzhantel)",
+      "muskelgruppe": "SCHULTER_VORN",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Stehend, Hanteln vor Körper bis Schulterhöhe heben. Kontrolliert senken, kein Schwung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 75,
+    "fields": {
+      "bezeichnung": "Upright Rows (Langhantel)",
+      "muskelgruppe": "SCHULTER_SEIT",
+      "hilfsmuskeln": [
+        "Rücken - Nacken/Trapez",
+        "Schulter - Vordere"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "ZIEHEN",
+      "beschreibung": "Enger Griff, Stange zum Kinn ziehen. Ellbogen hoch, kontrolliert senken.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 76,
+    "fields": {
+      "bezeichnung": "Lying Lateral Raises (Bank, Kurzhantel)",
+      "muskelgruppe": "SCHULTER_SEIT",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Seitlage auf Bank. Obere Hantel seitlich heben. Isoliert seitliche Schulter.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 77,
+    "fields": {
+      "bezeichnung": "Langhantel Shrugs (Langhantel)",
+      "muskelgruppe": "RUECKEN_TRAPEZ",
+      "hilfsmuskeln": [
+        "Nacken"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Stehend, Stange vor Körper. Schultern vertikal heben (shrugging motion). Keine Rotation.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 78,
+    "fields": {
+      "bezeichnung": "Prone I-Y-T Raises (Körpergewicht/leichte DB)",
+      "muskelgruppe": "RUECKEN_TRAPEZ",
+      "hilfsmuskeln": [
+        "Schulter - Hintere",
+        "Rücken - Oberer"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Bauchlage auf Bank. Arme in I-, Y- und T-Position heben. Langsam, kontrolliert.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 79,
+    "fields": {
+      "bezeichnung": "Single Leg Calf Raises (Körpergewicht)",
+      "muskelgruppe": "WADEN",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Einbeinig auf Kante/Stufe. Ferse senken, auf Zehenspitzen heben. Pro Seite.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 80,
+    "fields": {
+      "bezeichnung": "Seated Calf Raises (Kurzhantel auf Knien)",
+      "muskelgruppe": "WADEN",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Sitzend, Hantel auf Knien. Fersen heben und senken. Fokus auf Soleus-Muskel.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 81,
+    "fields": {
+      "bezeichnung": "Donkey Calf Raises (Körpergewicht)",
+      "muskelgruppe": "WADEN",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Vorgebeugt, Hände auf Bank. Fersen heben und senken. Maximale Wadendehnung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 82,
+    "fields": {
+      "bezeichnung": "Reverse Wrist Curls (Kurzhantel)",
+      "muskelgruppe": "UNTERARME",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Unterarme auf Bank, Handrücken oben. Hanteln mit Handgelenk heben. Unterarmstrecker trainieren.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 83,
+    "fields": {
+      "bezeichnung": "Farmer Walk (Kurzhantel)",
+      "muskelgruppe": "UNTERARME",
+      "hilfsmuskeln": [
+        "Rücken - Nacken/Trapez",
+        "Bauch"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Schwere Hanteln halten und gehen. Aufrechte Haltung, Griffkraft trainieren.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 84,
+    "fields": {
+      "bezeichnung": "Glute Kickbacks (Körpergewicht)",
+      "muskelgruppe": "PO",
+      "hilfsmuskeln": [
+        "Beine - Oberschenkel hinten"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Vierfüßlerstand. Bein nach hinten/oben strecken. Po anspannen, kontrolliert.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 85,
+    "fields": {
+      "bezeichnung": "Single Leg Hip Thrust (Körpergewicht/Hantel)",
+      "muskelgruppe": "PO",
+      "hilfsmuskeln": [
+        "Beine - Oberschenkel hinten",
+        "Bauch"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "HEBEN",
+      "beschreibung": "Rücken auf Bank, ein Bein gestreckt. Hüfte heben, Po anspannen. Pro Seite.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 86,
+    "fields": {
+      "bezeichnung": "Side Lunges (Kurzhantel)",
+      "muskelgruppe": "ADDUKTOREN",
+      "hilfsmuskeln": [
+        "Beine - Oberschenkel vorne",
+        "Po"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Seitlicher Ausfallschritt. Gewicht auf Ferse, Knie über Fuß. Adduktoren dehnen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 87,
+    "fields": {
+      "bezeichnung": "Copenhagen Planks (Körpergewicht)",
+      "muskelgruppe": "ADDUKTOREN",
+      "hilfsmuskeln": [
+        "Bauch",
+        "Rücken - Unterer"
+      ],
+      "gewichts_typ": "ZEIT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Seitlicher Plank, oberes Bein auf Bank. Körper gerade halten. Adduktoren aktiviert.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 88,
+    "fields": {
+      "bezeichnung": "Sumo Squats (Kurzhantel)",
+      "muskelgruppe": "ADDUKTOREN",
+      "hilfsmuskeln": [
+        "Beine - Oberschenkel vorne",
+        "Po"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Breiter Stand, Füße nach außen. Tief beugen, Hantel zwischen Beinen. Adduktoren fokussieren.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 89,
+    "fields": {
+      "bezeichnung": "Cossack Squats (Körpergewicht/Kurzhantel)",
+      "muskelgruppe": "ADDUKTOREN",
+      "hilfsmuskeln": [
+        "Beine - Oberschenkel vorne",
+        "Po"
+      ],
+      "gewichts_typ": "PRO_SEITE",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Breiter Stand. Zu einer Seite tief beugen, anderes Bein gestreckt. Seitenwechsel.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 90,
+    "fields": {
+      "bezeichnung": "Side-Lying Leg Raises (Körpergewicht)",
+      "muskelgruppe": "ABDUKTOREN",
+      "hilfsmuskeln": [
+        "Po"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Seitlage. Oberes Bein gerade anheben und senken. Fokus auf Abduktoren.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 91,
+    "fields": {
+      "bezeichnung": "Clamshells (Körpergewicht)",
+      "muskelgruppe": "ABDUKTOREN",
+      "hilfsmuskeln": [
+        "Po"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Seitlage, Knie gebeugt. Oberes Knie öffnen wie Muschel. Füße zusammen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 92,
+    "fields": {
+      "bezeichnung": "Fire Hydrants (Körpergewicht)",
+      "muskelgruppe": "ABDUKTOREN",
+      "hilfsmuskeln": [
+        "Po"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Vierfüßlerstand. Knie seitlich anheben (90° Hüfte). Abduktoren und Po aktivieren.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 93,
+    "fields": {
+      "bezeichnung": "Standing Hip Abduction (Körpergewicht)",
+      "muskelgruppe": "ABDUKTOREN",
+      "hilfsmuskeln": [
+        "Po",
+        "Bauch"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Stehend, ein Bein seitlich abheben. Balance halten, kontrolliert senken. Pro Seite.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 94,
+    "fields": {
+      "bezeichnung": "Lying Leg Raises (Körpergewicht)",
+      "muskelgruppe": "HUEFTBEUGER",
+      "hilfsmuskeln": [
+        "Bauch"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Rückenlage. Gestreckte Beine anheben bis 90°. Kontrolliert senken ohne Boden zu berühren.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 95,
+    "fields": {
+      "bezeichnung": "Standing Knee Raises (Körpergewicht)",
+      "muskelgruppe": "HUEFTBEUGER",
+      "hilfsmuskeln": [
+        "Bauch"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Stehend. Knie abwechselnd bis Hüfthöhe ziehen. Kontrolliert, kein Schwung.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 96,
+    "fields": {
+      "bezeichnung": "Psoas Marches (Körpergewicht)",
+      "muskelgruppe": "HUEFTBEUGER",
+      "hilfsmuskeln": [
+        "Bauch"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Rückenlage, Beine 90° angewinkelt. Abwechselnd Ferse zum Boden senken ohne abzusetzen.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 97,
+    "fields": {
+      "bezeichnung": "Mountain Climbers (Körpergewicht)",
+      "muskelgruppe": "HUEFTBEUGER",
+      "hilfsmuskeln": [
+        "Bauch",
+        "Brust",
+        "Schulter - Vordere"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "BEUGEN",
+      "beschreibung": "Plank-Position. Knie abwechselnd schnell zur Brust ziehen. Cardio und Hüftbeuger.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 98,
+    "fields": {
+      "bezeichnung": "Floor Press (Langhantel)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "TRIZEPS",
+        "SCHULTER_VORN"
+      ],
+      "gewichts_typ": "GESAMT",
+      "bewegungstyp": "DRUECKEN",
+      "beschreibung": "Rücken auf dem Boden. Langhantel drücken wie beim Bankdrücken, aber Ellbogen stoppen am Boden (schont Schulter, fokussiert Trizeps).",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 99,
+    "fields": {
+      "bezeichnung": "Dead Bug (Körpergewicht)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [
+        "Hüftbeuger"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Rückenlage, Arme nach oben gestreckt, Beine 90° angewinkelt. Abwechselnd gegenläufig Arm und Bein ausstrecken (rechter Arm + linkes Bein). Rücken bleibt flach am Boden, Bauchspannung halten.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 100,
+    "fields": {
+      "bezeichnung": "Crunch (Körpergewicht)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Rückenlage, Beine angewinkelt, Füße am Boden. Oberkörper kontrolliert aufrollen (Schultern vom Boden), oben kurz halten, langsam ablassen. Fokus auf obere Bauchmuskeln.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.uebung",
+    "pk": 101,
+    "fields": {
+      "bezeichnung": "Reverse Crunch (Körpergewicht)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [
+        "Hüftbeuger"
+      ],
+      "gewichts_typ": "KOERPERGEWICHT",
+      "bewegungstyp": "ISOLATION",
+      "beschreibung": "Rückenlage, Arme neben dem Körper. Beine angewinkelt anheben, Becken aktiv nach oben kippen. Langsam zurück ohne Schwung. Fokus auf untere Bauchmuskeln.",
+      "bild": "",
+      "video_link": null,
+      "erstellt_am": "2024-01-01T12:00:00Z",
+      "favoriten": []
+    }
+  },
+  {
+    "model": "core.koerperwerte",
+    "pk": 1,
+    "fields": {
+      "user": [
+        "Leratos"
+      ],
+      "datum": "2026-01-02",
+      "groesse_cm": 180,
+      "gewicht": "100.00",
+      "fettmasse_kg": "29.80",
+      "koerperfett_prozent": null,
+      "koerperwasser_kg": "51.40",
+      "muskelmasse_kg": "37.60",
+      "knochenmasse_kg": null,
+      "notiz": ""
+    }
+  },
+  {
+    "model": "core.plan",
+    "pk": 3,
+    "fields": {
+      "user": [
+        "Leratos"
+      ],
+      "name": "Training A",
+      "beschreibung": "Drücken + Rudern + Hinge",
+      "erstellt_am": "2026-01-03T19:20:06.212Z"
+    }
+  },
+  {
+    "model": "core.plan",
+    "pk": 4,
+    "fields": {
+      "user": [
+        "Leratos"
+      ],
+      "name": "Training B",
+      "beschreibung": "Beine + Schulterdrücken + Rücken",
+      "erstellt_am": "2026-01-03T20:39:59.383Z"
+    }
+  },
+  {
+    "model": "core.trainingseinheit",
+    "pk": 18,
+    "fields": {
+      "user": [
+        "Leratos"
+      ],
+      "plan": 3,
+      "datum": "2026-01-03T19:33:36.144Z",
+      "dauer_minuten": 57,
+      "kommentar": null
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 84,
+    "fields": {
+      "einheit": 18,
+      "uebung": 45,
+      "satz_nr": 1,
+      "gewicht": "10.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 85,
+    "fields": {
+      "einheit": 18,
+      "uebung": 45,
+      "satz_nr": 2,
+      "gewicht": "10.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 86,
+    "fields": {
+      "einheit": 18,
+      "uebung": 45,
+      "satz_nr": 3,
+      "gewicht": "10.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 87,
+    "fields": {
+      "einheit": 18,
+      "uebung": 15,
+      "satz_nr": 1,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "6.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 88,
+    "fields": {
+      "einheit": 18,
+      "uebung": 15,
+      "satz_nr": 2,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 89,
+    "fields": {
+      "einheit": 18,
+      "uebung": 15,
+      "satz_nr": 3,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 90,
+    "fields": {
+      "einheit": 18,
+      "uebung": 21,
+      "satz_nr": 1,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 91,
+    "fields": {
+      "einheit": 18,
+      "uebung": 21,
+      "satz_nr": 2,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "7.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 92,
+    "fields": {
+      "einheit": 18,
+      "uebung": 21,
+      "satz_nr": 3,
+      "gewicht": "20.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 93,
+    "fields": {
+      "einheit": 18,
+      "uebung": 7,
+      "satz_nr": 1,
+      "gewicht": "5.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 94,
+    "fields": {
+      "einheit": 18,
+      "uebung": 7,
+      "satz_nr": 2,
+      "gewicht": "5.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 95,
+    "fields": {
+      "einheit": 18,
+      "uebung": 54,
+      "satz_nr": 1,
+      "gewicht": "5.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 96,
+    "fields": {
+      "einheit": 18,
+      "uebung": 54,
+      "satz_nr": 2,
+      "gewicht": "5.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 97,
+    "fields": {
+      "einheit": 18,
+      "uebung": 99,
+      "satz_nr": 1,
+      "gewicht": "0.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "8.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 98,
+    "fields": {
+      "einheit": 18,
+      "uebung": 99,
+      "satz_nr": 2,
+      "gewicht": "0.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 99,
+    "fields": {
+      "einheit": 18,
+      "uebung": 99,
+      "satz_nr": 3,
+      "gewicht": "0.00",
+      "wiederholungen": 12,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 100,
+    "fields": {
+      "einheit": 18,
+      "uebung": 57,
+      "satz_nr": 1,
+      "gewicht": "10.00",
+      "wiederholungen": 8,
+      "ist_aufwaermsatz": false,
+      "rpe": "9.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  },
+  {
+    "model": "core.satz",
+    "pk": 101,
+    "fields": {
+      "einheit": 18,
+      "uebung": 57,
+      "satz_nr": 2,
+      "gewicht": "10.00",
+      "wiederholungen": 6,
+      "ist_aufwaermsatz": false,
+      "rpe": "10.0",
+      "notiz": null,
+      "superset_gruppe": 0
+    }
+  }
+]
