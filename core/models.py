@@ -48,7 +48,51 @@ BEWEGUNGS_TYP = [
     ('ISOLATION', 'Isolation / Sonstiges'),
 ]
 
+# NEU: Equipment / Ausrüstung
+EQUIPMENT_CHOICES = [
+    ('LANGHANTEL', 'Langhantel'),
+    ('KURZHANTEL', 'Kurzhanteln'),
+    ('KETTLEBELL', 'Kettlebell'),
+    ('BANK', 'Flachbank'),
+    ('SCHRAEGBANK', 'Schrägbank'),
+    ('KLIMMZUG', 'Klimmzugstange'),
+    ('DIP', 'Dipstation / Barren'),
+    ('KABELZUG', 'Kabelzug / Latzug'),
+    ('BEINPRESSE', 'Beinpresse'),
+    ('LEG_CURL', 'Leg Curl Maschine'),
+    ('LEG_EXT', 'Leg Extension Maschine'),
+    ('SMITHMASCHINE', 'Smith Maschine'),
+    ('HACKENSCHMIDT', 'Hackenschmidt'),
+    ('RUDERMASCHINE', 'Rudermaschine'),
+    ('WIDERSTANDSBAND', 'Widerstandsbänder'),
+    ('SUSPENSION', 'Suspension Trainer (TRX)'),
+    ('MEDIZINBALL', 'Medizinball'),
+    ('BOXEN', 'Plyo Box'),
+    ('MATTE', 'Trainingsmatte'),
+    ('KOERPER', 'Nur Körpergewicht'),
+]
+
 # --- MODELLE ---
+
+class Equipment(models.Model):
+    """
+    Ausrüstung / Equipment für Übungen
+    """
+    name = models.CharField(max_length=50, choices=EQUIPMENT_CHOICES, unique=True, verbose_name="Equipment")
+    beschreibung = models.TextField(blank=True, verbose_name="Beschreibung")
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+    
+    # Welche User haben dieses Equipment?
+    users = models.ManyToManyField(User, related_name="verfuegbares_equipment", blank=True)
+    
+    def __str__(self):
+        return self.get_name_display()
+    
+    class Meta:
+        verbose_name = "Equipment"
+        verbose_name_plural = "Equipment"
+        ordering = ['name']
+
 
 class Uebung(models.Model):
     bezeichnung = models.CharField(max_length=100, unique=True, verbose_name="Name der Übung")
@@ -59,6 +103,9 @@ class Uebung(models.Model):
     
     # NEU: Bewegungstyp für Algorithmus
     bewegungstyp = models.CharField(max_length=20, choices=BEWEGUNGS_TYP, default='ISOLATION', verbose_name="Bewegungsmuster")
+    
+    # NEU: Equipment das für diese Übung benötigt wird
+    equipment = models.ManyToManyField(Equipment, related_name="uebungen", blank=True, verbose_name="Benötigtes Equipment")
 
     beschreibung = models.TextField(blank=True, verbose_name="Anleitung / Notizen")
     bild = models.ImageField(upload_to='uebungen_bilder/', blank=True, null=True, verbose_name="Foto/Grafik")
@@ -199,6 +246,9 @@ class PlanUebung(models.Model):
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name="uebungen")
     uebung = models.ForeignKey(Uebung, on_delete=models.CASCADE, verbose_name="Übung")
     reihenfolge = models.PositiveIntegerField(default=1, verbose_name="Reihenfolge")
+    
+    # NEU: Trainingstag für Splits (z.B. "Push", "Pull", "Legs" oder "Tag 1", "Tag 2")
+    trainingstag = models.CharField(max_length=100, blank=True, verbose_name="Trainingstag/Session")
     
     # Vorgaben für den Plan
     saetze_ziel = models.PositiveIntegerField(default=3, verbose_name="Geplante Sätze")

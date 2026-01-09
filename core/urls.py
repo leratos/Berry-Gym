@@ -45,4 +45,8 @@ urlpatterns = [
     
     # AI/ML Recommendations
     path('recommendations/', views.workout_recommendations, name='workout_recommendations'),
+    
+    # Equipment Management
+    path('equipment/', views.equipment_management, name='equipment_management'),
+    path('equipment/toggle/<int:equipment_id>/', views.toggle_equipment, name='toggle_equipment'),
 ]

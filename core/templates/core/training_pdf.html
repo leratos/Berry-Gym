@@ -6,156 +6,451 @@
     <style>
         @page {
             size: A4;
-            margin: 2cm;
+            margin: 1.5cm;
         }
         body {
             font-family: Arial, Helvetica, sans-serif;
             color: #333;
-            font-size: 12px;
+            font-size: 10px;
+            line-height: 1.4;
         }
         h1 {
             color: #0d6efd;
             border-bottom: 3px solid #0d6efd;
             padding-bottom: 10px;
-            font-size: 24px;
+            font-size: 22px;
+            margin-bottom: 15px;
         }
         h2 {
             color: #495057;
-            margin-top: 25px;
-            border-bottom: 1px solid #dee2e6;
+            margin-top: 20px;
+            border-bottom: 2px solid #dee2e6;
             padding-bottom: 5px;
-            font-size: 18px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        h3 {
+            color: #6c757d;
+            font-size: 13px;
+            margin-top: 15px;
+            margin-bottom: 8px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 15px 0;
+            margin: 10px 0 15px 0;
+            font-size: 9px;
         }
         th {
             background-color: #0d6efd;
             color: white;
-            padding: 10px;
+            padding: 8px 6px;
             text-align: left;
             font-weight: bold;
         }
         td {
-            padding: 8px;
+            padding: 6px;
             border-bottom: 1px solid #dee2e6;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
         }
         .stat-box {
             display: inline-block;
-            padding: 15px 20px;
-            margin: 10px 10px 10px 0;
+            padding: 10px 15px;
+            margin: 5px 8px 5px 0;
             background-color: #f8f9fa;
-            border-radius: 8px;
-            min-width: 120px;
+            border-left: 4px solid #0d6efd;
+            min-width: 100px;
+            vertical-align: top;
         }
         .stat-value {
-            font-size: 28px;
+            font-size: 22px;
             font-weight: bold;
             color: #0d6efd;
         }
         .stat-label {
-            font-size: 11px;
+            font-size: 9px;
             color: #6c757d;
             text-transform: uppercase;
-            margin-top: 5px;
+            margin-top: 3px;
+        }
+        .positive {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .negative {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .neutral {
+            color: #6c757d;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #0d6efd;
+            text-align: center;
+            color: white;
+            font-size: 9px;
+            line-height: 20px;
+            font-weight: bold;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0d6efd;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 10px;
         }
         .footer {
-            margin-top: 50px;
-            padding-top: 20px;
+            margin-top: 30px;
+            padding-top: 15px;
             border-top: 1px solid #dee2e6;
             text-align: center;
             color: #6c757d;
-            font-size: 10px;
+            font-size: 8px;
         }
+        .two-column {
+            width: 48%;
+            display: inline-block;
+            vertical-align: top;
+            margin-right: 2%;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .badge-success { background-color: #28a745; color: white; }
+        .badge-warning { background-color: #ffc107; color: #333; }
+        .badge-danger { background-color: #dc3545; color: white; }
+        .badge-info { background-color: #17a2b8; color: white; }
     </style>
 </head>
 <body>
-    <h1>🏋️ HomeGym Training Report</h1>
+    <h1>HomeGym Training Report - Trainer Edition</h1>
     
-    <div style="margin-bottom: 30px;">
-        <p><strong>Benutzer:</strong> {{ user.username }}</p>
-        <p><strong>Erstellt am:</strong> {{ datum|date:"d.m.Y H:i" }} Uhr</p>
+    <div style="margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px;">
+        <strong>Athlet:</strong> {{ user.username }} | 
+        <strong>Erstellt:</strong> {{ datum|date:"d.m.Y H:i" }} Uhr | 
+        <strong>Zeitraum:</strong> Letzte 30 Tage
     </div>
 
-    <!-- Statistiken -->
-    <h2>📊 Übersicht</h2>
+    <!-- Gesamtstatistiken -->
+    <h2>Gesamtstatistiken</h2>
     
-    <div style="margin: 20px 0;">
+    <div style="margin: 15px 0;">
         <div class="stat-box">
             <div class="stat-value">{{ gesamt_trainings }}</div>
-            <div class="stat-label">Trainings</div>
+            <div class="stat-label">Gesamt Trainings</div>
         </div>
         
         <div class="stat-box">
-            <div class="stat-value">{{ gesamt_saetze }}</div>
-            <div class="stat-label">Sätze</div>
+            <div class="stat-value">{{ trainings_30_tage }}</div>
+            <div class="stat-label">30 Tage</div>
         </div>
         
         <div class="stat-box">
-            <div class="stat-value">{{ gesamt_volumen|floatformat:0 }}</div>
-            <div class="stat-label">Volumen (kg)</div>
+            <div class="stat-value">{{ trainings_pro_woche }}</div>
+            <div class="stat-label">Ø/Woche</div>
+        </div>
+        
+        <div class="stat-box">
+            <div class="stat-value">{{ saetze_30_tage }}</div>
+            <div class="stat-label">Sätze (30T)</div>
+        </div>
+        
+        <div class="stat-box">
+            <div class="stat-value">{{ volumen_30_tage|floatformat:0 }}</div>
+            <div class="stat-label">Volumen kg (30T)</div>
+        </div>
+        
+        <div class="stat-box">
+            <div class="stat-value">{{ avg_rpe|floatformat:1 }}</div>
+            <div class="stat-label">Ø RPE</div>
         </div>
     </div>
 
     {% if letzter_koerperwert %}
-    <!-- Körperwerte -->
-    <h2>⚖️ Körperwerte</h2>
-    <table>
-        <tr>
-            <th>Messung</th>
-            <th>Wert</th>
-        </tr>
-        <tr>
-            <td>Gewicht</td>
-            <td>{{ letzter_koerperwert.gewicht }} kg</td>
-        </tr>
-        {% if letzter_koerperwert.bmi %}
-        <tr>
-            <td>BMI</td>
-            <td>{{ letzter_koerperwert.bmi }}</td>
-        </tr>
+    <!-- Körperwerte & Entwicklung -->
+    <h2>Körperwerte & Entwicklung</h2>
+    
+    <div class="two-column">
+        <h3>Aktuelle Messung ({{ letzter_koerperwert.datum|date:"d.m.Y" }})</h3>
+        <table>
+            <tr>
+                <th>Messung</th>
+                <th>Wert</th>
+            </tr>
+            <tr>
+                <td>Gewicht</td>
+                <td><strong>{{ letzter_koerperwert.gewicht }} kg</strong></td>
+            </tr>
+            {% if letzter_koerperwert.bmi %}
+            <tr>
+                <td>BMI</td>
+                <td>{{ letzter_koerperwert.bmi }}</td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.ffmi %}
+            <tr>
+                <td>FFMI</td>
+                <td>{{ letzter_koerperwert.ffmi }}</td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.koerperfett %}
+            <tr>
+                <td>Körperfett</td>
+                <td>{{ letzter_koerperwert.koerperfett }}%</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    
+    <div class="two-column">
+        <h3>Verlauf (letzte 5 Messungen)</h3>
+        {% if gewichts_trend %}
+        <div class="info-box">
+            <strong>Trend:</strong> {{ gewichts_trend.diff|floatformat:1 }} kg {{ gewichts_trend.richtung }}
+        </div>
         {% endif %}
-        {% if letzter_koerperwert.ffmi %}
-        <tr>
-            <td>FFMI</td>
-            <td>{{ letzter_koerperwert.ffmi }}</td>
-        </tr>
-        {% endif %}
-    </table>
+        <table>
+            <tr>
+                <th>Datum</th>
+                <th>Gewicht</th>
+            </tr>
+            {% for kw in koerperwerte %}
+            <tr>
+                <td>{{ kw.datum|date:"d.m.Y" }}</td>
+                <td>{{ kw.gewicht }} kg</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
     {% endif %}
-
-    <!-- Top Übungen -->
-    <h2>💪 Top 10 Übungen</h2>
+    
+    <!-- Kraftentwicklung -->
+    {% if kraft_progression %}
+    <h2>Kraftentwicklung - Top 5 Übungen</h2>
+    <div class="info-box">
+        <strong>Interpretation:</strong> Zeigt die Gewichtssteigerung vom Start bis zur aktuellen Leistung. 
+        Positiv = Kraftzuwachs, Negativ = Möglicher Übertraining oder Technikfokus.
+    </div>
     <table>
         <thead>
             <tr>
                 <th>Übung</th>
+                <th>Muskelgruppe</th>
+                <th>Start</th>
+                <th>Aktuell</th>
+                <th>Progression</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prog in kraft_progression %}
+            <tr>
+                <td>{{ prog.uebung }}</td>
+                <td><span class="badge badge-info">{{ prog.muskelgruppe }}</span></td>
+                <td>{{ prog.start_gewicht|floatformat:1 }} kg</td>
+                <td>{{ prog.aktuell_gewicht|floatformat:1 }} kg</td>
+                <td>
+                    {% if prog.progression > 0 %}
+                        <span class="positive">+{{ prog.progression }}%</span>
+                        {% if prog.progression > 20 %}
+                            <span class="badge badge-success">Stark</span>
+                        {% elif prog.progression > 10 %}
+                            <span class="badge badge-info">Gut</span>
+                        {% endif %}
+                    {% elif prog.progression < 0 %}
+                        <span class="negative">{{ prog.progression }}%</span>
+                        <span class="badge badge-warning">Prüfen</span>
+                    {% else %}
+                        <span class="neutral">0%</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    
+    <!-- Muskelgruppen-Balance -->
+    {% if muskelgruppen_stats %}
+    <h2>Muskelgruppen-Balance (30 Tage)</h2>
+    <div class="info-box">
+        <strong>Trainer-Notiz:</strong> Ausgeglichenes Training aller Muskelgruppen ist wichtig für Verletzungsprävention. 
+        Push/Pull-Verhältnis sollte ausgeglichen sein. RPE zeigt Intensität (7-9 = optimal).
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Muskelgruppe</th>
+                <th>Sätze</th>
+                <th>Volumen (kg)</th>
+                <th>Ø RPE</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gruppe in muskelgruppen_stats %}
+            <tr>
+                <td><strong>{{ gruppe.name }}</strong></td>
+                <td>{{ gruppe.saetze }}</td>
+                <td>{{ gruppe.volumen|floatformat:0 }}</td>
+                <td>{{ gruppe.avg_rpe|floatformat:1 }}</td>
+                <td>
+                    {% if gruppe.saetze >= 30 %}
+                        <span class="badge badge-success">Optimal</span>
+                    {% elif gruppe.saetze >= 20 %}
+                        <span class="badge badge-info">Gut</span>
+                    {% elif gruppe.saetze >= 10 %}
+                        <span class="badge badge-warning">Untertrainiert</span>
+                    {% else %}
+                        <span class="badge badge-danger">Zu wenig</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    
+    <!-- Intensitäts-Analyse -->
+    <h2>Intensitäts-Analyse (RPE)</h2>
+    <div class="two-column">
+        <h3>RPE-Verteilung (30 Tage)</h3>
+        <table>
+            <tr>
+                <th>Intensität</th>
                 <th>Anzahl Sätze</th>
+                <th>Prozent</th>
+            </tr>
+            <tr>
+                <td>Leicht (RPE 1-6)</td>
+                <td>{{ rpe_verteilung.leicht }}</td>
+                <td>
+                    {% widthratio rpe_verteilung.leicht saetze_30_tage 100 %}%
+                </td>
+            </tr>
+            <tr>
+                <td>Mittel (RPE 7-8)</td>
+                <td>{{ rpe_verteilung.mittel }}</td>
+                <td>
+                    {% widthratio rpe_verteilung.mittel saetze_30_tage 100 %}%
+                </td>
+            </tr>
+            <tr>
+                <td>Schwer (RPE 9-10)</td>
+                <td>{{ rpe_verteilung.schwer }}</td>
+                <td>
+                    {% widthratio rpe_verteilung.schwer saetze_30_tage 100 %}%
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="two-column">
+        <h3>Empfehlung</h3>
+        <div class="info-box">
+            <strong>Durchschnitts-RPE:</strong> {{ avg_rpe|floatformat:1 }}/10
+            <br><br>
+            {% if avg_rpe < 6.5 %}
+                <span class="badge badge-warning">Zu niedrig</span>
+                <p>Intensität erhöhen für bessere Fortschritte.</p>
+            {% elif avg_rpe <= 8.5 %}
+                <span class="badge badge-success">Optimal</span>
+                <p>Gute Balance zwischen Intensität und Regeneration.</p>
+            {% else %}
+                <span class="badge badge-danger">Zu hoch</span>
+                <p>Deload-Woche oder Volumen reduzieren empfohlen.</p>
+            {% endif %}
+            <br>
+            <strong>Ideal:</strong> 70-80% der Sätze bei RPE 7-9 für optimalen Muskelaufbau.
+        </div>
+    </div>
+    
+    <!-- Volumen-Progression -->
+    {% if volumen_wochen %}
+    <h2>Volumen-Progression (letzte 8 Wochen)</h2>
+    <div class="info-box">
+        <strong>Periodisierung:</strong> Gesundes Training zeigt progressive Überlastung mit gelegentlichen Deload-Wochen. 
+        Zu schneller Anstieg = Verletzungsrisiko, zu wenig Variation = Plateau.
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Woche</th>
+                <th style="width: 60%;">Volumen</th>
+                <th>kg gesamt</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for woche in volumen_wochen %}
+            <tr>
+                <td><strong>{{ woche.woche }}</strong></td>
+                <td>
+                    <div class="progress-bar">
+                        {% widthratio woche.volumen volumen_wochen.0.volumen 100 as prozent %}
+                        <div class="progress-fill" style="width: {{ prozent }}%;">
+                            {{ prozent }}%
+                        </div>
+                    </div>
+                </td>
+                <td>{{ woche.volumen|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Top Übungen -->
+    <h2>Top 10 Übungen (gesamt)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Übung</th>
+                <th>Muskelgruppe</th>
+                <th>Sätze</th>
                 <th>Max Gewicht</th>
+                <th>Ø Gewicht</th>
+                <th>Total Volumen</th>
             </tr>
         </thead>
         <tbody>
             {% for uebung in top_uebungen %}
             <tr>
                 <td>{{ uebung.uebung__bezeichnung }}</td>
+                <td><span class="badge badge-info">{{ uebung.muskelgruppe_display }}</span></td>
                 <td>{{ uebung.anzahl }}</td>
                 <td>{{ uebung.max_gewicht|floatformat:1 }} kg</td>
+                <td>{{ uebung.avg_gewicht|floatformat:1 }} kg</td>
+                <td>{{ uebung.total_volumen|floatformat:0 }} kg</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <!-- Training Historie -->
-    <h2>📅 Letzte Trainings (max. 20)</h2>
+    <h2>Letzte Trainingseinheiten (max. 20)</h2>
     <table>
         <thead>
             <tr>
                 <th>Datum</th>
-                <th>Plan</th>
+                <th>Plan/Session</th>
                 <th>Dauer</th>
                 <th>Sätze</th>
+                <th>Volumen</th>
             </tr>
         </thead>
         <tbody>
@@ -165,13 +460,76 @@
                 <td>{{ training.plan.name|default:"Freies Training" }}</td>
                 <td>{{ training.dauer_minuten|default:"-" }} Min</td>
                 <td>{{ training.saetze.count }}</td>
+                <td>
+                    {% with volumen=0 %}
+                        {% for satz in training.saetze.all %}
+                            {% if satz.gewicht and satz.wiederholungen %}
+                                {% widthratio satz.gewicht 1 satz.wiederholungen as satz_vol %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                    -
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    
+    <!-- Trainer-Empfehlungen -->
+    <h2>Trainer-Notizen & Empfehlungen</h2>
+    
+    <div class="info-box" style="background-color: #fff3cd; border-left-color: #ffc107;">
+        <h3 style="margin-top: 0;">Stärken</h3>
+        <ul style="margin: 5px 0;">
+            {% if trainings_pro_woche >= 3 %}
+            <li>Konsistente Trainingsfrequenz ({{ trainings_pro_woche }}x/Woche)</li>
+            {% endif %}
+            {% if avg_rpe >= 7 and avg_rpe <= 8.5 %}
+            <li>Optimale Trainingsintensität (RPE {{ avg_rpe|floatformat:1 }})</li>
+            {% endif %}
+            {% if kraft_progression %}
+                {% for prog in kraft_progression %}
+                    {% if prog.progression > 10 and forloop.counter0 < 2 %}
+                    <li>Starke Kraftentwicklung bei {{ prog.uebung }} (+{{ prog.progression }}%)</li>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </ul>
+    </div>
+    
+    <div class="info-box" style="background-color: #f8d7da; border-left-color: #dc3545;">
+        <h3 style="margin-top: 0;">Verbesserungspotenzial</h3>
+        <ul style="margin: 5px 0;">
+            {% if trainings_pro_woche < 3 %}
+            <li>Trainingsfrequenz erhöhen auf mind. 3x/Woche für bessere Fortschritte</li>
+            {% endif %}
+            {% if avg_rpe < 6.5 %}
+            <li>Trainingsintensität steigern - aktuell zu niedrig (RPE {{ avg_rpe|floatformat:1 }})</li>
+            {% endif %}
+            {% if avg_rpe > 8.5 %}
+            <li>Deload-Woche einplanen - Übertraining-Risiko (RPE {{ avg_rpe|floatformat:1 }})</li>
+            {% endif %}
+            {% for gruppe in muskelgruppen_stats %}
+                {% if gruppe.saetze < 15 and forloop.counter0 < 2 %}
+                <li>{{ gruppe.name }} untertrainiert (nur {{ gruppe.saetze }} Sätze) - Volumen erhöhen</li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="info-box" style="background-color: #d1ecf1; border-left-color: #17a2b8;">
+        <h3 style="margin-top: 0;">Nächste Schritte</h3>
+        <ul style="margin: 5px 0;">
+            <li>Nächster Check-in in 4 Wochen empfohlen</li>
+            <li>Fokus: Progressive Überlastung bei Hauptübungen</li>
+            <li>Ernährungsstatus überprüfen (Kalorienüberschuss/-defizit je nach Ziel)</li>
+            <li>Regeneration: Mind. 48h zwischen gleichen Muskelgruppen</li>
+        </ul>
+    </div>
 
     <div class="footer">
-        <p>HomeGym App © 2026 | Generiert mit ❤️</p>
+        <p>HomeGym App © 2026 | Trainer Edition Report</p>
+        <p>Dieser Report dient zur Trainingsplanung und -optimierung. Bei Fragen wenden Sie sich an Ihren Trainer.</p>
     </div>
 </body>
 </html>

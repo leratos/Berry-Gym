@@ -1,0 +1,16 @@
+# AI Coach Dependencies
+
+# LLM Integration
+ollama>=0.1.6
+
+# SSH Tunnel für sichere DB-Verbindung
+sshtunnel>=0.4.0
+
+# MariaDB/MySQL Client (falls nicht schon im Hauptprojekt)
+mysqlclient>=2.2.4
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# Django (sollte bereits installiert sein, aber zur Sicherheit)
+Django>=5.0.3

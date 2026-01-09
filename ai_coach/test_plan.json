@@ -1,0 +1,295 @@
+{
+  "success": true,
+  "plan_id": null,
+  "plan_data": {
+    "plan_name": "3er-Split: Push/Pull/Legs - Woche 1-4",
+    "plan_description": "Kurzfristiger Anpassungsplan für User, der sehr selten trainiert. Ziel ist es, untertrainierte Muskelgruppen zu priorisieren und eine bessere Balance zwischen Push und Pull herzustellen.",
+    "duration_weeks": 4,
+    "sessions": [
+      {
+        "day_name": "Push (Brust/Schultern/Trizeps)",
+        "exercises": [
+          {
+            "exercise_name": "Bankdrücken (Langhantel)",
+            "sets": 4,
+            "reps": "8-10",
+            "rpe_target": 8,
+            "order": 1,
+            "notes": "Hauptübung, progressive Overload"
+          },
+          {
+            "exercise_name": "Arnold Press (Kurzhantel)",
+            "sets": 3,
+            "reps": "10-12",
+            "rpe_target": 7,
+            "order": 2
+          },
+          {
+            "exercise_name": "Trizeps Overhead Extension (Kurzhantel)",
+            "sets": 4,
+            "reps": "12-15",
+            "rpe_target": 6,
+            "order": 3
+          }
+        ]
+      },
+      {
+        "day_name": "Pull (Rücken/Lat)",
+        "exercises": [
+          {
+            "exercise_name": "Kreuzheben (Langhantel, Conventional)",
+            "sets": 4,
+            "reps": "8-10",
+            "rpe_target": 8,
+            "order": 1
+          },
+          {
+            "exercise_name": "Seal Rows (Bank, Kurzhantel)",
+            "sets": 3,
+            "reps": "10-12",
+            "rpe_target": 7,
+            "order": 2
+          }
+        ]
+      },
+      {
+        "day_name": "Legs (Beine)",
+        "exercises": [
+          {
+            "exercise_name": "Kniebeuge (Langhantel, Back Squat)",
+            "sets": 4,
+            "reps": "8-10",
+            "rpe_target": 8,
+            "order": 1
+          },
+          {
+            "exercise_name": "Sumo Squats (Kurzhantel)",
+            "sets": 3,
+            "reps": "12-15",
+            "rpe_target": 6,
+            "order": 2
+          }
+        ]
+      }
+    ],
+    "weekly_structure": "Push, Pull und Legs werden auf zwei Tage verteilt. Ziel ist es, eine bessere Balance zwischen Push und Pull herzustellen.",
+    "progression_notes": "Der User sollte progressive Overload durch mehr Gewicht oder Wiederholungen erzielen. Die RPE-Target 7-9 für Hypertrophie wird angestrebt."
+  },
+  "analysis_data": {
+    "user_id": 1,
+    "analysis_period": "30 days",
+    "training_stats": {
+      "total_sessions": 1,
+      "avg_duration_minutes": 57,
+      "frequency_per_week": 0.2
+    },
+    "muscle_groups": {
+      "BRUST": {
+        "effective_reps": 28.8,
+        "avg_rpe": 8.0,
+        "last_trained": "2026-01-03T19:33:36.144246+00:00"
+      },
+      "RUECKEN_LAT": {
+        "effective_reps": 23.999999999999996,
+        "avg_rpe": 6.7,
+        "last_trained": "2026-01-03T19:33:36.144246+00:00"
+      },
+      "BEINE_HAM": {
+        "effective_reps": 26.4,
+        "avg_rpe": 7.3,
+        "last_trained": "2026-01-03T19:33:36.144246+00:00"
+      },
+      "SCHULTER_SEIT": {
+        "effective_reps": 20.400000000000002,
+        "avg_rpe": 8.5,
+        "last_trained": "2026-01-03T19:33:36.144246+00:00"
+      },
+      "SCHULTER_HINT": {
+        "effective_reps": 20.400000000000002,
+        "avg_rpe": 8.5,
+        "last_trained": "2026-01-03T19:33:36.144246+00:00"
+      },
+      "BAUCH": {
+        "effective_reps": 31.200000000000003,
+        "avg_rpe": 8.7,
+        "last_trained": "2026-01-03T19:33:36.144246+00:00"
+      },
+      "BIZEPS": {
+        "effective_reps": 13.2,
+        "avg_rpe": 9.5,
+        "last_trained": "2026-01-03T19:33:36.144246+00:00"
+      }
+    },
+    "exercise_performance": {
+      "Floor Press (Kurzhantel)": {
+        "records": [
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 14.0,
+            "weight": 10.0,
+            "reps": 12,
+            "rpe": 7.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 14.0,
+            "weight": 10.0,
+            "reps": 12,
+            "rpe": 8.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 14.0,
+            "weight": 10.0,
+            "reps": 12,
+            "rpe": 9.0
+          }
+        ],
+        "muscle_group": "BRUST",
+        "trend": "0.0kg",
+        "last_1rm": 14.0,
+        "avg_rpe": 8.0
+      },
+      "Langhantel-Rudern (Vorgebeugt)": {
+        "records": [
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 28.0,
+            "weight": 20.0,
+            "reps": 12,
+            "rpe": 6.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 28.0,
+            "weight": 20.0,
+            "reps": 12,
+            "rpe": 7.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 28.0,
+            "weight": 20.0,
+            "reps": 12,
+            "rpe": 7.0
+          }
+        ],
+        "muscle_group": "RUECKEN_LAT",
+        "trend": "0.0kg",
+        "last_1rm": 28.0,
+        "avg_rpe": 6.7
+      },
+      "Rumänisches Kreuzheben (RDL)": {
+        "records": [
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 28.0,
+            "weight": 20.0,
+            "reps": 12,
+            "rpe": 7.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 28.0,
+            "weight": 20.0,
+            "reps": 12,
+            "rpe": 7.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 28.0,
+            "weight": 20.0,
+            "reps": 12,
+            "rpe": 8.0
+          }
+        ],
+        "muscle_group": "BEINE_HAM",
+        "trend": "0.0kg",
+        "last_1rm": 28.0,
+        "avg_rpe": 7.3
+      },
+      "Seitheben (Kurzhantel)": {
+        "records": [
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 7.0,
+            "weight": 5.0,
+            "reps": 12,
+            "rpe": 8.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 7.0,
+            "weight": 5.0,
+            "reps": 12,
+            "rpe": 9.0
+          }
+        ],
+        "muscle_group": "SCHULTER_SEIT",
+        "trend": "0.0kg",
+        "last_1rm": 7.0,
+        "avg_rpe": 8.5
+      },
+      "Vorgebeugtes Seitheben (Kurzhantel)": {
+        "records": [
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 7.0,
+            "weight": 5.0,
+            "reps": 12,
+            "rpe": 8.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 7.0,
+            "weight": 5.0,
+            "reps": 12,
+            "rpe": 9.0
+          }
+        ],
+        "muscle_group": "SCHULTER_HINT",
+        "trend": "0.0kg",
+        "last_1rm": 7.0,
+        "avg_rpe": 8.5
+      },
+      "Dead Bug (Körpergewicht)": {
+        "records": [],
+        "muscle_group": "BAUCH",
+        "trend": "Nicht genug Daten",
+        "last_1rm": 0,
+        "avg_rpe": 0
+      },
+      "Concentration Curls (Kurzhantel)": {
+        "records": [
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 12.7,
+            "weight": 10.0,
+            "reps": 8,
+            "rpe": 9.0
+          },
+          {
+            "date": "2026-01-03T19:33:36.144246+00:00",
+            "1rm": 12.0,
+            "weight": 10.0,
+            "reps": 6,
+            "rpe": 10.0
+          }
+        ],
+        "muscle_group": "BIZEPS",
+        "trend": "-0.7kg",
+        "last_1rm": 12.0,
+        "avg_rpe": 9.5
+      }
+    },
+    "push_pull_balance": {
+      "push_volume": 0,
+      "pull_volume": 0,
+      "ratio": 0,
+      "balanced": false
+    },
+    "weaknesses": [
+      "BIZEPS: Untertrainiert (nur 13 eff. Wdh vs. Ø 23)"
+    ]
+  }
+}

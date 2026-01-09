@@ -162,6 +162,9 @@
       <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="text-secondary ps-1 mb-0">TRAINING</h6>
           <div class="d-flex gap-3">
+              <a href="{% url 'equipment_management' %}" class="text-decoration-none small fw-bold text-warning" title="Ausrüstung verwalten">
+                  <i class="bi bi-tools"></i> Equipment
+              </a>
               <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
                   <i class="bi bi-moon-fill" id="themeIcon"></i>
               </button>
@@ -551,6 +554,8 @@
             const heatmapData = {{ training_heatmap_json|safe }};
             const container = document.getElementById('training-heatmap');
             
+            if (!container) return;
+            
             // Leere Container
             container.innerHTML = '';
             
@@ -567,6 +572,7 @@
             
             let currentDate = new Date(startDate);
             let currentMonth = null;
+            let currentMonthContainer = null;
             
             while (currentDate <= today) {
                 // Neuer Monat? (nur anzeigen wenn es der erste Sonntag im Monat ist)
@@ -588,6 +594,7 @@
                     
                     container.appendChild(monthCol);
                     currentMonth = month;
+                    currentMonthContainer = monthCol;
                 }
                 
                 // Wochenspalte erstellen
@@ -626,7 +633,10 @@
                     weekCol.appendChild(dayBox);
                 }
                 
-                container.lastChild.appendChild(weekCol);
+                // Füge Woche zum aktuellen Monatscontainer hinzu
+                if (currentMonthContainer) {
+                    currentMonthContainer.appendChild(weekCol);
+                }
                 
                 // Nächste Woche
                 currentDate.setDate(currentDate.getDate() + 7);

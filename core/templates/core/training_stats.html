@@ -170,7 +170,7 @@
                             <tr>
                                 <th>Muskelgruppe</th>
                                 <th class="text-center">Sätze</th>
-                                <th class="text-end">Volumen (kg)</th>
+                                <th class="text-end">Eff. Wiederholungen</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -266,7 +266,7 @@
             data: {
                 labels: {{ mg_labels_json|safe }},
                 datasets: [{
-                    label: 'Volumen (kg)',
+                    label: 'Effektive Wiederholungen',
                     data: {{ mg_data_json|safe }},
                     backgroundColor: [
                         '#0d6efd', '#6610f2', '#6f42c1', '#d63384', 
@@ -277,10 +277,24 @@
                 }]
             },
             options: {
-                ...chartDefaults,
+                responsive: true,
+                maintainAspectRatio: true,
                 indexAxis: 'y',
                 plugins: {
-                    legend: { display: false }
+                    legend: { 
+                        display: false 
+                    }
+                },
+                scales: {
+                    x: { 
+                        ticks: { color: '#adb5bd' }, 
+                        grid: { color: '#404448' },
+                        beginAtZero: true
+                    },
+                    y: { 
+                        ticks: { color: '#adb5bd' }, 
+                        grid: { color: '#404448' }
+                    }
                 }
             }
         });

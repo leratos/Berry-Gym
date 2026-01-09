@@ -1,0 +1,177 @@
+{% load static %}
+<!doctype html>
+<html lang="de" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ausrüstung verwalten - HomeGym</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  </head>
+  <body>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-tools"></i> Meine Ausrüstung</h2>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Zurück
+                </a>
+            </div>
+            
+            <!-- Info Card -->
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                <strong>Wähle deine verfügbare Ausrüstung aus.</strong><br>
+                Nur Übungen mit verfügbarem Equipment werden dir angezeigt und für Trainingspläne vorgeschlagen.
+            </div>
+            
+            <!-- Statistik -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ available_uebungen }}</h3>
+                            <p class="mb-0">Verfügbare Übungen</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body text-center">
+                            <h3>{{ unavailable_uebungen }}</h3>
+                            <p class="mb-0">Gesperrte Übungen</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ total_uebungen }}</h3>
+                            <p class="mb-0">Gesamt Übungen</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Equipment Selection -->
+            {% for category, equipment_list in categorized_equipment.items %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ category }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for equipment in equipment_list %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="form-check form-switch">
+                                <input 
+                                    class="form-check-input equipment-toggle" 
+                                    type="checkbox" 
+                                    id="equipment_{{ equipment.id }}"
+                                    data-equipment-id="{{ equipment.id }}"
+                                    {% if equipment.id in user_equipment_ids %}checked{% endif %}
+                                >
+                                <label class="form-check-label" for="equipment_{{ equipment.id }}">
+                                    <strong>{{ equipment }}</strong>
+                                    {% if equipment.beschreibung %}
+                                    <br><small class="text-muted">{{ equipment.beschreibung }}</small>
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Quick Presets -->
+            <div class="card border-primary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightning-fill"></i> Schnell-Auswahl</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group d-flex flex-wrap gap-2" role="group">
+                        <button type="button" class="btn btn-outline-primary" onclick="selectPreset('home-basic')">
+                            <i class="bi bi-house"></i> Home Gym Basic
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="selectPreset('home-advanced')">
+                            <i class="bi bi-house-fill"></i> Home Gym Advanced
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="selectPreset('fitness-studio')">
+                            <i class="bi bi-building"></i> Fitnessstudio
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="selectPreset('bodyweight')">
+                            <i class="bi bi-person-arms-up"></i> Nur Körpergewicht
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="selectPreset('none')">
+                            <i class="bi bi-x-circle"></i> Alles abwählen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Equipment Toggle via AJAX
+document.querySelectorAll('.equipment-toggle').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const equipmentId = this.dataset.equipmentId;
+        const isChecked = this.checked;
+        
+        fetch(`/equipment/toggle/${equipmentId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Optional: Toast Notification
+            console.log(`Equipment ${data.equipment_name}: ${data.status}`);
+            
+            // Statistik aktualisieren (Seite neu laden)
+            setTimeout(() => location.reload(), 300);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            this.checked = !isChecked; // Zurücksetzen bei Fehler
+        });
+    });
+});
+
+// Preset Selection
+const presets = {
+    'home-basic': ['KURZHANTEL', 'BANK', 'KLIMMZUG', 'MATTE', 'KOERPER'],
+    'home-advanced': ['LANGHANTEL', 'KURZHANTEL', 'BANK', 'SCHRAEGBANK', 'KLIMMZUG', 'DIP', 'MATTE', 'KOERPER'],
+    'fitness-studio': ['LANGHANTEL', 'KURZHANTEL', 'KETTLEBELL', 'BANK', 'SCHRAEGBANK', 'KLIMMZUG', 'DIP', 'KABELZUG', 'BEINPRESSE', 'LEG_CURL', 'LEG_EXT', 'SMITHMASCHINE', 'HACKENSCHMIDT', 'RUDERMASCHINE', 'MATTE', 'KOERPER'],
+    'bodyweight': ['MATTE', 'KOERPER', 'KLIMMZUG', 'DIP'],
+    'none': []
+};
+
+function selectPreset(presetName) {
+    const selectedEquipment = presets[presetName] || [];
+    
+    document.querySelectorAll('.equipment-toggle').forEach(checkbox => {
+        const equipmentId = checkbox.dataset.equipmentId;
+        const equipmentName = checkbox.closest('.form-check').querySelector('label strong').textContent.trim();
+        
+        // Equipment-Name zu Code konvertieren (vereinfacht)
+        const shouldBeChecked = selectedEquipment.some(eq => equipmentName.toLowerCase().includes(eq.toLowerCase()) || equipmentName === eq);
+        
+        if (checkbox.checked !== shouldBeChecked) {
+            checkbox.checked = shouldBeChecked;
+            checkbox.dispatchEvent(new Event('change'));
+        }
+    });
+}
+</script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from .models import Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, ProgressPhoto, MUSKELGRUPPEN
+from .models import Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, ProgressPhoto, Equipment, MUSKELGRUPPEN
 
 # --- ÜBUNGEN ---
 class UebungAdminForm(forms.ModelForm):
@@ -23,23 +23,31 @@ class UebungAdminForm(forms.ModelForm):
 @admin.register(Uebung)
 class UebungAdmin(admin.ModelAdmin):
     form = UebungAdminForm
-    list_display = ('bezeichnung', 'muskelgruppe', 'gewichts_typ', 'bewegungstyp', 'hilfsmuskel_anzeige')
-    list_filter = ('muskelgruppe', 'bewegungstyp', 'gewichts_typ')
+    list_display = ('bezeichnung', 'muskelgruppe', 'gewichts_typ', 'bewegungstyp', 'equipment_anzeige', 'hilfsmuskel_anzeige')
+    list_filter = ('muskelgruppe', 'bewegungstyp', 'gewichts_typ', 'equipment')
     search_fields = ('bezeichnung',)
     ordering = ('bezeichnung',)
+    filter_horizontal = ('equipment', 'favoriten')
     
     fieldsets = (
         ('Grundinformationen', {
             'fields': ('bezeichnung', 'muskelgruppe', 'hilfsmuskeln')
         }),
         ('Trainingsdetails', {
-            'fields': ('gewichts_typ', 'bewegungstyp')
+            'fields': ('gewichts_typ', 'bewegungstyp', 'equipment')
         }),
         ('Zusätzliche Infos', {
             'fields': ('beschreibung', 'bild', 'video_link'),
             'classes': ('collapse',)
         }),
     )
+    
+    def equipment_anzeige(self, obj):
+        equipment_list = obj.equipment.all()
+        if equipment_list:
+            return ', '.join(str(eq) for eq in equipment_list[:2]) + ('...' if len(equipment_list) > 2 else '')
+        return '❌ Kein Equipment'
+    equipment_anzeige.short_description = 'Equipment'
     
     def hilfsmuskel_anzeige(self, obj):
         if obj.hilfsmuskeln:
@@ -102,3 +110,15 @@ class ProgressPhotoAdmin(admin.ModelAdmin):
         return '-'
     foto_thumbnail.short_description = 'Vorschau'
     foto_thumbnail.allow_tags = True
+
+
+# --- EQUIPMENT ---
+@admin.register(Equipment)
+class EquipmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'anzahl_user', 'erstellt_am')
+    search_fields = ('name',)
+    filter_horizontal = ('users',)
+    
+    def anzahl_user(self, obj):
+        return obj.users.count()
+    anzahl_user.short_description = 'Anzahl User'

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Count, Max, Sum, Avg
+from django.db.models import Count, Max, Sum, Avg, F
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.contrib import messages
@@ -8,7 +8,8 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
-from .models import Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung, ProgressPhoto, MUSKELGRUPPEN
+from .models import Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung, ProgressPhoto, Equipment, MUSKELGRUPPEN
+from django.db import models
 import re
 import json
 import random
@@ -36,16 +37,24 @@ def dashboard(request):
     letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
     letzter_koerperwert = KoerperWerte.objects.first()
     
-    # Trainingsfrequenz diese Woche
+    # Trainingsfrequenz diese Woche (Montag bis Sonntag)
     heute = timezone.now()
-    start_woche = heute - timedelta(days=heute.weekday())  # Montag dieser Woche
+    # ISO-Woche: Montag = 1, Sonntag = 7
+    iso_weekday = heute.isoweekday()
+    # Start der Woche ist Montag
+    start_woche = heute - timedelta(days=iso_weekday - 1)
+    # Setze auf Mitternacht
+    start_woche = start_woche.replace(hour=0, minute=0, second=0, microsecond=0)
     trainings_diese_woche = Trainingseinheit.objects.filter(user=request.user, datum__gte=start_woche).count()
     
     # Streak berechnen (aufeinanderfolgende Wochen mit mindestens 1 Training)
     streak = 0
     check_date = heute
     while True:
-        week_start = check_date - timedelta(days=check_date.weekday())
+        # ISO-Woche: Montag = 1
+        iso_weekday = check_date.isoweekday()
+        week_start = check_date - timedelta(days=iso_weekday - 1)
+        week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
         week_end = week_start + timedelta(days=7)
         trainings_in_week = Trainingseinheit.objects.filter(
             user=request.user,
@@ -160,10 +169,15 @@ def dashboard(request):
     # Wöchentliches Volumen (letzte 4 Wochen für Dashboard)
     weekly_volumes = []
     for i in range(4):
-        week_start = heute - timedelta(days=heute.weekday() + (i * 7))
+        # ISO-Woche: Montag = 1, Sonntag = 7
+        iso_weekday = heute.isoweekday()
+        # Berechne Wochenstart (Montag) für Woche i
+        week_start = heute - timedelta(days=iso_weekday - 1 + (i * 7))
+        week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
         week_end = week_start + timedelta(days=7)
         
         week_saetze = Satz.objects.filter(
+            einheit__user=request.user,
             einheit__datum__gte=week_start,
             einheit__datum__lt=week_end,
             ist_aufwaermsatz=False
@@ -892,7 +906,11 @@ def training_stats(request):
     
     for training in trainings:
         arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
-        volumen = sum(float(s.gewicht) * s.wiederholungen for s in arbeitssaetze)
+        volumen = sum(
+            float(s.gewicht) * s.wiederholungen 
+            for s in arbeitssaetze 
+            if s.gewicht and s.wiederholungen
+        )
         volumen_labels.append(training.datum.strftime('%d.%m'))
         volumen_data.append(round(volumen, 1))
     
@@ -903,31 +921,41 @@ def training_stats(request):
     for training in trainings:
         week_key = training.datum.strftime('%Y-W%W')
         arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
-        volumen = sum(float(s.gewicht) * s.wiederholungen for s in arbeitssaetze)
+        volumen = sum(
+            float(s.gewicht) * s.wiederholungen 
+            for s in arbeitssaetze 
+            if s.gewicht and s.wiederholungen
+        )
         weekly_volume[week_key] += volumen
     
     # Letzte 12 Wochen
     weekly_labels = sorted(weekly_volume.keys())[-12:]
     weekly_data = [round(weekly_volume[k], 1) for k in weekly_labels]
     
-    # Muskelgruppen-Balance
+    # Muskelgruppen-Balance (RPE-gewichtet)
     muskelgruppen_stats = {}
     muskelgruppen_stats_code = {}  # Für SVG-Mapping
     for training in trainings:
         for satz in training.saetze.filter(ist_aufwaermsatz=False):
+            # Überspringe Sätze ohne Wiederholungen/RPE
+            if not satz.wiederholungen or not satz.rpe:
+                continue
+                
             mg_display = satz.uebung.get_muskelgruppe_display()
             mg_code = satz.uebung.muskelgruppe
-            volumen = float(satz.gewicht) * satz.wiederholungen
+            
+            # Effektive Wiederholungen: Wiederholungen × (RPE/10)
+            effektive_wdh = satz.wiederholungen * (float(satz.rpe) / 10.0)
             
             if mg_display not in muskelgruppen_stats:
                 muskelgruppen_stats[mg_display] = {'saetze': 0, 'volumen': 0}
             muskelgruppen_stats[mg_display]['saetze'] += 1
-            muskelgruppen_stats[mg_display]['volumen'] += volumen
+            muskelgruppen_stats[mg_display]['volumen'] += effektive_wdh
             
             # Für SVG-Mapping
             if mg_code not in muskelgruppen_stats_code:
                 muskelgruppen_stats_code[mg_code] = 0
-            muskelgruppen_stats_code[mg_code] += volumen
+            muskelgruppen_stats_code[mg_code] += effektive_wdh
     
     # Sortieren nach Volumen
     muskelgruppen_sorted = sorted(
@@ -1240,7 +1268,20 @@ def delete_plan(request, plan_id):
 @login_required
 def uebungen_auswahl(request):
     """Übersicht aller Übungen mit grafischer Muskelgruppen-Darstellung"""
-    uebungen = Uebung.objects.all().order_by('muskelgruppe', 'bezeichnung')
+    # Equipment-Filter: Nur Übungen mit verfügbarem Equipment
+    user_equipment_ids = request.user.verfuegbares_equipment.values_list('id', flat=True)
+    
+    if user_equipment_ids:
+        # Filter: Übungen die ALLE ihre benötigten Equipment haben ODER keine Equipment-Anforderungen
+        uebungen = []
+        for uebung in Uebung.objects.prefetch_related('equipment').order_by('muskelgruppe', 'bezeichnung'):
+            required_eq_ids = set(uebung.equipment.values_list('id', flat=True))
+            # Verfügbar wenn: keine Equipment nötig ODER alle benötigten Equipment verfügbar
+            if not required_eq_ids or required_eq_ids.issubset(set(user_equipment_ids)):
+                uebungen.append(uebung)
+    else:
+        # Keine Equipment ausgewählt: Nur Übungen ohne Equipment-Anforderung
+        uebungen = Uebung.objects.filter(equipment__isnull=True).distinct().order_by('muskelgruppe', 'bezeichnung')
     
     # Gruppiere nach Muskelgruppen
     uebungen_nach_gruppe = {}
@@ -1411,18 +1452,16 @@ def uebung_detail(request, uebung_id):
     # SVG-IDs für Hilfsmuskeln (blau)
     helper_muscle_ids = []
     if uebung.hilfsmuskeln:
-        # Wenn hilfsmuskeln ein String ist, splitten wir ihn
+        # hilfsmuskeln ist ein JSON-Array mit Muskelgruppen-Codes
         if isinstance(uebung.hilfsmuskeln, str):
-            hilfs_texte = [h.strip() for h in uebung.hilfsmuskeln.split(',')]
+            hilfs_codes = [h.strip() for h in uebung.hilfsmuskeln.split(',')]
         else:
-            hilfs_texte = uebung.hilfsmuskeln
+            hilfs_codes = uebung.hilfsmuskeln
         
-        for hilfs_text in hilfs_texte:
-            # Text bereinigen (z.B. "(Stabilisierung)" entfernen)
-            hilfs_text_clean = re.sub(r'\([^)]*\)', '', hilfs_text).strip()
-            # Code nachschlagen
-            code = text_to_code.get(hilfs_text_clean)
-            if code:
+        for code in hilfs_codes:
+            # Code ist bereits im Format 'BIZEPS', 'BAUCH' etc.
+            # Direkt im muscle_mapping nachschlagen
+            if code in muscle_mapping:
                 helper_muscle_ids.extend(muscle_mapping.get(code, []))
     
     # Statistiken zur Übung
@@ -1504,6 +1543,9 @@ def export_training_pdf(request):
     """Exportiert Trainingsstatistiken als PDF (WeasyPrint auf Linux, xhtml2pdf auf Windows)."""
     from io import BytesIO
     
+    # Helper-Funktion: Muskelgruppe Key zu Display Name
+    muskelgruppen_dict = dict(MUSKELGRUPPEN)
+    
     # Versuche WeasyPrint (beste Qualität, für Linux-Server)
     use_weasyprint = False
     try:
@@ -1523,6 +1565,7 @@ def export_training_pdf(request):
     # Daten sammeln
     heute = timezone.now()
     letzte_30_tage = heute - timedelta(days=30)
+    letzte_90_tage = heute - timedelta(days=90)
     
     # Trainings
     trainings = Trainingseinheit.objects.filter(
@@ -1533,29 +1576,169 @@ def export_training_pdf(request):
     # Statistiken
     alle_trainings = Trainingseinheit.objects.filter(user=request.user)
     gesamt_trainings = alle_trainings.count()
+    trainings_30_tage = alle_trainings.filter(datum__gte=letzte_30_tage).count()
     
     alle_saetze = Satz.objects.filter(
         einheit__user=request.user,
         ist_aufwaermsatz=False
     )
     gesamt_saetze = alle_saetze.count()
+    saetze_30_tage = alle_saetze.filter(einheit__datum__gte=letzte_30_tage).count()
     
     # Volumen
     gesamt_volumen = sum(
         float(s.gewicht) * s.wiederholungen 
         for s in alle_saetze if s.gewicht and s.wiederholungen
     )
+    volumen_30_tage = sum(
+        float(s.gewicht) * s.wiederholungen 
+        for s in alle_saetze.filter(einheit__datum__gte=letzte_30_tage)
+        if s.gewicht and s.wiederholungen
+    )
     
-    # Top Übungen
-    top_uebungen = alle_saetze.values(
-        'uebung__bezeichnung'
+    # Durchschnittliche Trainingsfrequenz
+    if gesamt_trainings > 0:
+        erste_training = alle_trainings.order_by('datum').first()
+        if erste_training:
+            tage_aktiv = max(1, (heute - erste_training.datum).days)
+            trainings_pro_woche = round((gesamt_trainings / tage_aktiv) * 7, 1)
+        else:
+            trainings_pro_woche = 0
+    else:
+        trainings_pro_woche = 0
+    
+    # Top Übungen mit mehr Details
+    top_uebungen_raw = alle_saetze.values(
+        'uebung__bezeichnung',
+        'uebung__muskelgruppe'
     ).annotate(
         anzahl=Count('id'),
-        max_gewicht=Max('gewicht')
+        max_gewicht=Max('gewicht'),
+        avg_gewicht=Avg('gewicht'),
+        total_volumen=Sum(
+            F('gewicht') * F('wiederholungen'),
+            output_field=models.FloatField()
+        )
     ).order_by('-anzahl')[:10]
     
-    # Körperwerte
-    letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
+    # Konvertiere Muskelgruppe Keys zu Display Names
+    top_uebungen = []
+    for uebung in top_uebungen_raw:
+        uebung_dict = dict(uebung)
+        uebung_dict['muskelgruppe_display'] = muskelgruppen_dict.get(
+            uebung['uebung__muskelgruppe'], 
+            uebung['uebung__muskelgruppe']
+        )
+        top_uebungen.append(uebung_dict)
+    
+    # Kraftentwicklung: Top 5 Übungen mit messbarer Progression
+    kraft_progression = []
+    for uebung in top_uebungen[:5]:
+        uebung_name = uebung['uebung__bezeichnung']
+        uebung_saetze = alle_saetze.filter(
+            uebung__bezeichnung=uebung_name
+        ).order_by('einheit__datum')
+        
+        if uebung_saetze.count() >= 3:
+            # Vergleiche erste 3 Sätze mit letzten 3 Sätzen
+            erste_saetze = uebung_saetze[:3]
+            # Hole die letzten 3 Sätze durch negative Indexierung
+            letzte_saetze = list(uebung_saetze)[-3:]
+            
+            erstes_max = max((s.gewicht or 0) for s in erste_saetze)
+            letztes_max = max((s.gewicht or 0) for s in letzte_saetze)
+            
+            if erstes_max > 0:
+                progression_prozent = round(((letztes_max - erstes_max) / erstes_max) * 100, 1)
+                kraft_progression.append({
+                    'uebung': uebung_name,
+                    'start_gewicht': erstes_max,
+                    'aktuell_gewicht': letztes_max,
+                    'progression': progression_prozent,
+                    'muskelgruppe': muskelgruppen_dict.get(uebung['uebung__muskelgruppe'], uebung['uebung__muskelgruppe'])
+                })
+    
+    kraft_progression = sorted(kraft_progression, key=lambda x: x['progression'], reverse=True)[:5]
+    
+    # Muskelgruppen-Balance
+    muskelgruppen_stats = []
+    for gruppe_key, gruppe_name in MUSKELGRUPPEN:
+        gruppe_saetze = alle_saetze.filter(
+            uebung__muskelgruppe=gruppe_key,
+            einheit__datum__gte=letzte_30_tage
+        )
+        anzahl = gruppe_saetze.count()
+        if anzahl > 0:
+            volumen = sum(
+                float(s.gewicht) * s.wiederholungen
+                for s in gruppe_saetze
+                if s.gewicht and s.wiederholungen
+            )
+            avg_rpe = gruppe_saetze.aggregate(Avg('rpe'))['rpe__avg'] or 0
+            muskelgruppen_stats.append({
+                'name': gruppe_name,
+                'saetze': anzahl,
+                'volumen': round(volumen, 0),
+                'avg_rpe': round(avg_rpe, 1)
+            })
+    
+    muskelgruppen_stats = sorted(muskelgruppen_stats, key=lambda x: x['saetze'], reverse=True)
+    
+    # Intensitäts-Analyse (RPE-basiert)
+    rpe_saetze = alle_saetze.filter(
+        rpe__isnull=False,
+        einheit__datum__gte=letzte_30_tage
+    )
+    if rpe_saetze.exists():
+        avg_rpe = round(rpe_saetze.aggregate(Avg('rpe'))['rpe__avg'], 1)
+        rpe_verteilung = {
+            'leicht': rpe_saetze.filter(rpe__lte=6).count(),
+            'mittel': rpe_saetze.filter(rpe__gt=6, rpe__lte=8).count(),
+            'schwer': rpe_saetze.filter(rpe__gt=8).count()
+        }
+    else:
+        avg_rpe = 0
+        rpe_verteilung = {'leicht': 0, 'mittel': 0, 'schwer': 0}
+    
+    # Volumen-Progression über letzte 12 Wochen
+    volumen_wochen = []
+    for woche in range(12, 0, -1):
+        start = heute - timedelta(weeks=woche)
+        ende = heute - timedelta(weeks=woche-1)
+        woche_saetze = alle_saetze.filter(
+            einheit__datum__gte=start,
+            einheit__datum__lt=ende
+        )
+        woche_volumen = sum(
+            float(s.gewicht) * s.wiederholungen
+            for s in woche_saetze
+            if s.gewicht and s.wiederholungen
+        )
+        if woche_volumen > 0:
+            volumen_wochen.append({
+                'woche': f"KW{start.isocalendar()[1]}",
+                'volumen': round(woche_volumen, 0)
+            })
+    
+    # Körperwerte mit Trend
+    koerperwerte_qs = KoerperWerte.objects.filter(
+        user=request.user
+    ).order_by('-datum')
+    
+    koerperwerte = list(koerperwerte_qs[:5])  # Letzte 5 Messungen als Liste
+    
+    letzter_koerperwert = koerperwerte[0] if koerperwerte else None
+    
+    # Gewichts-Trend berechnen
+    gewichts_trend = None
+    if len(koerperwerte) >= 2:
+        neueste = koerperwerte[0]
+        aelteste = koerperwerte[-1]
+        gewichts_diff = neueste.gewicht - aelteste.gewicht
+        gewichts_trend = {
+            'diff': round(gewichts_diff, 1),
+            'richtung': 'zugenommen' if gewichts_diff > 0 else 'abgenommen'
+        }
     
     context = {
         'user': request.user,
@@ -1564,8 +1747,19 @@ def export_training_pdf(request):
         'gesamt_trainings': gesamt_trainings,
         'gesamt_saetze': gesamt_saetze,
         'gesamt_volumen': round(gesamt_volumen, 0),
+        'trainings_30_tage': trainings_30_tage,
+        'saetze_30_tage': saetze_30_tage,
+        'volumen_30_tage': round(volumen_30_tage, 0),
+        'trainings_pro_woche': trainings_pro_woche,
         'top_uebungen': top_uebungen,
+        'kraft_progression': kraft_progression,
+        'muskelgruppen_stats': muskelgruppen_stats,
+        'avg_rpe': avg_rpe,
+        'rpe_verteilung': rpe_verteilung,
+        'volumen_wochen': volumen_wochen[-8:],  # Letzte 8 Wochen für Übersichtlichkeit
+        'koerperwerte': koerperwerte,
         'letzter_koerperwert': letzter_koerperwert,
+        'gewichts_trend': gewichts_trend,
     }
     
     # HTML rendern
@@ -1647,26 +1841,31 @@ def workout_recommendations(request):
     
     empfehlungen = []
     
-    # === 1. MUSKELGRUPPEN-BALANCE ANALYSE ===
-    muskelgruppen_volumen = {}
+    # === 1. MUSKELGRUPPEN-BALANCE ANALYSE (RPE-gewichtet) ===
+    muskelgruppen_stats = {}
     for gruppe_key, gruppe_name in MUSKELGRUPPEN:
-        volumen = sum(
-            float(s.gewicht) * s.wiederholungen
+        # Berechne effektive Wiederholungen: Sätze × Wiederholungen × (RPE/10)
+        effektive_wdh = sum(
+            s.wiederholungen * (float(s.rpe) / 10.0)
             for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe=gruppe_key)
-            if s.gewicht and s.wiederholungen
+            if s.wiederholungen and s.rpe
         )
-        if volumen > 0:
-            muskelgruppen_volumen[gruppe_key] = {
+        
+        saetze_anzahl = letzte_30_tage_saetze.filter(uebung__muskelgruppe=gruppe_key).count()
+        
+        if effektive_wdh > 0:
+            muskelgruppen_stats[gruppe_key] = {
                 'name': gruppe_name,
-                'volumen': volumen
+                'effektive_wdh': effektive_wdh,
+                'saetze': saetze_anzahl
             }
     
-    if muskelgruppen_volumen:
-        # Finde untertrainierte Muskelgruppen
-        avg_volumen = sum(m['volumen'] for m in muskelgruppen_volumen.values()) / len(muskelgruppen_volumen)
+    if muskelgruppen_stats:
+        # Finde untertrainierte Muskelgruppen (basierend auf effektiven Wiederholungen)
+        avg_effektive_wdh = sum(m['effektive_wdh'] for m in muskelgruppen_stats.values()) / len(muskelgruppen_stats)
         
-        for gruppe_key, data in muskelgruppen_volumen.items():
-            if data['volumen'] < avg_volumen * 0.5:  # Weniger als 50% des Durchschnitts
+        for gruppe_key, data in muskelgruppen_stats.items():
+            if data['effektive_wdh'] < avg_effektive_wdh * 0.5:  # Weniger als 50% des Durchschnitts
                 # Finde passende Übungen
                 passende_uebungen = Uebung.objects.filter(muskelgruppe=gruppe_key)[:3]
                 
@@ -1674,36 +1873,36 @@ def workout_recommendations(request):
                     'typ': 'muskelgruppe',
                     'prioritaet': 'hoch',
                     'titel': f'{data["name"]} untertrainiert',
-                    'beschreibung': f'Diese Muskelgruppe wurde in den letzten 30 Tagen unterdurchschnittlich trainiert (nur {int(data["volumen"])} kg Volumen vs. {int(avg_volumen)} kg Durchschnitt).',
+                    'beschreibung': f'Diese Muskelgruppe wurde in den letzten 30 Tagen unterdurchschnittlich trainiert (nur {int(data["effektive_wdh"])} effektive Wiederholungen vs. {int(avg_effektive_wdh)} Durchschnitt).',
                     'empfehlung': f'Füge mehr Übungen für {data["name"]} hinzu',
                     'uebungen': [{'id': u.id, 'name': u.bezeichnung} for u in passende_uebungen]
                 })
     
-    # === 2. PUSH/PULL BALANCE ===
+    # === 2. PUSH/PULL BALANCE (RPE-gewichtet) ===
     push_gruppen = ['BRUST', 'SCHULTER_VORN', 'SCHULTER_SEIT', 'TRIZEPS']
     pull_gruppen = ['RUECKEN_LAT', 'RUECKEN_TRAPEZ', 'BIZEPS']
     
-    push_volumen = sum(
-        float(s.gewicht) * s.wiederholungen
+    push_effektiv = sum(
+        s.wiederholungen * (float(s.rpe) / 10.0)
         for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=push_gruppen)
-        if s.gewicht and s.wiederholungen
+        if s.wiederholungen and s.rpe
     )
     
-    pull_volumen = sum(
-        float(s.gewicht) * s.wiederholungen
+    pull_effektiv = sum(
+        s.wiederholungen * (float(s.rpe) / 10.0)
         for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=pull_gruppen)
-        if s.gewicht and s.wiederholungen
+        if s.wiederholungen and s.rpe
     )
     
-    if push_volumen > 0 and pull_volumen > 0:
-        ratio = push_volumen / pull_volumen if pull_volumen > 0 else 999
+    if push_effektiv > 0 and pull_effektiv > 0:
+        ratio = push_effektiv / pull_effektiv if pull_effektiv > 0 else 999
         
         if ratio > 1.5:  # Zu viel Push
             empfehlungen.append({
                 'typ': 'balance',
                 'prioritaet': 'mittel',
                 'titel': 'Push/Pull Unbalance',
-                'beschreibung': f'Dein Push-Volumen ({int(push_volumen)} kg) ist {ratio:.1f}x höher als dein Pull-Volumen ({int(pull_volumen)} kg). Dies kann zu Haltungsschäden führen.',
+                'beschreibung': f'Dein Push-Training ({int(push_effektiv)} eff. Wdh) ist {ratio:.1f}x intensiver als dein Pull-Training ({int(pull_effektiv)} eff. Wdh). Dies kann zu Haltungsschäden führen.',
                 'empfehlung': 'Mehr Zugübungen (Rücken, Bizeps) trainieren',
                 'uebungen': [{'id': u.id, 'name': u.bezeichnung} for u in Uebung.objects.filter(muskelgruppe__in=pull_gruppen)[:3]]
             })
@@ -1712,7 +1911,7 @@ def workout_recommendations(request):
                 'typ': 'balance',
                 'prioritaet': 'mittel',
                 'titel': 'Push/Pull Unbalance',
-                'beschreibung': f'Dein Pull-Volumen ({int(pull_volumen)} kg) ist höher als dein Push-Volumen ({int(push_volumen)} kg).',
+                'beschreibung': f'Dein Pull-Training ({int(pull_effektiv)} eff. Wdh) ist intensiver als dein Push-Training ({int(push_effektiv)} eff. Wdh).',
                 'empfehlung': 'Mehr Druckübungen (Brust, Schultern, Trizeps) einbauen',
                 'uebungen': [{'id': u.id, 'name': u.bezeichnung} for u in Uebung.objects.filter(muskelgruppe__in=push_gruppen)[:3]]
             })
@@ -1816,3 +2015,76 @@ def workout_recommendations(request):
     }
     
     return render(request, 'core/workout_recommendations.html', context)
+
+
+@login_required
+def equipment_management(request):
+    """
+    Equipment/Ausrüstungs-Verwaltung
+    User kann seine verfügbare Ausrüstung auswählen
+    """
+    # Alle verfügbaren Equipment-Typen laden (oder erstellen falls leer)
+    from .models import EQUIPMENT_CHOICES
+    
+    # Equipment initial erstellen falls nicht vorhanden
+    for eq_code, eq_name in EQUIPMENT_CHOICES:
+        Equipment.objects.get_or_create(name=eq_code)
+    
+    all_equipment = Equipment.objects.all().order_by('name')
+    user_equipment_ids = request.user.verfuegbares_equipment.values_list('id', flat=True)
+    
+    # Kategorien für bessere Darstellung
+    equipment_categories = {
+        'Freie Gewichte': ['LANGHANTEL', 'KURZHANTEL', 'KETTLEBELL'],
+        'Racks & Stangen': ['KLIMMZUG', 'DIP', 'SMITHMASCHINE'],
+        'Bänke': ['BANK', 'SCHRAEGBANK'],
+        'Maschinen': ['KABELZUG', 'BEINPRESSE', 'LEG_CURL', 'LEG_EXT', 'HACKENSCHMIDT', 'RUDERMASCHINE'],
+        'Sonstiges': ['WIDERSTANDSBAND', 'SUSPENSION', 'MEDIZINBALL', 'BOXEN', 'MATTE', 'KOERPER'],
+    }
+    
+    categorized_equipment = {}
+    for category, eq_codes in equipment_categories.items():
+        categorized_equipment[category] = all_equipment.filter(name__in=eq_codes)
+    
+    # Statistik: Übungen mit verfügbarem Equipment
+    total_uebungen = Uebung.objects.count()
+    if user_equipment_ids:
+        # Übungen die ALLE ihre benötigten Equipment-Teile beim User verfügbar haben
+        available_uebungen = 0
+        for uebung in Uebung.objects.prefetch_related('equipment'):
+            required_eq = set(uebung.equipment.values_list('id', flat=True))
+            if not required_eq or required_eq.issubset(set(user_equipment_ids)):
+                available_uebungen += 1
+    else:
+        # Nur Übungen ohne Equipment-Anforderung
+        available_uebungen = Uebung.objects.filter(equipment__isnull=True).count()
+    
+    context = {
+        'categorized_equipment': categorized_equipment,
+        'user_equipment_ids': list(user_equipment_ids),
+        'total_uebungen': total_uebungen,
+        'available_uebungen': available_uebungen,
+        'unavailable_uebungen': total_uebungen - available_uebungen,
+    }
+    
+    return render(request, 'core/equipment_management.html', context)
+
+
+@login_required
+def toggle_equipment(request, equipment_id):
+    """
+    Toggle Equipment für User (An/Aus)
+    """
+    equipment = get_object_or_404(Equipment, id=equipment_id)
+    
+    if request.user in equipment.users.all():
+        equipment.users.remove(request.user)
+        status = 'removed'
+    else:
+        equipment.users.add(request.user)
+        status = 'added'
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': status, 'equipment_name': str(equipment)})
+    
+    return redirect('equipment_management')
