@@ -140,11 +140,14 @@ class PlanGenerator:
             use_openrouter=self.use_openrouter,
             fallback_to_openrouter=self.fallback_to_openrouter
         )
-        plan_json = llm_client.generate_training_plan(
+        llm_result = llm_client.generate_training_plan(
             messages=messages,
             max_tokens=4000,
             timeout=120
         )
+        
+        # Extrahiere JSON aus Result-Dict
+        plan_json = llm_result.get('response') if isinstance(llm_result, dict) else llm_result
         
         # 5. Validierung mit Smart Retry
         print("\n✅ SCHRITT 5: Plan validieren")
