@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Django Setup
 sys.path.insert(0, str(Path(__file__).parent))
-from db_client import DatabaseClient
+from .db_client import DatabaseClient
 
 
 class LiveGuidance:
@@ -232,7 +232,7 @@ FOKUS:
                 'model': str - Verwendetes LLM
             }
         """
-        from llm_client import LLMClient
+        from .llm_client import LLMClient
         
         print(f"\n🤖 Live Guidance Request")
         print(f"   Session: {trainingseinheit_id}")

@@ -18,6 +18,7 @@ MUSKELGRUPPEN = [
     ('RUECKEN_UNTEN', 'Unterer Rücken (Erector spinae)'),
     ('BIZEPS', 'Bizeps (Biceps brachii)'),
     ('UNTERARME', 'Unterarme (Brachioradialis/Flexoren)'),
+    ('RUECKEN_OBERER', 'Oberer Rücken (Rhomboiden, mittlerer Trapez)'),
     
     # Unterkörper
     ('BEINE_QUAD', 'Oberschenkel Vorn (Quadrizeps)'),
@@ -26,6 +27,7 @@ MUSKELGRUPPEN = [
     ('WADEN', 'Waden (Gastrocnemius/Soleus)'),
     ('ADDUKTOREN', 'Oberschenkel Innen (Adduktoren)'),
     ('ABDUKTOREN', 'Oberschenkel Außen (Abduktoren)'),
+    ('HUEFTBEUGER', 'Hüftbeuger (Iliopsoas)'),
     
     # Sonstiges
     ('BAUCH', 'Bauch (Abdominals)'),
@@ -70,6 +72,9 @@ EQUIPMENT_CHOICES = [
     ('BOXEN', 'Plyo Box'),
     ('MATTE', 'Trainingsmatte'),
     ('KOERPER', 'Nur Körpergewicht'),
+    ('ADDUKTOREN_MASCHINE', 'Adduktoren Maschine'),
+    ('ABDUKTOREN_MASCHINE', 'Abduktoren Maschine'),
+    
 ]
 
 # --- MODELLE ---

@@ -2193,14 +2193,8 @@ def live_guidance_api(request):
         # Prüfe ob Session dem User gehört
         session = get_object_or_404(Trainingseinheit, id=session_id, user=request.user)
         
-        # Live Guidance aufrufen
-        import sys
-        from pathlib import Path
-        ai_coach_path = Path(__file__).parent.parent / 'ai_coach'
-        if str(ai_coach_path) not in sys.path:
-            sys.path.insert(0, str(ai_coach_path))
-        
-        from live_guidance import LiveGuidance
+        # Live Guidance importieren (korrekter Package-Import)
+        from ai_coach.live_guidance import LiveGuidance
         
         # Use OpenRouter auf Server, Ollama lokal
         use_openrouter = os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
@@ -2252,14 +2246,8 @@ def generate_plan_api(request):
         if sets_per_session < 10 or sets_per_session > 30:
             return JsonResponse({'error': 'Sätze pro Session muss zwischen 10-30 liegen'}, status=400)
         
-        # Plan Generator aufrufen
-        import sys
-        from pathlib import Path
-        ai_coach_path = Path(__file__).parent.parent / 'ai_coach'
-        if str(ai_coach_path) not in sys.path:
-            sys.path.insert(0, str(ai_coach_path))
-        
-        from plan_generator import PlanGenerator
+        # Plan Generator importieren (korrekter Package-Import)
+        from ai_coach.plan_generator import PlanGenerator
         
         # Use OpenRouter auf Server, Ollama lokal
         use_openrouter = os.getenv('USE_OPENROUTER', 'False').lower() == 'true'

@@ -5,13 +5,14 @@ Kombiniert: Data Analyzer → Prompt Builder → LLM → Django Plan Persistieru
 
 import argparse
 import json
+import sys
 from datetime import datetime
 from typing import Optional
 
-from db_client import DatabaseClient
-from data_analyzer import TrainingAnalyzer
-from prompt_builder import PromptBuilder
-from llm_client import LLMClient
+from .db_client import DatabaseClient
+from .data_analyzer import TrainingAnalyzer
+from .prompt_builder import PromptBuilder
+from .llm_client import LLMClient
 
 
 class PlanGenerator:
@@ -67,131 +68,148 @@ class PlanGenerator:
         print("=" * 60)
         
         try:
-            with DatabaseClient() as db:
-                # 1. Trainingshistorie analysieren
-                print("\n📊 SCHRITT 1: Trainingshistorie analysieren")
-                print("-" * 60)
-                
-                analyzer = TrainingAnalyzer(
-                    user_id=self.user_id,
-                    days=self.analysis_days
-                )
-                analysis_data = analyzer.analyze()
-                analyzer.print_summary()
-                
-                # 2. Verfügbare Übungen ermitteln (Equipment-Filter)
-                print("\n🔧 SCHRITT 2: Verfügbare Übungen ermitteln")
-                print("-" * 60)
-                
-                builder = PromptBuilder()
-                available_exercises = builder.get_available_exercises_for_user(self.user_id)
-                
-                print(f"✓ {len(available_exercises)} Übungen mit verfügbarem Equipment")
-                
-                if len(available_exercises) < 10:
-                    print("\n⚠️ WARNUNG: Zu wenig Übungen verfügbar!")
-                    print("   Der User sollte mehr Equipment auswählen.")
-                    print("   Mindestens 15-20 Übungen empfohlen für gute Pläne.")
-                
-                # 3. Prompts erstellen
-                print("\n🤖 SCHRITT 3: LLM Prompts erstellen")
-                print("-" * 60)
-                
-                messages = builder.build_messages(
-                    analysis_data=analysis_data,
-                    available_exercises=available_exercises,
-                    plan_type=self.plan_type,
-                    sets_per_session=self.sets_per_session
-                )
-                
-                print(f"✓ System Prompt: {len(messages[0]['content'])} Zeichen")
-                print(f"✓ User Prompt: {len(messages[1]['content'])} Zeichen")
-                
-                # 4. LLM Call - Trainingsplan generieren
-                print("\n🧠 SCHRITT 4: Trainingsplan mit Llama generieren")
-                print("-" * 60)
-                
-                llm_client = LLMClient(
-                    temperature=self.llm_temperature,
-                    use_openrouter=self.use_openrouter,
-                    fallback_to_openrouter=self.fallback_to_openrouter
-                )
-                plan_json = llm_client.generate_training_plan(
-                    messages=messages,
-                    max_tokens=4000,
-                    timeout=120
-                )
-                
-                # 5. Validierung mit Smart Retry
-                print("\n✅ SCHRITT 5: Plan validieren")
-                print("-" * 60)
-                
-                valid, errors = llm_client.validate_plan(plan_json, available_exercises)
-                
-                if not valid:
-                    print(f"⚠️ Plan Validation: {len(errors)} Fehler gefunden")
-                    for error in errors:
-                        print(f"   - {error}")
-                    
-                    # Smart Retry: Fehlerhafte Übungen durch LLM ersetzen lassen
-                    print("\n🔄 SCHRITT 5b: Fehlerhafte Übungen korrigieren (Smart Retry)")
-                    print("-" * 60)
-                    
-                    plan_json = self._fix_invalid_exercises(
-                        plan_json=plan_json,
-                        errors=errors,
-                        available_exercises=available_exercises,
-                        llm_client=llm_client
-                    )
-                    
-                    # Nochmal validieren
-                    print("\n✅ Re-Validierung nach Korrektur")
-                    print("-" * 60)
-                    valid, errors = llm_client.validate_plan(plan_json, available_exercises)
-                
-                if not valid:
-                    print("\n⚠️ Plan hat Validierungsfehler:")
-                    for error in errors:
-                        print(f"   - {error}")
-                    print("\n   Plan wird NICHT gespeichert!")
-                    return {
-                        'success': False,
-                        'errors': errors,
-                        'plan_data': plan_json,
-                        'analysis_data': analysis_data
-                    }
-                
-                # 6. In Django DB speichern
-                if save_to_db:
-                    print("\n💾 SCHRITT 6: Plan in Datenbank speichern")
-                    print("-" * 60)
-                    
-                    plan_ids = self._save_plan_to_db(plan_json)
-                    
-                    print(f"✓ {len(plan_ids)} Pläne gespeichert (IDs: {', '.join(map(str, plan_ids))})")
-                    print(f"   Basis-Name: {plan_json['plan_name']}")
-                    print(f"   Sessions: {len(plan_json['sessions'])}")
-                else:
-                    plan_ids = []
-                    print("\n💾 SCHRITT 6: ÜBERSPRUNGEN (save_to_db=False)")
-                
-                # Erfolg!
-                print("\n" + "=" * 60)
-                print("🎉 FERTIG! Trainingsplan erfolgreich generiert")
-                print("=" * 60)
-                
-                return {
-                    'success': True,
-                    'plan_ids': plan_ids,
-                    'plan_data': plan_json,
-                    'analysis_data': analysis_data
-                }
+            # Prüfe ob Django bereits läuft (Web-Kontext)
+            # Wenn ja, brauchen wir keinen DatabaseClient
+            django_is_running = 'django' in sys.modules and hasattr(sys.modules['django'], 'apps')
+            
+            if django_is_running:
+                # Django läuft bereits (Web-Kontext) - kein DB-Client nötig
+                print("\n💡 Django-Kontext erkannt - nutze existierende DB-Verbindung")
+                return self._generate_with_existing_django(save_to_db)
+            else:
+                # CLI-Modus - braucht DatabaseClient mit SSH-Tunnel
+                print("\n💡 CLI-Modus - starte SSH-Tunnel")
+                with DatabaseClient() as db:
+                    return self._generate_with_existing_django(save_to_db)
         
         except Exception as e:
             print(f"\n❌ FEHLER bei Plan-Generierung: {e}")
             import traceback
             traceback.print_exc()
             raise
+    
+    def _generate_with_existing_django(self, save_to_db: bool) -> dict:
+        """
+        Generiert Plan mit vorhandener Django-Verbindung
+        """
+        # 1. Trainingshistorie analysieren
+        print("\n📊 SCHRITT 1: Trainingshistorie analysieren")
+        print("-" * 60)
+        
+        analyzer = TrainingAnalyzer(
+            user_id=self.user_id,
+            days=self.analysis_days
+        )
+        analysis_data = analyzer.analyze()
+        analyzer.print_summary()
+        
+        # 2. Verfügbare Übungen ermitteln (Equipment-Filter)
+        print("\n🔧 SCHRITT 2: Verfügbare Übungen ermitteln")
+        print("-" * 60)
+        
+        builder = PromptBuilder()
+        available_exercises = builder.get_available_exercises_for_user(self.user_id)
+        
+        print(f"✓ {len(available_exercises)} Übungen mit verfügbarem Equipment")
+        
+        if len(available_exercises) < 10:
+            print("\n⚠️ WARNUNG: Zu wenig Übungen verfügbar!")
+            print("   Der User sollte mehr Equipment auswählen.")
+            print("   Mindestens 15-20 Übungen empfohlen für gute Pläne.")
+        
+        # 3. Prompts erstellen
+        print("\n🤖 SCHRITT 3: LLM Prompts erstellen")
+        print("-" * 60)
+        
+        messages = builder.build_messages(
+            analysis_data=analysis_data,
+            available_exercises=available_exercises,
+            plan_type=self.plan_type,
+            sets_per_session=self.sets_per_session
+        )
+        
+        print(f"✓ System Prompt: {len(messages[0]['content'])} Zeichen")
+        print(f"✓ User Prompt: {len(messages[1]['content'])} Zeichen")
+        
+        # 4. LLM Call - Trainingsplan generieren
+        print("\n🧠 SCHRITT 4: Trainingsplan mit Llama generieren")
+        print("-" * 60)
+        
+        llm_client = LLMClient(
+            temperature=self.llm_temperature,
+            use_openrouter=self.use_openrouter,
+            fallback_to_openrouter=self.fallback_to_openrouter
+        )
+        plan_json = llm_client.generate_training_plan(
+            messages=messages,
+            max_tokens=4000,
+            timeout=120
+        )
+        
+        # 5. Validierung mit Smart Retry
+        print("\n✅ SCHRITT 5: Plan validieren")
+        print("-" * 60)
+        
+        valid, errors = llm_client.validate_plan(plan_json, available_exercises)
+        
+        if not valid:
+            print(f"⚠️ Plan Validation: {len(errors)} Fehler gefunden")
+            for error in errors:
+                print(f"   - {error}")
+            
+            # Smart Retry: Fehlerhafte Übungen durch LLM ersetzen lassen
+            print("\n🔄 SCHRITT 5b: Fehlerhafte Übungen korrigieren (Smart Retry)")
+            print("-" * 60)
+            
+            plan_json = self._fix_invalid_exercises(
+                plan_json=plan_json,
+                errors=errors,
+                available_exercises=available_exercises,
+                llm_client=llm_client
+            )
+            
+            # Nochmal validieren
+            print("\n✅ Re-Validierung nach Korrektur")
+            print("-" * 60)
+            valid, errors = llm_client.validate_plan(plan_json, available_exercises)
+        
+        if not valid:
+            print("\n⚠️ Plan hat Validierungsfehler:")
+            for error in errors:
+                print(f"   - {error}")
+            print("\n   Plan wird NICHT gespeichert!")
+            return {
+                'success': False,
+                'errors': errors,
+                'plan_data': plan_json,
+                'analysis_data': analysis_data
+            }
+        
+        # 6. In Django DB speichern
+        if save_to_db:
+            print("\n💾 SCHRITT 6: Plan in Datenbank speichern")
+            print("-" * 60)
+            
+            plan_ids = self._save_plan_to_db(plan_json)
+            
+            print(f"✓ {len(plan_ids)} Pläne gespeichert (IDs: {', '.join(map(str, plan_ids))})")
+            print(f"   Basis-Name: {plan_json['plan_name']}")
+            print(f"   Sessions: {len(plan_json['sessions'])}")
+        else:
+            plan_ids = []
+            print("\n💾 SCHRITT 6: ÜBERSPRUNGEN (save_to_db=False)")
+        
+        # Erfolg!
+        print("\n" + "=" * 60)
+        print("🎉 FERTIG! Trainingsplan erfolgreich generiert")
+        print("=" * 60)
+        
+        return {
+            'success': True,
+            'plan_ids': plan_ids,
+            'plan_data': plan_json,
+            'analysis_data': analysis_data
+        }
     
     def _save_plan_to_db(self, plan_json: dict) -> list:
         """
