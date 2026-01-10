@@ -398,45 +398,46 @@ Verfügbare Übungen (nutze NUR diese!):
 
 Bitte analysiere und schlage Optimierungen vor."""
         
-        # LLM Call
-        use_openrouter = os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
-        
+        # LLM Call mit automatischem Fallback
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
         
         try:
-            if use_openrouter:
-                response, cost = self.llm_client._generate_with_openrouter(
-                    messages=messages,
-                    temperature=0.3,
-                    max_tokens=2000
-                )
-            else:
-                response = self.llm_client._generate_with_ollama(
-                    messages=messages,
-                    max_tokens=2000,
-                    timeout=60
-                )
-                cost = 0.0
+            # Nutze LLMClient mit Fallback-Logik (Ollama → OpenRouter)
+            from ai_coach.llm_client import LLMClient
             
-            # Parse JSON
+            # Client mit Fallback initialisieren
+            client = LLMClient(temperature=0.3, fallback_to_openrouter=True)
+            
+            # generate_training_plan nutzt automatisch Ollama oder OpenRouter
+            result = client.generate_training_plan(messages=messages, max_tokens=2000)
+            
+            # Parse Result
+            response = result.get('response')
+            cost = result.get('cost', 0.0)
+            model_used = result.get('model', 'unknown')
+            
+            # Parse JSON wenn String
             if isinstance(response, str):
                 response = json.loads(response)
             
             return {
                 'optimizations': response.get('optimizations', []),
                 'cost': cost,
-                'model': 'llama-3.1-70b' if use_openrouter else 'llama3.1:8b',
+                'model': model_used,
                 'analysis_period_days': days
             }
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {
                 'error': str(e),
                 'optimizations': [],
-                'cost': 0.0
+                'cost': 0.0,
+                'model': 'error'
             }
     
     def _get_plan_structure(self) -> Dict[str, Any]:

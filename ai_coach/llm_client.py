@@ -93,7 +93,7 @@ class LLMClient:
         if self.openrouter_client is None:
             try:
                 from openai import OpenAI
-                from secrets_manager import get_openrouter_key
+                from .secrets_manager import get_openrouter_key
                 
                 # Versuche API Key aus sicherer Quelle zu holen
                 api_key = get_openrouter_key()
@@ -200,8 +200,13 @@ class LLMClient:
             print(f"   Länge: {len(content)} Zeichen")
             print(f"   Kosten: 0€ (lokal)\n")
             
-            # JSON parsen
-            return self._extract_json(content)
+            # JSON parsen und mit Metadaten zurückgeben
+            return {
+                'response': self._extract_json(content),
+                'cost': 0.0,
+                'model': self.model,
+                'tokens': eval_count
+            }
         
         except json.JSONDecodeError as e:
             print(f"\n❌ JSON Parse Error: {e}")
@@ -256,8 +261,13 @@ class LLMClient:
             print(f"   Länge: {len(content)} Zeichen")
             print(f"   Kosten: {total_cost:.4f}€ (~{total_cost*100:.2f} Cent)\n")
             
-            # JSON parsen
-            return self._extract_json(content)
+            # JSON parsen und mit Metadaten zurückgeben
+            return {
+                'response': self._extract_json(content),
+                'cost': total_cost,
+                'model': model,
+                'tokens': tokens_used
+            }
         
         except json.JSONDecodeError as e:
             print(f"\n❌ JSON Parse Error: {e}")
