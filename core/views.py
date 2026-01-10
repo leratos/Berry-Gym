@@ -2577,7 +2577,7 @@ def export_uebungen(request):
                 'hilfsmuskeln': uebung.hilfsmuskeln if uebung.hilfsmuskeln else [],
                 'bewegungstyp': uebung.bewegungstyp,
                 'gewichts_typ': uebung.gewichts_typ,
-                'equipment': [eq.bezeichnung for eq in uebung.equipment.all()],
+                'equipment': [eq.get_name_display() for eq in uebung.equipment.all()],
                 'beschreibung': uebung.beschreibung if hasattr(uebung, 'beschreibung') else '',
             })
         
@@ -2612,7 +2612,7 @@ def export_uebungen(request):
                 ', '.join(uebung.hilfsmuskeln) if uebung.hilfsmuskeln else '',
                 uebung.bewegungstyp,
                 uebung.gewichts_typ,
-                ', '.join([eq.bezeichnung for eq in uebung.equipment.all()]),
+                ', '.join([eq.get_name_display() for eq in uebung.equipment.all()]),
             ])
         
         return response
@@ -2673,10 +2673,24 @@ def import_uebungen(request):
                 equipment_objs = []
                 for eq_name in equipment_names:
                     try:
-                        eq = Equipment.objects.get(bezeichnung=eq_name)
+                        # Suche nach name (Display-Name aus Choices)
+                        eq = Equipment.objects.get(name=eq_name)
                         equipment_objs.append(eq)
                     except Equipment.DoesNotExist:
-                        errors.append(f'Equipment "{eq_name}" nicht gefunden für Übung "{bezeichnung}"')
+                        # Fallback: Suche in EQUIPMENT_CHOICES by display name
+                        found = False
+                        from core.models import EQUIPMENT_CHOICES
+                        for choice_value, choice_display in EQUIPMENT_CHOICES:
+                            if choice_display == eq_name:
+                                try:
+                                    eq = Equipment.objects.get(name=choice_value)
+                                    equipment_objs.append(eq)
+                                    found = True
+                                    break
+                                except Equipment.DoesNotExist:
+                                    pass
+                        if not found:
+                            errors.append(f'Equipment "{eq_name}" nicht gefunden für Übung "{bezeichnung}"')
                 
                 # Übung erstellen oder aktualisieren
                 ex_id = ex_data.get('id')
