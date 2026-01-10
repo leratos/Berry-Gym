@@ -36,7 +36,7 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit
   - Sätze, Wiederholungen, Gewicht, RPE (Rate of Perceived Exertion)
   - Automatisches Ghosting: Vorschläge basierend auf letztem Training
   - Aufwärmsätze separat markieren
-  - Superset-Support für kombinierte Übungen
+  - **Superset-Support**: Gruppiere bis zu 5 Übungen (S1-S5) mit farbiger Visualisierung
   - Notizen pro Satz für detailliertes Tracking
 
 - **Körperwerte & Statistiken**

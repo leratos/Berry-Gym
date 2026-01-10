@@ -63,4 +63,8 @@ urlpatterns = [
     path('api/analyze-plan/', views.analyze_plan_api, name='analyze_plan_api'),
     path('api/optimize-plan/', views.optimize_plan_api, name='optimize_plan_api'),
     path('api/apply-optimizations/', views.apply_optimizations_api, name='apply_optimizations_api'),
+    
+    # Exercise Management (Admin Only)
+    path('uebungen/export/', views.export_uebungen, name='export_uebungen'),
+    path('uebungen/import/', views.import_uebungen, name='import_uebungen'),
 ]

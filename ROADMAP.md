@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
 **Stand:** 10.01.2026  
-**Version:** 0.4.0
+**Version:** 0.4.1
 
 ---
 
@@ -17,6 +17,7 @@
 - [x] Training Abschluss-Screen mit Dauer & Kommentar
 - [x] Volumen-Tracking (kg × Wdh)
 - [x] Übungen nach Muskelgruppen filtern
+- [x] **Superset-Support** (S1-S5 Gruppen mit farbiger Visualisierung)
 
 ### Körperwerte
 - [x] Gewicht, Größe, Körperfett, Muskelmasse erfassen
@@ -59,6 +60,7 @@
 - [x] **Drag & Drop Reihenfolge** (↑/↓ Buttons)
 - [x] **Grafische Muskelgruppen-Darstellung** (Haupt + Hilfs)
 - [x] **Übungs-Bibliothek** (alle Übungen mit Muskelgruppen)
+- [x] **Superset-Gruppierung im Plan** (S1-S5 Buttons, farbige Border, Badges)
 - [x] **Intelligente Empfehlungen** (Bewegungstyp-Balance-Analyse)
   - Erkennt fehlende Isolationsübungen (z.B. Fliegende für Brust)
   - Warnt bei einseitiger Übungsauswahl (nur Drücken ohne Isolation)
