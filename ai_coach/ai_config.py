@@ -11,7 +11,8 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# SSH Tunnel Configuration
+# SSH Tunnel Configuration (nur für lokale Entwicklung)
+USE_SSH_TUNNEL = os.getenv('USE_SSH_TUNNEL', 'True').lower() == 'true'
 SSH_HOST = os.getenv('SSH_HOST', 'gym.last-strawberry.com')
 SSH_PORT = int(os.getenv('SSH_PORT', 22))
 SSH_USERNAME = os.getenv('SSH_USERNAME')
@@ -45,12 +46,15 @@ def validate_config():
     """
     errors = []
     
-    if not SSH_USERNAME:
-        errors.append("SSH_USERNAME nicht gesetzt in .env")
+    # SSH-Validierung nur wenn Tunnel verwendet wird
+    if USE_SSH_TUNNEL:
+        if not SSH_USERNAME:
+            errors.append("SSH_USERNAME nicht gesetzt in .env")
+        
+        if not SSH_PASSWORD and not SSH_KEY_PATH:
+            errors.append("Weder SSH_PASSWORD noch SSH_KEY_PATH gesetzt in .env")
     
-    if not SSH_PASSWORD and not SSH_KEY_PATH:
-        errors.append("Weder SSH_PASSWORD noch SSH_KEY_PATH gesetzt in .env")
-    
+    # DB-Validierung immer
     if not DB_NAME:
         errors.append("DB_NAME nicht gesetzt in .env")
     

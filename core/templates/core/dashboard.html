@@ -474,6 +474,10 @@
             <i class="bi bi-play-circle-fill me-2"></i> Training starten
         </a>
         
+        <button type="button" class="btn btn-warning btn-action fw-bold rounded-4 shadow" data-bs-toggle="modal" data-bs-target="#aiPlanGeneratorModal">
+            <i class="bi bi-stars me-2"></i> KI-Plan erstellen
+        </button>
+        
         <a href="{% url 'workout_recommendations' %}" class="btn btn-outline-success btn-action fw-bold rounded-4 shadow">
             <i class="bi bi-robot me-2"></i> Trainingsempfehlungen (AI)
         </a>
@@ -646,5 +650,8 @@
         // Heatmap beim Laden generieren
         window.addEventListener('DOMContentLoaded', generateHeatmap);
     </script>
+    
+    <!-- AI Plan Generator Modal -->
+    {% include 'core/ai_plan_generator.html' %}
   </body>
 </html>

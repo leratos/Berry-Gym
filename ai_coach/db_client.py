@@ -32,7 +32,13 @@ class DatabaseClient:
     def start_tunnel(self):
         """
         Startet SSH Tunnel zur Production Database via subprocess
+        Überspringt Tunnel auf Production Server (USE_SSH_TUNNEL=False)
         """
+        # Auf Production Server: Kein SSH-Tunnel nötig
+        if not ai_config.USE_SSH_TUNNEL:
+            print(f"ℹ️ Production Mode: Direkte DB-Verbindung (kein SSH-Tunnel)")
+            return
+        
         ai_config.validate_config()
         
         print(f"🔌 Starte SSH Tunnel zu {ai_config.SSH_HOST}...")
@@ -90,6 +96,9 @@ class DatabaseClient:
         """
         Stoppt SSH Tunnel
         """
+        if not ai_config.USE_SSH_TUNNEL:
+            return  # Kein Tunnel zu stoppen
+            
         if self.tunnel_process:
             self.tunnel_process.terminate()
             try:
@@ -111,11 +120,18 @@ class DatabaseClient:
         project_root = Path(__file__).parent.parent
         sys.path.insert(0, str(project_root))
         
-        # Database Settings für SSH Tunnel überschreiben
+        # Database Settings überschreiben
         # Muss VOR django.setup() passieren
         os.environ['DB_ENGINE'] = 'django.db.backends.mysql'  # WICHTIG: MySQL aktivieren!
-        os.environ['DB_HOST'] = '127.0.0.1'  # Tunnel läuft auf localhost
-        os.environ['DB_PORT'] = str(ai_config.LOCAL_BIND_PORT)
+        
+        # Production: Direkte Verbindung, Development: SSH-Tunnel
+        if ai_config.USE_SSH_TUNNEL:
+            os.environ['DB_HOST'] = '127.0.0.1'  # Tunnel läuft auf localhost
+            os.environ['DB_PORT'] = str(ai_config.LOCAL_BIND_PORT)
+        else:
+            os.environ['DB_HOST'] = ai_config.DB_HOST  # localhost auf Server
+            os.environ['DB_PORT'] = str(ai_config.DB_PORT)  # 3306 direkt
+            
         os.environ['DB_NAME'] = ai_config.DB_NAME
         os.environ['DB_USER'] = ai_config.DB_USER
         os.environ['DB_PASSWORD'] = ai_config.DB_PASSWORD

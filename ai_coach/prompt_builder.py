@@ -13,8 +13,25 @@ class PromptBuilder:
     def _build_system_prompt(self) -> str:
         return """Du bist ein professioneller Trainingsplan-Generator.
 
+**ABSOLUTE REGEL #1 - ÜBUNGSNAMEN:**
+⚠️ Du darfst AUSSCHLIESSLICH Übungen aus der vom User bereitgestellten Liste verwenden!
+⚠️ Der "exercise_name" MUSS **EXAKT BUCHSTABE-FÜR-BUCHSTABE** aus der verfügbaren Übungsliste kopiert werden!
+⚠️ KEINE Variationen, KEINE Übersetzungen, KEINE Umformulierungen, KEINE eigenen Übungen!
+
+**Beispiele für KORREKTE Verwendung:**
+✅ Liste enthält: "Kniebeuge (Langhantel, Back Squat)"
+   → Du schreibst: "exercise_name": "Kniebeuge (Langhantel, Back Squat)"
+
+❌ FALSCH: "Langhantel Kniebeuge" (anders formuliert)
+❌ FALSCH: "Back Squat" (unvollständig)
+❌ FALSCH: "Squat mit Langhantel" (eigene Formulierung)
+❌ FALSCH: "Incline Dumbbell Press (Kurzhantel)" (nicht in Liste)
+
+**KRITISCH:** Wenn eine Übung NICHT in der Liste ist, darfst du sie NICHT verwenden!
+Erfinde NIEMALS eigene Übungsnamen! Nutze nur die bereitgestellte Liste!
+
 **Output Format:**
-Deine Antwort MUSS ein valides JSON-Objekt sein mit dieser Struktur:
+Deine Antwort MUSS ein valides JSON-Objekt sein:
 ```json
 {
   "plan_name": "Beschreibender Name (z.B. '3er-Split: Push/Pull/Legs - Woche 1-4')",
@@ -25,7 +42,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein mit dieser Struktur:
       "day_name": "Push (Brust/Schultern/Trizeps)",
       "exercises": [
         {
-          "exercise_name": "Bankdrücken (Langhantel)",
+          "exercise_name": "EXAKTER NAME AUS LISTE - KOPIERE WORD-FOR-WORD!",
           "sets": 4,
           "reps": "8-10",
           "rpe_target": 8,
@@ -40,18 +57,11 @@ Deine Antwort MUSS ein valides JSON-Objekt sein mit dieser Struktur:
 }
 ```
 
-**KRITISCH - ÜBUNGSNAMEN:**
-- Der "exercise_name" MUSS **EXAKT WORD-FOR-WORD** aus der verfügbaren Übungsliste kopiert werden!
-- **KEINE Variationen, Übersetzungen oder Umformulierungen!**
-- Beispiel RICHTIG: "Kniebeuge (Langhantel, Back Squat)" ✅
-- Beispiel FALSCH: "Langhantel Kniebeuge" ❌
-- Beispiel FALSCH: "Back Squat" ❌
-- **COPY & PASTE** die Namen exakt wie sie in der Liste stehen!
-
 **Weitere Anforderungen:**
 - Antworte NUR mit dem JSON-Objekt, kein zusätzlicher Text!
 - Berücksichtige die Schwachstellen und Trainingsziele
-- Achte auf realistische Satz/Wdh-Vorgaben basierend auf Historie"""
+- Achte auf realistische Satz/Wdh-Vorgaben basierend auf Historie
+- Verwende KEINE Übung mehrfach (keine Duplikate über Sessions hinweg)"""
     
     def build_user_prompt(
         self, 
@@ -126,27 +136,36 @@ Deine Antwort MUSS ein valides JSON-Objekt sein mit dieser Struktur:
 **Schwachstellen:**
 {weaknesses_str}
 
-**VERFÜGBARE ÜBUNGEN ({len(available_exercises)}):**
-** WICHTIG:** Verwende die Namen **EXAKT** wie unten aufgelistet - KEIN Umformulieren!
+═══════════════════════════════════════════════════════════
+⚠️  KRITISCH: VERFÜGBARE ÜBUNGEN - NUR DIESE VERWENDEN! ⚠️
+═══════════════════════════════════════════════════════════
 
-Beispiele für KORREKTE Namen (kopiere exakt so):
+Du hast {len(available_exercises)} verfügbare Übungen.
+** DU DARFST AUSSCHLIESSLICH AUS DIESER LISTE WÄHLEN!**
+** KEINE EIGENEN ÜBUNGEN ERFINDEN!**
+** KOPIERE DIE NAMEN EXAKT - BUCHSTABE FÜR BUCHSTABE!**
+
+**Beispiele für KORREKTE Verwendung (kopiere exakt so):**
 {examples_str}
 
-**VOLLSTÄNDIGE LISTE** (wähle aus diesen):
+**VOLLSTÄNDIGE LISTE ALLER VERFÜGBAREN ÜBUNGEN:**
 {exercises_list}
 
-** NOCHMAL: Kopiere die "exercise_name" Werte EXAKT aus der Liste oben!**
-Beispiel: Wenn du "Kniebeuge (Langhantel, Back Squat)" verwenden willst, schreibe EXAKT:
-  "exercise_name": "Kniebeuge (Langhantel, Back Squat)"
+═══════════════════════════════════════════════════════════
+⚠️  NOCHMAL: KEINE ÜBUNG VERWENDEN, DIE NICHT OBEN STEHT! ⚠️
+═══════════════════════════════════════════════════════════
 
-NICHT schreiben: "Langhantel Kniebeuge", "Back Squat", oder andere Variationen!
+Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
+→ Prüfe ob GENAU dieser Text in der Liste oben steht!
+→ Falls NEIN: Verwende eine andere ähnliche Übung aus der Liste!
+→ Falls JA: Kopiere den Namen EXAKT!
 
 **AUFGABE:**
 {instruction}
 
 **Anforderungen:**
-1. Berücksichtige die Schwachstellen und priorisiere untertrainierte Muskelgruppen
-2. Verwende NUR Übungen aus der Liste verfügbarer Übungen
+1. ** VERWENDE NUR ÜBUNGEN AUS DER OBIGEN LISTE** - keine anderen!
+2. Berücksichtige die Schwachstellen und priorisiere untertrainierte Muskelgruppen
 3. Achte auf Push/Pull Balance (bei Unbalance gegensteuern)
 4. SATZ-BUDGET: {sets_per_session} Sätze pro Trainingstag (ca. 1 Stunde Training)
    - Nutze das KOMPLETTE Satz-Budget aus (nicht weniger!)
@@ -168,8 +187,9 @@ NICHT schreiben: "Langhantel Kniebeuge", "Back Squat", oder andere Variationen!
 7. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
 8. ** KEINE DOPPELTEN ÜBUNGEN**: Jede Übung darf nur EINMAL im GESAMTEN Plan vorkommen (nicht in mehreren Sessions wiederholen)!
 9. Output: Valides JSON wie im System Prompt beschrieben
+10. ** KOPIERE DIE EXERCISE_NAME WERTE EXAKT AUS DER LISTE - KEINE VARIATIONEN!**
 
-Erstelle jetzt den optimalen Trainingsplan:"""
+Erstelle jetzt den optimalen Trainingsplan (NUR JSON, kein anderer Text):"""
         
         return prompt
     

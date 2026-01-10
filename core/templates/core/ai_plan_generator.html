@@ -1,0 +1,270 @@
+<!-- AI Plan Generator Modal -->
+<style>
+    .ai-plan-btn {
+        background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+        border: none;
+        box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+        transition: all 0.3s;
+    }
+    
+    .ai-plan-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(25, 135, 84, 0.4);
+    }
+    
+    .plan-generator-modal .modal-dialog {
+        max-width: 500px;
+    }
+    
+    .cost-badge {
+        background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+    
+    .progress-container {
+        display: none;
+        margin-top: 1rem;
+    }
+    
+    .progress {
+        height: 30px;
+        background: #1a1d20;
+    }
+    
+    .progress-bar {
+        background: linear-gradient(90deg, #198754 0%, #20c997 100%);
+        font-weight: bold;
+        transition: width 0.5s ease;
+    }
+    
+    .step-indicator {
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+</style>
+
+<!-- AI Plan Generator Modal -->
+<div class="modal fade plan-generator-modal" id="aiPlanGeneratorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">
+                    <i class="bi bi-robot text-success"></i> KI-Trainingsplan erstellen
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Info Badge -->
+                <div class="alert alert-info border-info d-flex align-items-center mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <small>Die KI analysiert deine letzten Trainings und erstellt einen personalisierten Plan</small>
+                </div>
+                
+                <!-- Form -->
+                <form id="aiPlanForm">
+                    <!-- Plan-Typ -->
+                    <div class="mb-3">
+                        <label for="planType" class="form-label">
+                            <i class="bi bi-calendar-week"></i> Plan-Typ
+                        </label>
+                        <select class="form-select bg-dark text-white border-secondary" id="planType" name="plan_type" required>
+                            <option value="3er-split" selected>3er-Split (3x/Woche)</option>
+                            <option value="2er-split">2er-Split (2x/Woche)</option>
+                            <option value="4er-split">4er-Split (4x/Woche)</option>
+                            <option value="push-pull-legs">Push-Pull-Beine (3x/Woche)</option>
+                            <option value="ganzkörper">Ganzkörper (2-3x/Woche)</option>
+                        </select>
+                        <div class="form-text">Wie oft trainierst du pro Woche?</div>
+                    </div>
+                    
+                    <!-- Sätze pro Session -->
+                    <div class="mb-3">
+                        <label for="setsPerSession" class="form-label">
+                            <i class="bi bi-bar-chart"></i> Sätze pro Trainingstag: <strong id="setsValue">18</strong>
+                        </label>
+                        <input type="range" class="form-range" id="setsPerSession" name="sets_per_session" 
+                               min="12" max="24" value="18" step="2" oninput="updateSetsValue(this.value)">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">12 (Kurz)</small>
+                            <small class="text-muted">18 (Optimal)</small>
+                            <small class="text-muted">24 (Lang)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Analyse-Zeitraum -->
+                    <div class="mb-3">
+                        <label for="analysisDays" class="form-label">
+                            <i class="bi bi-clock-history"></i> Trainingshistorie analysieren
+                        </label>
+                        <select class="form-select bg-dark text-white border-secondary" id="analysisDays" name="analysis_days">
+                            <option value="14">Letzte 2 Wochen</option>
+                            <option value="30" selected>Letzter Monat</option>
+                            <option value="60">Letzte 2 Monate</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Kosten-Anzeige -->
+                    <div class="text-center mb-3">
+                        <span class="cost-badge">
+                            <i class="bi bi-lightning-charge"></i> Kosten: <span id="costDisplay">0.003€</span>
+                        </span>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-success w-100 fw-bold" id="generateBtn">
+                        <i class="bi bi-stars"></i> Plan generieren
+                    </button>
+                </form>
+                
+                <!-- Progress Container (initially hidden) -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" id="progressBar" style="width: 0%">
+                            0%
+                        </div>
+                    </div>
+                    <div class="step-indicator text-center" id="stepIndicator">
+                        <i class="bi bi-hourglass-split"></i> Starte Generierung...
+                    </div>
+                </div>
+                
+                <!-- Success Message (initially hidden) -->
+                <div class="alert alert-success border-success mt-3" id="successMessage" style="display: none;">
+                    <i class="bi bi-check-circle"></i> <strong>Erfolg!</strong>
+                    <p class="mb-0 mt-2" id="successText"></p>
+                </div>
+                
+                <!-- Error Message (initially hidden) -->
+                <div class="alert alert-danger border-danger mt-3" id="errorMessage" style="display: none;">
+                    <i class="bi bi-exclamation-triangle"></i> <strong>Fehler!</strong>
+                    <p class="mb-0 mt-2" id="errorText"></p>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // AI Plan Generator Logic
+    (function() {
+        const aiPlanForm = document.getElementById('aiPlanForm');
+        const generateBtn = document.getElementById('generateBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const stepIndicator = document.getElementById('stepIndicator');
+        const successMessage = document.getElementById('successMessage');
+        const successText = document.getElementById('successText');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const costDisplay = document.getElementById('costDisplay');
+        
+        // Update Sätze Value
+        window.updateSetsValue = function(value) {
+            document.getElementById('setsValue').textContent = value;
+        };
+        
+        // Update Kosten basierend auf Server/Lokal
+        // TODO: Könnte dynamisch aus Backend kommen
+        const isServer = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        costDisplay.textContent = isServer ? '0.003€' : '0€ (lokal)';
+        
+        // Form Submit
+        aiPlanForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Reset UI
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+            progressContainer.style.display = 'block';
+            generateBtn.disabled = true;
+            
+            // Form Data
+            const formData = {
+                plan_type: document.getElementById('planType').value,
+                sets_per_session: parseInt(document.getElementById('setsPerSession').value),
+                analysis_days: parseInt(document.getElementById('analysisDays').value)
+            };
+            
+            try {
+                // Simulated Progress Steps
+                const steps = [
+                    { progress: 20, text: '📊 Analysiere Trainingshistorie...' },
+                    { progress: 40, text: '🤖 KI erstellt personalisierten Plan...' },
+                    { progress: 60, text: '✅ Validiere Übungen...' },
+                    { progress: 80, text: '💾 Speichere Plan...' }
+                ];
+                
+                let currentStep = 0;
+                const progressInterval = setInterval(() => {
+                    if (currentStep < steps.length) {
+                        const step = steps[currentStep];
+                        progressBar.style.width = step.progress + '%';
+                        progressBar.textContent = step.progress + '%';
+                        stepIndicator.innerHTML = step.text;
+                        currentStep++;
+                    }
+                }, 1500);
+                
+                // API Call
+                const response = await fetch('{% url "generate_plan_api" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                clearInterval(progressInterval);
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Success!
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
+                    progressBar.classList.remove('progress-bar-animated');
+                    stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Abgeschlossen!';
+                    
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        successMessage.style.display = 'block';
+                        successText.innerHTML = `
+                            ${data.message}<br>
+                            <strong>${data.sessions} Trainingstage</strong> erstellt<br>
+                            <small class="text-muted">Kosten: ${data.cost}€ | Model: ${data.model}</small>
+                        `;
+                        
+                        // Redirect nach 2 Sekunden
+                        setTimeout(() => {
+                            if (data.plan_ids && data.plan_ids.length > 0) {
+                                window.location.href = `/plan/${data.plan_ids[0]}/`;
+                            } else {
+                                window.location.reload();
+                            }
+                        }, 2000);
+                    }, 500);
+                } else {
+                    // Error
+                    progressContainer.style.display = 'none';
+                    errorMessage.style.display = 'block';
+                    errorText.textContent = data.error || 'Unbekannter Fehler';
+                    generateBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Plan Generation Error:', error);
+                progressContainer.style.display = 'none';
+                errorMessage.style.display = 'block';
+                errorText.textContent = 'Netzwerkfehler. Bitte versuche es erneut.';
+                generateBtn.disabled = false;
+            }
+        });
+    })();
+</script>

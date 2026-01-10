@@ -1,30 +1,53 @@
 """
-LLM Client - Ollama Integration für Trainingsplan-Generierung
-Kommuniziert mit lokalem Llama 3.1 8B Model
+LLM Client - Hybrid Ollama + OpenRouter Integration
+Unterstützt lokales Llama 3.1 8B mit OpenRouter 70B Fallback
 """
 
 import json
 import ollama
 from typing import Dict, List, Any, Optional
 import ai_config
+import os
 
 
 class LLMClient:
     """
-    Wrapper für Ollama API - generiert Trainingspläne mit Llama 3.1
+    Hybrid LLM Wrapper - Ollama lokal + OpenRouter Fallback
     """
     
-    def __init__(self, model: str = None, temperature: float = 0.7):
+    def __init__(
+        self, 
+        model: str = None, 
+        temperature: float = 0.7,
+        use_openrouter: bool = False,
+        fallback_to_openrouter: bool = True
+    ):
         """
         Args:
             model: Ollama Model Name (default: aus .env)
             temperature: Kreativität (0.0 = deterministisch, 1.0 = kreativ)
+            use_openrouter: True = nutze nur OpenRouter (skip Ollama)
+            fallback_to_openrouter: True = nutze OpenRouter wenn Ollama fehlschlägt
         """
         self.model = model or ai_config.OLLAMA_MODEL
         self.temperature = temperature
+        self.use_openrouter = use_openrouter
+        self.fallback_to_openrouter = fallback_to_openrouter
         
-        # Validiere dass Ollama läuft
-        self._check_ollama_available()
+        # OpenRouter Client (lazy init)
+        self.openrouter_client = None
+        
+        # Ollama verfügbar?
+        self.ollama_available = False
+        if not use_openrouter:
+            try:
+                self._check_ollama_available()
+                self.ollama_available = True
+            except Exception as e:
+                print(f"⚠️ Ollama nicht verfügbar: {e}")
+                if not fallback_to_openrouter:
+                    raise
+                print("→ Werde OpenRouter als Fallback nutzen")
     
     def _check_ollama_available(self):
         """
@@ -65,6 +88,39 @@ class LLMClient:
         except Exception as e:
             raise Exception(f"Ollama nicht erreichbar: {e}\nStarte Ollama mit: ollama serve")
     
+    def _get_openrouter_client(self):
+        """Lazy init OpenRouter Client"""
+        if self.openrouter_client is None:
+            try:
+                from openai import OpenAI
+                from secrets_manager import get_openrouter_key
+                
+                # Versuche API Key aus sicherer Quelle zu holen
+                api_key = get_openrouter_key()
+                
+                if not api_key:
+                    raise Exception(
+                        "OPENROUTER_API_KEY nicht gefunden!\n\n"
+                        "Sichere Speicherung (empfohlen):\n"
+                        "  python ai_coach/secrets_manager.py set OPENROUTER_API_KEY\n\n"
+                        "Oder in .env (nicht sicher):\n"
+                        "  OPENROUTER_API_KEY=sk-or-v1-xxx\n\n"
+                        "API Key erhältlich: https://openrouter.ai/keys"
+                    )
+                
+                self.openrouter_client = OpenAI(
+                    api_key=api_key,
+                    base_url="https://openrouter.ai/api/v1"
+                )
+                print("✓ OpenRouter Client bereit (Key aus sicherer Quelle)")
+            except ImportError:
+                raise Exception(
+                    "OpenAI Package nicht installiert!\n"
+                    "Installiere mit: pip install openai"
+                )
+        
+        return self.openrouter_client
+    
     def generate_training_plan(
         self, 
         messages: List[Dict[str, str]],
@@ -72,7 +128,7 @@ class LLMClient:
         timeout: int = 120
     ) -> Dict[str, Any]:
         """
-        Generiert Trainingsplan via Ollama
+        Generiert Trainingsplan - versucht erst Ollama, dann OpenRouter
         
         Args:
             messages: [{"role": "system", "content": "..."}, {"role": "user", "content": "..."}]
@@ -83,11 +139,40 @@ class LLMClient:
             Parsed JSON Response als Dict
         
         Raises:
-            JSONDecodeError: Wenn Response kein valides JSON ist
-            Exception: Bei Ollama Errors
+            Exception: Wenn beide Methoden fehlschlagen
         """
         
-        print(f"\n🤖 Generiere Trainingsplan mit {self.model}...")
+        # Strategie 1: OpenRouter direkt
+        if self.use_openrouter:
+            return self._generate_with_openrouter(messages, max_tokens)
+        
+        # Strategie 2: Ollama mit OpenRouter Fallback
+        if self.ollama_available:
+            try:
+                return self._generate_with_ollama(messages, max_tokens, timeout)
+            except Exception as e:
+                if self.fallback_to_openrouter:
+                    print(f"\n⚠️ Ollama fehlgeschlagen: {e}")
+                    print("→ Versuche OpenRouter Fallback...\n")
+                    return self._generate_with_openrouter(messages, max_tokens)
+                else:
+                    raise
+        
+        # Strategie 3: Nur OpenRouter (Ollama nicht verfügbar)
+        if self.fallback_to_openrouter:
+            return self._generate_with_openrouter(messages, max_tokens)
+        
+        raise Exception("Kein LLM verfügbar - weder Ollama noch OpenRouter konfiguriert")
+    
+    def _generate_with_ollama(
+        self,
+        messages: List[Dict[str, str]],
+        max_tokens: int,
+        timeout: int
+    ) -> Dict[str, Any]:
+        """Generiert Plan mit lokalem Ollama"""
+        
+        print(f"\n🤖 Generiere mit Ollama ({self.model})...")
         print(f"   Temperature: {self.temperature}")
         print(f"   Max Tokens: {max_tokens}")
         
@@ -98,7 +183,7 @@ class LLMClient:
                 messages=messages,
                 options={
                     'temperature': self.temperature,
-                    'num_predict': max_tokens,  # max_tokens für Ollama
+                    'num_predict': max_tokens,
                 }
             )
             
@@ -106,18 +191,17 @@ class LLMClient:
             content = response['message']['content']
             
             # Stats ausgeben
-            total_duration = response.get('total_duration', 0) / 1e9  # Nanosekunden → Sekunden
-            eval_count = response.get('eval_count', 0)  # Generated tokens
+            total_duration = response.get('total_duration', 0) / 1e9
+            eval_count = response.get('eval_count', 0)
             
-            print(f"✓ Response erhalten:")
+            print(f"✓ Ollama Response:")
             print(f"   Dauer: {total_duration:.1f}s")
             print(f"   Tokens: {eval_count}")
-            print(f"   Länge: {len(content)} Zeichen\n")
+            print(f"   Länge: {len(content)} Zeichen")
+            print(f"   Kosten: 0€ (lokal)\n")
             
             # JSON parsen
-            plan_json = self._extract_json(content)
-            
-            return plan_json
+            return self._extract_json(content)
         
         except json.JSONDecodeError as e:
             print(f"\n❌ JSON Parse Error: {e}")
@@ -127,6 +211,62 @@ class LLMClient:
         
         except Exception as e:
             print(f"\n❌ Ollama Error: {e}")
+            raise
+    
+    def _generate_with_openrouter(
+        self,
+        messages: List[Dict[str, str]],
+        max_tokens: int
+    ) -> Dict[str, Any]:
+        """Generiert Plan mit OpenRouter (70B Remote)"""
+        
+        client = self._get_openrouter_client()
+        model = os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.1-70b-instruct')
+        
+        print(f"\n🌐 Generiere mit OpenRouter ({model})...")
+        print(f"   Temperature: {self.temperature}")
+        print(f"   Max Tokens: {max_tokens}")
+        
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=max_tokens,
+                extra_headers={
+                    "HTTP-Referer": "https://gym.last-strawberry.com",
+                    "X-Title": "HomeGym AI Coach"
+                }
+            )
+            
+            content = response.choices[0].message.content
+            
+            # Stats ausgeben
+            tokens_used = response.usage.total_tokens
+            prompt_tokens = response.usage.prompt_tokens
+            completion_tokens = response.usage.completion_tokens
+            
+            # Kosten berechnen (OpenRouter Llama 3.1 70B)
+            cost_input = (prompt_tokens / 1_000_000) * 0.60
+            cost_output = (completion_tokens / 1_000_000) * 0.80
+            total_cost = cost_input + cost_output
+            
+            print(f"✓ OpenRouter Response:")
+            print(f"   Tokens: {tokens_used} (in: {prompt_tokens}, out: {completion_tokens})")
+            print(f"   Länge: {len(content)} Zeichen")
+            print(f"   Kosten: {total_cost:.4f}€ (~{total_cost*100:.2f} Cent)\n")
+            
+            # JSON parsen
+            return self._extract_json(content)
+        
+        except json.JSONDecodeError as e:
+            print(f"\n❌ JSON Parse Error: {e}")
+            print("Raw Response:")
+            print(content[:500])
+            raise
+        
+        except Exception as e:
+            print(f"\n❌ OpenRouter Error: {e}")
             raise
     
     def _extract_json(self, content: str) -> Dict[str, Any]:

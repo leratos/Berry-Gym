@@ -49,4 +49,13 @@ urlpatterns = [
     # Equipment Management
     path('equipment/', views.equipment_management, name='equipment_management'),
     path('equipment/toggle/<int:equipment_id>/', views.toggle_equipment, name='toggle_equipment'),
+    
+    # Exercise API
+    path('api/exercise/<int:exercise_id>/', views.exercise_api_detail, name='exercise_api_detail'),
+    
+    # Live Guidance API
+    path('api/live-guidance/', views.live_guidance_api, name='live_guidance_api'),
+    
+    # AI Plan Generator API
+    path('api/generate-plan/', views.generate_plan_api, name='generate_plan_api'),
 ]

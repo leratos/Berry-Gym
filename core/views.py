@@ -8,11 +8,15 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
-from .models import Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung, ProgressPhoto, Equipment, MUSKELGRUPPEN
+from .models import (
+    Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung, 
+    ProgressPhoto, Equipment, MUSKELGRUPPEN, BEWEGUNGS_TYP, GEWICHTS_TYP
+)
 from django.db import models
 import re
 import json
 import random
+import os
 
 
 def register(request):
@@ -2088,3 +2092,176 @@ def toggle_equipment(request, equipment_id):
         return JsonResponse({'status': status, 'equipment_name': str(equipment)})
     
     return redirect('equipment_management')
+
+
+@login_required
+def exercise_api_detail(request, exercise_id):
+    """
+    API Endpoint für Übungsdetails (für Modal)
+    Gibt JSON mit allen Übungsinformationen zurück
+    """
+    try:
+        uebung = get_object_or_404(Uebung, id=exercise_id)
+        
+        # Muskelgruppen Dict für Display-Namen
+        muskelgruppen_dict = dict(MUSKELGRUPPEN)
+        
+        # Bewegungstyp Display Namen (aus models.py)
+        bewegungstyp_dict = dict(BEWEGUNGS_TYP)
+        
+        # Gewichtstyp Display Namen (aus models.py)
+        gewichts_typ_dict = dict(GEWICHTS_TYP)
+        
+        # Hilfsmuskeln Display Namen
+        hilfsmuskeln_display = []
+        if uebung.hilfsmuskeln:
+            hilfsmuskeln_display = [muskelgruppen_dict.get(m, m) for m in uebung.hilfsmuskeln]
+        
+        # Equipment Liste
+        equipment_list = [eq.get_name_display() for eq in uebung.equipment.all()]
+        
+        data = {
+            'id': uebung.id,
+            'bezeichnung': uebung.bezeichnung,
+            'beschreibung': uebung.beschreibung or 'Keine Beschreibung verfügbar',
+            'bild': uebung.bild.url if uebung.bild else None,
+            'muskelgruppe': uebung.muskelgruppe or '',
+            'muskelgruppe_display': muskelgruppen_dict.get(uebung.muskelgruppe, uebung.muskelgruppe) if uebung.muskelgruppe else '-',
+            'bewegungstyp': uebung.bewegungstyp or '',
+            'bewegungstyp_display': bewegungstyp_dict.get(uebung.bewegungstyp, '') if uebung.bewegungstyp else '',
+            'gewichts_typ': uebung.gewichts_typ or '',
+            'gewichts_typ_display': gewichts_typ_dict.get(uebung.gewichts_typ, '') if uebung.gewichts_typ else '-',
+            'hilfsmuskeln': uebung.hilfsmuskeln or [],
+            'hilfsmuskeln_display': hilfsmuskeln_display,
+            'equipment': equipment_list,
+        }
+        
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def live_guidance_api(request):
+    """
+    API Endpoint für Live-Guidance während Training
+    POST: { session_id, question, exercise_id?, set_number? }
+    Returns: { answer, cost, model }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        session_id = data.get('session_id')
+        question = data.get('question', '').strip()
+        exercise_id = data.get('exercise_id')
+        set_number = data.get('set_number')
+        
+        if not session_id or not question:
+            return JsonResponse({'error': 'session_id und question erforderlich'}, status=400)
+        
+        # Prüfe ob Session dem User gehört
+        session = get_object_or_404(Trainingseinheit, id=session_id, user=request.user)
+        
+        # Live Guidance aufrufen
+        import sys
+        from pathlib import Path
+        ai_coach_path = Path(__file__).parent.parent / 'ai_coach'
+        if str(ai_coach_path) not in sys.path:
+            sys.path.insert(0, str(ai_coach_path))
+        
+        from live_guidance import LiveGuidance
+        
+        # Use OpenRouter auf Server, Ollama lokal
+        use_openrouter = os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
+        
+        guidance = LiveGuidance(use_openrouter=use_openrouter)
+        result = guidance.get_guidance(
+            trainingseinheit_id=session_id,
+            user_question=question,
+            current_uebung_id=exercise_id,
+            current_satz_number=set_number
+        )
+        
+        return JsonResponse({
+            'answer': result['answer'],
+            'cost': result['cost'],
+            'model': result['model']
+        })
+    
+    except Trainingseinheit.DoesNotExist:
+        return JsonResponse({'error': 'Trainingseinheit nicht gefunden'}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def generate_plan_api(request):
+    """
+    API Endpoint für KI-Plan-Generierung über Web-Interface
+    POST: { plan_type, sets_per_session, analysis_days? }
+    Returns: { success, plan_ids, cost, message }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        plan_type = data.get('plan_type', '3er-split')
+        sets_per_session = int(data.get('sets_per_session', 18))
+        analysis_days = int(data.get('analysis_days', 30))
+        
+        # Validierung
+        valid_plan_types = ['2er-split', '3er-split', '4er-split', 'ganzkörper', 'push-pull-legs']
+        if plan_type not in valid_plan_types:
+            return JsonResponse({'error': f'Ungültiger Plan-Typ. Erlaubt: {", ".join(valid_plan_types)}'}, status=400)
+        
+        if sets_per_session < 10 or sets_per_session > 30:
+            return JsonResponse({'error': 'Sätze pro Session muss zwischen 10-30 liegen'}, status=400)
+        
+        # Plan Generator aufrufen
+        import sys
+        from pathlib import Path
+        ai_coach_path = Path(__file__).parent.parent / 'ai_coach'
+        if str(ai_coach_path) not in sys.path:
+            sys.path.insert(0, str(ai_coach_path))
+        
+        from plan_generator import PlanGenerator
+        
+        # Use OpenRouter auf Server, Ollama lokal
+        use_openrouter = os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
+        
+        generator = PlanGenerator(
+            user_id=request.user.id,
+            plan_type=plan_type,
+            analysis_days=analysis_days,
+            sets_per_session=sets_per_session,
+            use_openrouter=use_openrouter,
+            fallback_to_openrouter=True
+        )
+        
+        # Generiere Plan
+        result = generator.generate(save_to_db=True)
+        
+        return JsonResponse({
+            'success': True,
+            'plan_ids': result.get('plan_ids', []),
+            'plan_name': result.get('plan_data', {}).get('plan_name', ''),
+            'sessions': len(result.get('plan_data', {}).get('sessions', [])),
+            'cost': 0.003 if use_openrouter else 0.0,  # Geschätzte Kosten
+            'model': 'OpenRouter 70B' if use_openrouter else 'Ollama 8B',
+            'message': f"Plan '{result.get('plan_data', {}).get('plan_name', '')}' erfolgreich erstellt!"
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'error': str(e),
+            'success': False
+        }, status=500)

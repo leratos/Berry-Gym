@@ -129,7 +129,14 @@
             <div class="card bg-dark border-secondary mb-3 shadow-sm">
                 <div class="card-header border-secondary d-flex justify-content-between align-items-center bg-secondary bg-opacity-10">
                     <div class="d-flex align-items-center">
-                        <h5 class="mb-0 text-primary fw-bold me-2">{{ uebung_group.grouper }}</h5>
+                        <h5 class="mb-0 text-primary fw-bold me-2">
+                            <a href="#" class="text-decoration-none text-primary exercise-link" 
+                               data-exercise-id="{{ uebung_group.grouper.id }}" 
+                               title="Übungsdetails anzeigen">
+                                {{ uebung_group.grouper }}
+                                <i class="bi bi-info-circle-fill"></i>
+                            </a>
+                        </h5>
                         <!-- NEU: Der Statistik-Link -->
                         <a href="{% url 'exercise_stats' uebung_group.grouper.id %}" class="text-decoration-none text-info opacity-50">
                             <i class="bi bi-graph-up"></i>
@@ -752,5 +759,12 @@
             }
         });
     </script>
+    
+    <!-- Include Exercise Info Modal -->
+    {% include 'core/exercise_info_modal.html' %}
+    
+    <!-- Include AI Coach Chat -->
+    {% include 'core/ai_coach_chat.html' %}
+    
   </body>
 </html>

@@ -1,0 +1,238 @@
+<!-- Übungs-Info Modal - Wiederverwendbare Komponente -->
+<div class="modal fade" id="exerciseInfoModal" tabindex="-1" aria-labelledby="exerciseInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exerciseInfoModalLabel">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <span id="exerciseModalTitle">Übungsdetails</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                <div id="exerciseModalLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Lädt...</span>
+                    </div>
+                </div>
+                
+                <div id="exerciseModalContent" style="display: none;">
+                    <!-- Übungsbild -->
+                    <div id="exerciseImageContainer" class="text-center mb-4" style="display: none;">
+                        <img id="exerciseImage" 
+                             src="" 
+                             alt="Übungsgrafik" 
+                             class="img-fluid rounded shadow-sm"
+                             style="max-height: 400px; object-fit: contain;">
+                    </div>
+                    
+                    <!-- Kein Bild Hinweis -->
+                    <div id="exerciseNoImage" class="alert alert-light text-center mb-4" style="display: none;">
+                        <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                        <p class="mb-0 mt-2 text-muted">Keine Grafik verfügbar</p>
+                    </div>
+                    
+                    <!-- Muskelgruppe Badge -->
+                    <div class="mb-3">
+                        <span class="badge bg-primary" id="exerciseMuscleGroup">
+                            <i class="bi bi-bullseye me-1"></i>
+                            <span id="exerciseMuscleGroupText"></span>
+                        </span>
+                        <span class="badge bg-secondary ms-2" id="exerciseMovementType">
+                            <i class="bi bi-arrow-repeat me-1"></i>
+                            <span id="exerciseMovementTypeText"></span>
+                        </span>
+                    </div>
+                    
+                    <!-- Beschreibung -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="bi bi-card-text me-2"></i>Anleitung
+                        </h6>
+                        <div id="exerciseDescription" class="border rounded p-3 bg-dark border-secondary">
+                            <p class="mb-0 text-white" id="exerciseDescriptionText"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Equipment -->
+                    <div id="exerciseEquipmentContainer" class="mb-3" style="display: none;">
+                        <h6 class="text-muted mb-2">
+                            <i class="bi bi-tools me-2"></i>Benötigtes Equipment
+                        </h6>
+                        <div id="exerciseEquipment" class="d-flex flex-wrap gap-2">
+                            <!-- Equipment Badges werden hier dynamisch eingefügt -->
+                        </div>
+                    </div>
+                    
+                    <!-- Zusätzliche Infos -->
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-dark border-secondary">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">
+                                        <i class="bi bi-person-arms-up me-2"></i>Gewichtstyp
+                                    </h6>
+                                    <p class="card-text mb-0 text-white" id="exerciseWeightType">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="exerciseHilfsContainer" style="display: none;">
+                            <div class="card border-0 bg-dark border-secondary">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">
+                                        <i class="bi bi-diagram-3 me-2"></i>Hilfsmuskeln
+                                    </h6>
+                                    <p class="card-text mb-0 text-white" id="exerciseHilfsmuskeln">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="exerciseModalError" class="alert alert-danger" style="display: none;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span id="exerciseModalErrorText">Fehler beim Laden der Übungsdetails</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-2"></i>Schließen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Globale Funktion zum Öffnen des Exercise Info Modals
+function showExerciseInfo(exerciseId) {
+    const modal = new bootstrap.Modal(document.getElementById('exerciseInfoModal'));
+    
+    // Reset Modal State
+    document.getElementById('exerciseModalLoading').style.display = 'block';
+    document.getElementById('exerciseModalContent').style.display = 'none';
+    document.getElementById('exerciseModalError').style.display = 'none';
+    
+    // Modal öffnen
+    modal.show();
+    
+    // Fetch Exercise Details
+    fetch(`/api/exercise/${exerciseId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Übung nicht gefunden');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Loading verstecken
+            document.getElementById('exerciseModalLoading').style.display = 'none';
+            document.getElementById('exerciseModalContent').style.display = 'block';
+            
+            // Titel
+            document.getElementById('exerciseModalTitle').textContent = data.bezeichnung;
+            
+            // Bild
+            if (data.bild) {
+                document.getElementById('exerciseImage').src = data.bild;
+                document.getElementById('exerciseImageContainer').style.display = 'block';
+                document.getElementById('exerciseNoImage').style.display = 'none';
+            } else {
+                document.getElementById('exerciseImageContainer').style.display = 'none';
+                document.getElementById('exerciseNoImage').style.display = 'block';
+            }
+            
+            // Muskelgruppe
+            document.getElementById('exerciseMuscleGroupText').textContent = data.muskelgruppe_display || '-';
+            
+            // Bewegungstyp
+            if (data.bewegungstyp_display) {
+                document.getElementById('exerciseMovementTypeText').textContent = data.bewegungstyp_display;
+                document.getElementById('exerciseMovementType').style.display = 'inline-block';
+            } else {
+                document.getElementById('exerciseMovementType').style.display = 'none';
+            }
+            
+            // Beschreibung
+            const descText = data.beschreibung || 'Keine Beschreibung verfügbar';
+            document.getElementById('exerciseDescriptionText').innerHTML = descText.replace(/\n/g, '<br>');
+            
+            // Equipment
+            if (data.equipment && data.equipment.length > 0) {
+                const equipmentHtml = data.equipment.map(eq => 
+                    `<span class="badge bg-info text-dark">
+                        <i class="bi bi-wrench me-1"></i>${eq}
+                    </span>`
+                ).join('');
+                document.getElementById('exerciseEquipment').innerHTML = equipmentHtml;
+                document.getElementById('exerciseEquipmentContainer').style.display = 'block';
+            } else {
+                document.getElementById('exerciseEquipmentContainer').style.display = 'none';
+            }
+            
+            // Gewichtstyp
+            document.getElementById('exerciseWeightType').textContent = data.gewichts_typ_display || '-';
+            
+            // Hilfsmuskeln
+            if (data.hilfsmuskeln_display && data.hilfsmuskeln_display.length > 0) {
+                document.getElementById('exerciseHilfsmuskeln').textContent = data.hilfsmuskeln_display.join(', ');
+                document.getElementById('exerciseHilfsContainer').style.display = 'block';
+            } else {
+                document.getElementById('exerciseHilfsContainer').style.display = 'none';
+            }
+        })
+        .catch(error => {
+            document.getElementById('exerciseModalLoading').style.display = 'none';
+            document.getElementById('exerciseModalError').style.display = 'block';
+            document.getElementById('exerciseModalErrorText').textContent = error.message;
+        });
+}
+
+// Event Delegation für Exercise Links
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.addEventListener('click', function(e) {
+        const exerciseLink = e.target.closest('[data-exercise-id]');
+        if (exerciseLink) {
+            e.preventDefault();
+            const exerciseId = exerciseLink.getAttribute('data-exercise-id');
+            showExerciseInfo(exerciseId);
+        }
+    });
+});
+</script>
+
+<style>
+/* Exercise Link Styling */
+.exercise-link {
+    cursor: pointer;
+    color: #0d6efd;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.exercise-link:hover {
+    color: #0a58ca;
+    text-decoration: underline;
+}
+
+.exercise-link i {
+    font-size: 0.8em;
+    opacity: 0.6;
+    margin-left: 0.25rem;
+}
+
+/* Modal Enhancements */
+#exerciseInfoModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+#exerciseImage {
+    border: 2px solid #dee2e6;
+}
+
+.badge {
+    font-size: 0.85rem;
+    padding: 0.4em 0.8em;
+}
+</style>
