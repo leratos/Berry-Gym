@@ -70,13 +70,13 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         plan_type: str = "3er-split",
         sets_per_session: int = 18
     ) -> str:
-        # Plan-Type spezifische Anweisungen
+        # Plan-Type spezifische Anweisungen (Frontend-kompatible Keys)
         plan_instructions = {
+            "2er-split": "Erstelle einen 2er-Split (z.B. Oberkörper/Unterkörper oder Push/Pull)",
             "3er-split": "Erstelle einen 3er-Split (z.B. Push/Pull/Legs oder Oberkörper/Unterkörper/Ganzkörper)",
             "4er-split": "Erstelle einen 4er-Split (z.B. Brust+Trizeps, Rücken+Bizeps, Schultern+Bauch, Beine)",
-            "ppl": "Erstelle einen Push/Pull/Legs Split (6x pro Woche möglich)",
-            "upper-lower": "Erstelle einen Upper/Lower Split (4x pro Woche)",
-            "fullbody": "Erstelle einen Ganzkörper-Plan (3x pro Woche)"
+            "push-pull-legs": "Erstelle einen Push/Pull/Legs Split (6x pro Woche möglich)",
+            "ganzkörper": "Erstelle einen Ganzkörper-Plan (2-3x pro Woche, alle Muskelgruppen pro Session)"
         }
         
         instruction = plan_instructions.get(plan_type, plan_instructions["3er-split"])
