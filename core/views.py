@@ -411,6 +411,9 @@ def training_start(request, plan_id=None):
             # Anzahl der Sätze aus dem Plan holen
             anzahl_saetze = plan_uebung.saetze_ziel
             
+            # Superset-Gruppe aus dem Plan übernehmen
+            superset_gruppe = plan_uebung.superset_gruppe
+            
             # Wir erstellen so viele Platzhalter-Sätze, wie im Plan stehen
             for i in range(1, anzahl_saetze + 1):
                 Satz.objects.create(
@@ -419,7 +422,8 @@ def training_start(request, plan_id=None):
                     satz_nr=i,
                     gewicht=start_gewicht,
                     wiederholungen=start_wdh,
-                    ist_aufwaermsatz=False
+                    ist_aufwaermsatz=False,
+                    superset_gruppe=superset_gruppe
                 )
             
     return redirect('training_session', training_id=training.id)
@@ -470,6 +474,7 @@ def add_set(request, training_id):
         rpe = request.POST.get('rpe')
         is_warmup = request.POST.get('ist_aufwaermsatz') == 'on'
         notiz = request.POST.get('notiz', '').strip()
+        superset_gruppe = request.POST.get('superset_gruppe', 0)
         
         uebung = get_object_or_404(Uebung, id=uebung_id)
         
@@ -486,7 +491,8 @@ def add_set(request, training_id):
             wiederholungen=wdh,
             ist_aufwaermsatz=is_warmup,
             rpe=rpe if rpe else None,
-            notiz=notiz if notiz else None
+            notiz=notiz if notiz else None,
+            superset_gruppe=int(superset_gruppe)
         )
         
         # PR-Check (nur für Arbeitssätze)
@@ -554,6 +560,8 @@ def update_set(request, set_id):
         satz.ist_aufwaermsatz = request.POST.get('ist_aufwaermsatz') == 'on'
         notiz = request.POST.get('notiz', '').strip()
         satz.notiz = notiz if notiz else None
+        superset_gruppe = request.POST.get('superset_gruppe', 0)
+        satz.superset_gruppe = int(superset_gruppe)
         satz.save()
         
         # AJAX Request? Sende JSON
@@ -1207,13 +1215,15 @@ def edit_plan(request, plan_id):
             uebung = get_object_or_404(Uebung, id=uebung_id)
             saetze = request.POST.get(f'saetze_{uebung_id}', 3)
             wdh = request.POST.get(f'wdh_{uebung_id}', '8-12')
+            superset_gruppe = request.POST.get(f'superset_gruppe_{uebung_id}', 0)
             
             PlanUebung.objects.create(
                 plan=plan,
                 uebung=uebung,
                 reihenfolge=idx,
                 saetze_ziel=saetze,
-                wiederholungen_ziel=wdh
+                wiederholungen_ziel=wdh,
+                superset_gruppe=int(superset_gruppe)
             )
         
         messages.success(request, f'Trainingsplan "{plan.name}" erfolgreich aktualisiert!')
@@ -1221,13 +1231,14 @@ def edit_plan(request, plan_id):
     
     uebungen = Uebung.objects.all().order_by('muskelgruppe', 'bezeichnung')
     
-    # Hole Plan-Übungen mit Details (Reihenfolge, Sets, Reps)
+    # Hole Plan-Übungen mit Details (Reihenfolge, Sets, Reps, Superset)
     plan_uebungen_details = {}
     for pu in plan.uebungen.all():
         plan_uebungen_details[pu.uebung_id] = {
             'reihenfolge': pu.reihenfolge,
             'saetze': pu.saetze_ziel,
-            'wdh': pu.wiederholungen_ziel
+            'wdh': pu.wiederholungen_ziel,
+            'superset_gruppe': pu.superset_gruppe
         }
     
     plan_uebung_ids = list(plan_uebungen_details.keys())

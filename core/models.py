@@ -254,6 +254,13 @@ class PlanUebung(models.Model):
     saetze_ziel = models.PositiveIntegerField(default=3, verbose_name="Geplante Sätze")
     wiederholungen_ziel = models.CharField(max_length=50, blank=True, verbose_name="Ziel-Wdh (z.B. 8-12)")
     
+    # Superset/Circuit Support
+    superset_gruppe = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Superset-Gruppe",
+        help_text="0 = keine Gruppe, 1-9 = Gruppennummer für Supersätze"
+    )
+    
     class Meta:
         verbose_name = "Plan-Übung"
         verbose_name_plural = "Plan-Übungen"

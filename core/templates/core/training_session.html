@@ -7,6 +7,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
+        /* Superset-Gruppierung */
+        .superset-group-1 { border-left: 4px solid #ffc107 !important; }
+        .superset-group-2 { border-left: 4px solid #0dcaf0 !important; }
+        .superset-group-3 { border-left: 4px solid #d63384 !important; }
+        .superset-group-4 { border-left: 4px solid #6610f2 !important; }
+        .superset-group-5 { border-left: 4px solid #20c997 !important; }
+        
         .rest-timer {
             position: fixed;
             bottom: 90px;
@@ -157,7 +164,7 @@
                         </thead>
                         <tbody>
                             {% for satz in uebung_group.list %}
-                            <tr class="{% if satz.ist_aufwaermsatz %}text-muted fst-italic{% endif %} {% if satz.superset_gruppe > 0 %}border-start border-3 border-warning{% endif %}">
+                            <tr class="{% if satz.ist_aufwaermsatz %}text-muted fst-italic{% endif %} {% if satz.superset_gruppe > 0 %}superset-group-{{ satz.superset_gruppe }}{% endif %}">
                                 <td class="ps-3">
                                     {% if satz.superset_gruppe > 0 %}
                                         <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">S{{ satz.superset_gruppe }}</span>
@@ -184,7 +191,7 @@
                                 <td class="text-end pe-3 text-nowrap">
                                     <!-- EDIT BUTTON -->
                                     <button class="btn btn-link text-info opacity-75 text-decoration-none px-2" 
-                                            onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}', '{{ satz.notiz|default_if_none:''|escapejs }}')">
+                                            onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}', '{{ satz.notiz|default_if_none:''|escapejs }}', '{{ satz.superset_gruppe }}')">>
                                         <i class="bi bi-pencil-fill"></i>
                                     </button>
                                     
@@ -200,10 +207,14 @@
                     </table>
                     
                     <div class="d-grid p-2 border-top border-secondary">
+                        {% with last_satz=uebung_group.list|last %}
                         <button class="btn btn-sm btn-outline-secondary border-0 text-start ps-3" 
-                                onclick="openModalWithExercise('{{ uebung_group.grouper.id }}')">
+                                data-exercise-id="{{ uebung_group.grouper.id }}"
+                                data-last-superset="{{ last_satz.superset_gruppe|default:0 }}"
+                                onclick="openModalWithExercise('{{ uebung_group.grouper.id }}', this.dataset.lastSuperset)">
                             <i class="bi bi-plus-circle me-2"></i> Weiteren Satz hinzufügen
                         </button>
+                        {% endwith %}
                     </div>
                 </div>
             </div>
@@ -291,10 +302,11 @@
                         <label class="form-label text-secondary">Superset</label>
                         <select name="superset_gruppe" id="supersetInput" class="form-select bg-dark text-white border-secondary">
                             <option value="0">Keine</option>
-                            <option value="1">Gruppe 1</option>
-                            <option value="2">Gruppe 2</option>
-                            <option value="3">Gruppe 3</option>
-                            <option value="4">Gruppe 4</option>
+                            <option value="1">S1</option>
+                            <option value="2">S2</option>
+                            <option value="3">S3</option>
+                            <option value="4">S4</option>
+                            <option value="5">S5</option>
                         </select>
                     </div>
                 </div>
@@ -391,6 +403,7 @@
         const gewichtInput = document.getElementById('gewichtInput');
         const wdhInput = document.getElementById('wdhInput');
         const rpeInput = document.getElementById('rpeInput');
+        const supersetInput = document.getElementById('supersetInput');
         const warmupCheck = document.getElementById('warmupCheck');
         const notizInput = document.getElementById('notizInput');
         const progressionHint = document.getElementById('progressionHint');
@@ -430,7 +443,7 @@
         });
 
         // MODUS 1: NEUEN SATZ ERSTELLEN
-        function openModalWithExercise(uebungId) {
+        function openModalWithExercise(uebungId, lastSuperset = '0') {
             modalTitle.innerText = "Satz hinzufügen";
             setForm.action = addUrl;
             
@@ -439,6 +452,7 @@
             
             // Reset
             gewichtInput.value = ""; wdhInput.value = ""; rpeInput.value = ""; warmupCheck.checked = false; notizInput.value = "";
+            supersetInput.value = lastSuperset || '0'; // Letzte Superset-Gruppe oder 0
             progressionHint.style.display = 'none';
             
             if (uebungId) {
@@ -456,7 +470,7 @@
         }
 
         // MODUS 2: SATZ BEARBEITEN
-        function openEditModal(setId, uebungId, gewicht, wdh, rpe, isWarmup, notiz) {
+        function openEditModal(setId, uebungId, gewicht, wdh, rpe, isWarmup, notiz, supersetGroup) {
             modalTitle.innerText = "Satz bearbeiten";
             // URL dynamisch anpassen
             let updateUrl = "{% url 'update_set' 0 %}".replace('0', setId);
@@ -479,6 +493,7 @@
             rpeInput.value = rpe;
             notizInput.value = notiz || '';
             warmupCheck.checked = (isWarmup === 'true');
+            supersetInput.value = supersetGroup || '0';
             
             // Kein Progression Hint beim Bearbeiten
             progressionHint.style.display = 'none';

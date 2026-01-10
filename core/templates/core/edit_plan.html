@@ -44,6 +44,16 @@
             font-weight: bold;
             color: #198754;
         }
+        .superset-badge {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.4rem;
+            font-weight: bold;
+        }
+        .superset-group-1 { border-left: 4px solid #ffc107 !important; }
+        .superset-group-2 { border-left: 4px solid #0dcaf0 !important; }
+        .superset-group-3 { border-left: 4px solid #d63384 !important; }
+        .superset-group-4 { border-left: 4px solid #6610f2 !important; }
+        .superset-group-5 { border-left: 4px solid #20c997 !important; }
     </style>
 </head>
 <body class="bg-dark text-light">
@@ -97,6 +107,7 @@
                                          data-reihenfolge="{{ uebung.reihenfolge|default:'9999' }}"
                                          data-saetze="{{ uebung.saetze|default:'3' }}"
                                          data-wdh="{{ uebung.wdh|default:'8-12' }}"
+                                         data-superset="{{ uebung.superset_gruppe|default:'0' }}"
                                          onclick="toggleExercise(this)">
                                         <div class="card-body p-2">
                                             <div class="d-flex justify-content-between align-items-start">
@@ -306,9 +317,10 @@
                 const reihenfolge = parseInt(card.dataset.reihenfolge) || 9999;
                 const saetze = card.dataset.saetze || 3;
                 const wdh = card.dataset.wdh || '8-12';
+                const supersetGroup = parseInt(card.dataset.superset) || 0;
                 
                 planExercises.push({
-                    id, name, muscle, reihenfolge, saetze, wdh
+                    id, name, muscle, reihenfolge, saetze, wdh, supersetGroup
                 });
             });
             
@@ -321,7 +333,8 @@
                 name: ex.name,
                 muscle: ex.muscle,
                 saetze: ex.saetze,
-                wdh: ex.wdh
+                wdh: ex.wdh,
+                supersetGroup: ex.supersetGroup
             }));
             
             updateSelectedList();
@@ -344,7 +357,7 @@
                 // Hole Sätze/Wdh aus data-Attributen (wenn vorhanden) oder nutze Defaults
                 const saetze = card.dataset.saetze || 3;
                 const wdh = card.dataset.wdh || '8-12';
-                selectedExercises.push({ id, name, muscle, saetze, wdh });
+                selectedExercises.push({ id, name, muscle, saetze, wdh, supersetGroup: 0 });
             }
 
             updateSelectedList();
@@ -378,6 +391,14 @@
             }
         }
         
+        function setSupersetGroup(id, group) {
+            const exercise = selectedExercises.find(e => e.id == id);
+            if (exercise) {
+                exercise.supersetGroup = group;
+                updateSelectedList();
+            }
+        }
+        
         function updateExerciseData(id, field, value) {
             const exercise = selectedExercises.find(e => e.id == id);
             if (exercise) {
@@ -405,16 +426,20 @@
 
             let html = '';
             selectedExercises.forEach((ex, idx) => {
+                const supersetClass = ex.supersetGroup > 0 ? `superset-group-${ex.supersetGroup}` : '';
+                const supersetBadge = ex.supersetGroup > 0 ? `<span class="badge bg-warning text-dark superset-badge ms-1">S${ex.supersetGroup}</span>` : '';
+                
                 html += `
-                    <div class="card bg-black border-secondary mb-2">
+                    <div class="card bg-black border-secondary mb-2 ${supersetClass}">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="flex-grow-1">
                                     <div class="exercise-order-item">
-                                        <strong>${ex.name}</strong>
+                                        <strong>${ex.name}</strong>${supersetBadge}
                                         <small class="text-muted d-block">${ex.muscle}</small>
                                     </div>
                                     <input type="hidden" name="uebungen" value="${ex.id}">
+                                    <input type="hidden" name="superset_gruppe_${ex.id}" value="${ex.supersetGroup}">
                                     <div class="row g-2 mt-1">
                                         <div class="col-6">
                                             <input type="number" name="saetze_${ex.id}" class="form-control form-control-sm" 
@@ -425,6 +450,19 @@
                                             <input type="text" name="wdh_${ex.id}" class="form-control form-control-sm" 
                                                    placeholder="Wdh." value="${ex.wdh || '8-12'}"
                                                    onchange="updateExerciseData(${ex.id}, 'wdh', this.value)">
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <label class="text-muted small">Superset:</label>
+                                        <div class="btn-group btn-group-sm w-100" role="group">
+                                            <button type="button" class="btn ${ex.supersetGroup === 0 ? 'btn-secondary' : 'btn-outline-secondary'}" 
+                                                    onclick="setSupersetGroup(${ex.id}, 0)">Keine</button>
+                                            <button type="button" class="btn ${ex.supersetGroup === 1 ? 'btn-warning' : 'btn-outline-warning'}" 
+                                                    onclick="setSupersetGroup(${ex.id}, 1)">S1</button>
+                                            <button type="button" class="btn ${ex.supersetGroup === 2 ? 'btn-info' : 'btn-outline-info'}" 
+                                                    onclick="setSupersetGroup(${ex.id}, 2)">S2</button>
+                                            <button type="button" class="btn ${ex.supersetGroup === 3 ? 'btn-danger' : 'btn-outline-danger'}" 
+                                                    onclick="setSupersetGroup(${ex.id}, 3)">S3</button>
                                         </div>
                                     </div>
                                 </div>

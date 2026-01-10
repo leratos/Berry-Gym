@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
-**Stand:** 03.01.2026  
-**Version:** 0.3.0
+**Stand:** 10.01.2026  
+**Version:** 0.4.0
 
 ---
 
@@ -136,7 +136,58 @@
 
 ---
 
-## � PHASE 4: Erweiterte Features (0% - OFFEN)
+## ✅ PHASE 3.7: AI Coach - Plan-Generierung & Optimierung (100% KOMPLETT)
+
+### Automatische Plan-Generierung
+- [x] **KI-basierter Plan-Generator** (CLI Tool)
+- [x] **Equipment-basierte Übungsauswahl** (nur vorhandene Geräte)
+- [x] **Intelligente Split-Erstellung** (2-6 Tage/Woche)
+- [x] **Push/Pull/Legs Balance** (wissenschaftlich fundiert)
+- [x] **Volumen-Berechnung** (Sets × Reps pro Muskelgruppe)
+- [x] **Training-Historie-Analyse** (letzte 30 Tage)
+- [x] **Hybrid LLM System** (Ollama lokal, OpenRouter Fallback)
+- [x] **Cost Tracking** (~0.003€ pro Plan)
+
+### Automatische Plan-Optimierung (Hybrid-Ansatz)
+- [x] **Stufe 1: Regelbasierte Performance-Checks** (kostenlos)
+  - [x] RPE-Analyse (<7 → Gewicht erhöhen, >8.5 → Deload)
+  - [x] Muskelgruppen-Balance (>14 Tage nicht trainiert)
+  - [x] Plateau-Erkennung (1RM stagniert 4+ Wochen)
+  - [x] Volumen-Trends (>20% Spike, >30% Drop)
+- [x] **Stufe 2: KI-Optimierungsvorschläge** (~0.003€)
+  - [x] LLM analysiert Performance-Historie
+  - [x] Übungs-Ersatz (nur aus Equipment-Bestand)
+  - [x] Volumen-Anpassungen (Sets/Reps)
+  - [x] Deload-Empfehlungen
+- [x] **Web-Interface für Plan-Optimierung**
+  - [x] Performance-Warnings Card (Top 3 kritischste)
+  - [x] Diff-Modal (Vorher/Nachher mit Begründungen)
+  - [x] Checkbox-Selektion für Optimierungen
+  - [x] Apply-Funktionalität (1-Klick Übernahme)
+- [x] **API Endpoints**
+  - [x] GET /api/analyze-plan/ (Regelbasiert, kostenlos)
+  - [x] POST /api/optimize-plan/ (KI, ~0.003€)
+  - [x] POST /api/apply-optimizations/ (DB Update)
+
+### Live Training Guidance
+- [x] **AI Coach Chat während Training**
+- [x] **Context-aware Tipps** (kennt aktuelle Übung, Satz, RPE)
+- [x] **Formcheck-Hinweise** (basierend auf RPE/Gewicht)
+- [x] **Progressive Overload Beratung**
+- [x] **Technique-Verbesserungsvorschläge**
+- [x] **Cost: ~0.002€ pro Chat-Session**
+
+### LLM Infrastructure
+- [x] **Hybrid Client** (ai_coach/llm_client.py)
+- [x] **Ollama Integration** (lokal, 0€)
+- [x] **OpenRouter Fallback** (Cloud, ~0.003€)
+- [x] **Smart Retry Logic** (3 Versuche mit Backoff)
+- [x] **Secrets Manager** (sichere API Key Storage)
+- [x] **Prompt Engineering** (ai_coach/prompt_builder.py)
+
+---
+
+## 🔄 PHASE 4: Erweiterte Features (20% - IN ARBEIT)
 
 ### In-App Plan-Editor
 - [x] **Pläne in der App erstellen (ohne Admin)** ✅
@@ -160,12 +211,13 @@
 - [ ] Schwierigkeitsgrad anzeigen
 
 ### PWA & Offline
-- [ ] Progressive Web App Setup
-- [ ] Offline-Funktionalität (Service Worker)
+- [x] Progressive Web App Setup ✅
+- [x] Service Worker (Offline-Support) ✅
+- [x] Manifest.json (Installierbar) ✅
 - [ ] Push-Notifications aktivieren
-- [ ] Home Screen Installation
-- [ ] Sync bei Verbindung
-- [ ] Offline-Indikator
+- [ ] Sync bei Verbindung (Background Sync)
+- [ ] Offline-Indikator (Connection Status)
+- [ ] Offline-Datenspeicherung (IndexedDB)
 
 ### Themes & Customization
 - [ ] Dark/Light Mode Toggle
@@ -193,26 +245,151 @@
 
 ---
 
-## 🎯 Quick Wins (Empfohlen als Nächstes)
+## 🎯 PHASE 5: Next Features (Priorisiert nach Impact)
 
-**Priorität HOCH (1-2h pro Feature):**
-- [x] ~~Dark/Light Mode Toggle (Theme-Switcher Button)~~ ✅
-- [x] ~~Übungs-Favoriten (Stern-Icon zum Markieren)~~ ✅
-- [x] ~~CSV Export für Trainings-Daten~~ ✅
-- [x] ~~Rest Timer Settings (60/90/120 Sek wählbar)~~ ✅
-- [x] ~~Körperwerte bearbeiten/löschen~~ ✅
+### 🔥 High Priority (Nächste 2-4 Wochen)
 
-**Priorität MITTEL (3-5h pro Feature):**
-- [x] ~~Volumen-Progression Chart (Wochen-Verlauf)~~ ✅
-- [x] ~~Heatmap für Trainingstage~~ ✅
-- [x] ~~In-App Plan-Editor (Basis-Version)~~ ✅
-- [ ] Übungs-Notizen pro Satz
-- [ ] Foto-Upload für Progress Pics
+**1. Superset-Support beim Plan-Erstellen** ⭐ Impact: 9/10 | Aufwand: 4h ✅ FERTIG
+- [x] **Superset-Gruppierung im Plan-Editor** ✅
+  - Übungen beim Erstellen zu Supersätzen gruppieren
+  - Visuelle Gruppierung (farbige Border + Badges)
+  - Buttons "Keine / S1 / S2 / S3"
+  - Hidden Input für superset_gruppe beim Speichern
+- [x] **Superset während Training** (bereits vorhanden) ✅
+  - Superset-Badge "S1", "S2" etc.
+  - Manuelles Gruppieren im Training
+- [x] **Backend Logic** ✅
+  - PlanUebung.superset_gruppe Feld
+  - Migration erstellt und ausgeführt
+  - Speichern + Laden funktioniert
 
-**Priorität NIEDRIG (Später):**
-- [ ] Ernährungs-Dashboard
-- [ ] Social Features
-- [ ] ML-Empfehlungen
+**Status:** ✅ Implementiert und getestet (10.01.2026)
+
+**2. PDF Export Verbesserungen** ⭐ Impact: 8/10 | Aufwand: 4h
+- [x] **Trainingsstatistik als PDF** (bereits vorhanden) ✅
+- [ ] **Trainingsplan als PDF exportieren**
+  - Clean Layout für Gym (A4, druckoptimiert)
+  - Übungen mit Sets/Reps-Vorgaben
+  - Muskelgruppen-Icons
+  - QR-Code für Web-Zugriff zum Plan
+- [ ] **Workout Card** (einzelner Trainingstag)
+  - Kompaktes Format (Halbseite)
+  - Checkboxen für Sätze
+  - Platz für Gewicht/Wdh Notizen
+- [ ] **Monats-Report PDF**
+  - 1RM Progressions-Charts
+  - Volumen-Zusammenfassung
+  - PR-Highlights
+
+**Warum:** PDF Statistik existiert, Plan-Export ist logische Ergänzung
+
+**3. Plan-Templates** ⭐ Impact: 7/10 | Aufwand: 5h
+- [ ] **Vordefinierte Plan-Templates**
+  - Push/Pull/Legs (6 Tage)
+  - Upper/Lower (4 Tage)
+  - Full Body (3 Tage)
+  - Bro-Split (5 Tage)
+- [ ] **Template-Auswahl im Plan-Editor**
+  - "Von Template starten" Button
+  - Vorschau der Übungen
+  - Anpassbar nach Equipment
+- [ ] **Plan duplizieren**
+  - Eigene Pläne als Basis für Varianten
+  - Umbenennen + Anpassen
+- [ ] **Plan-Export/Import (JSON)**
+  - Pläne mit Community teilen
+  - QR-Code generieren
+
+**Warum:** Senkt Einstiegshürde massiv, schneller Start für neue User
+
+**4. AI Coach UI-Verbesserungen** ⭐ Impact: 6/10 | Aufwand: 3h
+- [x] **Plan-Generierung Web** (heute implementiert!) ✅
+- [x] **Plan-Optimierung Web** (heute implementiert!) ✅
+- [ ] **Auto-Suggest nach Training**
+  - Button: "Plan optimieren?" nach jedem 3. Training
+  - Zeigt Performance-Warnings im Dashboard
+- [ ] **Onboarding-Tour**
+  - Erste Schritte für AI Coach
+  - Tooltips für Equipment-Setup
+  - "Ersten Plan generieren" Wizard
+- [ ] **Plan-Generierung verbessern**
+  - Mehr Optionen (Fokus: Kraft/Hypertrophie/Ausdauer)
+  - Trainingszeit-Vorgabe (45/60/90 Min)
+  - Deload-Wochen einplanen
+
+**Warum:** AI Coach ist Alleinstellungsmerkmal, UI-Polish wichtig
+
+### ⚙️ Medium Priority (Nächste 1-2 Monate)
+
+**4. Notizen & Kommentare erweitern** Impact: 6/10 | Aufwand: 3h
+- [ ] **Satz-Notizen** (bereits vorhanden, aber UI verbessern)
+- [ ] **Übungs-Notizen** (persistent, nicht nur pro Training)
+- [ ] **Trainingstag-Kommentare** (Tagesform, Schlaf, Stress)
+- [ ] **Rich Text Editor** (Bold, Listen, Emojis)
+
+**5. Plan-Templates & Sharing** Impact: 6/10 | Aufwand: 5h
+- [ ] **Plan-Templates** (Push/Pull/Legs, Upper/Lower, etc.)
+- [ ] **Plan duplizieren** (als Basis für Anpassungen)
+- [ ] **Plan-Export als JSON** (teilen mit anderen Usern)
+- [ ] **Plan-Import** (JSON Upload)
+- [ ] **QR-Code für Plan-Sharing**
+
+**6. Erweiterte Equipment-Features** Impact: 5/10 | Aufwand: 4h
+- [ ] **Equipment-Profil pro User** (bereits vorhanden, aber UI verbessern)
+- [ ] **"Alternative Übungen"** (bei fehlendem Equipment)
+- [ ] **Equipment-basierte Übungsfilter** (im Plan-Editor)
+- [ ] **Equipment-Tracking** (Verfügbarkeit im Gym)
+
+### 🔮 Low Priority (Later / Community-Request)
+
+**7. Social Features** Impact: 4/10 | Aufwand: 10h+
+- [ ] User-Profile (öffentlich/privat)
+- [ ] Leaderboards (1RM Rankings)
+- [ ] Workout-Sharing (Social Feed)
+- [ ] Freunde hinzufügen
+- [ ] Gemeinsame Challenges
+
+**8. Ernährungs-Tracking** Impact: 3/10 | Aufwand: 15h+
+- [ ] Kalorienzähler
+- [ ] Makro-Tracking (Protein, Kohlenhydrate, Fett)
+- [ ] Meal-Planner
+- [ ] Barcode-Scanner für Lebensmittel
+
+**Warum niedrige Prio:** MyFitnessPal & Co machen das bereits besser
+
+**9. Wearables-Integration** Impact: 3/10 | Aufwand: 8h+
+- [ ] Google Fit OAuth2 Integration
+- [ ] Herzfrequenz-Daten importieren
+- [ ] Schritte/Aktivität syncen
+- [ ] Samsung Health Export/Import
+
+**Warum niedrige Prio:** RPE ist für Krafttraining ausreichend, Aufwand/Nutzen schlecht
+
+---
+
+## 🎯 Empfohlene Reihenfolge (Nächste 4 Features)
+
+1. **Superset beim Plan-Erstellen** (4h)
+   - Model existiert bereits
+   - Nur UI im Plan-Editor fehlt
+   - Hoher User-Value
+
+2. **Plan als PDF exportieren** (4h)
+   - PDF-Export existiert bereits für Statistiken
+   - Code wiederverwenden
+   - Gym-freundliches Feature
+
+3. **Plan-Templates** (5h)
+   - Schnellstart für neue User
+   - Reduziert Setup-Zeit massiv
+   - Gute Community-Feature Basis
+
+4. **AI Coach Auto-Suggest** (3h)
+   - Macht AI Coach proaktiver
+   - "Plan optimieren?" nach Training
+   - Dashboard-Integration
+
+**Gesamtaufwand:** ~16 Stunden für massive UX-Verbesserung
 
 ---
 
@@ -222,70 +399,50 @@
 - [ ] --
 
 ### Verbesserungen
-- [ ] Loading-States bei API-Calls
-- [ ] Undo-Funktion für gelöschte Sätze
-- [ ] Keyboard-Shortcuts (Enter = Speichern, Esc = Schließen)
-- [ ] Bessere Error-Messages
-- [ ] Konfigurierbarer Rest Timer (Zeit einstellen)
+- [ ] **Loading-States bei API-Calls** (Spinner während LLM-Anfragen)
+- [ ] **Undo-Funktion für gelöschte Sätze** (5 Sekunden Rückgängig-Fenster)
+- [ ] **Keyboard-Shortcuts** (Enter = Speichern, Esc = Schließen)
+- [ ] **Bessere Error-Messages** (User-freundliche Fehlerbeschreibungen)
+- [ ] **Toast-Notifications** (statt Alerts für Erfolgs-Meldungen)
+- [ ] **Autocomplete für Übungssuche** (Typeahead)
 
 ---
 
-## 📝 Notizen
+## 🎉 Neue Features in Version 0.4.0 (10.01.2026)
 
-### Technische Schulden
-- PWA Setup fehlt noch
-- Keine automatisierten Tests
-- Keine CI/CD Pipeline
-- Keine Migrations-Strategie für Prod
+### AI Coach - Automatische Plan-Optimierung
+Die App hat jetzt einen vollständigen AI Coach für automatische Plan-Anpassung:
 
-### Externe Systeme
-- **Ernährung & Lifestyle:** Wird über Samsung Uhr getrackt (Schlaf, Kalorien, Aktivität)
-- Keine API-Integration geplant - externe Daten bleiben außerhalb der App
+1. **Regelbasierte Performance-Checks** (kostenlos)
+   - RPE-Analyse: Warnt bei zu niedrig/hoch
+   - Muskelgruppen-Balance: Erkennt vernachlässigte Muskelgruppen
+   - Plateau-Erkennung: Identifiziert stagnierende Übungen (4+ Wochen)
+   - Volumen-Trends: Warnt bei Spikes (>20%) oder Drops (>30%)
 
-### Performance
-- Lazy Loading für Bilder implementieren
-- Chart.js Daten cachen
-- Pagination für lange Listen
+2. **KI-Optimierungsvorschläge** (~0.003€)
+   - LLM analysiert Training-Historie (letzte 30 Tage)
+   - Schlägt konkrete Änderungen vor (Übungs-Ersatz, Volumen-Anpassungen)
+   - Nur Übungen aus deinem Equipment-Bestand
+   - Diff-View: Vorher/Nachher mit Begründungen
 
-### Sicherheit
-- `.env` für Secrets nutzen
-- HTTPS erzwingen in Produktion
-- Rate Limiting für API-Endpoints
-- User-Authentication erweitern
+3. **Web-Interface**
+   - Performance-Warnings Card (zeigt Top 3 Probleme)
+   - "KI-Optimierung starten" Button
+   - Checkbox-Selektion für Änderungen
+   - Apply-Funktionalität: Übernahme mit 1 Klick
 
----
+4. **Hybrid-Ansatz**
+   - Stufe 1 (Analyse): Immer kostenlos, regelbasiert
+   - Stufe 2 (Optimierung): Optional, KI-gestützt, ~0.003€
+   - Beste Balance zwischen Kosten und Mehrwert
 
-## 🎉 Neue Features in Version 0.3.0
-
-### Anatomische Visualisierung
-Die App verfügt jetzt über eine vollständige anatomische Visualisierung:
-
-1. **Interaktive Muskelgruppen-Map** (`/muscle-map/`)
-   - Klickbare SVG mit Vorder- & Rückansicht
-   - 50+ individuelle Muskelregionen
-   - Übungen nach Muskelgruppe filtern
-   - Quick-Select Buttons für alle Muskelgruppen
-
-2. **Übungs-Detail-Ansicht** (`/uebung/<id>/`)
-   - Anatomische Darstellung mit Color-Coding
-   - Hauptmuskel in Rot hervorgehoben
-   - Hilfsmuskeln in Blau hervorgehoben
-   - Statistiken: Max Gewicht, Volumen, Sätze
-
-3. **Balance-Visualisierung in Trainingsstatistik**
-   - SVG-Anatomie zeigt Belastungsverteilung
-   - Farbgradient: Grau (niedrig) → Rot (hoch)
-   - Basierend auf trainiertem Volumen
-   - Side-by-Side mit Chart-Darstellung
-
-### Technische Implementierung
-- Dynamisches SVG-Laden via Fetch API
-- Text-zu-Code Mapping für 16 Muskelgruppen
-- Intensitäts-Normalisierung (0-1)
-- RGB-Interpolation für Farbgradienten
-- Responsive Design für mobile Geräte
+### Technische Details
+- **Backend:** ai_coach/plan_adapter.py (529 Zeilen)
+- **API Endpoints:** 3 neue REST APIs (analyze, optimize, apply)
+- **Frontend:** JavaScript Diff-Modal mit Live-Preview
+- **LLM:** Ollama lokal (0€) oder OpenRouter Cloud (0.003€)
 
 ---
 
-**Letzte Aktualisierung:** 03.01.2026  
-**Nächstes Review:** Nach Abschluss Phase 4 (Erweiterte Features)
+**Letzte Aktualisierung:** 10.01.2026  
+**Nächstes Review:** Nach Abschluss Phase 5 (Next Features)
