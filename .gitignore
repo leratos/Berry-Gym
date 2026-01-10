@@ -69,8 +69,13 @@ yarn-error.log*
 # Backups
 *.bak
 *.tmp
+*.backup
 backup_*.sql
 backup_*.sqlite3
+
+# Deployment Configs mit Secrets
+homegym.service
+homegym.nginx
 
 # Coverage reports
 htmlcov/

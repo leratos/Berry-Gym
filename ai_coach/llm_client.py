@@ -6,7 +6,7 @@ Unterstützt lokales Llama 3.1 8B mit OpenRouter 70B Fallback
 import json
 import ollama
 from typing import Dict, List, Any, Optional
-import ai_config
+from . import ai_config
 import os
 
 

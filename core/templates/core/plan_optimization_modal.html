@@ -1,0 +1,300 @@
+<!-- Plan Optimization Modal - Diff View für KI-Vorschläge -->
+<div class="modal fade" id="optimizationModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">
+                    <i class="bi bi-stars me-2"></i>KI-Optimierungsvorschläge
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Cost Info -->
+                <div class="alert alert-info d-flex align-items-center mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <div class="flex-grow-1">
+                        <strong>Analyse abgeschlossen</strong><br>
+                        <span id="optimizationCost">Kosten: 0.003€</span> | 
+                        <span id="optimizationModel">Model: llama-3.1-70b</span>
+                    </div>
+                </div>
+                
+                <!-- Optimizations List -->
+                <div id="optimizationsList"></div>
+                
+                <!-- No Optimizations Found -->
+                <div id="noOptimizations" style="display: none;" class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Keine Optimierungen nötig!</strong><br>
+                    Dein Plan ist bereits gut ausbalanciert.
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-2"></i>Schließen
+                </button>
+                <button type="button" class="btn btn-success" onclick="applySelectedOptimizations()">
+                    <i class="bi bi-check-lg me-2"></i>Ausgewählte übernehmen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .optimization-card {
+        border: 2px solid #495057;
+        transition: all 0.2s;
+    }
+    
+    .optimization-card.selected {
+        border-color: #198754;
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+    
+    .optimization-card:hover {
+        border-color: #6c757d;
+    }
+    
+    .diff-view {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+    }
+    
+    .diff-old {
+        background-color: rgba(220, 53, 69, 0.15);
+        padding: 0.5rem;
+        border-left: 3px solid #dc3545;
+    }
+    
+    .diff-new {
+        background-color: rgba(25, 135, 84, 0.15);
+        padding: 0.5rem;
+        border-left: 3px solid #198754;
+    }
+    
+    .reason-text {
+        background-color: rgba(13, 202, 240, 0.1);
+        border-left: 3px solid #0dcaf0;
+        padding: 0.5rem;
+        font-style: italic;
+    }
+</style>
+
+<script>
+let currentOptimizations = [];
+let selectedOptimizations = new Set();
+
+function showOptimizationModal(optimizations, cost, model) {
+    currentOptimizations = optimizations;
+    selectedOptimizations.clear();
+    
+    // Update Cost & Model Info
+    document.getElementById('optimizationCost').textContent = `Kosten: ${cost.toFixed(4)}€`;
+    document.getElementById('optimizationModel').textContent = `Model: ${model}`;
+    
+    // Render Optimizations
+    if (optimizations.length === 0) {
+        document.getElementById('optimizationsList').style.display = 'none';
+        document.getElementById('noOptimizations').style.display = 'block';
+    } else {
+        document.getElementById('optimizationsList').style.display = 'block';
+        document.getElementById('noOptimizations').style.display = 'none';
+        renderOptimizations(optimizations);
+    }
+    
+    // Show Modal
+    const modal = new bootstrap.Modal(document.getElementById('optimizationModal'));
+    modal.show();
+}
+
+function renderOptimizations(optimizations) {
+    const container = document.getElementById('optimizationsList');
+    let html = '';
+    
+    optimizations.forEach((opt, idx) => {
+        html += `
+            <div class="card optimization-card bg-dark mb-3" id="opt-${idx}" onclick="toggleOptimization(${idx})">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="form-check me-3 mt-1">
+                            <input class="form-check-input" type="checkbox" id="check-${idx}" 
+                                   onchange="event.stopPropagation(); toggleOptimization(${idx})">
+                        </div>
+                        <div class="flex-grow-1">
+                            ${renderOptimizationType(opt, idx)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderOptimizationType(opt, idx) {
+    switch(opt.type) {
+        case 'replace_exercise':
+            return `
+                <h6 class="mb-2">
+                    <i class="bi bi-arrow-left-right text-warning me-2"></i>
+                    Übung ersetzen
+                </h6>
+                <div class="diff-view mb-2">
+                    <div class="diff-old mb-2">
+                        <i class="bi bi-dash-circle text-danger me-2"></i>
+                        <strong>Alt:</strong> ${opt.old_exercise}
+                    </div>
+                    <div class="diff-new">
+                        <i class="bi bi-plus-circle text-success me-2"></i>
+                        <strong>Neu:</strong> ${opt.new_exercise}
+                    </div>
+                </div>
+                <div class="reason-text">
+                    <i class="bi bi-lightbulb text-info me-2"></i>
+                    <strong>Begründung:</strong> ${opt.reason}
+                </div>
+            `;
+        
+        case 'adjust_volume':
+            return `
+                <h6 class="mb-2">
+                    <i class="bi bi-bar-chart text-primary me-2"></i>
+                    Volumen anpassen: ${opt.exercise}
+                </h6>
+                <div class="diff-view mb-2">
+                    <div class="diff-old mb-2">
+                        <strong>Alt:</strong> ${opt.old_sets} Sätze × ${opt.old_reps} Wdh
+                    </div>
+                    <div class="diff-new">
+                        <strong>Neu:</strong> ${opt.new_sets} Sätze × ${opt.new_reps} Wdh
+                    </div>
+                </div>
+                <div class="reason-text">
+                    <i class="bi bi-lightbulb text-info me-2"></i>
+                    <strong>Begründung:</strong> ${opt.reason}
+                </div>
+            `;
+        
+        case 'deload_recommended':
+            return `
+                <h6 class="mb-2">
+                    <i class="bi bi-pause-circle text-warning me-2"></i>
+                    Deload empfohlen
+                </h6>
+                <div class="reason-text">
+                    <i class="bi bi-lightbulb text-info me-2"></i>
+                    ${opt.reason}
+                </div>
+                <div class="alert alert-warning mt-2 mb-0">
+                    <small>
+                        <strong>Tipp:</strong> Nächste Woche: 50% weniger Volumen, RPE 5-6 maximal.
+                    </small>
+                </div>
+            `;
+        
+        case 'add_exercise':
+            return `
+                <h6 class="mb-2">
+                    <i class="bi bi-plus-circle text-success me-2"></i>
+                    Übung hinzufügen
+                </h6>
+                <div class="diff-view mb-2">
+                    <div class="diff-new">
+                        <i class="bi bi-plus-circle text-success me-2"></i>
+                        <strong>Neu:</strong> ${opt.exercise}
+                        ${opt.sets ? ` - ${opt.sets} Sätze × ${opt.reps} Wdh` : ''}
+                    </div>
+                </div>
+                <div class="reason-text">
+                    <i class="bi bi-lightbulb text-info me-2"></i>
+                    <strong>Begründung:</strong> ${opt.reason}
+                </div>
+            `;
+        
+        default:
+            return `
+                <h6 class="mb-2">
+                    <i class="bi bi-gear text-secondary me-2"></i>
+                    ${opt.type}
+                </h6>
+                <div class="reason-text">
+                    ${opt.reason || 'Keine Details verfügbar'}
+                </div>
+            `;
+    }
+}
+
+function toggleOptimization(idx) {
+    const card = document.getElementById(`opt-${idx}`);
+    const checkbox = document.getElementById(`check-${idx}`);
+    
+    if (selectedOptimizations.has(idx)) {
+        selectedOptimizations.delete(idx);
+        card.classList.remove('selected');
+        checkbox.checked = false;
+    } else {
+        selectedOptimizations.add(idx);
+        card.classList.add('selected');
+        checkbox.checked = true;
+    }
+}
+
+function applySelectedOptimizations() {
+    if (selectedOptimizations.size === 0) {
+        alert('Bitte wähle mindestens eine Optimierung aus.');
+        return;
+    }
+    
+    const selected = Array.from(selectedOptimizations).map(idx => currentOptimizations[idx]);
+    
+    const planId = {{ plan.id }};
+    const btn = event.target;
+    
+    // Button disable + Loading
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Übernehme...';
+    
+    fetch('/api/apply-optimizations/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            plan_id: planId,
+            optimizations: selected
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Erfolgs-Message
+            const message = `✓ ${data.applied_count} Optimierung(en) erfolgreich angewendet!`;
+            
+            if (data.errors && data.errors.length > 0) {
+                alert(message + '\n\nWarnungen:\n' + data.errors.join('\n'));
+            } else {
+                alert(message);
+            }
+            
+            // Modal schließen
+            bootstrap.Modal.getInstance(document.getElementById('optimizationModal')).hide();
+            
+            // Seite neu laden um Änderungen zu sehen
+            location.reload();
+        } else {
+            alert('Fehler beim Anwenden: ' + (data.error || 'Unbekannter Fehler'));
+        }
+    })
+    .catch(err => {
+        console.error('Fehler:', err);
+        alert('Netzwerkfehler beim Anwenden der Optimierungen');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>Ausgewählte übernehmen';
+    });
+}
+</script>

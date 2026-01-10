@@ -1220,7 +1220,17 @@ def edit_plan(request, plan_id):
         return redirect('plan_details', plan_id=plan.id)
     
     uebungen = Uebung.objects.all().order_by('muskelgruppe', 'bezeichnung')
-    plan_uebung_ids = list(plan.uebungen.values_list('uebung_id', flat=True))
+    
+    # Hole Plan-Übungen mit Details (Reihenfolge, Sets, Reps)
+    plan_uebungen_details = {}
+    for pu in plan.uebungen.all():
+        plan_uebungen_details[pu.uebung_id] = {
+            'reihenfolge': pu.reihenfolge,
+            'saetze': pu.saetze_ziel,
+            'wdh': pu.wiederholungen_ziel
+        }
+    
+    plan_uebung_ids = list(plan_uebungen_details.keys())
     
     # Gruppiere Übungen nach Muskelgruppen
     uebungen_nach_gruppe = {}
@@ -1237,7 +1247,7 @@ def edit_plan(request, plan_id):
             for hm in hilfsmuskeln:
                 hilfs_labels.append(dict(MUSKELGRUPPEN).get(hm, hm))
         
-        uebungen_nach_gruppe[mg_label].append({
+        uebung_data = {
             'id': uebung.id,
             'bezeichnung': uebung.bezeichnung,
             'muskelgruppe': uebung.muskelgruppe,
@@ -1246,12 +1256,19 @@ def edit_plan(request, plan_id):
             'gewichts_typ': uebung.get_gewichts_typ_display(),
             'bewegungstyp': uebung.bewegungstyp,  # Für Empfehlungslogik
             'in_plan': uebung.id in plan_uebung_ids,
-        })
+        }
+        
+        # Füge Plan-Details hinzu wenn in Plan
+        if uebung.id in plan_uebungen_details:
+            uebung_data.update(plan_uebungen_details[uebung.id])
+        
+        uebungen_nach_gruppe[mg_label].append(uebung_data)
     
     context = {
         'plan': plan,
         'uebungen_nach_gruppe': uebungen_nach_gruppe,
         'muskelgruppen': MUSKELGRUPPEN,
+        'plan_uebungen_details': plan_uebungen_details,  # Für JavaScript
     }
     return render(request, 'core/edit_plan.html', context)
 
@@ -2256,6 +2273,258 @@ def generate_plan_api(request):
             'cost': 0.003 if use_openrouter else 0.0,  # Geschätzte Kosten
             'model': 'OpenRouter 70B' if use_openrouter else 'Ollama 8B',
             'message': f"Plan '{result.get('plan_data', {}).get('plan_name', '')}' erfolgreich erstellt!"
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'error': str(e),
+            'success': False
+        }, status=500)
+
+
+@login_required
+def analyze_plan_api(request):
+    """
+    Regelbasierte Plan-Analyse (kostenlos)
+    GET /api/analyze-plan/<plan_id>/
+    
+    Returns:
+        {
+            'warnings': [...],
+            'suggestions': [...],
+            'metrics': {...}
+        }
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET request required'}, status=405)
+    
+    try:
+        from ai_coach.plan_adapter import PlanAdapter
+        
+        plan_id = request.GET.get('plan_id')
+        days = int(request.GET.get('days', 30))
+        
+        if not plan_id:
+            return JsonResponse({'error': 'plan_id required'}, status=400)
+        
+        # Validierung: User darf nur eigene Pläne analysieren
+        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        
+        adapter = PlanAdapter(plan_id=plan.id, user_id=request.user.id)
+        result = adapter.analyze_plan_performance(days=days)
+        
+        return JsonResponse({
+            'success': True,
+            'plan_id': plan.id,
+            'plan_name': plan.name,
+            **result
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'error': str(e),
+            'success': False
+        }, status=500)
+
+
+@login_required
+def optimize_plan_api(request):
+    """
+    KI-gestützte Plan-Optimierung (~0.003€)
+    POST /api/optimize-plan/
+    
+    Body:
+        {
+            'plan_id': 1,
+            'days': 30
+        }
+    
+    Returns:
+        {
+            'optimizations': [...],
+            'cost': 0.003,
+            'model': 'llama-3.1-70b'
+        }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST request required'}, status=405)
+    
+    try:
+        from ai_coach.plan_adapter import PlanAdapter
+        
+        data = json.loads(request.body)
+        plan_id = data.get('plan_id')
+        days = int(data.get('days', 30))
+        
+        if not plan_id:
+            return JsonResponse({'error': 'plan_id required'}, status=400)
+        
+        # Validierung: User darf nur eigene Pläne optimieren
+        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        
+        adapter = PlanAdapter(plan_id=plan.id, user_id=request.user.id)
+        result = adapter.suggest_optimizations(days=days)
+        
+        return JsonResponse({
+            'success': True,
+            'plan_id': plan.id,
+            'plan_name': plan.name,
+            **result
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'error': str(e),
+            'success': False
+        }, status=500)
+
+
+@login_required
+def apply_optimizations_api(request):
+    """
+    Wendet ausgewählte Optimierungen auf den Plan an
+    POST /api/apply-optimizations/
+    
+    Body:
+        {
+            'plan_id': 1,
+            'optimizations': [
+                {
+                    'type': 'replace_exercise',
+                    'exercise_id': 15,
+                    'old_exercise': 'Bankdrücken',
+                    'new_exercise': 'Schrägbankdrücken'
+                },
+                ...
+            ]
+        }
+    
+    Returns:
+        {
+            'success': True,
+            'applied_count': 3,
+            'message': '3 Optimierungen erfolgreich angewendet'
+        }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST request required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        plan_id = data.get('plan_id')
+        optimizations = data.get('optimizations', [])
+        
+        if not plan_id:
+            return JsonResponse({'error': 'plan_id required'}, status=400)
+        
+        # Validierung: User darf nur eigene Pläne bearbeiten
+        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        
+        applied_count = 0
+        errors = []
+        
+        for opt in optimizations:
+            try:
+                opt_type = opt.get('type')
+                
+                if opt_type == 'replace_exercise':
+                    # Finde die zu ersetzende Übung
+                    old_exercise_name = opt.get('old_exercise')
+                    new_exercise_name = opt.get('new_exercise')
+                    
+                    # Hole alte PlanUebung
+                    old_plan_uebung = PlanUebung.objects.filter(
+                        plan=plan,
+                        uebung__bezeichnung__icontains=old_exercise_name.split('(')[0].strip()
+                    ).first()
+                    
+                    if not old_plan_uebung:
+                        errors.append(f"Übung '{old_exercise_name}' nicht im Plan gefunden")
+                        continue
+                    
+                    # Finde neue Übung
+                    new_uebung = Uebung.objects.filter(
+                        bezeichnung__icontains=new_exercise_name.split('(')[0].strip()
+                    ).first()
+                    
+                    if not new_uebung:
+                        errors.append(f"Übung '{new_exercise_name}' nicht gefunden")
+                        continue
+                    
+                    # Ersetze Übung (behalte Sets/Reps/Reihenfolge)
+                    old_plan_uebung.uebung = new_uebung
+                    old_plan_uebung.save()
+                    applied_count += 1
+                
+                elif opt_type == 'adjust_volume':
+                    # Finde Übung und ändere Sets/Reps
+                    exercise_name = opt.get('exercise')
+                    new_sets = opt.get('new_sets')
+                    new_reps = opt.get('new_reps')
+                    
+                    plan_uebung = PlanUebung.objects.filter(
+                        plan=plan,
+                        uebung__bezeichnung__icontains=exercise_name.split('(')[0].strip()
+                    ).first()
+                    
+                    if not plan_uebung:
+                        errors.append(f"Übung '{exercise_name}' nicht im Plan gefunden")
+                        continue
+                    
+                    if new_sets:
+                        plan_uebung.saetze_ziel = new_sets
+                    if new_reps:
+                        plan_uebung.wiederholungen_ziel = new_reps
+                    plan_uebung.save()
+                    applied_count += 1
+                
+                elif opt_type == 'add_exercise':
+                    # Füge neue Übung hinzu
+                    exercise_name = opt.get('exercise')
+                    sets = opt.get('sets', 3)
+                    reps = opt.get('reps', '8-12')
+                    
+                    # Finde Übung
+                    uebung = Uebung.objects.filter(
+                        bezeichnung__icontains=exercise_name.split('(')[0].strip()
+                    ).first()
+                    
+                    if not uebung:
+                        errors.append(f"Übung '{exercise_name}' nicht gefunden")
+                        continue
+                    
+                    # Füge am Ende des Plans hinzu
+                    max_reihenfolge = PlanUebung.objects.filter(plan=plan).aggregate(
+                        Max('reihenfolge')
+                    )['reihenfolge__max'] or 0
+                    
+                    PlanUebung.objects.create(
+                        plan=plan,
+                        uebung=uebung,
+                        reihenfolge=max_reihenfolge + 1,
+                        saetze_ziel=sets,
+                        wiederholungen_ziel=reps
+                    )
+                    applied_count += 1
+                
+                elif opt_type == 'deload_recommended':
+                    # Keine direkte Aktion - nur Info
+                    pass
+                
+            except Exception as e:
+                errors.append(f"{opt_type}: {str(e)}")
+        
+        return JsonResponse({
+            'success': True,
+            'applied_count': applied_count,
+            'errors': errors,
+            'message': f"{applied_count} Optimierung(en) erfolgreich angewendet"
         })
     
     except Exception as e:

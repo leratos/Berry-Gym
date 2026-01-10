@@ -94,6 +94,9 @@
                                          data-name="{{ uebung.bezeichnung }}"
                                          data-muscle="{{ uebung.muskelgruppe_label }}"
                                          data-pattern="{{ uebung.bewegungstyp }}"
+                                         data-reihenfolge="{{ uebung.reihenfolge|default:'9999' }}"
+                                         data-saetze="{{ uebung.saetze|default:'3' }}"
+                                         data-wdh="{{ uebung.wdh|default:'8-12' }}"
                                          onclick="toggleExercise(this)">
                                         <div class="card-body p-2">
                                             <div class="d-flex justify-content-between align-items-start">
@@ -129,6 +132,19 @@
             <!-- Plan-Details -->
             <div class="col-lg-4">
                 <div class="selected-exercises">
+                    <!-- Performance Warnings Card -->
+                    <div class="card bg-dark border-warning mb-3" id="performanceWarningsCard" style="display: none;">
+                        <div class="card-body">
+                            <h6 class="card-title text-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Optimierungsvorschläge
+                            </h6>
+                            <div id="performanceWarnings" class="small"></div>
+                            <button type="button" class="btn btn-warning btn-sm w-100 mt-2" onclick="startOptimization()">
+                                <i class="bi bi-stars me-2"></i>KI-Optimierung (0.003€)
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="card bg-dark border-secondary mb-3">
                         <div class="card-body">
                             <h5 class="card-title">
@@ -281,13 +297,33 @@
 
         // Initialize with plan exercises
         document.addEventListener('DOMContentLoaded', function() {
+            // Sammle alle Übungen die im Plan sind MIT ihren Details
+            const planExercises = [];
             document.querySelectorAll('.exercise-card.selected').forEach(card => {
-                selectedExercises.push({
-                    id: card.dataset.id,
-                    name: card.dataset.name,
-                    muscle: card.dataset.muscle
+                const id = card.dataset.id;
+                const name = card.dataset.name;
+                const muscle = card.dataset.muscle;
+                const reihenfolge = parseInt(card.dataset.reihenfolge) || 9999;
+                const saetze = card.dataset.saetze || 3;
+                const wdh = card.dataset.wdh || '8-12';
+                
+                planExercises.push({
+                    id, name, muscle, reihenfolge, saetze, wdh
                 });
             });
+            
+            // Sortiere nach Reihenfolge
+            planExercises.sort((a, b) => a.reihenfolge - b.reihenfolge);
+            
+            // Füge zu selectedExercises hinzu
+            selectedExercises = planExercises.map(ex => ({
+                id: ex.id,
+                name: ex.name,
+                muscle: ex.muscle,
+                saetze: ex.saetze,
+                wdh: ex.wdh
+            }));
+            
             updateSelectedList();
             analyzeBalance();
         });
@@ -305,7 +341,10 @@
             } else {
                 card.classList.add('selected');
                 icon.style.display = 'block';
-                selectedExercises.push({ id, name, muscle });
+                // Hole Sätze/Wdh aus data-Attributen (wenn vorhanden) oder nutze Defaults
+                const saetze = card.dataset.saetze || 3;
+                const wdh = card.dataset.wdh || '8-12';
+                selectedExercises.push({ id, name, muscle, saetze, wdh });
             }
 
             updateSelectedList();
@@ -336,6 +375,13 @@
             if (idx < selectedExercises.length - 1) {
                 [selectedExercises[idx], selectedExercises[idx + 1]] = [selectedExercises[idx + 1], selectedExercises[idx]];
                 updateSelectedList();
+            }
+        }
+        
+        function updateExerciseData(id, field, value) {
+            const exercise = selectedExercises.find(e => e.id == id);
+            if (exercise) {
+                exercise[field] = value;
             }
         }
 
@@ -372,11 +418,13 @@
                                     <div class="row g-2 mt-1">
                                         <div class="col-6">
                                             <input type="number" name="saetze_${ex.id}" class="form-control form-control-sm" 
-                                                   placeholder="Sätze" value="3" min="1" max="10">
+                                                   placeholder="Sätze" value="${ex.saetze || 3}" min="1" max="10"
+                                                   onchange="updateExerciseData(${ex.id}, 'saetze', this.value)">
                                         </div>
                                         <div class="col-6">
                                             <input type="text" name="wdh_${ex.id}" class="form-control form-control-sm" 
-                                                   placeholder="Wdh." value="8-12">
+                                                   placeholder="Wdh." value="${ex.wdh || '8-12'}"
+                                                   onchange="updateExerciseData(${ex.id}, 'wdh', this.value)">
                                         </div>
                                     </div>
                                 </div>
@@ -410,6 +458,110 @@
                 item.style.display = name.includes(search) ? 'block' : 'none';
             });
         });
+        
+        // Performance-Analyse beim Laden
+        loadPerformanceWarnings();
+        
+        function loadPerformanceWarnings() {
+            const planId = {{ plan.id }};
+            
+            fetch(`/api/analyze-plan/?plan_id=${planId}&days=30`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.warnings && data.warnings.length > 0) {
+                        displayWarnings(data.warnings);
+                        document.getElementById('performanceWarningsCard').style.display = 'block';
+                    }
+                })
+                .catch(err => console.error('Fehler beim Laden der Warnungen:', err));
+        }
+        
+        function displayWarnings(warnings) {
+            const container = document.getElementById('performanceWarnings');
+            
+            // Nur top 3 kritischste Warnungen anzeigen
+            const topWarnings = warnings
+                .sort((a, b) => {
+                    const severityOrder = {'warning': 0, 'info': 1};
+                    return (severityOrder[a.severity] || 99) - (severityOrder[b.severity] || 99);
+                })
+                .slice(0, 3);
+            
+            let html = '<ul class="mb-0 ps-3">';
+            topWarnings.forEach(w => {
+                const icon = w.severity === 'warning' ? 'exclamation-circle' : 'info-circle';
+                html += `<li class="mb-1"><i class="bi bi-${icon} me-1"></i>${w.message}</li>`;
+            });
+            html += '</ul>';
+            
+            if (warnings.length > 3) {
+                html += `<p class="text-muted small mb-0 mt-2">+ ${warnings.length - 3} weitere Hinweise</p>`;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function startOptimization() {
+            const planId = {{ plan.id }};
+            const btn = event.target;
+            
+            // Button disable + Loading
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analysiere...';
+            
+            fetch('/api/optimize-plan/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    plan_id: planId,
+                    days: 30
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.optimizations) {
+                    showOptimizationModal(data.optimizations, data.cost, data.model);
+                } else {
+                    alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                }
+            })
+            .catch(err => {
+                console.error('Fehler:', err);
+                alert('Netzwerkfehler beim Laden der Optimierungen');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-stars me-2"></i>KI-Optimierung (0.003€)';
+            });
+        }
+        
+        function showOptimizationModal(optimizations, cost, model) {
+            // Modal-Funktion ist jetzt in plan_optimization_modal.html definiert
+            currentOptimizations = optimizations;
+            selectedOptimizations.clear();
+            
+            document.getElementById('optimizationCost').textContent = `Kosten: ${cost.toFixed(4)}€`;
+            document.getElementById('optimizationModel').textContent = `Model: ${model}`;
+            
+            if (optimizations.length === 0) {
+                document.getElementById('optimizationsList').style.display = 'none';
+                document.getElementById('noOptimizations').style.display = 'block';
+            } else {
+                document.getElementById('optimizationsList').style.display = 'block';
+                document.getElementById('noOptimizations').style.display = 'none';
+                renderOptimizations(optimizations);
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('optimizationModal'));
+            modal.show();
+        }
     </script>
+    
+    <!-- Plan Optimization Modal -->
+    {% include 'core/plan_optimization_modal.html' %}
 </body>
 </html>
+
