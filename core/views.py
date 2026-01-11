@@ -1692,14 +1692,55 @@ def export_training_pdf(request):
     
     kraft_progression = sorted(kraft_progression, key=lambda x: x['progression'], reverse=True)[:5]
     
-    # Muskelgruppen-Balance
+    # Muskelgruppen-Balance mit intelligenter Bewertung
     muskelgruppen_stats = []
+    
+    # Empfohlene Sätze pro Muskelgruppe pro Monat (evidenzbasiert)
+    empfohlene_saetze = {
+        'brust': (12, 20),
+        'ruecken_breiter': (15, 25),
+        'ruecken_unterer': (10, 18),
+        'schulter_vordere': (8, 15),
+        'schulter_seitliche': (12, 20),
+        'schulter_hintere': (12, 20),
+        'bizeps': (10, 18),
+        'trizeps': (10, 18),
+        'quadrizeps': (15, 25),
+        'hamstrings': (12, 20),
+        'glutaeus': (10, 18),
+        'waden': (12, 20),
+        'bauch': (12, 25),
+        'unterer_ruecken': (8, 15),
+    }
+    
     for gruppe_key, gruppe_name in MUSKELGRUPPEN:
         gruppe_saetze = alle_saetze.filter(
             uebung__muskelgruppe=gruppe_key,
             einheit__datum__gte=letzte_30_tage
         )
         anzahl = gruppe_saetze.count()
+        
+        # Berechne Empfehlung und Status
+        empfehlung = empfohlene_saetze.get(gruppe_key, (12, 20))
+        min_saetze, max_saetze = empfehlung
+        
+        if anzahl == 0:
+            status = 'nicht_trainiert'
+            status_label = 'Nicht trainiert'
+            erklaerung = f'Diese Muskelgruppe wurde nicht trainiert. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat'
+        elif anzahl < min_saetze:
+            status = 'untertrainiert'
+            status_label = 'Untertrainiert'
+            erklaerung = f'Nur {anzahl} Sätze in 30 Tagen. Empfehlung: {min_saetze}-{max_saetze} Sätze für optimales Wachstum'
+        elif anzahl > max_saetze:
+            status = 'uebertrainiert'
+            status_label = 'Mögl. Übertraining'
+            erklaerung = f'{anzahl} Sätze könnten zu viel sein. Empfehlung: {min_saetze}-{max_saetze} Sätze. Regeneration prüfen!'
+        else:
+            status = 'optimal'
+            status_label = 'Optimal'
+            erklaerung = f'{anzahl} Sätze liegen im optimalen Bereich ({min_saetze}-{max_saetze})'
+        
         if anzahl > 0:
             volumen = sum(
                 float(s.gewicht) * s.wiederholungen
@@ -1708,13 +1749,55 @@ def export_training_pdf(request):
             )
             avg_rpe = gruppe_saetze.aggregate(Avg('rpe'))['rpe__avg'] or 0
             muskelgruppen_stats.append({
+                'key': gruppe_key,
                 'name': gruppe_name,
                 'saetze': anzahl,
                 'volumen': round(volumen, 0),
-                'avg_rpe': round(avg_rpe, 1)
+                'avg_rpe': round(avg_rpe, 1),
+                'status': status,
+                'status_label': status_label,
+                'erklaerung': erklaerung,
+                'empfehlung_min': min_saetze,
+                'empfehlung_max': max_saetze,
+                'prozent_von_optimal': round((anzahl / ((min_saetze + max_saetze) / 2)) * 100, 0)
             })
     
     muskelgruppen_stats = sorted(muskelgruppen_stats, key=lambda x: x['saetze'], reverse=True)
+    
+    # Push/Pull-Balance Analyse
+    push_groups = ['brust', 'schulter_vordere', 'schulter_seitliche', 'trizeps']
+    pull_groups = ['ruecken_breiter', 'ruecken_unterer', 'schulter_hintere', 'bizeps']
+    
+    push_saetze = sum(mg['saetze'] for mg in muskelgruppen_stats if mg['key'] in push_groups)
+    pull_saetze = sum(mg['saetze'] for mg in muskelgruppen_stats if mg['key'] in pull_groups)
+    
+    if pull_saetze > 0:
+        push_pull_ratio = round(push_saetze / pull_saetze, 2)
+    else:
+        push_pull_ratio = 0
+    
+    # Bewertung der Balance
+    if 0.9 <= push_pull_ratio <= 1.1:
+        push_pull_bewertung = 'Ausgewogen'
+        push_pull_empfehlung = 'Perfekt! Push/Pull-Verhältnis ist ausgeglichen.'
+    elif push_pull_ratio > 1.1:
+        push_pull_bewertung = 'Zu viel Push'
+        push_pull_empfehlung = f'Ratio {push_pull_ratio}:1 - Mehr Pull-Training (Rücken, Bizeps) für Schultergesundheit!'
+    else:
+        push_pull_bewertung = 'Zu viel Pull'
+        push_pull_empfehlung = f'Ratio {push_pull_ratio}:1 - Mehr Push-Training (Brust, Schultern) für Balance!'
+    
+    push_pull_balance = {
+        'push_saetze': push_saetze,
+        'pull_saetze': pull_saetze,
+        'ratio': push_pull_ratio,
+        'bewertung': push_pull_bewertung,
+        'empfehlung': push_pull_empfehlung
+    }
+    
+    # Schwachstellen identifizieren (untertrainierte Muskelgruppen)
+    schwachstellen = [mg for mg in muskelgruppen_stats if mg['status'] in ['untertrainiert', 'nicht_trainiert']]
+    schwachstellen = sorted(schwachstellen, key=lambda x: x['saetze'])[:5]
     
     # Intensitäts-Analyse (RPE-basiert)
     rpe_saetze = alle_saetze.filter(
@@ -1786,6 +1869,8 @@ def export_training_pdf(request):
         'top_uebungen': top_uebungen,
         'kraft_progression': kraft_progression,
         'muskelgruppen_stats': muskelgruppen_stats,
+        'push_pull_balance': push_pull_balance,
+        'schwachstellen': schwachstellen,
         'avg_rpe': avg_rpe,
         'rpe_verteilung': rpe_verteilung,
         'volumen_wochen': volumen_wochen[-8:],  # Letzte 8 Wochen für Übersichtlichkeit
@@ -1796,7 +1881,7 @@ def export_training_pdf(request):
     
     # HTML rendern
     try:
-        html_string = render_to_string('core/training_pdf.html', context)
+        html_string = render_to_string('core/training_pdf_v2.html', context)
     except Exception as e:
         messages.error(request, f'Template-Fehler: {str(e)}')
         return redirect('training_stats')
