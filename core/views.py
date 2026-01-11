@@ -1572,27 +1572,22 @@ def delete_progress_photo(request, photo_id):
 
 @login_required
 def export_training_pdf(request):
-    """Exportiert Trainingsstatistiken als PDF (WeasyPrint auf Linux, xhtml2pdf auf Windows)."""
+    """Exportiert Trainingsstatistiken als PDF (xhtml2pdf als primärer Renderer)."""
     from io import BytesIO
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     # Helper-Funktion: Muskelgruppe Key zu Display Name
     muskelgruppen_dict = dict(MUSKELGRUPPEN)
     
-    # Versuche WeasyPrint (beste Qualität, für Linux-Server)
-    use_weasyprint = False
+    # Nutze xhtml2pdf als primären Renderer (zuverlässiger)
     try:
-        from weasyprint import HTML, CSS
-        use_weasyprint = True
-    except (ImportError, OSError):
-        pass
-    
-    # Fallback: xhtml2pdf (Windows-kompatibel, funktioniert immer)
-    if not use_weasyprint:
-        try:
-            from xhtml2pdf import pisa
-        except ImportError:
-            messages.error(request, 'PDF Export nicht verfügbar')
-            return redirect('training_stats')
+        from xhtml2pdf import pisa
+    except ImportError:
+        messages.error(request, 'PDF Export nicht verfügbar - xhtml2pdf fehlt')
+        logger.error('xhtml2pdf import failed')
+        return redirect('training_stats')
     
     # Daten sammeln
     heute = timezone.now()
@@ -1883,56 +1878,28 @@ def export_training_pdf(request):
     try:
         html_string = render_to_string('core/training_pdf_v2.html', context)
     except Exception as e:
+        logger.error(f'Template rendering failed: {str(e)}', exc_info=True)
         messages.error(request, f'Template-Fehler: {str(e)}')
         return redirect('training_stats')
     
-    # PDF generieren (je nach verfügbarer Library)
+    # PDF generieren mit xhtml2pdf
     try:
-        if use_weasyprint:
-            # WeasyPrint (Linux-Server, hochwertige PDFs)
-            try:
-                css_string = '''
-                    @page { size: A4; margin: 2cm; }
-                    body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
-                    h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 10px; font-size: 24px; }
-                    h2 { color: #495057; margin-top: 25px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; font-size: 18px; }
-                    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-                    th { background: #0d6efd; color: white; padding: 10px; text-align: left; }
-                    td { padding: 8px; border-bottom: 1px solid #dee2e6; }
-                    .stat-box { display: inline-block; padding: 15px 20px; margin: 10px 10px 10px 0; background: #f8f9fa; border-radius: 8px; min-width: 120px; }
-                    .stat-value { font-size: 28px; font-weight: bold; color: #0d6efd; }
-                    .stat-label { font-size: 11px; color: #6c757d; text-transform: uppercase; margin-top: 5px; }
-                '''
-                html = HTML(string=html_string)
-                pdf_file = html.write_pdf(stylesheets=[CSS(string=css_string)])
-                response = HttpResponse(pdf_file, content_type='application/pdf')
-            except Exception as weasy_error:
-                # WeasyPrint fehlgeschlagen, nutze xhtml2pdf
-                from xhtml2pdf import pisa
-                result = BytesIO()
-                pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
-                
-                if pdf.err:
-                    messages.error(request, 'Fehler beim PDF-Export')
-                    return redirect('training_stats')
-                
-                response = HttpResponse(result.getvalue(), content_type='application/pdf')
-        else:
-            # xhtml2pdf (Windows-Fallback)
-            result = BytesIO()
-            pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
-            
-            if pdf.err:
-                messages.error(request, 'Fehler beim PDF-Export')
-                return redirect('training_stats')
-            
-            response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        result = BytesIO()
+        pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
+        
+        if pdf.err:
+            logger.error(f'PDF generation failed with {pdf.err} errors')
+            messages.error(request, 'Fehler beim PDF-Export (pisaDocument failed)')
+            return redirect('training_stats')
+        
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="homegym_report_{heute.strftime("%Y%m%d")}.pdf"'
+        return response
+        
     except Exception as e:
+        logger.error(f'PDF export failed: {str(e)}', exc_info=True)
         messages.error(request, f'PDF-Generierung fehlgeschlagen: {str(e)}')
         return redirect('training_stats')
-    
-    response['Content-Disposition'] = f'attachment; filename="homegym_report_{heute.strftime("%Y%m%d")}.pdf"'
-    return response
 
 
 @login_required
