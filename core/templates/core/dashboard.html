@@ -33,20 +33,54 @@
             align-items: center;
             justify-content: center;
         }
+        
+        /* Card Stats - Theme-aware */
         .card-stat {
-            background-color: #2b3035;
             border: none;
             height: 100%;
         }
+        
+        /* Dark Theme */
+        [data-bs-theme="dark"] .card-stat {
+            background-color: #2b3035;
+            color: #fff;
+        }
+        [data-bs-theme="dark"] .stat-label {
+            color: #adb5bd;
+        }
+        
+        /* Light Theme */
+        [data-bs-theme="light"] .card-stat {
+            background-color: #ffffff;
+            color: #212529;
+            border: 1px solid #dee2e6;
+        }
+        [data-bs-theme="light"] .stat-label {
+            color: #6c757d;
+        }
+        [data-bs-theme="light"] .card-stat.text-white {
+            color: #212529 !important;
+        }
+        
         .stat-label {
             font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #adb5bd;
         }
         .stat-value {
             font-size: 1.5rem;
             font-weight: bold;
+        }
+        
+        /* List Group Items - Theme-aware */
+        [data-bs-theme="dark"] .list-group-item.bg-transparent {
+            color: #fff;
+        }
+        [data-bs-theme="light"] .list-group-item.bg-transparent {
+            color: #212529;
+        }
+        [data-bs-theme="light"] .list-group-item.border-secondary {
+            border-color: #dee2e6 !important;
         }
         
         /* Heatmap Styles */
@@ -57,16 +91,44 @@
             padding: 10px 0;
             scrollbar-width: thin;
         }
-        #training-heatmap::-webkit-scrollbar {
-            height: 6px;
-        }
-        #training-heatmap::-webkit-scrollbar-track {
+        
+        /* Dark Theme Heatmap */
+        [data-bs-theme="dark"] #training-heatmap::-webkit-scrollbar-track {
             background: #161b22;
             border-radius: 3px;
         }
-        #training-heatmap::-webkit-scrollbar-thumb {
+        [data-bs-theme="dark"] #training-heatmap::-webkit-scrollbar-thumb {
             background: #30363d;
             border-radius: 3px;
+        }
+        [data-bs-theme="dark"] .heatmap-day[data-level="0"] {
+            background-color: #161b22;
+        }
+        [data-bs-theme="dark"] .heatmap-legend-box[data-level="0"] {
+            background-color: #161b22;
+        }
+        
+        /* Light Theme Heatmap */
+        [data-bs-theme="light"] #training-heatmap::-webkit-scrollbar-track {
+            background: #e9ecef;
+            border-radius: 3px;
+        }
+        [data-bs-theme="light"] #training-heatmap::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 3px;
+        }
+        [data-bs-theme="light"] .heatmap-day[data-level="0"] {
+            background-color: #ebedf0;
+        }
+        [data-bs-theme="light"] .heatmap-legend-box[data-level="0"] {
+            background-color: #ebedf0;
+        }
+        [data-bs-theme="light"] .heatmap-day {
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        #training-heatmap::-webkit-scrollbar {
+            height: 6px;
         }
         .heatmap-month {
             display: flex;
@@ -85,9 +147,6 @@
             cursor: pointer;
             transition: all 0.2s;
             border: 1px solid rgba(255,255,255,0.05);
-        }
-        .heatmap-day[data-level="0"] {
-            background-color: #161b22;
         }
         .heatmap-day[data-level="1"] {
             background-color: #0e4429;
@@ -110,9 +169,6 @@
             height: 15px;
             border-radius: 3px;
             border: 1px solid rgba(255,255,255,0.05);
-        }
-        .heatmap-legend-box[data-level="0"] {
-            background-color: #161b22;
         }
         .heatmap-legend-box[data-level="1"] {
             background-color: #0e4429;
@@ -180,7 +236,7 @@
       <!-- Trainingsfrequenz & Streak -->
       <div class="row g-3 mb-3">
         <div class="col-6">
-          <div class="card card-stat text-white shadow-sm">
+          <div class="card card-stat shadow-sm">
             <div class="card-body text-center py-3">
                 <div class="stat-label mb-1"><i class="bi bi-calendar-week me-1"></i> Diese Woche</div>
                 <div class="display-4 fw-bold text-primary">{{ trainings_diese_woche }}</div>
@@ -189,7 +245,7 @@
           </div>
         </div>
         <div class="col-6">
-          <div class="card card-stat text-white shadow-sm">
+          <div class="card card-stat shadow-sm">
             <div class="card-body text-center py-3">
                 <div class="stat-label mb-1"><i class="bi bi-fire me-1"></i> Streak</div>
                 <div class="display-4 fw-bold text-warning">{{ streak }}</div>
@@ -201,7 +257,7 @@
 
       <!-- Performance Form-Index -->
       {% if gesamt_trainings >= 4 %}
-      <div class="card bg-dark border-{{ form_color }} mb-3 shadow-sm">
+      <div class="card card-stat border-{{ form_color }} mb-3 shadow-sm">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0">
@@ -241,7 +297,7 @@
       </div>
       {% endif %}
 
-      <div class="card card-stat mb-4 text-white shadow-sm">
+      <div class="card card-stat mb-4 shadow-sm">
         <div class="card-body d-flex justify-content-between align-items-center">
             <div>
                 <div class="stat-label mb-1"><i class="bi bi-calendar-check me-1"></i> Letztes Workout</div>
@@ -269,12 +325,12 @@
 
       <!-- Favoriten-Übungen -->
       {% if favoriten %}
-      <div class="card card-stat mb-4 text-white shadow-sm">
+      <div class="card card-stat mb-4 shadow-sm">
         <div class="card-body">
             <div class="stat-label mb-3"><i class="bi bi-star-fill me-1"></i> Deine Top 3 Übungen</div>
             <div class="list-group list-group-flush bg-transparent">
                 {% for fav in favoriten %}
-                <a href="{% url 'exercise_stats' fav.uebung__id %}" class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                <a href="{% url 'exercise_stats' fav.uebung__id %}" class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center">
                     <span>{{ fav.uebung__bezeichnung }}</span>
                     <span class="badge bg-primary rounded-pill">{{ fav.anzahl }}×</span>
                 </a>
@@ -323,10 +379,10 @@
       {% endif %}
       
       <!-- Hauptwert Gewicht -->
-      <div class="card card-stat mb-3 text-white shadow-sm">
+      <div class="card card-stat mb-3 shadow-sm">
         <div class="card-body text-center py-4">
             <div class="stat-label mb-2">Aktuelles Gewicht</div>
-            <div class="display-3 fw-bold text-white">
+            <div class="display-3 fw-bold">
                 {% if letzter_koerperwert %}
                     {{ letzter_koerperwert.gewicht }} <span class="fs-4 text-muted">kg</span>
                 {% else %}
@@ -347,7 +403,7 @@
 
       <!-- Wöchentliches Volumen -->
       {% if weekly_volumes %}
-      <div class="card bg-dark border-secondary mb-3 shadow-sm">
+      <div class="card card-stat border-secondary mb-3 shadow-sm">
         <div class="card-body">
             <h6 class="mb-3">
                 <i class="bi bi-calendar-week me-2"></i>Wöchentliches Volumen
@@ -371,7 +427,7 @@
 
       <!-- Ermüdungs-Index -->
       {% if gesamt_trainings >= 4 %}
-      <div class="card bg-dark border-{{ fatigue_color }} mb-3 shadow-sm">
+      <div class="card card-stat border-{{ fatigue_color }} mb-3 shadow-sm">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0">

@@ -1,6 +1,7 @@
 {% load static %}
+{% load static %}<script src="{% static 'core/js/theme-toggle.js' %}"></script>
 <!DOCTYPE html>
-<html lang="de" data-bs-theme="dark">
+<html lang="de" data-bs-theme="dark" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -69,7 +70,10 @@
             <div>
                 <a href="{% url 'muscle_map' %}" class="btn btn-outline-light btn-sm">← Zurück zur Muscle-Map</a>
                 <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm">Dashboard</a>
-            </div>
+                        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+              <i class="bi bi-moon-fill" id="themeIcon"></i>
+            </button>
+</div>
         </div>
     </nav>
 
@@ -96,7 +100,7 @@
             <!-- Left: Muscle Visualization -->
             <div class="col-lg-7">
                 <div class="svg-container">
-                    <h5 class="text-white mb-3 text-center">Anatomische Darstellung</h5>
+                    <h5 class="mb-3 text-center">Anatomische Darstellung</h5>
                     
                     <!-- Legend -->
                     <div class="text-center mb-4">
@@ -142,7 +146,7 @@
 
             <!-- Right: Exercise Info -->
             <div class="col-lg-5">
-                <div class="card bg-dark border-secondary">
+                <div class="card card-stat border-secondary">
                     <div class="card-header bg-secondary">
                         <h5 class="mb-0">Übungsbeschreibung</h5>
                     </div>
@@ -172,7 +176,7 @@
                         
                         <hr class="border-secondary">
                         
-                        <h6 class="text-white mb-3">Details</h6>
+                        <h6 class="mb-3">Details</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <strong class="text-primary">Hauptmuskelgruppe:</strong>

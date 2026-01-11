@@ -222,7 +222,12 @@
 - [ ] Offline-Datenspeicherung (IndexedDB)
 
 ### Themes & Customization
-- [ ] Dark/Light Mode Toggle
+- [x] **Dark/Light Mode Toggle** ✅ (Globales Theme-System mit JavaScript)
+  - Theme-Toggle Button in allen Templates (15+ Seiten)
+  - LocalStorage Persistenz
+  - Theme-aware Cards, Heatmaps, List-Items
+  - Automatisches Theme-Loading (FOUC-Prevention)
+  - theme-toggle.js + theme-styles.css
 - [ ] Farbschema-Auswahl (Primärfarbe)
 - [ ] Dashboard personalisieren (Widgets)
 - [ ] Widget-System (verschiebbar)

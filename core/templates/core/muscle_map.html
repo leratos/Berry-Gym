@@ -1,6 +1,7 @@
 {% load static %}
+{% load static %}<script src="{% static 'core/js/theme-toggle.js' %}"></script>
 <!DOCTYPE html>
-<html lang="de" data-bs-theme="dark">
+<html lang="de" data-bs-theme="dark" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -71,7 +72,10 @@
             <div>
                 <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm">← Dashboard</a>
                 <a href="{% url 'uebungen_auswahl' %}" class="btn btn-outline-light btn-sm">Übungsliste</a>
-            </div>
+                        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+              <i class="bi bi-moon-fill" id="themeIcon"></i>
+            </button>
+</div>
         </div>
     </nav>
 
