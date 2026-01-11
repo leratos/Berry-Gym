@@ -57,11 +57,16 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 }
 ```
 
+**DUPLIKATE & PROGRESSION:**
+- ❌ KEINE Duplikate INNERHALB EINER SESSION (jede Übung nur 1x pro Tag)
+- ✅ ÜBER MEHRERE SESSIONS sind identische Übungen ERLAUBT und ERWÜNSCHT (Progression!)
+- Erstelle eine EINWÖCHIGE Session-Struktur, die für 4 Wochen verwendet wird
+- Übungen & Reihenfolge bleiben gleich, Progression kommt in progression_notes
+
 **Weitere Anforderungen:**
 - Antworte NUR mit dem JSON-Objekt, kein zusätzlicher Text!
 - Berücksichtige die Schwachstellen und Trainingsziele
-- Achte auf realistische Satz/Wdh-Vorgaben basierend auf Historie
-- Verwende KEINE Übung mehrfach (keine Duplikate über Sessions hinweg)"""
+- Achte auf realistische Satz/Wdh-Vorgaben basierend auf Historie"""
     
     def build_user_prompt(
         self, 
@@ -111,6 +116,17 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         # Few-shot examples mit EXAKTEN Namen aus der Liste
         example_exercises = [ex for ex in available_exercises if any(kw in ex for kw in ['Bankdrücken', 'Kniebeuge', 'Kreuzheben'])][:3]
         examples_str = "\n".join([f'  "{ex}"' for ex in example_exercises])
+        
+        # Satzbudget als Range (Flexibilität für LLM)
+        min_sets = max(10, sets_per_session - 4)
+        max_sets = sets_per_session
+        
+        # Coach-Sicherheitsregeln
+        coach_rules = """**🏥 COACH-SICHERHEITSREGELN (MUST):**
+- Wenn Bankdrücken ODER Schulterdrücken im Push-Tag: KEINE Front Raises (Überlastung vordere Schulter)
+- Kreuzheben (conventional): max. 3 Sätze ODER max. 15 Gesamtwiederholungen pro Woche
+- Pro Woche 2-4 Sätze hintere Schulter / Scapula-Hygiene (Face Pulls, Reverse Flys, etc.)
+- Kein Lower-Back-Overkill: Vermeide Kreuzheben + RDL + schwere Squats am selben Tag"""
         
         # Build prompt
         exercises_list = "\n".join([f"  - {ex}" for ex in sorted(available_exercises)])
@@ -163,11 +179,13 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 **AUFGABE:**
 {instruction}
 
+{coach_rules}
+
 **Anforderungen:**
 1. ** VERWENDE NUR ÜBUNGEN AUS DER OBIGEN LISTE** - keine anderen!
 2. Berücksichtige die Schwachstellen und priorisiere untertrainierte Muskelgruppen
 3. Achte auf Push/Pull Balance (bei Unbalance gegensteuern)
-4. SATZ-BUDGET: {sets_per_session} Sätze pro Trainingstag (ca. 1 Stunde Training)
+4. SATZ-BUDGET: {min_sets}-{max_sets} Sätze pro Trainingstag (ca. 1 Stunde Training)
    - Nutze das KOMPLETTE Satz-Budget aus (nicht weniger!)
    - Verteile die Sätze auf 5-6 Übungen
    - Beispiel Push-Tag (18 Sätze):
@@ -185,7 +203,7 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
    - Verschiedene Winkel/Bewegungen für vollständige Entwicklung
 6. Compound Movements (Langhantel-Kniebeuge, Bankdrücken, Kreuzheben) priorisieren als erste Übung
 7. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
-8. ** KEINE DOPPELTEN ÜBUNGEN**: Jede Übung darf nur EINMAL im GESAMTEN Plan vorkommen (nicht in mehreren Sessions wiederholen)!
+8. ** DUPLIKATE**: ❌ KEINE doppelten Übungen INNERHALB einer Session! ✅ ABER gleiche Übungen in verschiedenen Sessions sind ERWÜNSCHT (für Progression über 4 Wochen)!
 9. Output: Valides JSON wie im System Prompt beschrieben
 10. ** KOPIERE DIE EXERCISE_NAME WERTE EXAKT AUS DER LISTE - KEINE VARIATIONEN!**
 
