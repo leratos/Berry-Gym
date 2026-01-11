@@ -1,0 +1,178 @@
+{
+  "push_pull_legs_6day": {
+    "name": "Push/Pull/Legs (6 Tage)",
+    "description": "Klassischer 6-Tage Split für Hypertrophie und Kraftaufbau. Ideal für Fortgeschrittene mit Zeit für häufiges Training.",
+    "frequency_per_week": 6,
+    "difficulty": "Fortgeschritten",
+    "goal": "Hypertrophie",
+    "days": [
+      {
+        "name": "Push A (Brust-Fokus)",
+        "exercises": [
+          {"name": "Bankdrücken (Langhantel)", "sets": 4, "reps": "6-8", "equipment": "Langhantel"},
+          {"name": "Schrägbankdrücken (Kurzhantel)", "sets": 3, "reps": "8-10", "equipment": "Kurzhantel"},
+          {"name": "Fliegende (Kurzhantel)", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Schulterdrücken (Kurzhantel)", "sets": 3, "reps": "8-10", "equipment": "Kurzhantel"},
+          {"name": "Seitheben (Kurzhantel)", "sets": 3, "reps": "12-15", "equipment": "Kurzhantel"},
+          {"name": "Trizepsdrücken (Kabel)", "sets": 3, "reps": "10-12", "equipment": "Kabel"}
+        ]
+      },
+      {
+        "name": "Pull A (Rücken-Fokus)",
+        "exercises": [
+          {"name": "Kreuzheben", "sets": 4, "reps": "5-8", "equipment": "Langhantel"},
+          {"name": "Klimmzüge (breit)", "sets": 3, "reps": "8-10", "equipment": "Klimmzugstange"},
+          {"name": "Langhantelrudern", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Facepulls", "sets": 3, "reps": "12-15", "equipment": "Kabel"},
+          {"name": "Bizepscurls (Kurzhantel)", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Hammercurls", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"}
+        ]
+      },
+      {
+        "name": "Legs A",
+        "exercises": [
+          {"name": "Kniebeugen (Langhantel)", "sets": 4, "reps": "6-8", "equipment": "Langhantel"},
+          {"name": "Rumänisches Kreuzheben", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Bulgarian Split Squat", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Beinstrecker", "sets": 3, "reps": "12-15", "equipment": "Maschine"},
+          {"name": "Beincurls", "sets": 3, "reps": "12-15", "equipment": "Maschine"},
+          {"name": "Wadenheben (stehend)", "sets": 4, "reps": "15-20", "equipment": "Maschine"}
+        ]
+      },
+      {
+        "name": "Push B (Schulter-Fokus)",
+        "exercises": [
+          {"name": "Schulterdrücken (Langhantel)", "sets": 4, "reps": "6-8", "equipment": "Langhantel"},
+          {"name": "Schrägbankdrücken (Langhantel)", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Fliegende am Kabel", "sets": 3, "reps": "12-15", "equipment": "Kabel"},
+          {"name": "Seitheben (Kabel)", "sets": 3, "reps": "12-15", "equipment": "Kabel"},
+          {"name": "Frontheben", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Trizeps Kickbacks", "sets": 3, "reps": "12-15", "equipment": "Kurzhantel"}
+        ]
+      },
+      {
+        "name": "Pull B (Lat-Fokus)",
+        "exercises": [
+          {"name": "Klimmzüge (eng)", "sets": 3, "reps": "8-10", "equipment": "Klimmzugstange"},
+          {"name": "Langhantelrudern (Untergriff)", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Einarmiges Kurzhantelrudern", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Latzug (breit)", "sets": 3, "reps": "10-12", "equipment": "Kabel"},
+          {"name": "Shrugs", "sets": 3, "reps": "12-15", "equipment": "Kurzhantel"},
+          {"name": "Konzentrationscurls", "sets": 3, "reps": "12-15", "equipment": "Kurzhantel"}
+        ]
+      },
+      {
+        "name": "Legs B",
+        "exercises": [
+          {"name": "Front Squats", "sets": 4, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Beinpresse", "sets": 3, "reps": "10-12", "equipment": "Maschine"},
+          {"name": "Walking Lunges", "sets": 3, "reps": "12-15", "equipment": "Kurzhantel"},
+          {"name": "Beinstrecker", "sets": 3, "reps": "15-20", "equipment": "Maschine"},
+          {"name": "Beincurls (liegend)", "sets": 3, "reps": "12-15", "equipment": "Maschine"},
+          {"name": "Wadenheben (sitzend)", "sets": 4, "reps": "15-20", "equipment": "Maschine"}
+        ]
+      }
+    ]
+  },
+  "upper_lower_4day": {
+    "name": "Upper/Lower (4 Tage)",
+    "description": "Ausgewogener 4-Tage Split. Perfekt für Berufstätige mit guter Balance zwischen Frequenz und Regeneration.",
+    "frequency_per_week": 4,
+    "difficulty": "Mittel",
+    "goal": "Kraft & Hypertrophie",
+    "days": [
+      {
+        "name": "Upper A (Kraft)",
+        "exercises": [
+          {"name": "Bankdrücken (Langhantel)", "sets": 4, "reps": "5-7", "equipment": "Langhantel"},
+          {"name": "Langhantelrudern", "sets": 4, "reps": "6-8", "equipment": "Langhantel"},
+          {"name": "Schulterdrücken (Kurzhantel)", "sets": 3, "reps": "8-10", "equipment": "Kurzhantel"},
+          {"name": "Klimmzüge", "sets": 3, "reps": "8-10", "equipment": "Klimmzugstange"},
+          {"name": "Dips", "sets": 3, "reps": "8-10", "equipment": "Barren"},
+          {"name": "Bizepscurls", "sets": 2, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Trizepsdrücken", "sets": 2, "reps": "10-12", "equipment": "Kabel"}
+        ]
+      },
+      {
+        "name": "Lower A (Kraft)",
+        "exercises": [
+          {"name": "Kniebeugen (Langhantel)", "sets": 4, "reps": "5-7", "equipment": "Langhantel"},
+          {"name": "Rumänisches Kreuzheben", "sets": 3, "reps": "6-8", "equipment": "Langhantel"},
+          {"name": "Bulgarian Split Squat", "sets": 3, "reps": "8-10", "equipment": "Kurzhantel"},
+          {"name": "Beinstrecker", "sets": 3, "reps": "10-12", "equipment": "Maschine"},
+          {"name": "Beincurls", "sets": 3, "reps": "10-12", "equipment": "Maschine"},
+          {"name": "Wadenheben", "sets": 4, "reps": "12-15", "equipment": "Maschine"}
+        ]
+      },
+      {
+        "name": "Upper B (Hypertrophie)",
+        "exercises": [
+          {"name": "Schrägbankdrücken (Kurzhantel)", "sets": 4, "reps": "8-10", "equipment": "Kurzhantel"},
+          {"name": "Einarmiges Kurzhantelrudern", "sets": 4, "reps": "8-10", "equipment": "Kurzhantel"},
+          {"name": "Schulterdrücken (Langhantel)", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Seitheben", "sets": 3, "reps": "12-15", "equipment": "Kurzhantel"},
+          {"name": "Fliegende", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Facepulls", "sets": 3, "reps": "15-20", "equipment": "Kabel"},
+          {"name": "Hammercurls", "sets": 2, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Overhead Extension", "sets": 2, "reps": "10-12", "equipment": "Kurzhantel"}
+        ]
+      },
+      {
+        "name": "Lower B (Hypertrophie)",
+        "exercises": [
+          {"name": "Front Squats", "sets": 4, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Kreuzheben", "sets": 3, "reps": "6-8", "equipment": "Langhantel"},
+          {"name": "Walking Lunges", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Beinpresse", "sets": 3, "reps": "12-15", "equipment": "Maschine"},
+          {"name": "Beincurls (liegend)", "sets": 3, "reps": "12-15", "equipment": "Maschine"},
+          {"name": "Wadenheben (sitzend)", "sets": 4, "reps": "15-20", "equipment": "Maschine"}
+        ]
+      }
+    ]
+  },
+  "full_body_3day": {
+    "name": "Full Body (3 Tage)",
+    "description": "Ganzkörpertraining 3x pro Woche. Ideal für Anfänger oder wenn wenig Zeit verfügbar ist. Effizient und ausgewogen.",
+    "frequency_per_week": 3,
+    "difficulty": "Anfänger bis Mittel",
+    "goal": "Allgemeine Fitness & Kraft",
+    "days": [
+      {
+        "name": "Full Body A",
+        "exercises": [
+          {"name": "Kniebeugen (Langhantel)", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Bankdrücken (Langhantel)", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Langhantelrudern", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Schulterdrücken (Kurzhantel)", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Rumänisches Kreuzheben", "sets": 3, "reps": "10-12", "equipment": "Langhantel"},
+          {"name": "Bizepscurls", "sets": 2, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Trizepsdrücken", "sets": 2, "reps": "10-12", "equipment": "Kabel"}
+        ]
+      },
+      {
+        "name": "Full Body B",
+        "exercises": [
+          {"name": "Kreuzheben", "sets": 3, "reps": "6-8", "equipment": "Langhantel"},
+          {"name": "Schrägbankdrücken (Kurzhantel)", "sets": 3, "reps": "8-10", "equipment": "Kurzhantel"},
+          {"name": "Klimmzüge", "sets": 3, "reps": "8-10", "equipment": "Klimmzugstange"},
+          {"name": "Bulgarian Split Squat", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Seitheben", "sets": 3, "reps": "12-15", "equipment": "Kurzhantel"},
+          {"name": "Facepulls", "sets": 3, "reps": "15-20", "equipment": "Kabel"},
+          {"name": "Hammercurls", "sets": 2, "reps": "10-12", "equipment": "Kurzhantel"}
+        ]
+      },
+      {
+        "name": "Full Body C",
+        "exercises": [
+          {"name": "Front Squats", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Dips", "sets": 3, "reps": "8-10", "equipment": "Barren"},
+          {"name": "Einarmiges Kurzhantelrudern", "sets": 3, "reps": "8-10", "equipment": "Kurzhantel"},
+          {"name": "Schulterdrücken (Langhantel)", "sets": 3, "reps": "8-10", "equipment": "Langhantel"},
+          {"name": "Walking Lunges", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Fliegende", "sets": 3, "reps": "10-12", "equipment": "Kurzhantel"},
+          {"name": "Konzentrationscurls", "sets": 2, "reps": "12-15", "equipment": "Kurzhantel"}
+        ]
+      }
+    ]
+  }
+}

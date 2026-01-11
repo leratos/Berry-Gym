@@ -16,6 +16,7 @@ WeasyPrint==62.3
 xhtml2pdf==0.2.16
 matplotlib==3.10.8
 cairosvg==2.7.1  # SVG zu PNG Rendering für Body-Map
+qrcode[pil]==8.0  # QR-Code Generation für Plan-PDF Export
 
 # AI Coach - LLM Integration
 ollama==0.4.3

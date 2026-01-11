@@ -1677,12 +1677,12 @@ def export_training_pdf(request):
             letztes_max = max((s.gewicht or 0) for s in letzte_saetze)
             
             if erstes_max > 0:
-                progression_prozent = round(((letztes_max - erstes_max) / erstes_max) * 100, 1)
+                progression_prozent = round(((float(letztes_max) - float(erstes_max)) / float(erstes_max)) * 100, 1)
                 kraft_progression.append({
                     'uebung': uebung_name,
-                    'start_gewicht': erstes_max,
-                    'aktuell_gewicht': letztes_max,
-                    'progression': progression_prozent,
+                    'start_gewicht': float(erstes_max),
+                    'aktuell_gewicht': float(letztes_max),
+                    'progression': float(progression_prozent),
                     'muskelgruppe': muskelgruppen_dict.get(uebung['uebung__muskelgruppe'], uebung['uebung__muskelgruppe'])
                 })
     
@@ -1757,19 +1757,20 @@ def export_training_pdf(request):
                 for s in gruppe_saetze
                 if s.gewicht and s.wiederholungen
             )
-            avg_rpe = gruppe_saetze.aggregate(Avg('rpe'))['rpe__avg'] or 0
+            avg_rpe_result = gruppe_saetze.aggregate(Avg('rpe'))['rpe__avg']
+            avg_rpe = float(avg_rpe_result) if avg_rpe_result else 0.0
             muskelgruppen_stats.append({
                 'key': gruppe_key,
                 'name': gruppe_name,
                 'saetze': anzahl,
-                'volumen': round(volumen, 0),
-                'avg_rpe': round(avg_rpe, 1),
+                'volumen': float(round(volumen, 0)),
+                'avg_rpe': float(round(avg_rpe, 1)),
                 'status': status,
                 'status_label': status_label,
                 'erklaerung': erklaerung,
                 'empfehlung_min': min_saetze,
                 'empfehlung_max': max_saetze,
-                'prozent_von_optimal': round((anzahl / ((min_saetze + max_saetze) / 2)) * 100, 0)
+                'prozent_von_optimal': float(round((anzahl / ((min_saetze + max_saetze) / 2)) * 100, 0))
             })
     
     muskelgruppen_stats = sorted(muskelgruppen_stats, key=lambda x: x['saetze'], reverse=True)
@@ -1821,11 +1822,12 @@ def export_training_pdf(request):
         einheit__datum__gte=letzte_30_tage
     )
     if rpe_saetze.exists():
-        avg_rpe = round(rpe_saetze.aggregate(Avg('rpe'))['rpe__avg'], 1)
+        avg_rpe_val = rpe_saetze.aggregate(Avg('rpe'))['rpe__avg']
+        avg_rpe = float(round(avg_rpe_val, 1)) if avg_rpe_val else 0.0
         rpe_verteilung = {
-            'leicht': rpe_saetze.filter(rpe__lte=6).count(),
-            'mittel': rpe_saetze.filter(rpe__gt=6, rpe__lte=8).count(),
-            'schwer': rpe_saetze.filter(rpe__gt=8).count()
+            'leicht': int(rpe_saetze.filter(rpe__lte=6).count()),
+            'mittel': int(rpe_saetze.filter(rpe__gt=6, rpe__lte=8).count()),
+            'schwer': int(rpe_saetze.filter(rpe__gt=8).count())
         }
     else:
         avg_rpe = 0
@@ -1872,11 +1874,11 @@ def export_training_pdf(request):
         }
     
     # Push/Pull Balance-Daten für Template
-    push_saetze = push_pull_balance.get('push_saetze', 0)
-    pull_saetze = push_pull_balance.get('pull_saetze', 0)
-    push_pull_ratio = push_pull_balance.get('ratio', 0)
-    push_pull_bewertung = push_pull_balance.get('bewertung', '')
-    push_pull_empfehlung = push_pull_balance.get('empfehlung', '')
+    push_saetze = int(push_pull_balance.get('push_saetze', 0))
+    pull_saetze = int(push_pull_balance.get('pull_saetze', 0))
+    push_pull_ratio = float(push_pull_balance.get('ratio', 0))
+    push_pull_bewertung = str(push_pull_balance.get('bewertung', ''))
+    push_pull_empfehlung = str(push_pull_balance.get('empfehlung', ''))
     
     # Stärken identifizieren (optimale Muskelgruppen)
     staerken = [mg for mg in muskelgruppen_stats if mg['status'] == 'optimal']
@@ -1964,6 +1966,226 @@ def export_training_pdf(request):
         logger.error(f'PDF export failed: {str(e)}', exc_info=True)
         messages.error(request, f'PDF-Generierung fehlgeschlagen: {str(e)}')
         return redirect('training_stats')
+
+
+@login_required
+def export_plan_pdf(request, plan_id):
+    """Exportiert einen Trainingsplan als PDF mit QR-Code."""
+    from io import BytesIO
+    import logging
+    try:
+        from xhtml2pdf import pisa
+        import qrcode
+        import base64
+    except ImportError:
+        messages.error(request, 'PDF Export nicht verfügbar - Pakete fehlen')
+        return redirect('plan_details', plan_id=plan_id)
+    
+    logger = logging.getLogger(__name__)
+    plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+    
+    # QR-Code generieren (Link zum Plan)
+    plan_url = request.build_absolute_uri(f'/plan/{plan.id}/')
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr.add_data(plan_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    
+    # QR zu Base64 konvertieren
+    buffer = BytesIO()
+    qr_img.save(buffer, format='PNG')
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+    
+    # Übungen nach Trainingstag gruppieren
+    planuebungen = PlanUebung.objects.filter(plan=plan).select_related('uebung').order_by('trainingstag', 'reihenfolge')
+    
+    # Gruppiere nach Tag
+    tage = {}
+    for planuebung in planuebungen:
+        tag = planuebung.trainingstag or 'Tag 1'
+        if tag not in tage:
+            tage[tag] = []
+        tage[tag].append(planuebung)
+    
+    # Muskelgruppen für Icon-Mapping
+    muskelgruppen_dict = dict(MUSKELGRUPPEN)
+    
+    # HTML Template für PDF
+    html_template = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @page {{
+                size: A4;
+                margin: 2cm;
+            }}
+            body {{
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+                line-height: 1.4;
+            }}
+            h1 {{
+                color: #198754;
+                font-size: 24pt;
+                margin-bottom: 10px;
+                border-bottom: 3px solid #198754;
+                padding-bottom: 5px;
+            }}
+            h2 {{
+                color: #0dcaf0;
+                font-size: 14pt;
+                margin-top: 20px;
+                margin-bottom: 10px;
+                border-left: 4px solid #0dcaf0;
+                padding-left: 10px;
+            }}
+            .header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: start;
+                margin-bottom: 20px;
+            }}
+            .plan-info {{
+                flex: 1;
+            }}
+            .qr-code {{
+                text-align: right;
+            }}
+            .qr-code img {{
+                width: 120px;
+                height: 120px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }}
+            th {{
+                background-color: #198754;
+                color: white;
+                padding: 8px;
+                text-align: left;
+                font-size: 9pt;
+            }}
+            td {{
+                padding: 6px 8px;
+                border-bottom: 1px solid #ddd;
+                font-size: 9pt;
+            }}
+            tr:nth-child(even) {{
+                background-color: #f8f9fa;
+            }}
+            .badge {{
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 3px;
+                font-size: 8pt;
+                font-weight: bold;
+            }}
+            .badge-primary {{
+                background-color: #198754;
+                color: white;
+            }}
+            .badge-secondary {{
+                background-color: #6c757d;
+                color: white;
+            }}
+            .footer {{
+                position: fixed;
+                bottom: 1cm;
+                left: 2cm;
+                right: 2cm;
+                text-align: center;
+                font-size: 8pt;
+                color: #6c757d;
+                border-top: 1px solid #ddd;
+                padding-top: 5px;
+            }}
+            .page-break {{
+                page-break-after: always;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="plan-info">
+                <h1>{plan.name}</h1>
+                <p><strong>Beschreibung:</strong> {plan.beschreibung or 'Keine Beschreibung'}</p>
+                <p><strong>Erstellt:</strong> {plan.erstellt_am.strftime("%d.%m.%Y")}</p>
+            </div>
+            <div class="qr-code">
+                <img src="data:image/png;base64,{qr_base64}" alt="QR Code">
+                <p style="font-size: 8pt; color: #6c757d;">Scan für Details</p>
+            </div>
+        </div>
+    '''
+    
+    # Füge jeden Trainingstag hinzu
+    for tag_nummer, uebungen in sorted(tage.items()):
+        html_template += f'''
+        <h2>{tag_nummer}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Übung</th>
+                    <th>Muskelgruppe</th>
+                    <th>Sätze</th>
+                    <th>Wiederholungen</th>
+                </tr>
+            </thead>
+            <tbody>
+        '''
+        
+        for idx, pu in enumerate(uebungen, 1):
+            muskelgruppe = muskelgruppen_dict.get(pu.uebung.muskelgruppe, pu.uebung.muskelgruppe)
+            
+            html_template += f'''
+                <tr>
+                    <td>{idx}</td>
+                    <td><strong>{pu.uebung.bezeichnung}</strong></td>
+                    <td><span class="badge badge-primary">{muskelgruppe}</span></td>
+                    <td>{pu.saetze_ziel or "-"}</td>
+                    <td>{pu.wiederholungen_ziel or "-"}</td>
+                </tr>
+            '''
+        
+        html_template += '''
+            </tbody>
+        </table>
+        '''
+    
+    # Footer
+    html_template += f'''
+        <div class="footer">
+            HomeGym Trainingsplan | Erstellt: {timezone.now().strftime("%d.%m.%Y %H:%M")} | {plan_url}
+        </div>
+    </body>
+    </html>
+    '''
+    
+    # PDF generieren
+    try:
+        result = BytesIO()
+        pdf = pisa.pisaDocument(BytesIO(html_template.encode('utf-8')), result)
+        
+        if pdf.err:
+            logger.error(f'PDF generation errors: {pdf.err}')
+            messages.error(request, 'Fehler bei PDF-Generierung')
+            return redirect('plan_details', plan_id=plan_id)
+        
+        # Response mit PDF
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        filename = f"plan_{plan.name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        logger.error(f'Plan PDF export failed: {str(e)}', exc_info=True)
+        messages.error(request, f'PDF-Generierung fehlgeschlagen: {str(e)}')
+        return redirect('plan_details', plan_id=plan_id)
 
 
 @login_required
@@ -2860,3 +3082,234 @@ def import_uebungen(request):
         messages.error(request, f'Import fehlgeschlagen: {str(e)}')
     
     return redirect('uebungen_auswahl')
+
+
+# ============================================
+# PLAN TEMPLATES
+# ============================================
+
+@login_required
+def get_plan_templates(request):
+    """API Endpoint: Liefert alle verfügbaren Plan-Templates."""
+    try:
+        templates_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'plan_templates.json')
+        with open(templates_path, 'r', encoding='utf-8') as f:
+            templates = json.load(f)
+        
+        # Nur Metadaten ohne Exercises zurückgeben
+        templates_overview = {}
+        for key, template in templates.items():
+            templates_overview[key] = {
+                'name': template['name'],
+                'description': template['description'],
+                'frequency_per_week': template['frequency_per_week'],
+                'difficulty': template['difficulty'],
+                'goal': template['goal'],
+                'days_count': len(template['days'])
+            }
+        
+        return JsonResponse(templates_overview)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@login_required
+def get_template_detail(request, template_key):
+    """API Endpoint: Liefert alle Details eines Templates inkl. Übungen."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        templates_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'plan_templates.json')
+        with open(templates_path, 'r', encoding='utf-8') as f:
+            templates = json.load(f)
+        
+        if template_key not in templates:
+            return JsonResponse({'error': 'Template nicht gefunden'}, status=404)
+        
+        template = templates[template_key]
+        
+        # User-Equipment ermitteln (Equipment hat ManyToMany 'users', kein 'verfuegbar' Feld)
+        user_equipment = Equipment.objects.filter(users=request.user).values_list('name', flat=True)
+        # Normalisiere Equipment-Namen: lowercase und stripping für besseres Matching
+        user_equipment_set = set(eq.strip().lower() for eq in user_equipment)
+        
+        logger.info(f'User equipment: {user_equipment_set}')
+        
+        # Template anpassen: Prüfe ob Übungen machbar sind
+        adapted_template = {
+            'name': template.get('name', ''),
+            'description': template.get('description', ''),
+            'frequency_per_week': template.get('frequency_per_week', 0),
+            'difficulty': template.get('difficulty', ''),
+            'goal': template.get('goal', ''),
+            'days_adapted': []
+        }
+        
+        for day in template.get('days', []):
+            adapted_day = {
+                'name': day.get('name', ''),
+                'exercises': []
+            }
+            
+            for exercise in day.get('exercises', []):
+                exercise_copy = {
+                    'name': exercise.get('name', ''),
+                    'sets': exercise.get('sets', 0),
+                    'reps': exercise.get('reps', ''),
+                    'equipment': exercise.get('equipment', '')
+                }
+                required_equipment = exercise.get('equipment', '').strip().lower()
+                
+                # Prüfe ob Equipment verfügbar (case-insensitive und normalized)
+                if required_equipment in user_equipment_set or required_equipment == 'körpergewicht':
+                    exercise_copy['available'] = True
+                    exercise_copy['substitute'] = None
+                else:
+                    exercise_copy['available'] = False
+                    # Finde Ersatzübung
+                    substitute = find_substitute_exercise(exercise.get('name', ''), required_equipment, user_equipment_set)
+                    exercise_copy['substitute'] = substitute
+                
+                adapted_day['exercises'].append(exercise_copy)
+            
+            adapted_template['days_adapted'].append(adapted_day)
+        
+        return JsonResponse(adapted_template)
+    except Exception as e:
+        logger.error(f'Template detail error: {str(e)}', exc_info=True)
+        return JsonResponse({'error': str(e), 'template_key': template_key}, status=500)
+
+
+def find_substitute_exercise(original_name, required_equipment, available_equipment):
+    """
+    Findet eine Ersatzübung aus der Datenbank.
+    Versucht ähnliche Muskelgruppe und Bewegungstyp mit verfügbarem Equipment.
+    """
+    # Versuche Original-Übung in DB zu finden
+    try:
+        # Extrahiere Übungsname ohne Zusatzinfo in Klammern
+        clean_name = original_name.split('(')[0].strip()
+        original_uebung = Uebung.objects.filter(bezeichnung__icontains=clean_name).first()
+        
+        if original_uebung and original_uebung.hauptmuskel:
+            # Suche ähnliche Übungen mit gleichem Bewegungstyp und verfügbarem Equipment
+            if original_uebung.bewegungstyp and len(available_equipment) > 0:
+                for equip in available_equipment:
+                    similar = Uebung.objects.filter(
+                        hauptmuskel=original_uebung.hauptmuskel,
+                        bewegungstyp=original_uebung.bewegungstyp,
+                        equipment__name=equip
+                    ).exclude(id=original_uebung.id).first()
+                    
+                    if similar:
+                        return {
+                            'name': similar.bezeichnung,
+                            'equipment': equip
+                        }
+            
+            # Fallback: Nur gleiche Muskelgruppe, egal welcher Bewegungstyp
+            if len(available_equipment) > 0:
+                for equip in available_equipment:
+                    similar = Uebung.objects.filter(
+                        hauptmuskel=original_uebung.hauptmuskel,
+                        equipment__name=equip
+                    ).exclude(id=original_uebung.id).first()
+                    
+                    if similar:
+                        return {
+                            'name': similar.bezeichnung,
+                            'equipment': equip
+                        }
+        
+        # Kein Match gefunden - gib Equipment-Hinweis
+        return {
+            'name': f'Bitte Equipment "{required_equipment}" ergänzen',
+            'equipment': required_equipment,
+            'note': 'Keine passende Alternative gefunden'
+        }
+        
+    except Exception as e:
+        # Bei Fehler: Gib generische Nachricht zurück
+        return {
+            'name': f'Alternative für "{original_name}" nicht gefunden',
+            'equipment': required_equipment,
+            'note': f'Fehler: {str(e)}'
+        }
+
+
+@login_required
+def create_plan_from_template(request, template_key):
+    """Erstellt einen neuen Plan basierend auf einem Template."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Nur POST erlaubt'}, status=405)
+    
+    try:
+        # Template laden
+        templates_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'plan_templates.json')
+        with open(templates_path, 'r', encoding='utf-8') as f:
+            templates = json.load(f)
+        
+        if template_key not in templates:
+            return JsonResponse({'error': 'Template nicht gefunden'}, status=404)
+        
+        template = templates[template_key]
+        
+        # User-Equipment (Equipment hat ManyToMany 'users')
+        user_equipment = Equipment.objects.filter(users=request.user).values_list('name', flat=True)
+        user_equipment_set = set(eq.strip().lower() for eq in user_equipment)
+        
+        # Für jeden Tag einen eigenen Plan erstellen
+        created_plans = []
+        
+        for day in template['days']:
+            # Plan für diesen Tag erstellen
+            plan = Plan.objects.create(
+                user=request.user,
+                name=day['name'],
+                beschreibung=f"{template['name']}"
+            )
+            created_plans.append(plan)
+            
+            # Übungen zum Plan hinzufügen
+            reihenfolge = 1
+            for exercise_data in day['exercises']:
+                # Übung in DB suchen
+                exercise_name = exercise_data['name'].split('(')[0].strip()
+                uebung = Uebung.objects.filter(bezeichnung__icontains=exercise_name).first()
+                
+                # Wenn nicht gefunden und Equipment fehlt, versuche Substitut
+                if not uebung:
+                    required_equipment = exercise_data['equipment'].strip().lower()
+                    if required_equipment not in user_equipment_set and required_equipment != 'körpergewicht':
+                        substitute = find_substitute_exercise(exercise_name, required_equipment, user_equipment_set)
+                        if substitute and 'name' in substitute:
+                            uebung = Uebung.objects.filter(bezeichnung__icontains=substitute['name'].split('(')[0].strip()).first()
+                
+                # Wenn Übung gefunden, zum Plan hinzufügen
+                if uebung:
+                    PlanUebung.objects.create(
+                        plan=plan,
+                        uebung=uebung,
+                        trainingstag=day['name'],
+                        reihenfolge=reihenfolge,
+                        saetze_ziel=exercise_data['sets'],
+                        wiederholungen_ziel=exercise_data['reps']
+                    )
+                    reihenfolge += 1
+        
+        plan_count = len(created_plans)
+        plan_names = ', '.join([p.name for p in created_plans])
+        messages.success(request, f'{plan_count} Pläne erstellt: {plan_names}')
+        return JsonResponse({
+            'success': True, 
+            'plan_ids': [p.id for p in created_plans],
+            'plan_count': plan_count
+        })
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Plan creation error: {str(e)}', exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)

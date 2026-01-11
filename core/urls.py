@@ -42,6 +42,7 @@ urlpatterns = [
     
     # PDF Export
     path('export/training-pdf/', views.export_training_pdf, name='export_training_pdf'),
+    path('plan/<int:plan_id>/pdf/', views.export_plan_pdf, name='export_plan_pdf'),
     
     # AI/ML Recommendations
     path('recommendations/', views.workout_recommendations, name='workout_recommendations'),
@@ -63,6 +64,11 @@ urlpatterns = [
     path('api/analyze-plan/', views.analyze_plan_api, name='analyze_plan_api'),
     path('api/optimize-plan/', views.optimize_plan_api, name='optimize_plan_api'),
     path('api/apply-optimizations/', views.apply_optimizations_api, name='apply_optimizations_api'),
+    
+    # Plan Templates
+    path('api/plan-templates/', views.get_plan_templates, name='get_plan_templates'),
+    path('api/plan-templates/<str:template_key>/', views.get_template_detail, name='get_template_detail'),
+    path('api/plan-templates/<str:template_key>/create/', views.create_plan_from_template, name='create_plan_from_template'),
     
     # Exercise Management (Admin Only)
     path('uebungen/export/', views.export_uebungen, name='export_uebungen'),

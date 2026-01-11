@@ -70,6 +70,14 @@
                 </div>
             {% endfor %}
         {% endif %}
+        
+        <!-- Template-Auswahl Button -->
+        <div class="mb-3">
+            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#templateModal">
+                <i class="bi bi-lightning-charge-fill me-2"></i>Von Template starten
+            </button>
+            <span class="text-muted ms-2">Oder erstelle einen Plan von Grund auf:</span>
+        </div>
 
         <div class="row">
             <!-- Übungsauswahl -->
@@ -417,6 +425,271 @@
                 item.style.display = name.includes(search) ? 'block' : 'none';
             });
         });
+    </script>
+    
+    <!-- Template Modal -->
+    <div class="modal fade" id="templateModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">
+                        <i class="bi bi-lightning-charge-fill text-warning me-2"></i>
+                        Aus Template starten
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-4">
+                        Wähle ein vorgefertigtes Template basierend auf bewährten Trainingsprinzipien. 
+                        Die Übungen werden automatisch an dein verfügbares Equipment angepasst.
+                    </p>
+                    
+                    <div id="templatesContainer" class="row g-4">
+                        <!-- Templates werden hier geladen -->
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-info" role="status">
+                                <span class="visually-hidden">Lädt...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Template Detail Modal (nested) -->
+                    <div id="templateDetailView" style="display: none;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="showTemplateList()">
+                            <i class="bi bi-arrow-left me-2"></i>Zurück zur Auswahl
+                        </button>
+                        <div id="templateDetailContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let templates = {};
+        let selectedTemplate = null;
+        
+        // Modal öffnen - Templates laden
+        document.getElementById('templateModal').addEventListener('show.bs.modal', function() {
+            loadTemplates();
+        });
+        
+        function loadTemplates() {
+            fetch('/api/plan-templates/')
+                .then(response => response.json())
+                .then(data => {
+                    templates = data;
+                    displayTemplates();
+                })
+                .catch(error => {
+                    console.error('Fehler beim Laden:', error);
+                    document.getElementById('templatesContainer').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Fehler beim Laden der Templates
+                        </div>
+                    `;
+                });
+        }
+        
+        function displayTemplates() {
+            const container = document.getElementById('templatesContainer');
+            let html = '';
+            
+            for (const [key, template] of Object.entries(templates)) {
+                html += `
+                    <div class="col-md-4">
+                        <div class="card bg-black border-secondary h-100 template-card" 
+                             style="cursor: pointer; transition: all 0.2s;"
+                             onmouseover="this.style.borderColor='#0dcaf0'"
+                             onmouseout="this.style.borderColor=''"
+                             onclick="showTemplateDetail('${key}')">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="bi bi-card-checklist text-info me-2"></i>
+                                    ${template.name}
+                                </h5>
+                                <p class="text-muted small mb-3">${template.description}</p>
+                                
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-calendar-week me-1"></i>${template.frequency_per_week}x / Woche
+                                    </span>
+                                    <span class="badge bg-secondary">
+                                        ${template.difficulty}
+                                    </span>
+                                    <span class="badge bg-success">
+                                        ${template.goal}
+                                    </span>
+                                </div>
+                                
+                                <div class="text-muted small">
+                                    <i class="bi bi-list-ol me-1"></i>${template.days_count} Trainingstage
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent border-secondary">
+                                <button class="btn btn-sm btn-info w-100">
+                                    <i class="bi bi-eye me-2"></i>Details anzeigen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function showTemplateDetail(templateKey) {
+            selectedTemplate = templateKey;
+            
+            // Detail-View anzeigen, Liste verstecken
+            document.getElementById('templatesContainer').style.display = 'none';
+            document.getElementById('templateDetailView').style.display = 'block';
+            
+            // Loading anzeigen
+            document.getElementById('templateDetailContent').innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-info" role="status"></div>
+                </div>
+            `;
+            
+            // Template-Details laden
+            fetch(`/api/plan-templates/${templateKey}/`)
+                .then(response => response.json())
+                .then(data => {
+                    displayTemplateDetail(data);
+                })
+                .catch(error => {
+                    console.error('Fehler:', error);
+                    document.getElementById('templateDetailContent').innerHTML = `
+                        <div class="alert alert-danger">Fehler beim Laden</div>
+                    `;
+                });
+        }
+        
+        function displayTemplateDetail(template) {
+            let html = `
+                <div class="card bg-black border-info">
+                    <div class="card-body">
+                        <h4 class="card-title">${template.name}</h4>
+                        <p class="text-muted">${template.description}</p>
+                        
+                        <div class="d-flex gap-2 mb-4">
+                            <span class="badge bg-info">${template.frequency_per_week}x / Woche</span>
+                            <span class="badge bg-secondary">${template.difficulty}</span>
+                            <span class="badge bg-success">${template.goal}</span>
+                        </div>
+                        
+                        <h5 class="mb-3">Trainingstage:</h5>
+            `;
+            
+            template.days_adapted.forEach((day, idx) => {
+                html += `
+                    <div class="card bg-dark border-secondary mb-3">
+                        <div class="card-header">
+                            <strong>Tag ${idx + 1}: ${day.name}</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Übung</th>
+                                            <th>Sätze</th>
+                                            <th>Wdh.</th>
+                                            <th>Equipment</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                `;
+                
+                day.exercises.forEach(ex => {
+                    const statusIcon = ex.available 
+                        ? '<i class="bi bi-check-circle-fill text-success"></i>' 
+                        : '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+                    
+                    const substituteInfo = ex.substitute && !ex.available
+                        ? `<br><small class="text-warning">→ Ersatz: ${ex.substitute.name}</small>`
+                        : '';
+                    
+                    html += `
+                        <tr class="${ex.available ? '' : 'text-muted'}">
+                            <td>${ex.name}${substituteInfo}</td>
+                            <td>${ex.sets}</td>
+                            <td>${ex.reps}</td>
+                            <td><span class="badge bg-secondary">${ex.equipment}</span></td>
+                            <td>${statusIcon}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                        <button class="btn btn-success btn-lg w-100" onclick="createFromTemplate()">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            Plan erstellen
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('templateDetailContent').innerHTML = html;
+        }
+        
+        function showTemplateList() {
+            document.getElementById('templatesContainer').style.display = 'flex';
+            document.getElementById('templateDetailView').style.display = 'none';
+        }
+        
+        function createFromTemplate() {
+            if (!selectedTemplate) return;
+            
+            // Button deaktivieren
+            const btn = document.querySelector('#templateDetailView .btn-success');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird erstellt...';
+            
+            fetch(`/api/plan-templates/${selectedTemplate}/create/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Bei mehreren Plänen zum Dashboard, sonst zum Plan
+                    if (data.plan_count > 1) {
+                        window.location.href = '/training/select/';
+                    } else if (data.plan_ids && data.plan_ids.length > 0) {
+                        window.location.href = `/plan/${data.plan_ids[0]}/`;
+                    } else {
+                        window.location.href = '/training/select/';
+                    }
+                } else {
+                    alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Plan erstellen';
+                }
+            })
+            .catch(error => {
+                console.error('Fehler:', error);
+                alert('Fehler beim Erstellen des Plans');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Plan erstellen';
+            });
+        }
     </script>
 </body>
 </html>

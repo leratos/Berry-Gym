@@ -196,7 +196,6 @@
 - [x] **Übungen per Drag & Drop sortieren** ✅
 - [x] **Plan bearbeiten/löschen** ✅
 - [ ] Plan-Templates (Push/Pull/Legs, etc.)
-- [ ] Plan als PDF exportieren
 - [ ] Plan duplizieren
 - [ ] Plan teilen (QR-Code/Link)
 - [ ] Öffentliche Plan-Bibliothek
