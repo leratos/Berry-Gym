@@ -140,7 +140,7 @@
 
   <!-- Optional labels (remove if you don't want any text) -->
   <g font-family="Arial" font-size="22" fill="#111" opacity="0.85">
-    <text x="305" y="70" text-anchor="middle">Front</text>
-    <text x="845" y="70" text-anchor="middle">Back</text>
+    <text x="305" y="20" text-anchor="middle">Front</text>
+    <text x="845" y="20" text-anchor="middle">Back</text>
   </g>
 </svg>

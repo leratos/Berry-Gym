@@ -15,6 +15,7 @@ python-dotenv==1.0.1
 WeasyPrint==62.3
 xhtml2pdf==0.2.16
 matplotlib==3.10.8
+cairosvg==2.7.1  # SVG zu PNG Rendering für Body-Map
 
 # AI Coach - LLM Integration
 ollama==0.4.3

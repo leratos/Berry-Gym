@@ -1720,18 +1720,32 @@ def export_training_pdf(request):
         empfehlung = empfohlene_saetze.get(gruppe_key, (12, 20))
         min_saetze, max_saetze = empfehlung
         
+        # Datenqualitäts-Check: Bei wenigen Trainingseinheiten softere Formulierung
+        wenig_daten = trainings_30_tage < 8
+        
         if anzahl == 0:
             status = 'nicht_trainiert'
             status_label = 'Nicht trainiert'
-            erklaerung = f'Diese Muskelgruppe wurde nicht trainiert. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat'
+            if wenig_daten:
+                erklaerung = f'Noch keine Sätze erfasst. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat'
+            else:
+                erklaerung = f'Diese Muskelgruppe wurde nicht trainiert. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat'
         elif anzahl < min_saetze:
             status = 'untertrainiert'
-            status_label = 'Untertrainiert'
-            erklaerung = f'Nur {anzahl} Sätze in 30 Tagen. Empfehlung: {min_saetze}-{max_saetze} Sätze für optimales Wachstum'
+            if wenig_daten:
+                status_label = 'Wenig trainiert'
+                erklaerung = f'{anzahl} Sätze in 30 Tagen. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat (mehr Daten für genauere Analyse)'
+            else:
+                status_label = 'Untertrainiert'
+                erklaerung = f'Nur {anzahl} Sätze in 30 Tagen. Empfehlung: {min_saetze}-{max_saetze} Sätze für optimales Wachstum'
         elif anzahl > max_saetze:
             status = 'uebertrainiert'
-            status_label = 'Mögl. Übertraining'
-            erklaerung = f'{anzahl} Sätze könnten zu viel sein. Empfehlung: {min_saetze}-{max_saetze} Sätze. Regeneration prüfen!'
+            if wenig_daten:
+                status_label = 'Viel trainiert'
+                erklaerung = f'{anzahl} Sätze - intensiver Start! Beobachte Regeneration. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat'
+            else:
+                status_label = 'Mögl. Übertraining'
+                erklaerung = f'{anzahl} Sätze könnten zu viel sein. Empfehlung: {min_saetze}-{max_saetze} Sätze. Regeneration prüfen!'
         else:
             status = 'optimal'
             status_label = 'Optimal'
@@ -1760,28 +1774,34 @@ def export_training_pdf(request):
     
     muskelgruppen_stats = sorted(muskelgruppen_stats, key=lambda x: x['saetze'], reverse=True)
     
-    # Push/Pull-Balance Analyse
-    push_groups = ['brust', 'schulter_vordere', 'schulter_seitliche', 'trizeps']
-    pull_groups = ['ruecken_breiter', 'ruecken_unterer', 'schulter_hintere', 'bizeps']
+    # Push/Pull-Balance Analyse (Keys angepasst an MUSKELGRUPPEN in models.py)
+    push_groups = ['BRUST', 'SCHULTER_VORN', 'SCHULTER_SEIT', 'TRIZEPS']
+    pull_groups = ['RUECKEN_LAT', 'RUECKEN_TRAPEZ', 'RUECKEN_UNTEN', 'RUECKEN_OBERER', 'SCHULTER_HINT', 'BIZEPS']
     
     push_saetze = sum(mg['saetze'] for mg in muskelgruppen_stats if mg['key'] in push_groups)
     pull_saetze = sum(mg['saetze'] for mg in muskelgruppen_stats if mg['key'] in pull_groups)
     
-    if pull_saetze > 0:
-        push_pull_ratio = round(push_saetze / pull_saetze, 2)
-    else:
-        push_pull_ratio = 0
-    
     # Bewertung der Balance
-    if 0.9 <= push_pull_ratio <= 1.1:
-        push_pull_bewertung = 'Ausgewogen'
-        push_pull_empfehlung = 'Perfekt! Push/Pull-Verhältnis ist ausgeglichen.'
-    elif push_pull_ratio > 1.1:
-        push_pull_bewertung = 'Zu viel Push'
-        push_pull_empfehlung = f'Ratio {push_pull_ratio}:1 - Mehr Pull-Training (Rücken, Bizeps) für Schultergesundheit!'
+    if push_saetze == 0 and pull_saetze == 0:
+        push_pull_ratio = 0
+        push_pull_bewertung = 'Keine Daten'
+        push_pull_empfehlung = 'Beginne mit ausgewogenem Push- und Pull-Training für optimale Muskelentwicklung.'
+    elif pull_saetze > 0:
+        push_pull_ratio = round(push_saetze / pull_saetze, 2)
+        if 0.9 <= push_pull_ratio <= 1.1:
+            push_pull_bewertung = 'Ausgewogen'
+            push_pull_empfehlung = 'Perfekt! Push/Pull-Verhältnis ist ausgeglichen.'
+        elif push_pull_ratio > 1.1:
+            push_pull_bewertung = 'Zu viel Push'
+            push_pull_empfehlung = f'Ratio {push_pull_ratio}:1 - Mehr Pull-Training (Rücken, Bizeps) für Schultergesundheit!'
+        else:
+            push_pull_bewertung = 'Zu viel Pull'
+            push_pull_empfehlung = f'Ratio {push_pull_ratio}:1 - Mehr Push-Training (Brust, Schultern) für Balance!'
     else:
-        push_pull_bewertung = 'Zu viel Pull'
-        push_pull_empfehlung = f'Ratio {push_pull_ratio}:1 - Mehr Push-Training (Brust, Schultern) für Balance!'
+        # pull_saetze ist 0, aber push_saetze > 0
+        push_pull_ratio = 0
+        push_pull_bewertung = 'Nur Push'
+        push_pull_empfehlung = 'Füge Pull-Training (Rücken, Bizeps) hinzu für ausgeglichene Entwicklung!'
     
     push_pull_balance = {
         'push_saetze': push_saetze,
@@ -1863,15 +1883,18 @@ def export_training_pdf(request):
     
     # Charts generieren (matplotlib)
     try:
+        from core.chart_generator import generate_body_map_with_data
         muscle_heatmap = generate_muscle_heatmap(muskelgruppen_stats)
         volume_chart = generate_volume_chart(volumen_wochen[-8:])
         push_pull_chart = generate_push_pull_pie(push_saetze, pull_saetze)
+        body_map_image = generate_body_map_with_data(muskelgruppen_stats)  # Dynamische Body-Map mit User-Daten
         logger.info('Charts successfully generated')
     except Exception as e:
         logger.warning(f'Chart generation failed: {str(e)}')
         muscle_heatmap = None
         volume_chart = None
         push_pull_chart = None
+        body_map_image = None
     
     context = {
         'user': request.user,
@@ -1909,6 +1932,7 @@ def export_training_pdf(request):
         'muscle_heatmap': muscle_heatmap,
         'volume_chart': volume_chart,
         'push_pull_chart': push_pull_chart,
+        'body_map_image': body_map_image,  # Body-Map Visualisierung
         'koerperwerte': koerperwerte,
         'letzter_koerperwert': letzter_koerperwert,
         'gewichts_trend': gewichts_trend,

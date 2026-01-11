@@ -6,8 +6,9 @@
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square)
 ![Database](https://img.shields.io/badge/Database-MariaDB%20%7C%20SQLite-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.5.0-brightgreen?style=flat-square)
 
-**Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach**
+**Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach & professionellen PDF-Reports**
 
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
@@ -17,14 +18,15 @@
 
 ## 📖 Über dieses Projekt
 
-HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit künstlicher Intelligenz kombiniert. Die App ermöglicht detailliertes Logging von Trainingseinheiten, analysiert Fortschritte und bietet einen **KI-Coach**, der automatisch Trainingspläne erstellt und optimiert.
+HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit künstlicher Intelligenz kombiniert. Die App ermöglicht detailliertes Logging von Trainingseinheiten, analysiert Fortschritte mit evidenzbasierten Metriken und bietet einen **KI-Coach**, der automatisch Trainingspläne erstellt und optimiert.
 
 ### 🎯 Hauptziele
 
 - **Vollständige Privatsphäre**: Deine Trainingsdaten bleiben auf deinem Server
 - **KI ohne Cloud**: Lokale LLMs (Ollama) für 0€ Betriebskosten
-- **Smart Tracking**: Automatisches Ghosting, RPE-basierte Gewichtsvorschläge
+- **Smart Tracking**: Automatisches Ghosting, RPE-basierte Gewichtsvorschläge, Superset-Support
 - **Performance-Fokus**: 1RM Tracking, Volumen-Analyse, Plateau-Erkennung
+- **Professionelle Reports**: Anatomische Body-Maps mit dynamischer Farbcodierung
 
 ---
 
@@ -94,7 +96,47 @@ python ai_coach/plan_generator.py --user-id 1
 - **Ermüdungs-Index**: Automatische Deload-Empfehlungen
 - **RPE-Statistiken**: Durchschnitt & Trend pro Übung
 
-### 🔐 User Management
+### � Professional PDF Reports
+
+**7-seitiger professioneller Trainingsreport** mit xhtml2pdf:
+
+#### Aufbau:
+1. **Cover Page** mit anatomischer Body-Map
+2. **Table of Contents** (6 Kapitel)
+3. **Executive Summary** mit Kerndaten & Data-Quality-Warnings
+4. **Muskelgruppen-Analyse** mit Status-Badges & Erklärungen
+5. **Push/Pull Balance** mit Pie-Chart & Empfehlungen
+6. **Training Progress** (Top-5 Kraftzuwächse)
+7. **Trainer Recommendations** (Stärken, Schwächen, Next Steps)
+
+#### Features:
+- **Anatomische Body-Map** (SVG → PNG via cairosvg):
+  - 1100x1024px Front + Back View
+  - 19 Muskelgruppen dynamisch eingefärbt:
+    - 🟢 **Grün**: Optimal trainiert (80-120% des Ziels)
+    - 🟡 **Gelb**: Untertrainiert (< 80%)
+    - 🔴 **Rot**: Übertrainiert (> 120%)
+  - PIL-Fallback für Systeme ohne Cairo
+  
+- **Data Quality Checks**:
+  - Warnung bei < 8 Trainingseinheiten
+  - Weiche Formulierungen ("erste Eindrücke" statt harter Aussagen)
+  - Konservative Empfehlungen bei wenig Daten
+  
+- **Advanced Charts** (matplotlib):
+  - Muskelgruppen-Heatmap (horizontal bars)
+  - Volumen-Entwicklung (line chart mit area fill)
+  - Push/Pull Pie-Chart (korrekte Muskelgruppen-Zuordnung)
+  
+- **Professional Layout**:
+  - CSS2.1-kompatibel für xhtml2pdf
+  - Page-break Kontrolle (Grafik + Titel auf selber Seite)
+  - 16px Legenden-Font
+  - Border-less chart headers
+
+**Technologie-Stack**: xhtml2pdf, matplotlib (Agg backend), cairosvg, Pillow
+
+### �🔐 User Management
 
 - Multi-User Support mit vollständiger Datenisolation
 - Django Authentication (Login, Logout, Registration)
@@ -293,6 +335,16 @@ Siehe **[DEPLOYMENT.md](DEPLOYMENT.md)** für detaillierte Anweisungen.
 - **AI:** Ollama (lokal), OpenRouter (Cloud Fallback)
 - **Server:** Gunicorn, Nginx
 - **PWA:** Service Worker, Manifest.json
+- **PDF Generation:** xhtml2pdf 0.2.16, matplotlib 3.10.8, cairosvg 2.7.1, Pillow 12.1.0
+
+### Projekt-Statistiken (Version 0.5.0)
+- **Lines of Code:** ~15,000
+- **Python Files:** 50+
+- **Templates:** 25+ HTML/Django
+- **Exercise Library:** 150+ vordefinierte Übungen
+- **Muscle Groups:** 19 (anatomisch korrekt)
+- **PDF Report:** 7 Seiten mit 4 Charts
+- **Development Time:** 12+ Monate
 
 ---
 

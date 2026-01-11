@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
-**Stand:** 10.01.2026  
-**Version:** 0.4.1
+**Stand:** 11.01.2026  
+**Version:** 0.5.0
 
 ---
 
@@ -267,8 +267,33 @@
 
 **Status:** ✅ Implementiert und getestet (10.01.2026)
 
-**2. PDF Export Verbesserungen** ⭐ Impact: 8/10 | Aufwand: 4h
-- [x] **Trainingsstatistik als PDF** (bereits vorhanden) ✅
+**2. PDF Export Verbesserungen** ⭐ Impact: 8/10 | Aufwand: 4h ✅ FERTIG
+- [x] **Professioneller Training Report PDF** ✅
+  - Executive Summary mit Trainings-Metriken
+  - Datenqualitäts-Warnung (bei < 8 Trainings)
+  - Körperwerte-Entwicklung (Gewicht, Umfänge)
+  - Muskelgruppen-Analyse mit Status-Badges
+  - Intelligente Formulierungen bei wenig Daten
+- [x] **SVG Body-Map Integration im PDF** ✅
+  - Anatomische Visualisierung (1100x1024px)
+  - Dynamische Farbcodierung (grün/gelb/rot basierend auf Training)
+  - Cairosvg-Rendering für hochwertige Darstellung
+  - PIL-Fallback bei fehlender Cairo-Library
+  - Legende mit Farbcodierung
+- [x] **Matplotlib Charts im PDF** ✅
+  - Muskelgruppen-Balance Visualisierung (Horizontal Bar Chart)
+  - Trainingsvolumen-Entwicklung (Line Chart, letzte 8 Wochen)
+  - Push/Pull Balance (Pie Chart)
+- [x] **Multi-Page Layout** ✅
+  - Deckblatt mit Body-Map
+  - Inhaltsverzeichnis
+  - Separate Seiten für Kapitel (Executive Summary, Muskelgruppen, Push/Pull, Trainingsfortschritt, Empfehlungen)
+  - Page-break-Kontrolle (Überschriften mit Grafiken zusammenhalten)
+- [x] **Intelligente Empfehlungen** ✅
+  - Stärken & Schwachstellen Analyse
+  - Push/Pull Balance-Bewertung (0.9:1 - 1.1:1 optimal)
+  - Nächste Schritte (priorisiert)
+  - Kraftentwicklung Top 5
 - [ ] **Trainingsplan als PDF exportieren**
   - Clean Layout für Gym (A4, druckoptimiert)
   - Übungen mit Sets/Reps-Vorgaben
@@ -283,7 +308,15 @@
   - Volumen-Zusammenfassung
   - PR-Highlights
 
-**Warum:** PDF Statistik existiert, Plan-Export ist logische Ergänzung
+**Status:** ✅ PDF-Statistik vollständig implementiert (11.01.2026)
+**Details:**
+- Professionelles Multi-Page Design
+- Anatomische Body-Map mit User-Daten
+- 3 Matplotlib Charts
+- Intelligente Analysen mit Datenqualitäts-Checks
+- xhtml2pdf-kompatibles CSS (CSS2.1)
+
+**Warum:** Professioneller Export für Trainer & Athleten, Trainingsplan-PDF ist logische Ergänzung
 
 **3. Plan-Templates** ⭐ Impact: 7/10 | Aufwand: 5h
 - [ ] **Vordefinierte Plan-Templates**
@@ -410,7 +443,85 @@
 
 ---
 
-## 🎉 Neue Features in Version 0.4.0 (10.01.2026)
+## 🎉 Neue Features in Version 0.5.0 (11.01.2026)
+
+### Professioneller PDF Training Report
+Die App hat jetzt einen vollständigen professionellen PDF-Export mit anatomischen Visualisierungen:
+
+1. **Multi-Page Professional Layout**
+   - Deckblatt mit dynamischer Body-Map (SVG-basiert)
+   - Inhaltsverzeichnis mit 6 Kapiteln
+   - Separate Seiten für: Executive Summary, Muskelgruppen-Analyse, Push/Pull Balance, Trainingsfortschritt, Trainer-Empfehlungen
+   - Page-break-Kontrolle (Überschriften bleiben mit Grafiken zusammen)
+
+2. **Anatomische Body-Map Visualisierung**
+   - SVG-Muscle-Map (muscle_map.svg, 1100x1024px, 50+ Muskelregionen)
+   - Dynamische Farbcodierung basierend auf Trainingsdaten
+   - Cairosvg-Rendering (hochwertig, professionell)
+   - PIL-Fallback bei fehlender Cairo-Library (Windows-kompatibel)
+   - Legende mit 4 Status-Farben (Optimal=Grün, Untertrainiert=Gelb, Übertrainiert=Rot, Nicht trainiert=Grau)
+   - CSS class/style removal für korrekte Farbdarstellung
+
+3. **Matplotlib Charts**
+   - Muskelgruppen-Balance Visualisierung (Horizontal Bar Chart mit Referenzlinien)
+   - Trainingsvolumen-Entwicklung (Line Chart mit Area Fill, letzte 8 Wochen)
+   - Push/Pull Balance (Pie Chart mit Prozent-Anzeige)
+   - Base64-Encoding für PDF-Einbettung
+   - Dark mode compatible colors
+
+4. **Intelligente Datenqualitäts-Checks**
+   - Warnung bei < 8 Trainingseinheiten: "Bewertungen mit Vorsicht interpretieren"
+   - Softere Formulierungen bei wenig Daten:
+     * "Untertrainiert" → "Wenig trainiert"
+     * "Mögl. Übertraining" → "Viel trainiert"
+     * Zusatz: "(mehr Daten für genauere Analyse)"
+   - Körperdaten-Hinweis wenn keine Umfänge erfasst
+
+5. **Muskelgruppen-Analyse**
+   - Evidenzbasierte Empfehlungen (12-20 Sätze/Monat je Muskelgruppe)
+   - Status-Badges (Optimal/Untertrainiert/Übertrainiert/Nicht trainiert)
+   - Detaillierte Erklärungen mit konkreten Empfehlungen
+   - Sortiert nach Trainingsvolumen
+   - Angepasste Bewertungen bei niedriger Datenlage
+
+6. **Push/Pull Balance**
+   - Automatische Berechnung (korrigierte Muskelgruppen-Keys)
+   - Push: BRUST, SCHULTER_VORN, SCHULTER_SEIT, TRIZEPS
+   - Pull: RUECKEN_LAT, RUECKEN_TRAPEZ, RUECKEN_UNTEN, RUECKEN_OBERER, SCHULTER_HINT, BIZEPS
+   - Ratio-Berechnung mit 3 Status:
+     * "Keine Daten" (beide 0)
+     * "Nur Push" (Pull = 0)
+     * "Ausgewogen" (0.9:1 - 1.1:1)
+     * "Zu viel Push/Pull" (außerhalb Range)
+   - Konkrete Empfehlungen basierend auf Ratio
+
+7. **Trainer-Empfehlungen**
+   - Stärken-Liste (optimal trainierte Muskelgruppen)
+   - Schwachstellen-Liste (untertrainiert, sortiert nach Priorität)
+   - Nächste Schritte (3-4 konkrete Actions)
+   - Wissenschaftlich fundierte Ratschläge
+
+### Technische Details
+- **Backend:** core/views.py - export_training_pdf() (380 Zeilen)
+- **Frontend:** core/templates/core/training_pdf_simple.html (462 Zeilen)
+- **Charts:** core/chart_generator.py (514 Zeilen)
+  - SVG Rendering: _render_svg_muscle_map_png_base64()
+  - PIL Fallback: _generate_body_map_with_data_pil_fallback()
+  - Matplotlib: generate_muscle_heatmap(), generate_volume_chart(), generate_push_pull_pie()
+- **PDF Engine:** xhtml2pdf (CSS2.1 kompatibel)
+- **Dependencies:** cairosvg, matplotlib, Pillow, xhtml2pdf
+
+### Bugfixes & Verbesserungen
+- ✅ Push/Pull Keys korrigiert (BRUST statt brust, etc.)
+- ✅ h2 border-bottom entfernt bei Chart-Überschriften (keine Linien durch Grafiken)
+- ✅ Page-break-after: avoid bei Überschriften (bleiben mit Inhalt zusammen)
+- ✅ Legenden-Schrift vergrößert (16px, einheitlich)
+- ✅ Deckblatt-Layout optimiert (kompakt, alles auf eine Seite)
+- ✅ Body-Map Skalierung (62% width für optimale Darstellung)
+
+---
+
+## 🎉 Features aus Version 0.4.0 (10.01.2026)
 
 ### AI Coach - Automatische Plan-Optimierung
 Die App hat jetzt einen vollständigen AI Coach für automatische Plan-Anpassung:
@@ -446,5 +557,32 @@ Die App hat jetzt einen vollständigen AI Coach für automatische Plan-Anpassung
 
 ---
 
-**Letzte Aktualisierung:** 10.01.2026  
+**Letzte Aktualisierung:** 11.01.2026  
 **Nächstes Review:** Nach Abschluss Phase 5 (Next Features)
+
+---
+
+## 📊 Statistiken & Metriken
+
+### Codebase
+- **Gesamtzeilen Code:** ~15.000+ Zeilen
+- **Python Backend:** ~8.000 Zeilen
+- **Templates (HTML/Django):** ~5.000 Zeilen
+- **JavaScript/Chart.js:** ~2.000 Zeilen
+
+### Features Completed
+- **Phase 1:** 100% (10/10 Features)
+- **Phase 2:** 100% (12/12 Features)
+- **Phase 3:** 100% (15/15 Features)
+- **Phase 3.5:** 100% (10/10 Features)
+- **Phase 3.7:** 100% (8/8 Features - AI Coach)
+- **Phase 4:** 30% (3/10 Features - PDF Export, PWA, Übungsdb)
+- **Phase 5:** 40% (2/5 High Priority - Superset, PDF Report)
+
+### Key Numbers (Januar 2026)
+- **Übungsdatenbank:** 200+ Übungen mit anatomischen Daten
+- **SVG Muskelregionen:** 50+ identifizierbare Bereiche
+- **AI Coach Cost:** ~0.003€ pro Plan-Generierung/Optimierung
+- **PDF Seiten:** 7 Seiten professioneller Report
+- **Charts:** 4 (Body-Map, Heatmap, Volumen-Line, Push/Pull-Pie)
+- **Deployment:** Produktiv auf last-strawberry.com

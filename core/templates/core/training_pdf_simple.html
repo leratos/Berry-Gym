@@ -14,26 +14,26 @@
         /* Deckblatt */
         .cover-page {
             text-align: center;
-            padding-top: 150px;
+            padding-top: 60px;
         }
         
         .cover-title {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: bold;
             color: #0d6efd;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
         }
         
         .cover-subtitle {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 40px;
+            font-size: 14px;
+            color: #808080;
+            margin-bottom: 30px;
         }
         
         .cover-info {
             font-size: 12px;
             color: #555;
-            margin: 15px 0;
+            line-height: 1.8;
         }
         
         /* Überschriften */
@@ -51,12 +51,20 @@
             padding-bottom: 6px;
             font-size: 16px;
             margin: 20px 0 12px 0;
+            page-break-after: avoid;
         }
         
         h3 {
             color: #666;
             font-size: 13px;
             margin: 15px 0 8px 0;
+            page-break-after: avoid;
+        }
+        
+        /* Vermeide Seitenumbrüche innerhalb von Bildern */
+        img {
+            page-break-inside: avoid;
+            page-break-before: auto;
         }
         
         /* Tabellen */
@@ -152,13 +160,37 @@
 <body>
     <!-- DECKBLATT -->
     <div class="cover-page">
-        <div style="font-size: 48px; margin-bottom: 20px;">💪</div>
         <div class="cover-title">Training Report</div>
         <div class="cover-subtitle">Professional Edition - Trainer Analysis</div>
         
+        {% if body_map_image %}
+        <div style="text-align: center; margin: 20px 0;">
+            <img src="data:image/png;base64,{{ body_map_image }}" style="width: auto; height: 500px; margin: 0 auto" alt="Body Map">
+        </div>
+        
+        <!-- Legende unter der Body-Map -->
+        <div style="text-align: center; margin: 15px 0 30px 0;">
+            <table style="margin: 0 auto; border: none; font-size: 16px;">
+                <tr>
+                    <td style="width: 35px; height: 25px; background-color: #28a745; border: 1px solid #000;"></td>
+                    <td style="padding-left: 10px; padding-right: 30px; font-size: 16px; font-weight: normal;">Optimal</td>
+                    <td style="width: 35px; height: 25px; background-color: #ffc107; border: 1px solid #000;"></td>
+                    <td style="padding-left: 10px; padding-right: 30px; font-size: 16px; font-weight: normal;">Untertrainiert</td>
+                    <td style="width: 35px; height: 25px; background-color: #dc3545; border: 1px solid #000;"></td>
+                    <td style="padding-left: 10px; padding-right: 30px; font-size: 16px; font-weight: normal;">Übertrainiert</td>
+                    <td style="width: 35px; height: 25px; background-color: #d9d9d9; border: 1px solid #000;"></td>
+                    <td style="padding-left: 10px; font-size: 16px; font-weight: normal;">Nicht trainiert</td>
+                </tr>
+            </table>
+        </div>
+        {% endif %}
+        
         <div class="cover-info">
             <strong>Athlet:</strong> {{ user.get_full_name|default:user.username }}<br>
-            <strong>Berichtszeitraum:</strong> {{ start_datum|date:"d.m.Y" }} - {{ end_datum|date:"d.m.Y" }}<br>
+            <strong>Berichtszeitraum:</strong> {{ start_datum|date:"d.m.Y" }} - {{ end_datum|date:"d.m.Y" }}
+        </div>
+        
+        <div style="position: absolute; bottom: 80px; width: 100%; text-align: center; font-size: 12px; color: #555;">
             <strong>Erstellt am:</strong> {{ current_date|date:"d.m.Y H:i" }}
         </div>
     </div>
@@ -193,6 +225,13 @@
     <!-- EXECUTIVE SUMMARY -->
     <h1>📊 Executive Summary</h1>
     
+    {% if total_einheiten < 8 %}
+    <div class="info-box warning">
+        <strong>⚠️ Hinweis zur Datenqualität:</strong><br>
+        Dieser Bericht basiert auf {{ total_einheiten }} Trainingseinheiten. Für aussagekräftige Analysen und Empfehlungen werden mindestens 8-10 Trainings empfohlen. Aktuelle Bewertungen sollten mit Vorsicht interpretiert werden.
+    </div>
+    {% endif %}
+    
     <div class="info-box success">
         <strong>Trainingseinheiten:</strong> {{ total_einheiten }}<br>
         <strong>Gesamtsätze:</strong> {{ total_saetze }}<br>
@@ -226,7 +265,8 @@
     </table>
     {% else %}
     <div class="info-box warning">
-        <strong>Keine Körperwerte erfasst.</strong> Beginne mit regelmäßigen Messungen für detaillierte Analysen.
+        <strong>Keine Körperdaten erfasst.</strong><br>
+        Dieser Bericht fokussiert sich auf Trainingsdaten. Für eine umfassende Analyse empfehlen wir die regelmäßige Erfassung von Körperwerten (Gewicht, Umfänge). Dies ermöglicht präzisere Aussagen zur körperlichen Entwicklung.
     </div>
     {% endif %}
     
@@ -268,12 +308,15 @@
     </table>
     
     <!-- BODY MAP - Matplotlib Heatmap -->
-    <h2>Muskel-Balance Visualisierung</h2>
     {% if muscle_heatmap %}
-    <div style="text-align: center; margin: 20px 0;">
-        <img src="data:image/png;base64,{{ muscle_heatmap }}" style="max-width: 100%; height: auto;" alt="Muskelgruppen Heatmap">
+    <div style="page-break-inside: avoid;">
+        <h2 style="margin-bottom: 15px; border-bottom: none; padding-bottom: 5px;">Muskel-Balance Visualisierung</h2>
+        <div style="text-align: center; margin: 0;">
+            <img src="data:image/png;base64,{{ muscle_heatmap }}" style="max-width: 100%; height: auto;" alt="Muskelgruppen Heatmap">
+        </div>
     </div>
     {% else %}
+    <h2>Muskel-Balance Visualisierung</h2>
     <p style="font-size: 9px; color: #666; margin-bottom: 10px;">
         Balken zeigen das Trainingsvolumen relativ zum optimalen Bereich. Grün = Optimal, Gelb = Untertrainiert, Rot = Übertrainiert.
     </p>
@@ -304,6 +347,7 @@
             {% endfor %}
         </tbody>
     </table>
+    {% endif %}
     
     <pdf:nextpage />
     
@@ -330,13 +374,19 @@
     
     <!-- VOLUMEN-ENTWICKLUNG -->
     {% if volume_chart %}
-    <h2>Trainingsvolumen-Entwicklung</h2>
-    <div style="text-align: center; margin: 20px 0;">
-        <img src="data:image/png;base64,{{ volume_chart }}" style="max-width: 100%; height: auto;" alt="Volumen Entwicklung">
+    <div style="page-break-inside: avoid;">
+        <h2 style="margin-bottom: 15px; border-bottom: none; padding-bottom: 5px;">Trainingsvolumen-Entwicklung</h2>
+        <div style="text-align: center; margin: 0;">
+            <img src="data:image/png;base64,{{ volume_chart }}" style="max-width: 100%; height: auto;" alt="Volumen Entwicklung">
+        </div>
     </div>
     {% endif %}
     
+    <pdf:nextpage />
+    
     <!-- TRAININGSFORTSCHRITT -->
+    <h1>📈 Trainingsfortschritt</h1>
+    
     <h2>Kraftentwicklung Top 5</h2>
     {% if kraftentwicklung %}
     <table>
