@@ -14,6 +14,7 @@ python-dotenv==1.0.1
 # PDF Export (Hybrid: WeasyPrint für Linux, xhtml2pdf als Fallback)
 WeasyPrint==62.3
 xhtml2pdf==0.2.16
+matplotlib==3.10.8
 
 # AI Coach - LLM Integration
 ollama==0.4.3

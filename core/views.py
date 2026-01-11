@@ -1575,6 +1575,7 @@ def export_training_pdf(request):
     """Exportiert Trainingsstatistiken als PDF (xhtml2pdf als primärer Renderer)."""
     from io import BytesIO
     import logging
+    from core.chart_generator import generate_muscle_heatmap, generate_volume_chart, generate_push_pull_pie
     
     logger = logging.getLogger(__name__)
     
@@ -1850,9 +1851,34 @@ def export_training_pdf(request):
             'richtung': 'zugenommen' if gewichts_diff > 0 else 'abgenommen'
         }
     
+    # Push/Pull Balance-Daten für Template
+    push_saetze = push_pull_balance.get('push_saetze', 0)
+    pull_saetze = push_pull_balance.get('pull_saetze', 0)
+    push_pull_ratio = push_pull_balance.get('ratio', 0)
+    push_pull_bewertung = push_pull_balance.get('bewertung', '')
+    push_pull_empfehlung = push_pull_balance.get('empfehlung', '')
+    
+    # Stärken identifizieren (optimale Muskelgruppen)
+    staerken = [mg for mg in muskelgruppen_stats if mg['status'] == 'optimal']
+    
+    # Charts generieren (matplotlib)
+    try:
+        muscle_heatmap = generate_muscle_heatmap(muskelgruppen_stats)
+        volume_chart = generate_volume_chart(volumen_wochen[-8:])
+        push_pull_chart = generate_push_pull_pie(push_saetze, pull_saetze)
+        logger.info('Charts successfully generated')
+    except Exception as e:
+        logger.warning(f'Chart generation failed: {str(e)}')
+        muscle_heatmap = None
+        volume_chart = None
+        push_pull_chart = None
+    
     context = {
         'user': request.user,
         'datum': heute,
+        'current_date': heute,
+        'start_datum': letzte_30_tage,
+        'end_datum': heute,
         'trainings': trainings,
         'gesamt_trainings': gesamt_trainings,
         'gesamt_saetze': gesamt_saetze,
@@ -1863,20 +1889,34 @@ def export_training_pdf(request):
         'trainings_pro_woche': trainings_pro_woche,
         'top_uebungen': top_uebungen,
         'kraft_progression': kraft_progression,
+        'kraftentwicklung': kraft_progression,  # Alias für Template
         'muskelgruppen_stats': muskelgruppen_stats,
         'push_pull_balance': push_pull_balance,
+        'push_saetze': push_saetze,
+        'pull_saetze': pull_saetze,
+        'push_pull_ratio': push_pull_ratio,
+        'push_pull_bewertung': push_pull_bewertung,
+        'push_pull_empfehlung': push_pull_empfehlung,
         'schwachstellen': schwachstellen,
+        'staerken': staerken,
+        'total_einheiten': gesamt_trainings,
+        'total_saetze': gesamt_saetze,
+        'total_volumen': round(gesamt_volumen, 0),
         'avg_rpe': avg_rpe,
         'rpe_verteilung': rpe_verteilung,
         'volumen_wochen': volumen_wochen[-8:],  # Letzte 8 Wochen für Übersichtlichkeit
+        # Charts
+        'muscle_heatmap': muscle_heatmap,
+        'volume_chart': volume_chart,
+        'push_pull_chart': push_pull_chart,
         'koerperwerte': koerperwerte,
         'letzter_koerperwert': letzter_koerperwert,
         'gewichts_trend': gewichts_trend,
     }
     
-    # HTML rendern
+    # HTML rendern (vereinfachtes Template für xhtml2pdf-Kompatibilität)
     try:
-        html_string = render_to_string('core/training_pdf_v2.html', context)
+        html_string = render_to_string('core/training_pdf_simple.html', context)
     except Exception as e:
         logger.error(f'Template rendering failed: {str(e)}', exc_info=True)
         messages.error(request, f'Template-Fehler: {str(e)}')

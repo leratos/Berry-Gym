@@ -4,21 +4,11 @@
     <meta charset="utf-8">
     <title>HomeGym Training Report - Professional Edition</title>
     <style>
-        @page {
-            size: A4;
-            margin: 2cm;
-            @bottom-right {
-                content: "Seite " counter(page) " von " counter(pages);
-                font-size: 8px;
-                color: #6c757d;
-            }
-        }
-        
         body {
-            font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
-            color: #2c3e50;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333;
             font-size: 10px;
-            line-height: 1.6;
+            line-height: 1.5;
         }
         
         /* Deckblatt */
@@ -29,75 +19,176 @@
         }
         
         .cover-title {
-            font-size: 36px;
+            font-size: 32px;
             font-weight: bold;
             color: #0d6efd;
             margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
         }
         
         .cover-subtitle {
-            font-size: 18px;
-            color: #6c757d;
-            margin-bottom: 50px;
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 40px;
         }
         
         .cover-info {
-            font-size: 14px;
-            color: #495057;
-            margin: 20px 0;
-            line-height: 2;
-        }
-        
-        /* Inhaltsverzeichnis */
-        .toc-page {
-            page-break-after: always;
-        }
-        
-        .toc-title {
-            font-size: 24px;
-            color: #0d6efd;
-            border-bottom: 3px solid #0d6efd;
-            padding-bottom: 10px;
-            margin-bottom: 25px;
-        }
-        
-        .toc-item {
-            padding: 8px 0;
-            border-bottom: 1px dotted #dee2e6;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .toc-item-title {
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        /* Executive Summary */
-        .executive-summary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 8px;
-            margin: 20px 0;
-            page-break-inside: avoid;
-        }
-        
-        .executive-summary h2 {
-            color: white;
-            border: none;
-            margin-top: 0;
+            font-size: 12px;
+            color: #555;
+            margin: 15px 0;
+            line-height: 1.8;
         }
         
         /* Überschriften */
         h1 {
             color: #0d6efd;
-            border-bottom: 4px solid #0d6efd;
-            padding-bottom: 12px;
-            font-size: 26px;
-            margin: 30px 0 20px 0;
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 10px;
+            font-size: 22px;
+            margin: 25px 0 15px 0;
+        }
+        
+        h2 {
+            color: #555;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 6px;
+            font-size: 16px;
+            margin: 20px 0 12px 0;
+        }
+        
+        h3 {
+            color: #666;
+            font-size: 13px;
+            margin: 15px 0 8px 0;
+        }
+        
+        /* Tabellen */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 15px 0;
+            font-size: 9px;
+        }
+        
+        th {
+            background-color: #0d6efd;
+            color: white;
+            padding: 8px 6px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 6px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        /* Stat Boxes */
+        .stat-card {
+            background-color: #0d6efd;
+            color: white;
+            padding: 12px;
+            margin: 8px 8px 8px 0;
+            text-align: center;
+            display: inline-block;
+            width: 120px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 3px 0;
+        }
+        
+        .stat-label {
+            font-size: 8px;
+            text-transform: uppercase;
+        }
+        
+        /* Info Boxes */
+        .info-box {
+            padding: 12px;
+            margin: 12px 0;
+            border-left: 4px solid #0d6efd;
+            background-color: #f8f9fa;
+        }
+        
+        .info-box.success {
+            background-color: #d1f2eb;
+            border-left-color: #28a745;
+        }
+        
+        .info-box.warning {
+            background-color: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        
+        .info-box.danger {
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: bold;
+        }
+        
+        .badge-success { background-color: #28a745; color: white; }
+        .badge-warning { background-color: #ffc107; color: #333; }
+        .badge-danger { background-color: #dc3545; color: white; }
+        .badge-info { background-color: #17a2b8; color: white; }
+        .badge-primary { background-color: #0d6efd; color: white; }
+        
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border: 1px solid #ddd;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #0d6efd;
+            text-align: center;
+            color: white;
+            font-size: 8px;
+            line-height: 20px;
+            font-weight: bold;
+        }
+        
+        /* Footer */
+        .page-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 2px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 8px;
+        }
+        
+        .legend-item {
+            display: inline-block;
+            margin-right: 15px;
+            font-size: 9px;
+        }
+        
+        .legend-color {
+            display: inline-block;
+            width: 15px;
+            height: 12px;
+            margin-right: 4px;
+            border: 1px solid #999;
+        }
+    </style>
+</head>
             page-break-after: avoid;
         }
         

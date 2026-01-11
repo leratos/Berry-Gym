@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>HomeGym Training Report</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333;
+            font-size: 10px;
+            line-height: 1.5;
+        }
+        
+        /* Deckblatt */
+        .cover-page {
+            text-align: center;
+            padding-top: 150px;
+        }
+        
+        .cover-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #0d6efd;
+            margin-bottom: 15px;
+        }
+        
+        .cover-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .cover-info {
+            font-size: 12px;
+            color: #555;
+            margin: 15px 0;
+        }
+        
+        /* Überschriften */
+        h1 {
+            color: #0d6efd;
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 10px;
+            font-size: 22px;
+            margin: 25px 0 15px 0;
+        }
+        
+        h2 {
+            color: #555;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 6px;
+            font-size: 16px;
+            margin: 20px 0 12px 0;
+        }
+        
+        h3 {
+            color: #666;
+            font-size: 13px;
+            margin: 15px 0 8px 0;
+        }
+        
+        /* Tabellen */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 15px 0;
+            font-size: 9px;
+        }
+        
+        th {
+            background-color: #0d6efd;
+            color: white;
+            padding: 8px 6px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 6px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        /* Info Boxes */
+        .info-box {
+            padding: 12px;
+            margin: 12px 0;
+            border-left: 4px solid #0d6efd;
+            background-color: #f8f9fa;
+        }
+        
+        .info-box.success {
+            background-color: #d1f2eb;
+            border-left-color: #28a745;
+        }
+        
+        .info-box.warning {
+            background-color: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        
+        .info-box.danger {
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 8px;
+            font-weight: bold;
+        }
+        
+        .badge-success { background-color: #28a745; color: white; }
+        .badge-warning { background-color: #ffc107; color: #333; }
+        .badge-danger { background-color: #dc3545; color: white; }
+        .badge-info { background-color: #17a2b8; color: white; }
+        
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border: 1px solid #ddd;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #0d6efd;
+            text-align: center;
+            color: white;
+            font-size: 8px;
+            line-height: 20px;
+            font-weight: bold;
+        }
+        
+        /* Footer */
+        .page-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 2px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- DECKBLATT -->
+    <div class="cover-page">
+        <div style="font-size: 48px; margin-bottom: 20px;">💪</div>
+        <div class="cover-title">Training Report</div>
+        <div class="cover-subtitle">Professional Edition - Trainer Analysis</div>
+        
+        <div class="cover-info">
+            <strong>Athlet:</strong> {{ user.get_full_name|default:user.username }}<br>
+            <strong>Berichtszeitraum:</strong> {{ start_datum|date:"d.m.Y" }} - {{ end_datum|date:"d.m.Y" }}<br>
+            <strong>Erstellt am:</strong> {{ current_date|date:"d.m.Y H:i" }}
+        </div>
+    </div>
+    
+    <pdf:nextpage />
+    
+    <!-- INHALTSVERZEICHNIS -->
+    <h1>📋 Inhaltsverzeichnis</h1>
+    <table>
+        <tr>
+            <td>1. Executive Summary</td>
+        </tr>
+        <tr>
+            <td>2. Körperwerte Entwicklung</td>
+        </tr>
+        <tr>
+            <td>3. Muskelgruppen-Analyse</td>
+        </tr>
+        <tr>
+            <td>4. Push/Pull Balance</td>
+        </tr>
+        <tr>
+            <td>5. Trainingsfortschritt</td>
+        </tr>
+        <tr>
+            <td>6. Trainer-Empfehlungen</td>
+        </tr>
+    </table>
+    
+    <pdf:nextpage />
+    
+    <!-- EXECUTIVE SUMMARY -->
+    <h1>📊 Executive Summary</h1>
+    
+    <div class="info-box success">
+        <strong>Trainingseinheiten:</strong> {{ total_einheiten }}<br>
+        <strong>Gesamtsätze:</strong> {{ total_saetze }}<br>
+        <strong>Trainingsvolumen:</strong> {{ total_volumen|floatformat:0 }} kg
+    </div>
+    
+    <!-- KÖRPERWERTE -->
+    <h2>Körperentwicklung</h2>
+    {% if koerperwerte %}
+    <table>
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Gewicht</th>
+                <th>Brust (cm)</th>
+                <th>Taille (cm)</th>
+                <th>Bizeps (cm)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for wert in koerperwerte %}
+            <tr>
+                <td>{{ wert.datum|date:"d.m.Y" }}</td>
+                <td>{{ wert.gewicht|floatformat:1 }} kg</td>
+                <td>{{ wert.brustumfang|floatformat:1|default:"-" }}</td>
+                <td>{{ wert.taillenumfang|floatformat:1|default:"-" }}</td>
+                <td>{{ wert.bizepsumfang|floatformat:1|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="info-box warning">
+        <strong>Keine Körperwerte erfasst.</strong> Beginne mit regelmäßigen Messungen für detaillierte Analysen.
+    </div>
+    {% endif %}
+    
+    <pdf:nextpage />
+    
+    <!-- MUSKELGRUPPEN-ANALYSE -->
+    <h1>🎯 Muskelgruppen-Analyse (30 Tage)</h1>
+    
+    <h2>Trainingsvolumen pro Muskelgruppe</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Muskelgruppe</th>
+                <th>Sätze</th>
+                <th>Status</th>
+                <th>Erklärung</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gruppe in muskelgruppen_stats %}
+            <tr>
+                <td><strong>{{ gruppe.name }}</strong></td>
+                <td>{{ gruppe.saetze }}</td>
+                <td>
+                    {% if gruppe.status == 'optimal' %}
+                    <span class="badge badge-success">OPTIMAL</span>
+                    {% elif gruppe.status == 'untertrainiert' %}
+                    <span class="badge badge-warning">UNTERTRAINIERT</span>
+                    {% elif gruppe.status == 'uebertrainiert' %}
+                    <span class="badge badge-danger">ÜBERTRAINIERT</span>
+                    {% else %}
+                    <span class="badge badge-info">NICHT TRAINIERT</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 8px;">{{ gruppe.erklaerung }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- BODY MAP - Matplotlib Heatmap -->
+    <h2>Muskel-Balance Visualisierung</h2>
+    {% if muscle_heatmap %}
+    <div style="text-align: center; margin: 20px 0;">
+        <img src="data:image/png;base64,{{ muscle_heatmap }}" style="max-width: 100%; height: auto;" alt="Muskelgruppen Heatmap">
+    </div>
+    {% else %}
+    <p style="font-size: 9px; color: #666; margin-bottom: 10px;">
+        Balken zeigen das Trainingsvolumen relativ zum optimalen Bereich. Grün = Optimal, Gelb = Untertrainiert, Rot = Übertrainiert.
+    </p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Muskelgruppe</th>
+                <th>Trainingsvolumen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gruppe in muskelgruppen_stats %}
+            <tr>
+                <td><strong>{{ gruppe.name }}</strong></td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ gruppe.prozent_von_optimal }}%; 
+                            {% if gruppe.status == 'optimal' %}background: #28a745;
+                            {% elif gruppe.status == 'untertrainiert' %}background: #ffc107;
+                            {% elif gruppe.status == 'uebertrainiert' %}background: #dc3545;
+                            {% else %}background: #6c757d;{% endif %}">
+                            {{ gruppe.saetze }} Sätze
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <pdf:nextpage />
+    
+    <!-- PUSH/PULL BALANCE -->
+    <h1>⚖️ Push/Pull Balance</h1>
+    
+    {% if push_pull_chart %}
+    <div style="text-align: center; margin: 20px 0;">
+        <img src="data:image/png;base64,{{ push_pull_chart }}" style="max-width: 60%; height: auto;" alt="Push/Pull Balance Chart">
+    </div>
+    {% endif %}
+    
+    {% if push_pull_bewertung %}
+    <div class="info-box {% if push_pull_bewertung == 'Ausgewogen' %}success{% else %}warning{% endif %}">
+        <strong>Push-Sätze:</strong> {{ push_saetze }}<br>
+        <strong>Pull-Sätze:</strong> {{ pull_saetze }}<br>
+        <strong>Ratio:</strong> {{ push_pull_ratio|floatformat:2 }}:1<br>
+        <strong>Bewertung:</strong> {{ push_pull_bewertung }}
+        {% if push_pull_empfehlung %}
+        <br><br><strong>Empfehlung:</strong> {{ push_pull_empfehlung }}
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- VOLUMEN-ENTWICKLUNG -->
+    {% if volume_chart %}
+    <h2>Trainingsvolumen-Entwicklung</h2>
+    <div style="text-align: center; margin: 20px 0;">
+        <img src="data:image/png;base64,{{ volume_chart }}" style="max-width: 100%; height: auto;" alt="Volumen Entwicklung">
+    </div>
+    {% endif %}
+    
+    <!-- TRAININGSFORTSCHRITT -->
+    <h2>Kraftentwicklung Top 5</h2>
+    {% if kraftentwicklung %}
+    <table>
+        <thead>
+            <tr>
+                <th>Übung</th>
+                <th>Start-Gewicht</th>
+                <th>Aktuell</th>
+                <th>Entwicklung</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prog in kraftentwicklung|slice:":5" %}
+            <tr>
+                <td><strong>{{ prog.uebung }}</strong></td>
+                <td>{{ prog.start_gewicht|floatformat:1 }} kg</td>
+                <td>{{ prog.aktuell_gewicht|floatformat:1 }} kg</td>
+                <td style="color: #28a745; font-weight: bold;">Gewinn</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="info-box warning">
+        Noch keine Kraftentwicklung messbar. Fortschritte werden nach mehreren Trainingseinheiten sichtbar.
+    </div>
+    {% endif %}
+    
+    <pdf:nextpage />
+    
+    <!-- TRAINER-EMPFEHLUNGEN -->
+    <h1>🎓 Trainer-Empfehlungen</h1>
+    
+    <h2>Deine Stärken</h2>
+    {% if staerken %}
+    <div class="info-box success">
+        <ul style="margin: 5px 0; padding-left: 20px;">
+            {% for staerke in staerken %}
+            <li style="margin: 4px 0;"><strong>{{ staerke.name }}:</strong> {{ staerke.saetze }} Sätze - {{ staerke.erklaerung }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <div class="info-box">Beginne mit regelmäßigem Training, um Stärken aufzubauen.</div>
+    {% endif %}
+    
+    <h2>Schwachstellen (Priorität)</h2>
+    {% if schwachstellen %}
+    <div class="info-box warning">
+        <ul style="margin: 5px 0; padding-left: 20px;">
+            {% for schwach in schwachstellen %}
+            <li style="margin: 4px 0;">
+                <strong>{{ schwach.name }}:</strong> {{ schwach.erklaerung }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <div class="info-box success">Keine Schwachstellen identifiziert - ausgewogenes Training!</div>
+    {% endif %}
+    
+    <h2>Nächste Schritte</h2>
+    <div class="info-box">
+        <ol style="margin: 5px 0; padding-left: 20px;">
+            {% if schwachstellen %}
+            <li style="margin: 4px 0;">Fokussiere auf <strong>{{ schwachstellen.0.name }}</strong> - {{ schwachstellen.0.erklaerung }}</li>
+            {% endif %}
+            {% if push_pull_empfehlung %}
+            <li style="margin: 4px 0;">{{ push_pull_empfehlung }}</li>
+            {% endif %}
+            <li style="margin: 4px 0;">Erfasse regelmäßig Körperwerte für detaillierte Fortschrittsverfolgung</li>
+            <li style="margin: 4px 0;">Steigere Trainingsgewichte progressiv (2,5-5% pro Woche bei guter Form)</li>
+        </ol>
+    </div>
+    
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <p><strong>HomeGym Training Report - Professional Edition</strong></p>
+        <p>Erstellt am {{ current_date|date:"d.m.Y H:i" }} | Athlet: {{ user.get_full_name|default:user.username }}</p>
+        <p style="margin-top: 10px; font-size: 7px; color: #999;">
+            Dieser Report basiert auf evidenzbasierten Trainingsrichtlinien. Empfehlungen sind individuell anzupassen.
+        </p>
+    </div>
+</body>
+</html>
