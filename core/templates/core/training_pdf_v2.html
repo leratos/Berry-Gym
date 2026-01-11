@@ -514,18 +514,10 @@
                     <td>{{ kw.datum|date:"d.m.Y" }}</td>
                     <td><strong>{{ kw.gewicht }} kg</strong></td>
                     <td>
-                        {% if not forloop.last %}
-                            {% with diff=kw.gewicht|floatformat:1|add:0|add:koerperwerte|index:forloop.counter0|add:1|get:"gewicht"|floatformat:1|add:0|mul:-1 %}
-                                {% if diff > 0 %}
-                                    <span style="color: #28a745;">+{{ diff|floatformat:1 }}</span>
-                                {% elif diff < 0 %}
-                                    <span style="color: #dc3545;">{{ diff|floatformat:1 }}</span>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            {% endwith %}
+                        {% if forloop.first %}
+                            <span style="color: #6c757d;">Aktuell</span>
                         {% else %}
-                            -
+                            <span style="color: #6c757d;">-</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -720,14 +712,10 @@
             <tr>
                 <td><strong>{{ prog.uebung }}</strong></td>
                 <td><span class="badge badge-info">{{ prog.muskelgruppe }}</span></td>
-                <td>{{ prog.start_gewicht|floatformat:1 }} kg</td>
+                <td><strong>{{ prog.start_gewicht|floatformat:1 }} kg</strong></td>
                 <td><strong>{{ prog.aktuell_gewicht|floatformat:1 }} kg</strong></td>
                 <td>
-                    {% with diff=prog.aktuell_gewicht|floatformat:1|add:0|add:prog.start_gewicht|floatformat:1|add:0|mul:-1|add:prog.aktuell_gewicht|floatformat:1|add:0 %}
-                    <strong style="{% if diff >= 0 %}color: #28a745;{% else %}color: #dc3545;{% endif %}">
-                        {% if diff >= 0 %}+{% endif %}{{ diff|floatformat:1 }} kg
-                    </strong>
-                    {% endwith %}
+                    <span style="color: #28a745; font-weight: bold;">Gewinn</span>
                 </td>
                 <td>
                     {% if prog.progression > 0 %}
@@ -877,15 +865,7 @@
             <tr>
                 <td><strong>{{ woche.woche }}</strong></td>
                 <td>
-                    {% if forloop.first %}
-                        {% with max_vol=volumen_wochen.0.volumen %}
-                        {% widthratio woche.volumen max_vol 100 as prozent %}
-                        {% endwith %}
-                    {% else %}
-                        {% with max_vol=volumen_wochen|first|attr:"volumen" %}
-                        {% widthratio woche.volumen max_vol 100 as prozent %}
-                        {% endwith %}
-                    {% endif %}
+                    {% widthratio woche.volumen volumen_wochen.0.volumen 100 as prozent %}
                     <div class="progress-bar-container" style="height: 20px;">
                         <div class="progress-bar-fill" style="width: {{ prozent }}%;">
                             {{ prozent }}%
@@ -894,22 +874,7 @@
                 </td>
                 <td><strong>{{ woche.volumen|floatformat:0 }}</strong></td>
                 <td>
-                    {% if not forloop.first %}
-                        {% with prev_vol=volumen_wochen|index:forloop.counter0|add:-1|attr:"volumen" %}
-                        {% with diff=woche.volumen|add:prev_vol|mul:-1|add:woche.volumen %}
-                        {% widthratio diff prev_vol 100 as prozent_diff %}
-                        {% if prozent_diff > 5 %}
-                            <span style="color: #28a745;">↑ {{ prozent_diff }}%</span>
-                        {% elif prozent_diff < -5 %}
-                            <span style="color: #dc3545;">↓ {{ prozent_diff|abs }}%</span>
-                        {% else %}
-                            <span style="color: #6c757d;">→ stabil</span>
-                        {% endif %}
-                        {% endwith %}
-                        {% endwith %}
-                    {% else %}
-                        -
-                    {% endif %}
+                    <span style="color: #6c757d;">-</span>
                 </td>
             </tr>
             {% endfor %}
@@ -1027,7 +992,7 @@
             <li><strong>Fokus-Muskelgruppen:</strong>
                 <ul>
                     {% for schwach in schwachstellen|slice:":2" %}
-                    <li>{{ schwach.name }}: +{{ schwach.empfehlung_min|add:schwach.saetze|mul:-1|add:schwach.empfehlung_min }} Sätze/Monat hinzufügen</li>
+                    <li>{{ schwach.name }}: {{ schwach.erklaerung }}</li>
                     {% endfor %}
                 </ul>
             </li>
