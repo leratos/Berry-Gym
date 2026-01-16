@@ -1,0 +1,128 @@
+/* Offline Manager Styles */
+
+/* Connection Indicator (links unten, klein und unaufdringlich) */
+.connection-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    opacity: 0.8;
+}
+
+.connection-indicator:hover {
+    opacity: 1;
+}
+
+.connection-indicator.online {
+    background-color: #198754;
+    color: white;
+}
+
+.connection-indicator.offline {
+    background-color: #dc3545;
+    color: white;
+    animation: pulse 2s infinite;
+    opacity: 1;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.connection-indicator i {
+    font-size: 0.8rem;
+}
+
+/* Connection Toast (zentriert unten) */
+.connection-toast {
+    position: fixed;
+    bottom: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: bottom 0.3s ease;
+    min-width: 250px;
+    text-align: center;
+}
+
+.connection-toast.show {
+    bottom: 20px;
+}
+
+.connection-toast.success {
+    background-color: #198754;
+    color: white;
+}
+
+.connection-toast.warning {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.connection-toast.error {
+    background-color: #dc3545;
+    color: white;
+}
+
+.connection-toast.info {
+    background-color: #0dcaf0;
+    color: #000;
+}
+
+/* Offline Banner (falls Internet länger weg) */
+.offline-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #dc3545;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font-size: 0.875rem;
+    z-index: 9998;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.offline-banner i {
+    margin-right: 8px;
+}
+
+/* Dark Mode Support */
+[data-bs-theme="dark"] .connection-indicator {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+[data-bs-theme="dark"] .connection-toast {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+}
+
+/* Mobile Responsive */
+@media (max-width: 576px) {
+    .connection-indicator {
+        top: 5px;
+        right: 5px;
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    
+    .connection-toast {
+        min-width: 200px;
+        font-size: 0.8rem;
+    }
+}

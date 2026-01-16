@@ -35,6 +35,12 @@ db.sqlite3-journal
 /staticfiles/
 /media/
 
+# Documentation (internal notes)
+/docs/
+
+# Development scripts (local only)
+/dev-scripts/
+
 # Environment Variables
 .env
 !.env.example

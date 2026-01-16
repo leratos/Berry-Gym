@@ -5,6 +5,10 @@ urlpatterns = [
     # Auth
     # path('register/', views.register, name='register'),  # DEAKTIVIERT - keine öffentliche Registrierung
     
+    # PWA Files (must be at root)
+    path('service-worker.js', views.service_worker, name='service_worker'),
+    path('manifest.json', views.manifest, name='manifest'),
+    
     # Dashboard
     path('', views.dashboard, name='dashboard'),
     
@@ -35,6 +39,9 @@ urlpatterns = [
     path('training/<int:training_id>/finish/', views.finish_training, name='finish_training'),
     path('api/last-set/<int:uebung_id>/', views.get_last_set, name='get_last_set'),
     path('stats/exercise/<int:uebung_id>/', views.exercise_stats, name='exercise_stats'),
+    
+    # Offline Sync
+    path('api/sync-offline/', views.sync_offline_data, name='sync_offline_data'),
     
     # Progress Photos
     path('progress-photos/', views.progress_photos, name='progress_photos'),
