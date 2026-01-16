@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
 **Stand:** 11.01.2026  
-**Version:** 0.5.0
+**Version:** 0.6.0
 
 ---
 
@@ -189,13 +189,22 @@
 
 ---
 
-## 🔄 PHASE 4: Erweiterte Features (20% - IN ARBEIT)
+## 🔄 PHASE 4: Erweiterte Features (40% - IN ARBEIT)
 
 ### In-App Plan-Editor
 - [x] **Pläne in der App erstellen (ohne Admin)** ✅
 - [x] **Übungen per Drag & Drop sortieren** ✅
 - [x] **Plan bearbeiten/löschen** ✅
-- [ ] Plan-Templates (Push/Pull/Legs, etc.)
+- [x] **Plan-Templates** (Push/Pull/Legs, Upper/Lower, Full Body) ✅
+  - 3 vordefinierte Templates (6-Tage, 4-Tage, 3-Tage Splits)
+  - Equipment-basierte Anpassung (automatische Substitution)
+  - Template-Auswahl Modal mit Detailansicht
+  - Erstellt separate Pläne pro Trainingstag
+- [x] **Plan PDF-Export** (mit QR-Code) ✅
+  - xhtml2pdf Integration
+  - QR-Code für Plan-Link
+  - Übersichtstabelle mit Muskelgruppen
+  - Professionelles Layout
 - [ ] Plan duplizieren
 - [ ] Plan teilen (QR-Code/Link)
 - [ ] Öffentliche Plan-Bibliothek
@@ -289,6 +298,14 @@
   - Muskelgruppen-Balance Visualisierung (Horizontal Bar Chart)
   - Trainingsvolumen-Entwicklung (Line Chart, letzte 8 Wochen)
   - Push/Pull Balance (Pie Chart)
+- [x] **Plan-PDF Export** ✅
+  - Trainingsplan als druckbares PDF
+  - QR-Code mit Link zum Plan
+  - Übersichtstabelle (Übung, Muskelgruppe, Sätze, Wiederholungen)
+  - Gruppierung nach Trainingstagen
+  - xhtml2pdf + qrcode Integration
+
+**Status:** ✅ Implementiert und getestet (10.01.2026 + 11.01.2026)
 - [x] **Multi-Page Layout** ✅
   - Deckblatt mit Body-Map
   - Inhaltsverzeichnis
@@ -323,16 +340,44 @@
 
 **Warum:** Professioneller Export für Trainer & Athleten, Trainingsplan-PDF ist logische Ergänzung
 
-**3. Plan-Templates** ⭐ Impact: 7/10 | Aufwand: 5h
-- [ ] **Vordefinierte Plan-Templates**
-  - Push/Pull/Legs (6 Tage)
-  - Upper/Lower (4 Tage)
-  - Full Body (3 Tage)
-  - Bro-Split (5 Tage)
-- [ ] **Template-Auswahl im Plan-Editor**
-  - "Von Template starten" Button
-  - Vorschau der Übungen
-  - Anpassbar nach Equipment
+**3. Plan-Templates** ⭐ Impact: 7/10 | Aufwand: 5h ✅ FERTIG
+- [x] **Vordefinierte Plan-Templates** ✅
+  - Push/Pull/Legs (6 Tage Split)
+  - Upper/Lower (4 Tage Split)
+  - Full Body (3 Tage Split)
+  - JSON-basiert (core/fixtures/plan_templates.json)
+  - ~80 Übungen über alle Templates
+- [x] **Template-Auswahl im Plan-Editor** ✅
+  - "Von Template starten" Button in create_plan.html
+  - Modal mit Template-Übersicht (Karten-Layout)
+  - Detail-Ansicht mit allen Trainingstagen
+  - Equipment-basierte Anpassung (verfügbar/nicht verfügbar Badges)
+- [x] **Equipment-basierte Anpassung** ✅
+  - Automatische Substitution fehlender Übungen
+  - find_substitute_exercise() Funktion
+  - Case-insensitive Equipment-Matching
+  - Fallback auf Körpergewicht-Übungen
+- [x] **API Endpoints** ✅
+  - GET /api/plan-templates/ (Template-Liste)
+  - GET /api/plan-templates/<key>/ (Detail mit Equipment-Check)
+  - POST /api/plan-templates/<key>/create/ (Plan-Erstellung)
+- [x] **Plan-Erstellung Logic** ✅
+  - Erstellt separaten Plan pro Trainingstag
+  - trainingstag-Feld wird gesetzt (z.B. "Push A")
+  - Automatische Übungs-Substitution bei fehlendem Equipment
+  - Weiterleitung zum Dashboard nach Erstellung
+
+**Status:** ✅ Implementiert und getestet (11.01.2026)
+**Technische Details:**
+- 3 Templates mit wissenschaftlich fundierter Übungsauswahl
+- Equipment-Smart: passt sich an User-Equipment an
+- Separate Pläne: jeder Tag = 1 eigener Plan (z.B. "Push A", "Pull A", "Legs A")
+- JavaScript Fetch API für dynamisches Laden
+- Bootstrap Modal UI
+
+**Warum:** Anfänger brauchen fertige Templates statt leere Plan-Erstellung
+
+**4. Equipment-Manager** ⭐ Impact: 6/10 | Aufwand: 3h
 - [ ] **Plan duplizieren**
   - Eigene Pläne als Basis für Varianten
   - Umbenennen + Anpassen

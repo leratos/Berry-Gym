@@ -1,5 +1,6 @@
 {% load static %}
-{% load static %}<!doctype html>
+{% load custom_filters %}
+<!doctype html>
 <html lang="de" data-bs-theme="dark" id="htmlRoot">
   <head>
     <meta charset="utf-8">
@@ -155,7 +156,18 @@
                             <i class="bi bi-graph-up"></i>
                         </a>
                     </div>
-                    <span class="badge bg-secondary">{{ uebung_group.list|length }} Sätze</span>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if training.plan and plan_ziele %}
+                            {% with ziel=plan_ziele|get_item:uebung_group.grouper.id %}
+                                {% if ziel %}
+                                <span class="badge bg-info text-dark">
+                                    <i class="bi bi-bullseye me-1"></i>Ziel: {{ ziel.saetze_ziel }}×{{ ziel.wiederholungen_ziel }}
+                                </span>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                        <span class="badge bg-secondary">{{ uebung_group.list|length }} Sätze</span>
+                    </div>
                 </div>
 
                 <div class="card-body p-0">

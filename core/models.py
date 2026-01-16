@@ -236,6 +236,7 @@ class Plan(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="plaene", null=True)
     name = models.CharField(max_length=100, verbose_name="Name des Plans")
     beschreibung = models.TextField(blank=True, verbose_name="Beschreibung")
+    is_public = models.BooleanField(default=False, verbose_name="Öffentlich")
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

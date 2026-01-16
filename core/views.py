@@ -348,12 +348,30 @@ def dashboard(request):
 
 def training_select_plan(request):
     """Zeigt alle verfügbaren Pläne zur Auswahl an."""
-    plaene = Plan.objects.all()
-    return render(request, 'core/training_select_plan.html', {'plaene': plaene})
+    # Filter-Parameter (eigene oder öffentliche)
+    filter_type = request.GET.get('filter', 'eigene')
+    
+    if filter_type == 'public':
+        # Öffentliche Pläne von allen Usern (außer eigene)
+        plaene = Plan.objects.filter(is_public=True).exclude(user=request.user)
+    else:
+        # Eigene Pläne (Standard)
+        plaene = Plan.objects.filter(user=request.user)
+    
+    context = {
+        'plaene': plaene,
+        'filter_type': filter_type
+    }
+    return render(request, 'core/training_select_plan.html', context)
 
 def plan_details(request, plan_id):
     """Zeigt Details eines Trainingsplans mit allen Übungen."""
-    plan = get_object_or_404(Plan, id=plan_id)
+    # Zugriff nur auf eigene Pläne oder öffentliche Pläne
+    from django.db.models import Q
+    plan = get_object_or_404(Plan, Q(user=request.user) | Q(is_public=True), id=plan_id)
+    
+    # Prüfe ob User der Owner ist
+    is_owner = plan.user == request.user
     plan_uebungen = plan.uebungen.all().order_by('reihenfolge')
     
     # Für jede Übung das letzte verwendete Gewicht holen (für Vorschau)
@@ -373,6 +391,7 @@ def plan_details(request, plan_id):
     context = {
         'plan': plan,
         'uebungen_mit_historie': uebungen_mit_historie,
+        'is_owner': is_owner,
     }
     return render(request, 'core/plan_details.html', context)
 
@@ -454,12 +473,22 @@ def training_session(request, training_id):
     for satz in arbeitssaetze:
         total_volume += float(satz.gewicht) * satz.wiederholungen
 
+    # Zielwerte aus dem Plan laden (wenn vorhanden)
+    plan_ziele = {}
+    if training.plan:
+        for pu in training.plan.uebungen.all():
+            plan_ziele[pu.uebung_id] = {
+                'saetze_ziel': pu.saetze_ziel,
+                'wiederholungen_ziel': pu.wiederholungen_ziel
+            }
+
     context = {
         'training': training,
         'uebungen': uebungen,
         'saetze': saetze,
         'total_volume': round(total_volume, 1),
         'arbeitssaetze_count': arbeitssaetze.count(),
+        'plan_ziele': plan_ziele,
     }
     return render(request, 'core/training_session.html', context)
 
@@ -729,9 +758,9 @@ def export_training_csv(request):
 
 def training_list(request):
     """Zeigt eine Liste aller vergangenen Trainings."""
-    # Wir holen alle Trainings, sortiert nach Datum (neu -> alt)
+    # Wir holen NUR die Trainings des aktuellen Users, sortiert nach Datum (neu -> alt)
     # annotate(satz_count=Count('saetze')) zählt die Sätze für die Vorschau
-    trainings = Trainingseinheit.objects.annotate(satz_count=Count('saetze')).order_by('-datum')
+    trainings = Trainingseinheit.objects.filter(user=request.user).annotate(satz_count=Count('saetze')).order_by('-datum')
     
     # Volumen für jedes Training berechnen
     trainings_mit_volumen = []
@@ -751,7 +780,7 @@ def training_list(request):
 
 def delete_training(request, training_id):
     """Löscht ein komplettes Training aus der Historie."""
-    training = get_object_or_404(Trainingseinheit, id=training_id)
+    training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
     training.delete()
     # Wir leiten zurück zur Liste (History)
     return redirect('training_list')
@@ -1141,10 +1170,16 @@ def create_plan(request):
     if request.method == 'POST':
         name = request.POST.get('name')
         beschreibung = request.POST.get('beschreibung', '')
+        is_public = request.POST.get('is_public') == 'on'  # Checkbox-Wert
         uebungen_ids = request.POST.getlist('uebungen')  # Liste von Übungs-IDs
         
         if name and uebungen_ids:
-            plan = Plan.objects.create(user=request.user, name=name, beschreibung=beschreibung)
+            plan = Plan.objects.create(
+                user=request.user, 
+                name=name, 
+                beschreibung=beschreibung,
+                is_public=is_public
+            )
             
             # Übungen zum Plan hinzufügen
             for idx, uebung_id in enumerate(uebungen_ids, start=1):
@@ -1204,6 +1239,7 @@ def edit_plan(request, plan_id):
     if request.method == 'POST':
         plan.name = request.POST.get('name', plan.name)
         plan.beschreibung = request.POST.get('beschreibung', plan.beschreibung)
+        plan.is_public = request.POST.get('is_public') == 'on'  # Checkbox-Wert
         plan.save()
         
         # Lösche alte PlanUebung-Zuordnungen
@@ -1295,6 +1331,37 @@ def delete_plan(request, plan_id):
         return redirect('training_select_plan')
     
     return redirect('plan_details', plan_id=plan_id)
+
+@login_required
+def copy_plan(request, plan_id):
+    """Kopiert einen öffentlichen Plan in die eigenen Pläne."""
+    from django.db.models import Q
+    
+    # Plan muss öffentlich sein oder dem User gehören
+    original_plan = get_object_or_404(Plan, Q(is_public=True) | Q(user=request.user), id=plan_id)
+    
+    # Erstelle Kopie
+    new_plan = Plan.objects.create(
+        user=request.user,
+        name=f"{original_plan.name} (Kopie)",
+        beschreibung=original_plan.beschreibung,
+        is_public=False  # Kopien sind standardmäßig privat
+    )
+    
+    # Kopiere alle Übungen
+    for plan_uebung in original_plan.uebungen.all():
+        PlanUebung.objects.create(
+            plan=new_plan,
+            uebung=plan_uebung.uebung,
+            reihenfolge=plan_uebung.reihenfolge,
+            trainingstag=plan_uebung.trainingstag,
+            saetze_ziel=plan_uebung.saetze_ziel,
+            wiederholungen_ziel=plan_uebung.wiederholungen_ziel,
+            superset_gruppe=plan_uebung.superset_gruppe
+        )
+    
+    messages.success(request, f'Plan "{original_plan.name}" wurde in deine Pläne kopiert!')
+    return redirect('plan_details', plan_id=new_plan.id)
 
 
 @login_required

@@ -179,6 +179,16 @@
                                     <label class="form-label">Beschreibung</label>
                                     <textarea name="beschreibung" class="form-control" rows="2">{{ plan.beschreibung }}</textarea>
                                 </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="is_public" id="isPublicCheck" {% if plan.is_public %}checked{% endif %}>
+                                        <label class="form-check-label" for="isPublicCheck">
+                                            <i class="bi bi-globe me-1"></i> Plan öffentlich machen
+                                            <small class="text-muted d-block">Andere User können diesen Plan sehen und kopieren</small>
+                                        </label>
+                                    </div>
+                                </div>
 
                                 <hr class="border-secondary">
 

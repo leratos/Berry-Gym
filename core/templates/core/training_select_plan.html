@@ -39,17 +39,33 @@
         </div>
       </a>
 
-      <h6 class="text-secondary ps-2 mb-3 mt-5">DEINE PLÄNE</h6>
+      <h6 class="text-secondary ps-2 mb-3 mt-5">TRAININGSPLÄNE</h6>
       
+      <!-- Filter-Buttons -->
+      <div class="btn-group w-100 mb-3" role="group">
+        <a href="?filter=eigene" class="btn btn-outline-secondary {% if filter_type == 'eigene' %}active{% endif %}">
+            <i class="bi bi-person-fill me-1"></i>Meine Pläne
+        </a>
+        <a href="?filter=public" class="btn btn-outline-secondary {% if filter_type == 'public' %}active{% endif %}">
+            <i class="bi bi-globe me-1"></i>Öffentliche Pläne
+        </a>
+      </div>
+      
+      {% if filter_type == 'eigene' %}
       <div class="mb-3">
         <a href="{% url 'create_plan' %}" class="btn btn-success w-100">
             <i class="bi bi-plus-circle me-2"></i>Neuen Trainingsplan erstellen
         </a>
       </div>
+      {% endif %}
 
       {% if not plaene %}
         <div class="alert alert-secondary text-center">
-            <i class="bi bi-info-circle me-2"></i> Noch keine Pläne erstellt. Erstelle deinen ersten Plan!
+            {% if filter_type == 'eigene' %}
+                <i class="bi bi-info-circle me-2"></i> Noch keine Pläne erstellt. Erstelle deinen ersten Plan!
+            {% else %}
+                <i class="bi bi-info-circle me-2"></i> Noch keine öffentlichen Pläne verfügbar.
+            {% endif %}
         </div>
       {% else %}
         <div class="d-grid gap-3">
@@ -61,8 +77,18 @@
                             <i class="bi bi-card-checklist fs-2"></i>
                         </div>
                         <div class="flex-grow-1">
-                            <h5 class="mb-1">{{ plan.name }}</h5>
-                            <p class="text-muted mb-0 small">{{ plan.uebungen.count }} Übungen</p>
+                            <h5 class="mb-1">
+                                {{ plan.name }}
+                                {% if plan.is_public %}
+                                    <span class="badge bg-info text-dark ms-2"><i class="bi bi-globe"></i></span>
+                                {% endif %}
+                            </h5>
+                            <p class="text-muted mb-0 small">
+                                {{ plan.uebungen.count }} Übungen
+                                {% if filter_type == 'public' %}
+                                    <span class="ms-2">• von {{ plan.user.username }}</span>
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
                     
@@ -71,15 +97,24 @@
                     {% endif %}
                     
                     <div class="d-flex gap-2">
-                        <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-primary flex-grow-1">
-                            <i class="bi bi-play-circle-fill me-1"></i> Starten
-                        </a>
-                        <a href="{% url 'plan_details' plan.id %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-info-circle"></i> Details
-                        </a>
-                        <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
+                        {% if filter_type == 'eigene' %}
+                            <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-primary flex-grow-1">
+                                <i class="bi bi-play-circle-fill me-1"></i> Starten
+                            </a>
+                            <a href="{% url 'plan_details' plan.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-info-circle"></i> Details
+                            </a>
+                            <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                        {% else %}
+                            <a href="{% url 'plan_details' plan.id %}" class="btn btn-primary flex-grow-1">
+                                <i class="bi bi-info-circle me-1"></i> Details ansehen
+                            </a>
+                            <a href="{% url 'copy_plan' plan.id %}" class="btn btn-success">
+                                <i class="bi bi-copy"></i> Kopieren
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

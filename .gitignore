@@ -109,3 +109,8 @@ yarn.lock
 # Server-specific (Plesk/Production)
 /deployment/
 gunicorn.pid
+create_public_test_plan.py
+create_test_user.py
+db.sqlite3
+core/migrations/
+

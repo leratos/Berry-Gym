@@ -60,28 +60,43 @@
                 {% if plan.beschreibung %}
                 <p class="text-muted mb-3">{{ plan.beschreibung }}</p>
                 {% endif %}
+                
+                {% if plan.is_public %}
+                <div class="alert alert-info mb-3 py-2">
+                    <i class="bi bi-globe me-1"></i> Dieser Plan ist öffentlich
+                </div>
+                {% endif %}
 
                 <div class="d-grid gap-2">
-                    <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-success btn-lg fw-bold">
-                        <i class="bi bi-play-circle-fill me-2"></i> Training starten
-                    </a>
-                    <div class="row g-2">
-                        <div class="col-6 col-md-3">
-                            <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info w-100">
-                                <i class="bi bi-pencil-square me-1"></i> Bearbeiten
-                            </a>
+                    {% if is_owner %}
+                        <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-success btn-lg fw-bold">
+                            <i class="bi bi-play-circle-fill me-2"></i> Training starten
+                        </a>
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info w-100">
+                                    <i class="bi bi-pencil-square me-1"></i> Bearbeiten
+                                </a>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <a href="{% url 'export_plan_pdf' plan.id %}" class="btn btn-outline-secondary w-100" target="_blank">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                                </a>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#deletePlanModal">
+                                    <i class="bi bi-trash me-1"></i> Löschen
+                                </button>
+                            </div>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <a href="{% url 'export_plan_pdf' plan.id %}" class="btn btn-outline-secondary w-100" target="_blank">
-                                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
-                            </a>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#deletePlanModal">
-                                <i class="bi bi-trash me-1"></i> Löschen
-                            </button>
-                        </div>
-                    </div>
+                    {% else %}
+                        <a href="{% url 'copy_plan' plan.id %}" class="btn btn-success btn-lg fw-bold">
+                            <i class="bi bi-copy me-2"></i> In meine Pläne kopieren
+                        </a>
+                        <a href="{% url 'training_select_plan' %}?filter=public" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Zurück zur Übersicht
+                        </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

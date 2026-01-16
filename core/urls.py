@@ -13,6 +13,7 @@ urlpatterns = [
     path('plan/create/', views.create_plan, name='create_plan'),
     path('plan/<int:plan_id>/edit/', views.edit_plan, name='edit_plan'),
     path('plan/<int:plan_id>/delete/', views.delete_plan, name='delete_plan'),
+    path('plan/<int:plan_id>/copy/', views.copy_plan, name='copy_plan'),
     path('uebungen/', views.uebungen_auswahl, name='uebungen_auswahl'),
     path('muscle-map/', views.muscle_map, name='muscle_map'),
     path('uebung/<int:uebung_id>/', views.uebung_detail, name='uebung_detail'),
