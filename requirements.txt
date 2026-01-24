@@ -12,7 +12,7 @@ Pillow==12.1.0
 python-dotenv==1.0.1
 
 # PDF Export (Hybrid: WeasyPrint für Linux, xhtml2pdf als Fallback)
-WeasyPrint==62.3
+WeasyPrint==68.0
 xhtml2pdf==0.2.17
 matplotlib==3.10.8
 cairosvg==2.7.1  # SVG zu PNG Rendering für Body-Map
