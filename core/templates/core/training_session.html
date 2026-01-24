@@ -13,6 +13,9 @@
     <!-- Offline Manager CSS -->
     <link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
     
+    <!-- Toast Notification System -->
+    <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
+    
         <script src="{% static 'core/js/theme-toggle.js' %}"></script>
 <style>
         /* Superset-Gruppierung */
@@ -58,7 +61,7 @@
         }
     </style>
   </head>
-  <body>
+  <body data-context="training">
 
     <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-3 sticky-top shadow">
       <div class="container-fluid">
@@ -851,7 +854,7 @@
                     // Seite neu laden um Sätze anzuzeigen (aber ohne die Stoppuhr zu stoppen)
                     location.reload();
                 } else {
-                    alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                    showToast(data.error || 'Satz konnte nicht gespeichert werden', 'error', 4000);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = 'Speichern';
                 }
@@ -985,7 +988,7 @@
                     }
                 } catch (offlineError) {
                     console.error('[Offline] Fehler beim Offline-Speichern:', offlineError);
-                    alert('Fehler beim Offline-Speichern: ' + offlineError.message);
+                    showToast('Offline-Speicherung fehlgeschlagen. Bitte später erneut versuchen.', 'error', 5000);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = 'Speichern';
                 }
@@ -998,6 +1001,12 @@
     
     <!-- Include AI Coach Chat -->
     {% include 'core/ai_coach_chat.html' %}
+    
+    <!-- Toast Notification System -->
+    <script src="{% static 'core/js/toast.js' %}"></script>
+    
+    <!-- Keyboard Shortcuts -->
+    <script src="{% static 'core/js/keyboard-shortcuts.js' %}"></script>
     
     <!-- Offline Manager -->
     <script src="{% static 'core/js/offline-manager.js' %}"></script>

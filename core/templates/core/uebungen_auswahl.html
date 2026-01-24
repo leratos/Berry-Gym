@@ -16,6 +16,16 @@
         .exercise-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        a.text-decoration-none:hover {
+            text-decoration: none !important;
+        }
+        .exercise-card .text-light {
+            color: #f8f9fa !important;
+        }
+        .exercise-card:hover .text-light {
+            color: #0dcaf0 !important;
         }
         .muscle-visual {
             display: flex;
@@ -109,11 +119,12 @@
             <div class="row g-3">
                 {% for uebung in uebungen %}
                 <div class="col-lg-4 col-md-6 exercise-item" data-name="{{ uebung.bezeichnung|lower }}">
-                    <div class="card exercise-card bg-dark border-secondary h-100">
-                        <div class="card-body">
-                            <h5 class="card-title mb-3">
-                                {{ uebung.bezeichnung }}
-                            </h5>
+                    <a href="{% url 'exercise_detail' uebung.id %}" class="text-decoration-none">
+                        <div class="card exercise-card bg-dark border-secondary h-100">
+                            <div class="card-body">
+                                <h5 class="card-title mb-3 text-light">
+                                    {{ uebung.bezeichnung }}
+                                </h5>
                             
                             <!-- Muskelgruppen Visualisierung -->
                             <div class="mb-3">
@@ -154,7 +165,7 @@
                                 </small>
                                 {% if user.is_staff %}
                                 <div class="mt-2">
-                                    <a href="{% url 'admin:core_uebung_change' uebung.id %}" class="btn btn-sm btn-outline-secondary">
+                                    <a href="{% url 'admin:core_uebung_change' uebung.id %}" class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation();">
                                         <i class="bi bi-pencil"></i> Bearbeiten
                                     </a>
                                 </div>
@@ -162,6 +173,7 @@
                             </div>
                         </div>
                     </div>
+                    </a>
                 </div>
                 {% endfor %}
             </div>

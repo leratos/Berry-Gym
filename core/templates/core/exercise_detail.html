@@ -1,0 +1,261 @@
+{% load static %}
+<!doctype html>
+<html lang="de" data-bs-theme="dark" id="htmlRoot">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ uebung.bezeichnung }} - Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
+    <script src="{% static 'core/js/theme-toggle.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4">
+      <div class="container-fluid">
+        <a class="btn btn-outline-secondary border-0" href="{% url 'uebungen_auswahl' %}">
+            <i class="bi bi-arrow-left"></i> Zurück
+        </a>
+        <span class="navbar-text text-white fw-bold text-truncate" style="max-width: 200px;">
+            {{ uebung.bezeichnung }}
+        </span>
+        <div style="width: 40px;">
+            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+              <i class="bi bi-moon-fill" id="themeIcon"></i>
+            </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container pb-5">
+
+        <!-- Übungs-Info -->
+        <div class="card card-stat border-primary mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-info-circle fs-2 text-primary"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h4 class="mb-1">{{ uebung.bezeichnung }}</h4>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <span class="badge bg-primary">
+                                <i class="bi bi-bullseye me-1"></i>{{ uebung.get_muskelgruppe_display }}
+                            </span>
+                            <span class="badge bg-secondary">
+                                {{ uebung.get_bewegungstyp_display }}
+                            </span>
+                            {% if uebung.equipment.all %}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-tools me-1"></i>{{ uebung.equipment.count }} Equipment
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if uebung.beschreibung %}
+                <div class="alert alert-dark mb-0">
+                    <h6 class="text-primary mb-2">
+                        <i class="bi bi-card-text me-2"></i>Beschreibung
+                    </h6>
+                    <p class="mb-0">{{ uebung.beschreibung }}</p>
+                </div>
+                {% endif %}
+
+                {% if uebung.equipment.all %}
+                <div class="mt-3">
+                    <h6 class="text-secondary mb-2">
+                        <i class="bi bi-tools me-2"></i>Benötigtes Equipment
+                    </h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for eq in uebung.equipment.all %}
+                        <span class="badge bg-info bg-opacity-25 text-info px-3 py-2">
+                            {{ eq.get_name_display }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if uebung.hilfsmuskeln %}
+                <div class="mt-3">
+                    <h6 class="text-secondary mb-2">
+                        <i class="bi bi-plus-circle me-2"></i>Hilfsmuskeln
+                    </h6>
+                    <div class="text-muted">{{ uebung.hilfsmuskeln }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Statistiken (falls Daten vorhanden) -->
+        {% if has_data %}
+        
+        <h5 class="text-secondary mb-3">
+            <i class="bi bi-graph-up me-2"></i>Deine Statistiken
+        </h5>
+
+        <!-- Zusammenfassung -->
+        <div class="row g-2 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card card-stat border-secondary text-center p-3">
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Est. 1RM Max</small>
+                    <div class="h4 fw-bold text-success mb-0">{{ personal_record }}</div>
+                    <small class="text-muted">kg</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card card-stat border-secondary text-center p-3">
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Schwerster Satz</small>
+                    <div class="h4 fw-bold text-info mb-0">{{ best_weight }}</div>
+                    <small class="text-muted">kg</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card card-stat border-secondary text-center p-3">
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Gesamt-Volumen</small>
+                    <div class="h4 fw-bold text-warning mb-0">{{ total_volume|floatformat:0 }}</div>
+                    <small class="text-muted">kg</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card card-stat border-secondary text-center p-3">
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Sätze gesamt</small>
+                    <div class="h4 fw-bold text-primary mb-0">{{ total_sets }}</div>
+                    <small class="text-muted">Arbeitssätze</small>
+                </div>
+            </div>
+        </div>
+
+        {% if avg_rpe %}
+        <!-- RPE Analyse -->
+        <div class="card card-stat border-secondary mb-4">
+            <div class="card-body">
+                <h6 class="text-secondary mb-3">
+                    <i class="bi bi-speedometer2 me-2"></i>Durchschnittliches RPE
+                </h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="display-6 fw-bold">{{ avg_rpe }}</div>
+                        <small class="text-muted">von 10</small>
+                    </div>
+                    {% if rpe_trend %}
+                    <div class="text-end">
+                        {% if rpe_trend == 'improving' %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-arrow-down"></i> Besser werdend
+                            </span>
+                            <small class="text-muted d-block mt-1">RPE sinkt</small>
+                        {% elif rpe_trend == 'declining' %}
+                            <span class="badge bg-warning">
+                                <i class="bi bi-arrow-up"></i> Schwieriger
+                            </span>
+                            <small class="text-muted d-block mt-1">RPE steigt</small>
+                        {% else %}
+                            <span class="badge bg-info">
+                                <i class="bi bi-dash"></i> Stabil
+                            </span>
+                            <small class="text-muted d-block mt-1">Konstant</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 1RM Progression Chart -->
+        <div class="card card-stat border-secondary mb-4">
+            <div class="card-body">
+                <h6 class="text-secondary mb-3">
+                    <i class="bi bi-graph-up-arrow me-2"></i>1RM Progression
+                </h6>
+                <canvas id="progressionChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+
+        {% if letztes_training %}
+        <div class="alert alert-info">
+            <i class="bi bi-calendar-event me-2"></i>
+            <strong>Letztes Training:</strong> {{ letztes_training.datum|date:"d.m.Y" }}
+            {% if letztes_training.kommentar %}
+            <br><small class="text-muted">{{ letztes_training.kommentar }}</small>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- Keine Daten -->
+        <div class="card card-stat border-secondary">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-graph-up display-1 opacity-25 text-muted"></i>
+                <h5 class="mt-3 text-muted">Noch keine Statistiken</h5>
+                <p class="text-muted">Trainiere diese Übung, um deine Fortschritte zu sehen!</p>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% if has_data %}
+    <script>
+        const labels = {{ labels_json|safe }};
+        const data = {{ data_json|safe }};
+
+        const ctx = document.getElementById('progressionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Estimated 1RM (kg)',
+                    data: data,
+                    borderColor: '#0dcaf0',
+                    backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#0dcaf0',
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleColor: '#0dcaf0',
+                        bodyColor: '#fff'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#adb5bd' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { 
+                            color: '#adb5bd',
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
+
+  </body>
+</html>
