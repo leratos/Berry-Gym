@@ -13,7 +13,7 @@
     }
     
     .plan-generator-modal .modal-dialog {
-        max-width: 500px;
+        max-width: 700px;
     }
     
     .cost-badge {
@@ -43,6 +43,18 @@
         margin-top: 0.5rem;
         font-size: 0.875rem;
         color: #6c757d;
+    }
+    
+    .plan-preview-content {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .plan-preview-content pre {
+        background: #1a1d20;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        border: 1px solid #343a40;
     }
 </style>
 
@@ -106,6 +118,32 @@
                         </select>
                     </div>
                     
+                    <!-- Periodisierung -->
+                    <div class="mb-3">
+                        <label for="periodization" class="form-label">
+                            <i class="bi bi-arrow-repeat"></i> Periodisierung
+                        </label>
+                        <select class="form-select bg-dark text-white border-secondary" id="periodization" name="periodization">
+                            <option value="linear" selected>Linear (Progressive Steigerung)</option>
+                            <option value="wellenfoermig">Wellenförmig (Heavy/Medium/Light)</option>
+                            <option value="block">Block (Volumen → Kraft → Peak)</option>
+                        </select>
+                        <div class="form-text">12 Wochen mit Deload in Woche 4/8/12</div>
+                    </div>
+                    
+                    <!-- Zielprofil -->
+                    <div class="mb-3">
+                        <label for="targetProfile" class="form-label">
+                            <i class="bi bi-bullseye"></i> Trainingsziel
+                        </label>
+                        <select class="form-select bg-dark text-white border-secondary" id="targetProfile" name="target_profile">
+                            <option value="kraft">Kraft (3-6 Wdh, RPE 7.5-9)</option>
+                            <option value="hypertrophie" selected>Muskelaufbau (6-12 Wdh, RPE 7-8.5)</option>
+                            <option value="definition">Definition (10-15 Wdh, RPE 6.5-8)</option>
+                        </select>
+                        <div class="form-text">Bestimmt RPE- und Wiederholungs-Zonen</div>
+                    </div>
+                    
                     <!-- Kosten-Anzeige -->
                     <div class="text-center mb-3">
                         <span class="cost-badge">
@@ -115,9 +153,26 @@
                     
                     <!-- Submit Button -->
                     <button type="submit" class="btn btn-success w-100 fw-bold" id="generateBtn">
-                        <i class="bi bi-stars"></i> Plan generieren
+                        <i class="bi bi-stars"></i> Vorschau erstellen
                     </button>
                 </form>
+                
+                <!-- Plan Preview Container (initially hidden) -->
+                <div id="planPreviewContainer" style="display: none;">
+                    <hr class="my-4 border-secondary">
+                    <h6 class="text-success mb-3"><i class="bi bi-eye"></i> Plan-Vorschau</h6>
+                    <div id="planPreviewContent" class="plan-preview-content">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-success flex-fill" id="confirmSaveBtn">
+                            <i class="bi bi-save"></i> Plan speichern
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancelPreviewBtn">
+                            <i class="bi bi-x-circle"></i> Abbrechen
+                        </button>
+                    </div>
+                </div>
                 
                 <!-- Progress Container (initially hidden) -->
                 <div class="progress-container" id="progressContainer">
@@ -164,6 +219,12 @@
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
         const costDisplay = document.getElementById('costDisplay');
+        const planPreviewContainer = document.getElementById('planPreviewContainer');
+        const planPreviewContent = document.getElementById('planPreviewContent');
+        const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+        const cancelPreviewBtn = document.getElementById('cancelPreviewBtn');
+        
+        let currentPlanData = null;
         
         // Update Sätze Value
         window.updateSetsValue = function(value) {
@@ -171,17 +232,94 @@
         };
         
         // Update Kosten basierend auf Server/Lokal
-        // TODO: Könnte dynamisch aus Backend kommen
         const isServer = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
         costDisplay.textContent = isServer ? '0.003€' : '0€ (lokal)';
         
-        // Form Submit
+        // Cancel Preview
+        cancelPreviewBtn.addEventListener('click', function() {
+            planPreviewContainer.style.display = 'none';
+            aiPlanForm.style.display = 'block';
+            generateBtn.disabled = false;
+            currentPlanData = null;
+        });
+        
+        // Confirm Save
+        confirmSaveBtn.addEventListener('click', async function() {
+            if (!currentPlanData) return;
+            
+            confirmSaveBtn.disabled = true;
+            cancelPreviewBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.classList.add('progress-bar-animated');
+            stepIndicator.innerHTML = '<i class="bi bi-hourglass-split"></i> Speichere Plan...';
+            
+            try {
+                // Simuliere Progress
+                progressBar.style.width = '50%';
+                progressBar.textContent = '50%';
+                
+                // Save plan to database
+                const response = await fetch('{% url "generate_plan_api" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(currentPlanData)
+                });
+                
+                const data = await response.json();
+                
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                progressBar.classList.remove('progress-bar-animated');
+                stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Gespeichert!';
+                
+                if (data.success) {
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        successMessage.style.display = 'block';
+                        successText.innerHTML = `
+                            ${data.message || 'Plan erfolgreich gespeichert!'}<br>
+                            <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt<br>
+                            <small class="text-muted">Kosten: ${data.cost || 0}€ | Model: ${data.model || 'LLM'}</small>
+                        `;
+                        planPreviewContainer.style.display = 'none';
+                        
+                        // Redirect nach 2 Sekunden
+                        setTimeout(() => {
+                            if (data.plan_ids && data.plan_ids.length > 0) {
+                                window.location.href = `/plan/${data.plan_ids[0]}/`;
+                            } else {
+                                window.location.reload();
+                            }
+                        }, 2000);
+                    }, 500);
+                } else {
+                    progressContainer.style.display = 'none';
+                    errorMessage.style.display = 'block';
+                    errorText.textContent = data.error || 'Fehler beim Speichern';
+                    confirmSaveBtn.disabled = false;
+                    cancelPreviewBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Save Error:', error);
+                errorMessage.style.display = 'block';
+                errorText.textContent = 'Netzwerkfehler beim Speichern';
+                confirmSaveBtn.disabled = false;
+                cancelPreviewBtn.disabled = false;
+            }
+        });
+        
+        // Form Submit - Generate Preview
         aiPlanForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             // Reset UI
             successMessage.style.display = 'none';
             errorMessage.style.display = 'none';
+            planPreviewContainer.style.display = 'none';
             progressContainer.style.display = 'block';
             generateBtn.disabled = true;
             
@@ -189,16 +327,29 @@
             const formData = {
                 plan_type: document.getElementById('planType').value,
                 sets_per_session: parseInt(document.getElementById('setsPerSession').value),
-                analysis_days: parseInt(document.getElementById('analysisDays').value)
+                analysis_days: parseInt(document.getElementById('analysisDays').value),
+                periodization: document.getElementById('periodization').value,
+                target_profile: document.getElementById('targetProfile').value,
+                previewOnly: true
+            };
+            
+            // Speichere OHNE previewOnly für späteren Save
+            currentPlanData = {
+                plan_type: document.getElementById('planType').value,
+                sets_per_session: parseInt(document.getElementById('setsPerSession').value),
+                analysis_days: parseInt(document.getElementById('analysisDays').value),
+                periodization: document.getElementById('periodization').value,
+                target_profile: document.getElementById('targetProfile').value,
+                previewOnly: false
             };
             
             try {
                 // Simulated Progress Steps
                 const steps = [
-                    { progress: 20, text: '📊 Analysiere Trainingshistorie...' },
-                    { progress: 40, text: '🤖 KI erstellt personalisierten Plan...' },
-                    { progress: 60, text: '✅ Validiere Übungen...' },
-                    { progress: 80, text: '💾 Speichere Plan...' }
+                    { progress: 25, text: '📊 Analysiere Trainingshistorie...' },
+                    { progress: 50, text: '🤖 KI erstellt personalisierten Plan...' },
+                    { progress: 75, text: '✅ Validiere Übungen...' },
+                    { progress: 95, text: '👁️ Bereite Vorschau vor...' }
                 ];
                 
                 let currentStep = 0;
@@ -226,36 +377,24 @@
                 
                 const data = await response.json();
                 
-                if (data.success) {
-                    // Success!
+                if (data.success && data.preview) {
+                    // Show Preview
                     progressBar.style.width = '100%';
                     progressBar.textContent = '100%';
                     progressBar.classList.remove('progress-bar-animated');
-                    stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Abgeschlossen!';
+                    stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Vorschau bereit!';
                     
                     setTimeout(() => {
                         progressContainer.style.display = 'none';
-                        successMessage.style.display = 'block';
-                        successText.innerHTML = `
-                            ${data.message}<br>
-                            <strong>${data.sessions} Trainingstage</strong> erstellt<br>
-                            <small class="text-muted">Kosten: ${data.cost}€ | Model: ${data.model}</small>
-                        `;
-                        
-                        // Redirect nach 2 Sekunden
-                        setTimeout(() => {
-                            if (data.plan_ids && data.plan_ids.length > 0) {
-                                window.location.href = `/plan/${data.plan_ids[0]}/`;
-                            } else {
-                                window.location.reload();
-                            }
-                        }, 2000);
+                        aiPlanForm.style.display = 'none';
+                        planPreviewContainer.style.display = 'block';
+                        renderPreview(data.plan_data);
                     }, 500);
                 } else {
                     // Error
                     progressContainer.style.display = 'none';
                     errorMessage.style.display = 'block';
-                    errorText.textContent = data.error || 'Unbekannter Fehler';
+                    errorText.textContent = data.error || 'Fehler bei der Plan-Generierung';
                     generateBtn.disabled = false;
                 }
             } catch (error) {
@@ -266,5 +405,53 @@
                 generateBtn.disabled = false;
             }
         });
+        
+        // Render Preview
+        function renderPreview(planData) {
+            if (!planData || !planData.sessions) {
+                planPreviewContent.innerHTML = '<p class="text-muted">Keine Daten verfügbar</p>';
+                return;
+            }
+            
+            let html = `<div class="alert alert-info mb-3">
+                <strong>${planData.plan_name || 'Trainingsplan'}</strong>
+            </div>`;
+            
+            // Beschreibung mit Periodisierung
+            if (planData.beschreibung) {
+                html += `<div class="card bg-dark border-secondary mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title text-success">📋 Beschreibung & Periodisierung</h6>
+                        <pre class="text-white mb-0" style="white-space: pre-wrap; font-size: 0.85rem;">${planData.beschreibung}</pre>
+                    </div>
+                </div>`;
+            }
+            
+            // Sessions
+            planData.sessions.forEach((session, idx) => {
+                html += `<div class="card bg-dark border-secondary mb-3">
+                    <div class="card-header bg-secondary">
+                        <strong>Tag ${idx + 1}: ${session.day_name || `Trainingstag ${idx + 1}`}</strong>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">`;
+                
+                session.exercises.forEach(ex => {
+                    html += `<li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        <strong>${ex.exercise_name}</strong> - 
+                        ${ex.sets} Sätze × ${ex.reps} Wdh 
+                        ${ex.rpe ? `@ RPE ${ex.rpe}` : ''}
+                        ${ex.notes ? `<br><small class="text-muted ms-4">${ex.notes}</small>` : ''}
+                    </li>`;
+                });
+                
+                html += `</ul>
+                    </div>
+                </div>`;
+            });
+            
+            planPreviewContent.innerHTML = html;
+        }
     })();
 </script>

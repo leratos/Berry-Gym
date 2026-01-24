@@ -2086,6 +2086,9 @@ def export_plan_pdf(request, plan_id):
     # Muskelgruppen für Icon-Mapping
     muskelgruppen_dict = dict(MUSKELGRUPPEN)
     
+    # Beschreibung mit Zeilenumbrüchen formatieren
+    beschreibung_html = (plan.beschreibung or 'Keine Beschreibung').replace('\n', '<br>')
+    
     # HTML Template für PDF
     html_template = f'''
     <!DOCTYPE html>
@@ -2188,7 +2191,7 @@ def export_plan_pdf(request, plan_id):
         <div class="header">
             <div class="plan-info">
                 <h1>{plan.name}</h1>
-                <p><strong>Beschreibung:</strong> {plan.beschreibung or 'Keine Beschreibung'}</p>
+                <p><strong>Beschreibung:</strong><br>{beschreibung_html}</p>
                 <p><strong>Erstellt:</strong> {plan.erstellt_am.strftime("%d.%m.%Y")}</p>
             </div>
             <div class="qr-code">
@@ -2657,6 +2660,9 @@ def generate_plan_api(request):
         plan_type = data.get('plan_type', '3er-split')
         sets_per_session = int(data.get('sets_per_session', 18))
         analysis_days = int(data.get('analysis_days', 30))
+        periodization = data.get('periodization', 'linear')
+        target_profile = data.get('target_profile', 'hypertrophie')
+        preview_only = data.get('previewOnly', False)
         
         # Validierung
         valid_plan_types = ['2er-split', '3er-split', '4er-split', 'ganzkörper', 'push-pull-legs']
@@ -2665,6 +2671,14 @@ def generate_plan_api(request):
         
         if sets_per_session < 10 or sets_per_session > 30:
             return JsonResponse({'error': 'Sätze pro Session muss zwischen 10-30 liegen'}, status=400)
+        
+        valid_periodizations = ['linear', 'wellenfoermig', 'block']
+        if periodization not in valid_periodizations:
+            periodization = 'linear'
+        
+        valid_profiles = ['kraft', 'hypertrophie', 'definition']
+        if target_profile not in valid_profiles:
+            target_profile = 'hypertrophie'
         
         # Plan Generator importieren (korrekter Package-Import)
         from ai_coach.plan_generator import PlanGenerator
@@ -2677,22 +2691,35 @@ def generate_plan_api(request):
             plan_type=plan_type,
             analysis_days=analysis_days,
             sets_per_session=sets_per_session,
+            periodization=periodization,
+            target_profile=target_profile,
             use_openrouter=use_openrouter,
             fallback_to_openrouter=True
         )
         
-        # Generiere Plan
-        result = generator.generate(save_to_db=True)
-        
-        return JsonResponse({
-            'success': True,
-            'plan_ids': result.get('plan_ids', []),
-            'plan_name': result.get('plan_data', {}).get('plan_name', ''),
-            'sessions': len(result.get('plan_data', {}).get('sessions', [])),
-            'cost': 0.003 if use_openrouter else 0.0,  # Geschätzte Kosten
-            'model': 'OpenRouter 70B' if use_openrouter else 'Ollama 8B',
-            'message': f"Plan '{result.get('plan_data', {}).get('plan_name', '')}' erfolgreich erstellt!"
-        })
+        if preview_only:
+            # Generiere Plan ohne zu speichern für Vorschau
+            result = generator.generate(save_to_db=False)
+            return JsonResponse({
+                'success': True,
+                'preview': True,
+                'plan_data': result.get('plan_data', {}),
+                'cost': 0.003 if use_openrouter else 0.0,
+                'model': 'OpenRouter 70B' if use_openrouter else 'Ollama 8B'
+            })
+        else:
+            # Generiere und speichere Plan
+            result = generator.generate(save_to_db=True)
+            
+            return JsonResponse({
+                'success': True,
+                'plan_ids': result.get('plan_ids', []),
+                'plan_name': result.get('plan_data', {}).get('plan_name', ''),
+                'sessions': len(result.get('plan_data', {}).get('sessions', [])),
+                'cost': 0.003 if use_openrouter else 0.0,
+                'model': 'OpenRouter 70B' if use_openrouter else 'Ollama 8B',
+                'message': f"Plan '{result.get('plan_data', {}).get('plan_name', '')}' erfolgreich erstellt!"
+            })
     
     except Exception as e:
         import traceback
@@ -3212,12 +3239,49 @@ def get_template_detail(request, template_key):
         
         template = templates[template_key]
         
+        # Mapping von Template-Equipment-Namen zu DB Display-Namen
+        # Template verwendet vereinfachte Namen, DB hat exakte Display-Namen
+        equipment_name_mapping = {
+            'kurzhantel': 'kurzhanteln',
+            'langhantel': 'langhantel',
+            'kabel': 'kabelzug / latzug',
+            'barren': 'dipstation / barren',
+            'klimmzugstange': 'klimmzugstange',
+            'maschine': None,  # Generisch - wird separat behandelt
+            'körpergewicht': 'nur körpergewicht',
+        }
+        
         # User-Equipment ermitteln (Equipment hat ManyToMany 'users', kein 'verfuegbar' Feld)
-        user_equipment = Equipment.objects.filter(users=request.user).values_list('name', flat=True)
-        # Normalisiere Equipment-Namen: lowercase und stripping für besseres Matching
-        user_equipment_set = set(eq.strip().lower() for eq in user_equipment)
+        # Equipment für User abrufen
+        user_equipment = Equipment.objects.filter(users=request.user)
+        # Verwende get_name_display() für Display-Namen (z.B. "Klimmzugstange")
+        user_equipment_set = set(eq.get_name_display().strip().lower() for eq in user_equipment)
         
         logger.info(f'User equipment: {user_equipment_set}')
+        
+        def check_equipment_available(template_equip_name):
+            """Prüft ob Equipment verfügbar ist (mit Mapping)."""
+            template_equip_lower = template_equip_name.strip().lower()
+            
+            # Körpergewicht ist immer verfügbar
+            if template_equip_lower == 'körpergewicht':
+                return True
+            
+            # Mapping anwenden
+            mapped_name = equipment_name_mapping.get(template_equip_lower)
+            
+            if mapped_name:
+                # Direktes Mapping gefunden
+                return mapped_name in user_equipment_set
+            
+            # Maschine-Equipment: Prüfe ob passende Maschine vorhanden
+            if template_equip_lower == 'maschine':
+                # Prüfe ob User irgendeine Maschine hat (Beinpresse, Leg Curl, etc.)
+                maschine_keywords = ['beinpresse', 'leg curl', 'leg extension', 'maschine', 'smith']
+                return any(kw in eq for eq in user_equipment_set for kw in maschine_keywords)
+            
+            # Fallback: Direkter Vergleich
+            return template_equip_lower in user_equipment_set
         
         # Template anpassen: Prüfe ob Übungen machbar sind
         adapted_template = {
@@ -3242,16 +3306,16 @@ def get_template_detail(request, template_key):
                     'reps': exercise.get('reps', ''),
                     'equipment': exercise.get('equipment', '')
                 }
-                required_equipment = exercise.get('equipment', '').strip().lower()
+                required_equipment = exercise.get('equipment', '').strip()
                 
-                # Prüfe ob Equipment verfügbar (case-insensitive und normalized)
-                if required_equipment in user_equipment_set or required_equipment == 'körpergewicht':
+                # Prüfe ob Equipment verfügbar (mit Mapping)
+                if check_equipment_available(required_equipment):
                     exercise_copy['available'] = True
                     exercise_copy['substitute'] = None
                 else:
                     exercise_copy['available'] = False
                     # Finde Ersatzübung
-                    substitute = find_substitute_exercise(exercise.get('name', ''), required_equipment, user_equipment_set)
+                    substitute = find_substitute_exercise(exercise.get('name', ''), required_equipment.lower(), user_equipment_set)
                     exercise_copy['substitute'] = substitute
                 
                 adapted_day['exercises'].append(exercise_copy)
@@ -3268,44 +3332,159 @@ def find_substitute_exercise(original_name, required_equipment, available_equipm
     """
     Findet eine Ersatzübung aus der Datenbank.
     Versucht ähnliche Muskelgruppe und Bewegungstyp mit verfügbarem Equipment.
+    Priorität: 1. Band-Alternativen, 2. Gleiches Bewegungsmuster, 3. Gleiche Muskelgruppe, 4. Körpergewicht
     """
+    from core.models import Uebung, Equipment
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f'Finding substitute for: {original_name}, required: {required_equipment}, available: {available_equipment}')
+    
+    # Erstelle Reverse-Mapping: Display-Name (lowercase) -> Equipment-Objekt
+    all_equipment = Equipment.objects.all()
+    equipment_map = {}
+    for eq in all_equipment:
+        display_name = eq.get_name_display().strip().lower()
+        equipment_map[display_name] = eq
+    
+    # Sammle verfügbare Equipment-Objekte
+    available_equipment_objects = []
+    for equip_name in available_equipment:
+        equip_obj = equipment_map.get(equip_name)
+        if equip_obj:
+            available_equipment_objects.append(equip_obj)
+    
+    logger.info(f'Available equipment objects: {[eq.name for eq in available_equipment_objects]}')
+    
     # Versuche Original-Übung in DB zu finden
     try:
-        # Extrahiere Übungsname ohne Zusatzinfo in Klammern
-        clean_name = original_name.split('(')[0].strip()
-        original_uebung = Uebung.objects.filter(bezeichnung__icontains=clean_name).first()
+        # Erst exakter Match
+        original_uebung = Uebung.objects.filter(bezeichnung=original_name).first()
         
-        if original_uebung and original_uebung.hauptmuskel:
-            # Suche ähnliche Übungen mit gleichem Bewegungstyp und verfügbarem Equipment
-            if original_uebung.bewegungstyp and len(available_equipment) > 0:
-                for equip in available_equipment:
+        # Fallback: Teilmatch
+        if not original_uebung:
+            clean_name = original_name.split('(')[0].strip()
+            original_uebung = Uebung.objects.filter(bezeichnung__icontains=clean_name).first()
+        
+        if not original_uebung:
+            # Kein Original gefunden - versuche allgemeine Suche nach Muskelgruppe
+            exercise_to_muscle = {
+                'klimmzüge': 'RUECKEN_LAT',
+                'klimmzug': 'RUECKEN_LAT',
+                'lat pulldown': 'RUECKEN_LAT',
+                'latzug': 'RUECKEN_LAT',
+                'rudern': 'RUECKEN_LAT',
+                'dips': 'TRIZEPS',
+                'dip': 'TRIZEPS',
+                'liegestütz': 'BRUST',
+                'push-up': 'BRUST',
+                'bankdrücken': 'BRUST',
+                'fliegende': 'BRUST',
+                'crossover': 'BRUST',
+                'schulterdrücken': 'SCHULTER_VORN',
+                'shoulder press': 'SCHULTER_VORN',
+                'seitheben': 'SCHULTER_SEIT',
+                'lateral raise': 'SCHULTER_SEIT',
+                'facepull': 'SCHULTER_HINT',
+                'face pull': 'SCHULTER_HINT',
+                'bizeps': 'BIZEPS',
+                'curl': 'BIZEPS',
+                'trizeps': 'TRIZEPS',
+                'pushdown': 'TRIZEPS',
+                'squat': 'BEINE_QUAD',
+                'kniebeuge': 'BEINE_QUAD',
+                'beinpresse': 'BEINE_QUAD',
+                'beinstrecker': 'BEINE_QUAD',
+                'beinbeuger': 'BEINE_HAM',
+                'leg curl': 'BEINE_HAM',
+                'kreuzheben': 'BEINE_HAM',
+                'wadenheben': 'WADEN',
+                'calf': 'WADEN',
+            }
+            
+            for key, muscle in exercise_to_muscle.items():
+                if key in original_name.lower():
+                    # Erstelle Pseudo-Objekt
+                    original_uebung = type('obj', (object,), {
+                        'muskelgruppe': muscle,
+                        'bewegungstyp': 'ISOLATION',
+                        'id': -1
+                    })()
+                    break
+        
+        if original_uebung:
+            muscle_group = getattr(original_uebung, 'muskelgruppe', None)
+            movement_type = getattr(original_uebung, 'bewegungstyp', None)
+            original_id = getattr(original_uebung, 'id', -1)
+            
+            logger.info(f'Found original: muscle={muscle_group}, movement={movement_type}')
+            
+            if muscle_group and len(available_equipment_objects) > 0:
+                # 1. Priorität: Band-Alternative (Widerstandsbänder)
+                band_eq = equipment_map.get('widerstandsbänder')
+                if band_eq and band_eq in available_equipment_objects:
+                    band_exercise = Uebung.objects.filter(
+                        muskelgruppe=muscle_group,
+                        equipment=band_eq
+                    ).exclude(id=original_id if original_id > 0 else 0).first()
+                    
+                    if band_exercise:
+                        logger.info(f'Found band alternative: {band_exercise.bezeichnung}')
+                        return {
+                            'name': band_exercise.bezeichnung,
+                            'equipment': 'Widerstandsbänder',
+                            'note': 'Band-Alternative'
+                        }
+                
+                # 2. Gleiches Bewegungsmuster + verfügbares Equipment
+                if movement_type:
+                    for equip_obj in available_equipment_objects:
+                        similar = Uebung.objects.filter(
+                            muskelgruppe=muscle_group,
+                            bewegungstyp=movement_type,
+                            equipment=equip_obj
+                        ).exclude(id=original_id if original_id > 0 else 0).first()
+                        
+                        if similar:
+                            logger.info(f'Found same movement: {similar.bezeichnung}')
+                            return {
+                                'name': similar.bezeichnung,
+                                'equipment': equip_obj.get_name_display()
+                            }
+                
+                # 3. Nur gleiche Muskelgruppe + verfügbares Equipment
+                for equip_obj in available_equipment_objects:
                     similar = Uebung.objects.filter(
-                        hauptmuskel=original_uebung.hauptmuskel,
-                        bewegungstyp=original_uebung.bewegungstyp,
-                        equipment__name=equip
-                    ).exclude(id=original_uebung.id).first()
+                        muskelgruppe=muscle_group,
+                        equipment=equip_obj
+                    ).exclude(id=original_id if original_id > 0 else 0).first()
                     
                     if similar:
+                        logger.info(f'Found same muscle: {similar.bezeichnung}')
                         return {
                             'name': similar.bezeichnung,
-                            'equipment': equip
+                            'equipment': equip_obj.get_name_display()
                         }
             
-            # Fallback: Nur gleiche Muskelgruppe, egal welcher Bewegungstyp
-            if len(available_equipment) > 0:
-                for equip in available_equipment:
-                    similar = Uebung.objects.filter(
-                        hauptmuskel=original_uebung.hauptmuskel,
-                        equipment__name=equip
-                    ).exclude(id=original_uebung.id).first()
+            # 4. Letzter Fallback: Körpergewicht-Übung
+            if muscle_group:
+                koerper_eq = Equipment.objects.filter(name='KOERPER').first()
+                if koerper_eq:
+                    bodyweight_exercise = Uebung.objects.filter(
+                        muskelgruppe=muscle_group,
+                        equipment=koerper_eq
+                    ).exclude(id=original_id if original_id > 0 else 0).first()
                     
-                    if similar:
+                    if bodyweight_exercise:
+                        logger.info(f'Found bodyweight: {bodyweight_exercise.bezeichnung}')
                         return {
-                            'name': similar.bezeichnung,
-                            'equipment': equip
+                            'name': bodyweight_exercise.bezeichnung,
+                            'equipment': 'Nur Körpergewicht',
+                            'note': 'Körpergewicht-Alternative'
                         }
         
-        # Kein Match gefunden - gib Equipment-Hinweis
+        # Kein Match gefunden
+        logger.warning(f'No substitute found for {original_name}')
         return {
             'name': f'Bitte Equipment "{required_equipment}" ergänzen',
             'equipment': required_equipment,
@@ -3313,7 +3492,8 @@ def find_substitute_exercise(original_name, required_equipment, available_equipm
         }
         
     except Exception as e:
-        # Bei Fehler: Gib generische Nachricht zurück
+        import traceback
+        traceback.print_exc()
         return {
             'name': f'Alternative für "{original_name}" nicht gefunden',
             'equipment': required_equipment,
@@ -3338,9 +3518,33 @@ def create_plan_from_template(request, template_key):
         
         template = templates[template_key]
         
-        # User-Equipment (Equipment hat ManyToMany 'users')
-        user_equipment = Equipment.objects.filter(users=request.user).values_list('name', flat=True)
-        user_equipment_set = set(eq.strip().lower() for eq in user_equipment)
+        # User-Equipment mit Display-Namen
+        user_equipment = Equipment.objects.filter(users=request.user)
+        user_equipment_set = set(eq.get_name_display().strip().lower() for eq in user_equipment)
+        
+        # Mapping von Template-Equipment-Namen zu DB Display-Namen
+        equipment_name_mapping = {
+            'kurzhantel': 'kurzhanteln',
+            'langhantel': 'langhantel',
+            'kabel': 'kabelzug / latzug',
+            'barren': 'dipstation / barren',
+            'klimmzugstange': 'klimmzugstange',
+            'maschine': None,  # Generisch
+            'körpergewicht': 'nur körpergewicht',
+        }
+        
+        def check_equipment_available(template_equip_name):
+            """Prüft ob Equipment verfügbar ist (mit Mapping)."""
+            template_equip_lower = template_equip_name.strip().lower()
+            if template_equip_lower == 'körpergewicht':
+                return True
+            mapped_name = equipment_name_mapping.get(template_equip_lower)
+            if mapped_name:
+                return mapped_name in user_equipment_set
+            if template_equip_lower == 'maschine':
+                maschine_keywords = ['beinpresse', 'leg curl', 'leg extension', 'maschine', 'smith']
+                return any(kw in eq for eq in user_equipment_set for kw in maschine_keywords)
+            return template_equip_lower in user_equipment_set
         
         # Für jeden Tag einen eigenen Plan erstellen
         created_plans = []
@@ -3357,14 +3561,19 @@ def create_plan_from_template(request, template_key):
             # Übungen zum Plan hinzufügen
             reihenfolge = 1
             for exercise_data in day['exercises']:
-                # Übung in DB suchen
-                exercise_name = exercise_data['name'].split('(')[0].strip()
-                uebung = Uebung.objects.filter(bezeichnung__icontains=exercise_name).first()
+                # Übung in DB suchen - exakter Match zuerst
+                exercise_name = exercise_data['name']
+                uebung = Uebung.objects.filter(bezeichnung=exercise_name).first()
+                
+                # Fallback: Teilmatch
+                if not uebung:
+                    exercise_name_clean = exercise_name.split('(')[0].strip()
+                    uebung = Uebung.objects.filter(bezeichnung__icontains=exercise_name_clean).first()
                 
                 # Wenn nicht gefunden und Equipment fehlt, versuche Substitut
                 if not uebung:
                     required_equipment = exercise_data['equipment'].strip().lower()
-                    if required_equipment not in user_equipment_set and required_equipment != 'körpergewicht':
+                    if not check_equipment_available(exercise_data['equipment']):
                         substitute = find_substitute_exercise(exercise_name, required_equipment, user_equipment_set)
                         if substitute and 'name' in substitute:
                             uebung = Uebung.objects.filter(bezeichnung__icontains=substitute['name'].split('(')[0].strip()).first()
