@@ -965,7 +965,9 @@ def training_stats(request):
     weekly_volume = defaultdict(float)
     
     for training in trainings:
-        week_key = training.datum.strftime('%Y-W%W')
+        # ISO-Kalenderwoche verwenden (konsistent mit PDF Export)
+        iso_year, iso_week, _ = training.datum.isocalendar()
+        week_key = f"{iso_year}-W{iso_week:02d}"
         arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
         volumen = sum(
             float(s.gewicht) * s.wiederholungen 
@@ -1905,25 +1907,27 @@ def export_training_pdf(request):
         avg_rpe = 0
         rpe_verteilung = {'leicht': 0, 'mittel': 0, 'schwer': 0}
     
-    # Volumen-Progression über letzte 12 Wochen
-    volumen_wochen = []
-    for woche in range(12, 0, -1):
-        start = heute - timedelta(weeks=woche)
-        ende = heute - timedelta(weeks=woche-1)
-        woche_saetze = alle_saetze.filter(
-            einheit__datum__gte=start,
-            einheit__datum__lt=ende
-        )
-        woche_volumen = sum(
-            float(s.gewicht) * s.wiederholungen
-            for s in woche_saetze
-            if s.gewicht and s.wiederholungen
-        )
-        if woche_volumen > 0:
-            volumen_wochen.append({
-                'woche': f"KW{start.isocalendar()[1]}",
-                'volumen': round(woche_volumen, 0)
-            })
+    # Volumen-Progression über letzte 12 Wochen (gleiche Logik wie Browser-Ansicht)
+    from collections import defaultdict
+    weekly_volume_pdf = defaultdict(float)
+    
+    for satz in alle_saetze.filter(ist_aufwaermsatz=False):
+        if satz.gewicht and satz.wiederholungen:
+            # ISO-Kalenderwoche des Trainings
+            iso_year, iso_week, _ = satz.einheit.datum.isocalendar()
+            week_key = f"{iso_year}-W{iso_week:02d}"
+            volumen = float(satz.gewicht) * satz.wiederholungen
+            weekly_volume_pdf[week_key] += volumen
+    
+    # Letzte 12 Wochen sortiert
+    weekly_labels_pdf = sorted(weekly_volume_pdf.keys())[-12:]
+    volumen_wochen = [
+        {
+            'woche': f"KW{label.split('-W')[1]}",
+            'volumen': round(weekly_volume_pdf[label], 0)
+        }
+        for label in weekly_labels_pdf
+    ]
     
     # Körperwerte mit Trend
     koerperwerte_qs = KoerperWerte.objects.filter(
@@ -2359,25 +2363,27 @@ def workout_recommendations(request):
             })
     
     # === 3. STAGNIERENDE ÜBUNGEN ===
+    # Nur Übungen mit vielen Sätzen analysieren (häufig trainiert)
     haeufige_uebungen = letzte_60_tage_saetze.values('uebung').annotate(
         anzahl=Count('id')
-    ).filter(anzahl__gte=5).values_list('uebung', flat=True)
+    ).filter(anzahl__gte=8).values_list('uebung', flat=True)  # Mindestens 8 Sätze für relevante Analyse
     
     for uebung_id in haeufige_uebungen:
         uebung = Uebung.objects.get(id=uebung_id)
         
-        # Letzte 5 Trainings mit dieser Übung
-        letzte_saetze = alle_saetze.filter(uebung=uebung).order_by('-einheit__datum')[:10]
+        # Letzte 8 Sätze mit dieser Übung
+        letzte_saetze = alle_saetze.filter(uebung=uebung).order_by('-einheit__datum')[:8]
         
-        if len(letzte_saetze) >= 5:
-            gewichte = [float(s.gewicht) for s in letzte_saetze[:5] if s.gewicht]
+        if len(letzte_saetze) >= 8:  # Mindestens 8 Sätze für sinnvolle Stagnations-Analyse
+            gewichte = [float(s.gewicht) for s in letzte_saetze if s.gewicht]
             
-            if gewichte and max(gewichte) == min(gewichte):  # Kein Fortschritt
+            # Echte Stagnation: Kein Fortschritt über längeren Zeitraum
+            if gewichte and len(gewichte) >= 8 and max(gewichte) == min(gewichte):
                 empfehlungen.append({
                     'typ': 'stagnation',
                     'prioritaet': 'niedrig',
                     'titel': f'{uebung.bezeichnung}: Stagnation',
-                    'beschreibung': f'Bei dieser Übung gab es in den letzten 5 Trainings keinen Fortschritt (konstant {gewichte[0]} kg).',
+                    'beschreibung': f'Bei dieser Übung gab es in den letzten {len(gewichte)} Trainings keinen Fortschritt (konstant {gewichte[0]} kg).',
                     'empfehlung': 'Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren',
                     'uebungen': []
                 })
@@ -2576,7 +2582,11 @@ def exercise_api_detail(request, exercise_id):
         
         return JsonResponse(data)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f'Generate Plan API Error: {e}')
+        return JsonResponse({
+            'error': 'Plan konnte nicht generiert werden. Bitte später erneut versuchen.',
+            'technical_error': str(e) if settings.DEBUG else None
+        }, status=500)
 
 
 @login_required
@@ -3508,6 +3518,121 @@ def service_worker(request):
         return HttpResponse(content, content_type='application/javascript')
     except FileNotFoundError:
         return HttpResponse('Service Worker not found', status=404)
+
+
+@login_required
+def exercise_detail(request, uebung_id):
+    """
+    Kombinierte Übungs-Detailansicht:
+    - Beschreibung & Info
+    - Muskelgruppen-Visualisierung
+    - User-spezifische Statistiken
+    """
+    uebung = get_object_or_404(Uebung.objects.prefetch_related('equipment'), id=uebung_id)
+    
+    # User-spezifische Sätze
+    saetze = Satz.objects.filter(
+        einheit__user=request.user,
+        uebung=uebung,
+        ist_aufwaermsatz=False
+    ).select_related('einheit').order_by('einheit__datum')
+    
+    has_data = saetze.exists()
+    
+    context = {
+        'uebung': uebung,
+        'has_data': has_data,
+    }
+    
+    if has_data:
+        # === STATISTIKEN BERECHNEN ===
+        
+        # 1. 1RM Progression
+        history_data = {}
+        personal_record = 0
+        best_weight = 0
+        total_volume = 0
+        total_sets = saetze.count()
+        
+        for satz in saetze:
+            # Gewicht normalisieren
+            effektives_gewicht = float(satz.gewicht) if satz.gewicht else 0
+            if uebung.gewichts_typ == 'PRO_SEITE':
+                effektives_gewicht *= 2
+            
+            # 1RM berechnen
+            if uebung.gewichts_typ == 'ZEIT':
+                one_rep_max = float(satz.wiederholungen)
+            else:
+                if effektives_gewicht > 0:
+                    one_rep_max = effektives_gewicht * (1 + (satz.wiederholungen / 30))
+                else:
+                    one_rep_max = 0
+            
+            # Bestwert des Tages
+            datum_str = satz.einheit.datum.strftime('%d.%m.%Y')
+            if datum_str not in history_data or one_rep_max > history_data[datum_str]:
+                history_data[datum_str] = round(one_rep_max, 1)
+            
+            # Rekorde
+            if one_rep_max > personal_record:
+                personal_record = round(one_rep_max, 1)
+            if effektives_gewicht > best_weight:
+                best_weight = effektives_gewicht
+            
+            # Volumen
+            if satz.gewicht and satz.wiederholungen:
+                total_volume += float(satz.gewicht) * satz.wiederholungen
+        
+        # Chart-Daten
+        labels = list(history_data.keys())
+        data = list(history_data.values())
+        
+        # 2. RPE-Analyse
+        avg_rpe = saetze.aggregate(Avg('rpe'))['rpe__avg']
+        avg_rpe_display = round(avg_rpe, 1) if avg_rpe else None
+        
+        # RPE-Trend
+        rpe_trend = None
+        if avg_rpe:
+            heute = timezone.now()
+            vier_wochen_alt = heute - timedelta(days=28)
+            acht_wochen_alt = heute - timedelta(days=56)
+            
+            recent_rpe = saetze.filter(
+                einheit__datum__gte=vier_wochen_alt
+            ).aggregate(Avg('rpe'))['rpe__avg']
+            
+            older_rpe = saetze.filter(
+                einheit__datum__gte=acht_wochen_alt,
+                einheit__datum__lt=vier_wochen_alt
+            ).aggregate(Avg('rpe'))['rpe__avg']
+            
+            if recent_rpe and older_rpe:
+                diff = recent_rpe - older_rpe
+                if diff < -0.3:
+                    rpe_trend = 'improving'
+                elif diff > 0.3:
+                    rpe_trend = 'declining'
+                else:
+                    rpe_trend = 'stable'
+        
+        # 3. Letztes Training
+        letztes_training = saetze.last().einheit if saetze.exists() else None
+        
+        context.update({
+            'labels_json': json.dumps(labels),
+            'data_json': json.dumps(data),
+            'personal_record': personal_record,
+            'best_weight': best_weight,
+            'avg_rpe': avg_rpe_display,
+            'rpe_trend': rpe_trend,
+            'total_volume': round(total_volume, 0),
+            'total_sets': total_sets,
+            'letztes_training': letztes_training,
+        })
+    
+    return render(request, 'core/exercise_detail.html', context)
 
 
 @cache_control(max_age=0, no_cache=True, no_store=True, must_revalidate=True)

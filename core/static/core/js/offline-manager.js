@@ -20,6 +20,11 @@ class OfflineManager {
         // Initial Status setzen
         this.updateConnectionStatus();
         
+        // Markiere offline Sätze in UI (falls auf Training-Session)
+        if (window.location.pathname.includes('/training/')) {
+            await this.markOfflineSetsInUI();
+        }
+        
         // Service Worker Messages empfangen
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.addEventListener('message', event => {
@@ -141,28 +146,55 @@ class OfflineManager {
                 const result = await response.json();
                 console.log('[Manual Sync] Response:', result);
                 
+                let syncedCount = 0;
+                let failedCount = 0;
+                
                 // Markiere erfolgreiche Syncs
                 if (result.results) {
                     for (const syncResult of result.results) {
                         if (syncResult.success) {
                             await this.markAsSynced('trainingData', syncResult.id);
+                            syncedCount++;
                             console.log('[Manual Sync] Marked as synced:', syncResult.id);
                         } else {
+                            failedCount++;
                             console.warn('[Manual Sync] Sync failed for:', syncResult.id, syncResult.error);
                         }
                     }
                 }
                 
-                // Zeige Erfolg
-                this.showToast(`✓ ${result.synced_count || validData.length} Sätze synchronisiert`, 'success');
+                // Zeige detailliertes Feedback
+                if (syncedCount > 0) {
+                    const message = syncedCount === 1 
+                        ? '✓ 1 Satz synchronisiert'
+                        : `✓ ${syncedCount} Sätze synchronisiert`;
+                    
+                    // Verwende window.showToast falls vorhanden (von toast.js), sonst diese Methode
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(message, 'success', 3000);
+                    } else {
+                        this.showToast(message, 'success');
+                    }
+                }
+                
+                if (failedCount > 0) {
+                    const message = `⚠ ${failedCount} Satz(e) konnten nicht synchronisiert werden`;
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(message, 'warning', 4000);
+                    } else {
+                        this.showToast(message, 'warning');
+                    }
+                }
                 
                 // Seite nach kurzer Verzögerung neu laden
-                setTimeout(() => {
-                    if (window.location.pathname.includes('/training/')) {
-                        console.log('[Manual Sync] Reloading page...');
-                        window.location.reload();
-                    }
-                }, 1500);
+                if (syncedCount > 0) {
+                    setTimeout(() => {
+                        if (window.location.pathname.includes('/training/')) {
+                            console.log('[Manual Sync] Reloading page...');
+                            window.location.reload();
+                        }
+                    }, 1500);
+                }
                 
             } else {
                 const errorText = await response.text();
@@ -440,6 +472,69 @@ class OfflineManager {
             
             clearRequest.onerror = () => reject(clearRequest.error);
         });
+    }
+
+    async markOfflineSetsInUI() {
+        try {
+            const unsyncedData = await this.getUnsyncedData('trainingData');
+            
+            if (unsyncedData.length === 0) {
+                console.log('[Offline UI] No unsynced data to mark');
+                return;
+            }
+            
+            console.log(`[Offline UI] Marking ${unsyncedData.length} offline sets`);
+            
+            // Warte kurz bis DOM geladen ist
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            for (const item of unsyncedData) {
+                // Suche nach der Zeile mit diesem Satz
+                // URL-Pattern: /training/.../edit-set/123/
+                const setIdMatch = item.url && item.url.match(/\/edit-set\/(\d+)\//);
+                if (!setIdMatch) continue;
+                
+                const setId = setIdMatch[1];
+                const editBtn = document.querySelector(`button[onclick*="openEditModal('${setId}'"]`);
+                
+                if (editBtn) {
+                    const row = editBtn.closest('tr');
+                    if (row) {
+                        // Füge gelben Hintergrund hinzu
+                        row.classList.add('bg-warning', 'bg-opacity-10');
+                        
+                        // Füge Badge hinzu (falls noch nicht vorhanden)
+                        if (!row.querySelector('.badge.bg-warning')) {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-warning text-dark ms-2';
+                            badge.textContent = 'Offline';
+                            badge.title = 'Wird beim nächsten Sync übertragen';
+                            
+                            const gewichtCell = row.cells[1];
+                            if (gewichtCell) {
+                                gewichtCell.appendChild(badge);
+                            }
+                        }
+                        
+                        console.log(`[Offline UI] Marked set ${setId} as offline`);
+                    }
+                }
+            }
+            
+            // Zeige Info-Toast wenn Offline-Sätze vorhanden
+            if (unsyncedData.length > 0) {
+                const message = unsyncedData.length === 1
+                    ? '1 Satz wartet auf Synchronisierung'
+                    : `${unsyncedData.length} Sätze warten auf Synchronisierung`;
+                    
+                if (typeof window.showToast === 'function') {
+                    window.showToast(message, 'info', 4000);
+                }
+            }
+            
+        } catch (error) {
+            console.error('[Offline UI] Error marking offline sets:', error);
+        }
     }
 }
 

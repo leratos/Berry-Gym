@@ -21,6 +21,7 @@ urlpatterns = [
     path('uebungen/', views.uebungen_auswahl, name='uebungen_auswahl'),
     path('muscle-map/', views.muscle_map, name='muscle_map'),
     path('uebung/<int:uebung_id>/', views.uebung_detail, name='uebung_detail'),
+    path('exercise/<int:uebung_id>/detail/', views.exercise_detail, name='exercise_detail'),
     path('training/start/', views.training_start, name='training_start_free'),
     path('training/start/<int:plan_id>/', views.training_start, name='training_start_plan'),
     path('training/<int:training_id>/', views.training_session, name='training_session'),
