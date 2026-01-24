@@ -36,7 +36,28 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 {
   "plan_name": "Beschreibender Name (z.B. '3er-Split: Push/Pull/Legs - Woche 1-4')",
   "plan_description": "Kurze Beschreibung und Ziele",
-  "duration_weeks": 4,
+    "duration_weeks": 12,
+    "periodization": "linear | wellenfoermig | block",
+    "target_profile": "kraft | hypertrophie | definition",
+    "deload_weeks": [4,8,12],
+    "macrocycle": {
+        "duration_weeks": 12,
+        "weeks": [
+            {"week": 1, "focus": "Volumenaufbau", "volume_multiplier": 1.0, "intensity_target_rpe": 7.8, "notes": "Baseline"},
+            {"week": 4, "focus": "Deload", "is_deload": true, "volume_multiplier": 0.8, "intensity_target_rpe": 6.8, "notes": "Volumen -20%, Intensität -10%"}
+        ]
+    },
+    "microcycle_template": {
+        "rep_range": "6-12",
+        "rpe_range": "7-8.5",
+        "set_progression": "+1 Satz pro Hauptübung in Nicht-Deload-Wochen, nach Deload reset",
+        "deload_rules": "Woche 4/8/12: Volumen 80%, Intensität 90%"
+    },
+    "progression_strategy": {
+        "auto_load": "Wenn RPE < Ziel -0.5 zweimal → +2.5-5% Gewicht. Wenn RPE > Ziel +0.5 → -5% Gewicht oder 1 Satz weniger.",
+        "volume": "Nutze das Satzbudget voll aus, +1 Satz in Nicht-Deload-Wochen",
+        "after_deload": "Starte mit Basisvolumen, Woche nach Deload Re-Akklimatisierung"
+    },
   "sessions": [
     {
       "day_name": "Push (Brust/Schultern/Trizeps)",
@@ -51,16 +72,16 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         }
       ]
     }
-  ],
-  "weekly_structure": "Beschreibung des Wochenplans",
-  "progression_notes": "Wie soll der User progressiv steigern"
+    ],
+    "weekly_structure": "Beschreibung des Wochenplans",
+    "progression_notes": "Wie soll der User progressiv steigern"
 }
 ```
 
 **DUPLIKATE & PROGRESSION:**
 - ❌ KEINE Duplikate INNERHALB EINER SESSION (jede Übung nur 1x pro Tag)
 - ✅ ÜBER MEHRERE SESSIONS sind identische Übungen ERLAUBT und ERWÜNSCHT (Progression!)
-- Erstelle eine EINWÖCHIGE Session-Struktur, die für 4 Wochen verwendet wird
+- Erstelle eine EINWÖCHIGE Session-Struktur, die für den 12-Wochen-Makrozyklus verwendet wird (inkl. Deload-Wochen)
 - Übungen & Reihenfolge bleiben gleich, Progression kommt in progression_notes
 
 **Weitere Anforderungen:**
@@ -73,13 +94,16 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         analysis_data: Dict[str, Any],
         available_exercises: List[str],
         plan_type: str = "3er-split",
-        sets_per_session: int = 18
+        sets_per_session: int = 18,
+        target_profile: str = "hypertrophie",
+        periodization: str = "linear"
     ) -> str:
         # Plan-Type spezifische Anweisungen (Frontend-kompatible Keys)
         plan_instructions = {
             "2er-split": "Erstelle einen 2er-Split (z.B. Oberkörper/Unterkörper oder Push/Pull)",
             "3er-split": "Erstelle einen 3er-Split (z.B. Push/Pull/Legs oder Oberkörper/Unterkörper/Ganzkörper)",
             "4er-split": "Erstelle einen 4er-Split (z.B. Brust+Trizeps, Rücken+Bizeps, Schultern+Bauch, Beine)",
+            "ppl": "Erstelle einen Push/Pull/Legs Split (6x pro Woche möglich)",
             "push-pull-legs": "Erstelle einen Push/Pull/Legs Split (6x pro Woche möglich)",
             "ganzkörper": "Erstelle einen Ganzkörper-Plan (2-3x pro Woche, alle Muskelgruppen pro Session)"
         }
@@ -131,6 +155,18 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         # Build prompt
         exercises_list = "\n".join([f"  - {ex}" for ex in sorted(available_exercises)])
         
+        profile_guides = {
+            'kraft': '3-6 Wdh, RPE 7.5-9, lange Pausen, Compounds priorisieren',
+            'hypertrophie': '6-12 Wdh, RPE 7-8.5, moderates Volumen, 5-6 Übungen/Tag',
+            'definition': '10-15 Wdh, RPE 6.5-8, kürzere Pausen, metabolische Arbeit inkl. Core/Cardio'
+        }
+
+        periodization_note = {
+            'linear': 'Linear steigende Intensität pro Block, Deload in Woche 4/8/12 (Volumen 80%, Intensität 90%)',
+            'wellenfoermig': 'Wellenförmig: Heavy/Medium/Light innerhalb jedes 4-Wochen-Blocks + Deload in Woche 4/8/12',
+            'block': 'Blockperiodisierung: Block 1 Volumen, Block 2 Kraft, Block 3 Peaking/Definition mit Deload in Woche 4/8/12'
+        }.get(periodization, 'Linear mit Deload 4/8/12')
+
         prompt = f"""**TRAININGSANALYSE**
 
 **User ID:** {analysis_data['user_id']}
@@ -176,6 +212,12 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 → Falls NEIN: Verwende eine andere ähnliche Übung aus der Liste!
 → Falls JA: Kopiere den Namen EXAKT!
 
+**Trainingsprogrammierung Defaults:**
+- Makrozyklus: 12 Wochen, Periodisierung: {periodization_note}
+- Deload: Wochen 4, 8, 12 → Volumen 80%, Intensität ~90% der Vorwoche
+- Zielprofil: {target_profile} → {profile_guides.get(target_profile, profile_guides['hypertrophie'])}
+- Mikrozyklus: Nutze das Satz-Budget ({min_sets}-{max_sets}) voll aus, +1 Satz auf Hauptübungen in Nicht-Deload-Wochen, danach Deload-Reset
+
 **AUFGABE:**
 {instruction}
 
@@ -204,8 +246,9 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 6. Compound Movements (Langhantel-Kniebeuge, Bankdrücken, Kreuzheben) priorisieren als erste Übung
 7. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
 8. ** DUPLIKATE**: ❌ KEINE doppelten Übungen INNERHALB einer Session! ✅ ABER gleiche Übungen in verschiedenen Sessions sind ERWÜNSCHT (für Progression über 4 Wochen)!
-9. Output: Valides JSON wie im System Prompt beschrieben
-10. ** KOPIERE DIE EXERCISE_NAME WERTE EXAKT AUS DER LISTE - KEINE VARIATIONEN!**
+9. Periodisierung: Fülle periodization, deload_weeks, macrocycle, microcycle_template, progression_strategy gemäß Defaults oben aus (12 Wochen!)
+10. Output: Valides JSON wie im System Prompt beschrieben
+11. ** KOPIERE DIE EXERCISE_NAME WERTE EXAKT AUS DER LISTE - KEINE VARIATIONEN!**
 
 Erstelle jetzt den optimalen Trainingsplan (NUR JSON, kein anderer Text):"""
         
@@ -216,11 +259,13 @@ Erstelle jetzt den optimalen Trainingsplan (NUR JSON, kein anderer Text):"""
         analysis_data: Dict[str, Any],
         available_exercises: List[str],
         plan_type: str = "3er-split",
-        sets_per_session: int = 18
+        sets_per_session: int = 18,
+        target_profile: str = "hypertrophie",
+        periodization: str = "linear"
     ) -> List[Dict[str, str]]:
         return [
             {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": self.build_user_prompt(analysis_data, available_exercises, plan_type, sets_per_session)}
+            {"role": "user", "content": self.build_user_prompt(analysis_data, available_exercises, plan_type, sets_per_session, target_profile, periodization)}
         ]
     
     def get_available_exercises_for_user(self, user_id: int) -> List[str]:

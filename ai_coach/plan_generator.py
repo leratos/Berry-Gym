@@ -7,7 +7,7 @@ import argparse
 import json
 import sys
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, List
 
 from .db_client import DatabaseClient
 from .data_analyzer import TrainingAnalyzer
@@ -27,6 +27,8 @@ class PlanGenerator:
         plan_type: str = "3er-split",
         llm_temperature: float = 0.7,
         sets_per_session: int = 18,
+        periodization: str = "linear",
+        target_profile: str = "hypertrophie",
         use_openrouter: bool = False,
         fallback_to_openrouter: bool = True
     ):
@@ -37,6 +39,8 @@ class PlanGenerator:
             plan_type: Art des Plans (3er-split, ppl, upper-lower, fullbody)
             llm_temperature: LLM Kreativität (0.0-1.0)
             sets_per_session: Ziel-Satzanzahl pro Trainingstag (18 = ca. 1h)
+            periodization: Periodisierungsmodell (linear, wellenfoermig, block)
+            target_profile: Zielprofil (kraft, hypertrophie, definition)
             use_openrouter: True = nutze nur OpenRouter (skip Ollama)
             fallback_to_openrouter: True = Fallback zu OpenRouter bei Ollama-Fehler
         """
@@ -45,6 +49,8 @@ class PlanGenerator:
         self.plan_type = plan_type
         self.llm_temperature = llm_temperature
         self.sets_per_session = sets_per_session
+        self.periodization = periodization
+        self.target_profile = target_profile
         self.use_openrouter = use_openrouter
         self.fallback_to_openrouter = fallback_to_openrouter
     
@@ -125,7 +131,9 @@ class PlanGenerator:
             analysis_data=analysis_data,
             available_exercises=available_exercises,
             plan_type=self.plan_type,
-            sets_per_session=self.sets_per_session
+            sets_per_session=self.sets_per_session,
+            target_profile=self.target_profile,
+            periodization=self.periodization
         )
         
         print(f"✓ System Prompt: {len(messages[0]['content'])} Zeichen")
@@ -148,6 +156,7 @@ class PlanGenerator:
         
         # Extrahiere JSON aus Result-Dict
         plan_json = llm_result.get('response') if isinstance(llm_result, dict) else llm_result
+        plan_json = self._ensure_periodization_metadata(plan_json)
         
         # 5. Validierung mit Smart Retry
         print("\n✅ SCHRITT 5: Plan validieren")
@@ -170,6 +179,9 @@ class PlanGenerator:
                 available_exercises=available_exercises,
                 llm_client=llm_client
             )
+
+            # Stelle sicher, dass Periodisierungs-Metadaten nach der Korrektur noch vorhanden sind
+            plan_json = self._ensure_periodization_metadata(plan_json)
             
             # Nochmal validieren
             print("\n✅ Re-Validierung nach Korrektur")
@@ -207,6 +219,12 @@ class PlanGenerator:
         print("🎉 FERTIG! Trainingsplan erfolgreich generiert")
         print("=" * 60)
         
+        # Füge Makrozyklus-Beschreibung hinzu (auch für Vorschau)
+        macro_summary = self._format_macrocycle_summary(plan_json)
+        if 'plan_description' not in plan_json:
+            plan_json['plan_description'] = ''
+        plan_json['beschreibung'] = plan_json['plan_description'] + "\n\nPeriodisierung / Makrozyklus\n" + macro_summary
+        
         return {
             'success': True,
             'plan_ids': plan_ids,
@@ -234,10 +252,15 @@ class PlanGenerator:
             day_name = session['day_name']
             
             # Plan pro Session erstellen
+            beschreibungsteile = [plan_json.get('plan_description', '') + f"\n\nTrainingstag {session_index}: {day_name}"]
+            macro_summary = self._format_macrocycle_summary(plan_json)
+            if macro_summary:
+                beschreibungsteile.append("Periodisierung / Makrozyklus" + "\n" + macro_summary)
+
             plan = Plan.objects.create(
                 user=user,
                 name=f"{plan_json['plan_name']} - {day_name}",
-                beschreibung=plan_json.get('plan_description', '') + f"\n\nTrainingstag {session_index}: {day_name}",
+                beschreibung="\n\n".join([p for p in beschreibungsteile if p]),
                 erstellt_am=timezone.now()
             )
             
@@ -424,6 +447,216 @@ Beispiel:
             print("   → Plan wird ohne Korrektur zurückgegeben")
             return plan_json
 
+    def _ensure_periodization_metadata(self, plan_json: dict) -> dict:
+        """Sichert Makrozyklus-/Periodisierungsdaten ab und ergänzt Defaults"""
+        profile = (plan_json.get('target_profile') or self.target_profile or 'hypertrophie').lower()
+        periodization = (plan_json.get('periodization') or self.periodization or 'linear').lower()
+        deload_weeks = plan_json.get('deload_weeks') or [4, 8, 12]
+
+        plan_json['target_profile'] = profile
+        plan_json['periodization'] = periodization
+        plan_json['duration_weeks'] = plan_json.get('duration_weeks', 12)
+        plan_json['deload_weeks'] = deload_weeks
+        plan_json['macrocycle'] = plan_json.get('macrocycle') or self._build_macrocycle(periodization, profile, deload_weeks)
+        plan_json['microcycle_template'] = plan_json.get('microcycle_template') or self._build_microcycle_template(profile)
+        plan_json['progression_strategy'] = plan_json.get('progression_strategy') or self._build_progression_strategy(profile)
+
+        return plan_json
+
+    def _get_profile_defaults(self, profile: str) -> Dict[str, object]:
+        defaults = {
+            'kraft': {
+                'rep_range': '3-6',
+                'rpe_range': '7.5-9',
+                'base_rpe': 8.3,
+                'notes': 'Fokus auf Maximalkraft, längere Pausen, weniger Übungen'
+            },
+            'hypertrophie': {
+                'rep_range': '6-12',
+                'rpe_range': '7-8.5',
+                'base_rpe': 7.8,
+                'notes': 'Muskelaufbau, moderates Volumen pro Übung'
+            },
+            'definition': {
+                'rep_range': '10-15',
+                'rpe_range': '6.5-8',
+                'base_rpe': 7.2,
+                'notes': 'Kürzere Pausen, höheres metabolisches Volumen'
+            }
+        }
+        return defaults.get(profile, defaults['hypertrophie'])
+
+    def _build_macrocycle(self, periodization: str, profile: str, deload_weeks: List[int]) -> Dict[str, object]:
+        defaults = self._get_profile_defaults(profile)
+        weeks = []
+
+        for week in range(1, 13):
+            block = ((week - 1) // 4) + 1
+            pos_in_block = ((week - 1) % 4) + 1
+            is_deload = week in deload_weeks
+
+            volume_multiplier = 0.8 if is_deload else round(1.0 + 0.05 * (block - 1) + 0.02 * (pos_in_block - 1), 2)
+            intensity_rpe = self._calculate_weekly_rpe(periodization, defaults['base_rpe'], pos_in_block, block, is_deload)
+            focus = self._week_focus(periodization, block, is_deload, profile)
+            notes = "Deload: Volumen -20%, Intensität -10%" if is_deload else self._periodization_note(periodization, block, pos_in_block)
+
+            weeks.append({
+                'week': week,
+                'block': block,
+                'is_deload': is_deload,
+                'volume_multiplier': volume_multiplier,
+                'intensity_target_rpe': intensity_rpe,
+                'focus': focus,
+                'notes': notes
+            })
+
+        return {
+            'duration_weeks': 12,
+            'periodization': periodization,
+            'target_profile': profile,
+            'deload_weeks': deload_weeks,
+            'weeks': weeks
+        }
+
+    def _calculate_weekly_rpe(self, periodization: str, base_rpe: float, pos_in_block: int, block: int, is_deload: bool) -> float:
+        if is_deload:
+            return round(max(6.5, base_rpe - 1.0), 1)
+
+        # Linear: steigende Intensität innerhalb des Blocks
+        if periodization.startswith('lin'):
+            return round(min(9.0, base_rpe + 0.2 * (pos_in_block - 1) + 0.1 * (block - 1)), 1)
+
+        # Wellenförmig: Heavy/Medium/Light pro Block
+        if periodization.startswith('w'):  # wellenfoermig
+            pattern = {1: 0.0, 2: 0.3, 3: -0.1}
+            delta = pattern.get(pos_in_block, 0.0)
+            return round(min(9.0, max(6.5, base_rpe + delta)), 1)
+
+        # Block: Block 1 Basisvolumen, Block 2 Kraft, Block 3 Peaking/Definition
+        if periodization.startswith('b'):
+            block_delta = {1: -0.2, 2: 0.1, 3: 0.25}
+            return round(min(9.0, max(6.5, base_rpe + block_delta.get(block, 0))), 1)
+
+        # Fallback linear
+        return round(min(9.0, base_rpe + 0.15 * (pos_in_block - 1)), 1)
+
+    def _week_focus(self, periodization: str, block: int, is_deload: bool, profile: str) -> str:
+        if is_deload:
+            return "Deload & Technik"
+        if periodization.startswith('w'):
+            return f"Welle Block {block}: Schwer/Mittel/Leicht"
+        if periodization.startswith('b'):
+            focus_map = {1: 'Volumenbasis', 2: 'Kraft/Intensität', 3: 'Top-/Definition'}
+            return focus_map.get(block, 'Volumenbasis')
+        return f"Linearer Aufbau Block {block} ({profile})"
+
+    def _periodization_note(self, periodization: str, block: int, pos_in_block: int) -> str:
+        if periodization.startswith('w'):
+            tags = {1: 'Medium', 2: 'Heavy', 3: 'Light'}
+            return f"Wellenförmig: {tags.get(pos_in_block, 'Medium')} Woche"
+        if periodization.startswith('b'):
+            if block == 1:
+                return "Volumen priorisieren, Technik stabilisieren"
+            if block == 2:
+                return "Kraftfokus: schwerere Compounds"
+            return "Top-Phase: niedrigeres Volumen, höhere RPE"
+        return "Progressiv +0.5 RPE / Block"
+
+    def _build_microcycle_template(self, profile: str) -> Dict[str, object]:
+        defaults = self._get_profile_defaults(profile)
+        return {
+            'target_profile': profile,
+            'rep_range': defaults['rep_range'],
+            'rpe_range': defaults['rpe_range'],
+            'set_progression': '+1 Satz pro Hauptübung in Nicht-Deload-Wochen bis Obergrenze, danach Deload-Reset',
+            'deload_rules': 'Woche 4/8/12: Volumen 80%, Intensität 90%',
+            'notes': defaults['notes']
+        }
+
+    def _build_progression_strategy(self, profile: str) -> Dict[str, object]:
+        defaults = self._get_profile_defaults(profile)
+        return {
+            'target_profile': profile,
+            'rpe_guardrails': f"Hauptübungen RPE Ziel {defaults['rpe_range']}",
+            'auto_load': 'Wenn RPE > Ziel +0.5 zweimal in Folge: -5% Gewicht oder 1 Satz weniger. Wenn RPE < Ziel -0.5 zweimal: +2.5-5% Gewicht.',
+            'volume': f"Starte bei ~{self.sets_per_session} Sätzen pro Tag, erhöhe +1 Satz bei Hauptübung in Woche 2-3/6-7/10-11, Deload-Wochen resetten auf Basisvolumen.",
+            'progression': 'Steigere erst Wiederholungen innerhalb Range, dann Gewicht. Nach Deload: 1 Woche Re-Akklimatisierung.'
+        }
+
+    def _format_macrocycle_summary(self, plan_json: dict) -> str:
+        """Formatiert benutzerfreundliche Makrozyklus-Zusammenfassung mit konkreten Anweisungen"""
+        macro = plan_json.get('macrocycle', {}) or {}
+        deload_weeks = plan_json.get('deload_weeks') or macro.get('deload_weeks') or []
+        periodization = plan_json.get('periodization', self.periodization)
+        profile = plan_json.get('target_profile', self.target_profile)
+        duration = macro.get('duration_weeks') or plan_json.get('duration_weeks', 12)
+
+        # Benutzerfreundliche Überschrift
+        periodization_labels = {
+            'linear': 'Linearer Aufbau',
+            'wellenfoermig': 'Wellenfoermige Periodisierung',
+            'block': 'Blockperiodisierung'
+        }
+        profile_labels = {
+            'kraft': 'Maximalkraft',
+            'hypertrophie': 'Muskelaufbau',
+            'definition': 'Definition & Ausdauer'
+        }
+        
+        lines = [
+            f"PLAN-UEBERSICHT: {duration}-Wochen-Plan",
+            f"{periodization_labels.get(periodization, periodization)} fuer {profile_labels.get(profile, profile)}",
+            "",
+            ""
+        ]
+
+        # Mikrozyklus-Vorgaben (Wiederholungen & RPE)
+        micro = plan_json.get('microcycle_template') or {}
+        if micro:
+            rep_range = micro.get('rep_range', '6-12')
+            rpe_range = micro.get('rpe_range', '7-8.5')
+            lines.append(f"ZIEL PRO SATZ: {rep_range} Wiederholungen bei RPE {rpe_range}")
+            lines.append("")
+            lines.append("")
+
+        # Progression klar formuliert
+        lines.append("PROGRESSION (Wochen 1-3, 5-7, 9-11):")
+        lines.append("   - Steigere das Gewicht, wenn du >12 Wdh schaffst")
+        lines.append("   - Fuege +1 Satz bei Hauptuebungen hinzu (z.B. von 3 auf 4 Saetze)")
+        lines.append("   - Ziel: RPE bleibt bei 7-8.5 (noch 1-2 Wdh Reserve)")
+        lines.append("")
+        lines.append("")
+
+        # Deload-Wochen klar erklären
+        deload_str = ', '.join(map(str, deload_weeks)) if deload_weeks else '4, 8, 12'
+        lines.append(f"DELOAD-WOCHEN ({deload_str}):")
+        lines.append("   - Reduziere das Volumen auf 80% (z.B. 4 Saetze -> 3 Saetze)")
+        lines.append("   - Senke das Gewicht leicht (~10%), RPE sollte bei 6-7 liegen")
+        lines.append("   - Fokus auf Technik und Regeneration")
+        lines.append("")
+        lines.append("")
+
+        # Wochenplan-Beispiele (nur wichtige Wochen)
+        if macro and isinstance(macro, dict):
+            lines.append("BEISPIEL-WOCHENPLAN:")
+            week_examples = []
+            for week_data in macro.get('weeks', []):
+                week = week_data.get('week')
+                if week in (1, 4, 5, 8, 9, 12):  # Zeige nur Start, Deload, neue Blöcke
+                    focus = week_data.get('focus', '')
+                    vol = week_data.get('volume_multiplier', 1.0)
+                    rpe = week_data.get('intensity_target_rpe', 7.8)
+                    
+                    if week_data.get('is_deload'):
+                        week_examples.append(f"   - Woche {week}: {focus} (weniger Volumen, mehr Erholung)")
+                    else:
+                        week_examples.append(f"   - Woche {week}: {focus} (Volumen x{vol}, Ziel-RPE {rpe})")
+            
+            if week_examples:
+                lines.extend(week_examples[:4])  # Max 4 Beispiele
+
+        return "\n".join(lines)
+
 
 def main():
     """
@@ -479,6 +712,20 @@ Beispiele:
         default=0.7,
         help='LLM Kreativität 0.0-1.0 (default: 0.7)'
     )
+
+    parser.add_argument(
+        '--periodization',
+        choices=['linear', 'wellenfoermig', 'block'],
+        default='linear',
+        help='Periodisierungsmodell (default: linear, Deload in Woche 4/8/12)'
+    )
+
+    parser.add_argument(
+        '--target-profile',
+        choices=['kraft', 'hypertrophie', 'definition'],
+        default='hypertrophie',
+        help='Zielprofil für RPE/Wdh-Zonen (default: hypertrophie)'
+    )
     
     parser.add_argument(
         '--use-openrouter',
@@ -513,6 +760,8 @@ Beispiele:
         plan_type=args.plan_type,
         llm_temperature=args.temperature,
         sets_per_session=args.sets_per_session,
+        periodization=args.periodization,
+        target_profile=args.target_profile,
         use_openrouter=args.use_openrouter,
         fallback_to_openrouter=not args.no_fallback
     )
