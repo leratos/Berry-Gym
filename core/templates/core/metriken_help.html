@@ -1,0 +1,455 @@
+{% load static %}
+<!doctype html>
+<html lang="de" data-bs-theme="dark" id="htmlRoot">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Metriken & Kennzahlen - HomeGym</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <script>
+        // Theme laden vor Render
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+    
+    <style>
+        /* Dark Theme */
+        [data-bs-theme="dark"] body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        [data-bs-theme="dark"] .card {
+            background-color: #161b22;
+            border-color: #30363d;
+        }
+        
+        /* Light Theme */
+        [data-bs-theme="light"] body {
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        [data-bs-theme="light"] .card {
+            background-color: #ffffff;
+            border-color: #dee2e6;
+        }
+    </style>
+  </head>
+  <body>
+    
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">
+          <i class="bi bi-house-fill"></i> HomeGym
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'dashboard' %}">
+                <i class="bi bi-arrow-left"></i> Zurück zum Dashboard
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">📊 Metriken & Kennzahlen erklärt</h1>
+            <p class="lead">Verstehe deine Trainingsmetriken und wie sie berechnet werden</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Performance Form-Index -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">🎯 Performance Form-Index</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Was ist das?</h5>
+                    <p>Der <strong>Performance Form-Index</strong> ist ein Score von 0-100, der deine aktuelle Trainingsform bewertet. Er zeigt, wie gut du trainiert bist und ob du kontinuierlich Fortschritte machst.</p>
+                    
+                    <h5 class="mt-4">Wie wird er berechnet?</h5>
+                    <p>Der Index setzt sich aus 4 Faktoren zusammen (insgesamt 100 Punkte):</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Faktor</th>
+                                    <th>Max. Punkte</th>
+                                    <th>Beschreibung</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Trainingsfrequenz</strong></td>
+                                    <td>30</td>
+                                    <td>Wie oft du diese Woche trainierst<br>
+                                        <small class="text-muted">Optimal: 3-5x pro Woche<br>
+                                        Berechnung: Trainings × 7,5 (max. 30)</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Konsistenz (Streak)</strong></td>
+                                    <td>25</td>
+                                    <td>Wie viele Wochen du ohne Unterbrechung trainierst<br>
+                                        <small class="text-muted">Berechnung: Wochen × 2,5 (max. 25)<br>
+                                        10 Wochen = 25 Punkte</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Trainingsintensität (RPE)</strong></td>
+                                    <td>25</td>
+                                    <td>Durchschnittlicher RPE der letzten 2 Wochen<br>
+                                        <small class="text-muted">Optimal: RPE 7-8 = 25 Punkte<br>
+                                        RPE 6-9 = 20 Punkte<br>
+                                        RPE 5-9.5 = 15 Punkte<br>
+                                        Sonst = 10 Punkte</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Volumen-Trend</strong></td>
+                                    <td>20</td>
+                                    <td>Entwicklung deines Volumens (letzte 4 Wochen)<br>
+                                        <small class="text-muted">Steigend/gleichbleibend = 20 Punkte<br>
+                                        Leichter Rückgang (>80%) = 15 Punkte<br>
+                                        Starker Rückgang = 10 Punkte</small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5 class="mt-4">Bewertung:</h5>
+                    <ul class="list-unstyled">
+                        <li><span class="badge badge-success">80-100 Punkte</span> = Ausgezeichnet 🔥</li>
+                        <li><span class="badge badge-info">60-79 Punkte</span> = Gut 👍</li>
+                        <li><span class="badge badge-warning">40-59 Punkte</span> = Solide ⚡</li>
+                        <li><span class="badge badge-danger">0-39 Punkte</span> = Ausbaufähig 💪</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <strong>💡 Tipp:</strong> Ein hoher Form-Index bedeutet, dass du regelmäßig und mit guter Intensität trainierst. Fokussiere dich auf Konsistenz!
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ermüdungs-Index -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">😴 Ermüdungs-Index</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Was ist das?</h5>
+                    <p>Der <strong>Ermüdungs-Index</strong> ist ein Score von 0-100+, der anzeigt, wie erschöpft dein Körper ist. Hohe Werte bedeuten, dass du eine Pause brauchst!</p>
+                    
+                    <h5 class="mt-4">Wie wird er berechnet?</h5>
+                    <p>Der Index setzt sich aus 3 Faktoren zusammen (bis zu 100+ Punkte):</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Faktor</th>
+                                    <th>Max. Punkte</th>
+                                    <th>Beschreibung</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Volumen-Spike</strong></td>
+                                    <td>40</td>
+                                    <td>Plötzlicher Anstieg des Trainingsvolumens<br>
+                                        <small class="text-muted">>30% Anstieg = 40 Punkte<br>
+                                        >20% Anstieg = 30 Punkte<br>
+                                        >10% Anstieg = 15 Punkte</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Hoher RPE-Durchschnitt</strong></td>
+                                    <td>30</td>
+                                    <td>Sehr intensive Trainingseinheiten<br>
+                                        <small class="text-muted">RPE >8.5 = 30 Punkte<br>
+                                        RPE >8 = 20 Punkte</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Hohe Trainingsfrequenz</strong></td>
+                                    <td>30</td>
+                                    <td>Trainieren ohne ausreichend Ruhetage<br>
+                                        <small class="text-muted">≥6 Trainings/Woche = 30 Punkte<br>
+                                        ≥5 Trainings/Woche = 15 Punkte</small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5 class="mt-4">Bewertung:</h5>
+                    <ul class="list-unstyled">
+                        <li><span class="badge badge-danger">≥60 Punkte</span> = Hoch ⚠️
+                            <br><small>→ Deload-Woche empfohlen! Reduziere Volumen um 40-50%</small>
+                        </li>
+                        <li><span class="badge badge-warning">40-59 Punkte</span> = Moderat ⚡
+                            <br><small>→ Achte auf ausreichend Regeneration</small>
+                        </li>
+                        <li><span class="badge badge-info">20-39 Punkte</span> = Niedrig 👍
+                            <br><small>→ Gute Balance zwischen Training und Erholung</small>
+                        </li>
+                        <li><span class="badge badge-success">0-19 Punkte</span> = Sehr niedrig ✅
+                            <br><small>→ Du kannst noch mehr belasten</small>
+                        </li>
+                    </ul>
+
+                    <div class="alert alert-warning mt-3">
+                        <strong>⚠️ Achtung:</strong> Ein hoher Ermüdungs-Index erhöht das Verletzungsrisiko! Nimm dir Ruhetage oder plane eine Deload-Woche ein.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Weitere Metriken -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">💪 1RM (One-Rep Max)</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Was ist das?</h5>
+                    <p>Dein <strong>1RM</strong> ist das theoretische Maximalgewicht, das du für eine einzelne Wiederholung bewegen könntest.</p>
+                    
+                    <h5 class="mt-4">Wie wird er berechnet?</h5>
+                    <p>Wir verwenden die <strong>Epley-Formel</strong>:</p>
+                    <div class="alert alert-secondary">
+                        <code>1RM = Gewicht × (1 + Wiederholungen ÷ 30)</code>
+                    </div>
+                    
+                    <p><strong>Beispiel:</strong></p>
+                    <ul>
+                        <li>100kg × 5 Wiederholungen</li>
+                        <li>1RM = 100 × (1 + 5/30) = 100 × 1,167 = <strong>116,7 kg</strong></li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <strong>💡 Hinweis:</strong> Der 1RM ist eine Schätzung! Am genauesten ist er bei 3-8 Wiederholungen.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">📈 Trainingsvolumen</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Was ist das?</h5>
+                    <p>Das <strong>Trainingsvolumen</strong> ist die Gesamtmenge an bewegtem Gewicht in einem Training oder einer Woche.</p>
+                    
+                    <h5 class="mt-4">Wie wird es berechnet?</h5>
+                    <div class="alert alert-secondary">
+                        <code>Volumen = Gewicht × Wiederholungen × Sätze</code>
+                    </div>
+                    
+                    <p><strong>Beispiel:</strong></p>
+                    <ul>
+                        <li>Bankdrücken: 80kg × 10 Wdh × 3 Sätze = 2.400 kg</li>
+                        <li>Kniebeugen: 100kg × 8 Wdh × 4 Sätze = 3.200 kg</li>
+                        <li><strong>Gesamt: 5.600 kg</strong></li>
+                    </ul>
+
+                    <h5 class="mt-4">Warum ist es wichtig?</h5>
+                    <p>Volumen ist der <strong>wichtigste Faktor für Muskelwachstum</strong> (Hypertrophie). Wissenschaftlich empfohlen:</p>
+                    <ul>
+                        <li><strong>10-20 Sätze</strong> pro Muskelgruppe pro Woche</li>
+                        <li>Schrittweise Erhöhung (Progressive Overload)</li>
+                        <li>Deload alle 4-6 Wochen</li>
+                    </ul>
+
+                    <div class="alert alert-warning mt-3">
+                        <strong>⚠️ Vorsicht:</strong> Zu schneller Volumen-Anstieg (>20% pro Woche) erhöht das Verletzungsrisiko!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h3 class="mb-0">🎯 RPE (Rate of Perceived Exertion)</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Was ist das?</h5>
+                    <p><strong>RPE</strong> steht für "Rate of Perceived Exertion" - also wie anstrengend ein Satz war.</p>
+                    
+                    <h5 class="mt-4">Die RPE-Skala (0-10):</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>RPE</th>
+                                    <th>Beschreibung</th>
+                                    <th>Wiederholungen in Reserve (RIR)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>10</strong></td>
+                                    <td>Maximale Anstrengung</td>
+                                    <td>0 Wiederholungen übrig</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>9</strong></td>
+                                    <td>Sehr schwer</td>
+                                    <td>1 Wiederholung übrig</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>8</strong></td>
+                                    <td>Schwer</td>
+                                    <td>2 Wiederholungen übrig</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>7</strong></td>
+                                    <td>Moderat schwer</td>
+                                    <td>3 Wiederholungen übrig</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>6</strong></td>
+                                    <td>Moderat</td>
+                                    <td>4 Wiederholungen übrig</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>5 oder weniger</strong></td>
+                                    <td>Leicht</td>
+                                    <td>5+ Wiederholungen übrig</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <strong>💡 Empfehlung:</strong>
+                        <ul class="mb-0">
+                            <li><strong>Hypertrophie (Muskelaufbau):</strong> RPE 7-9</li>
+                            <li><strong>Kraft:</strong> RPE 8-9,5</li>
+                            <li><strong>Ausdauer/Definition:</strong> RPE 6-8</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">🔄 Progressive Overload</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Was ist das?</h5>
+                    <p><strong>Progressive Overload</strong> bedeutet, dass du dein Training schrittweise steigerst, um kontinuierlich Fortschritte zu machen.</p>
+                    
+                    <h5 class="mt-4">3 Wege für Progressive Overload:</h5>
+                    
+                    <div class="mb-3">
+                        <h6>1️⃣ Gewicht erhöhen</h6>
+                        <p>Die häufigste Methode: Erhöhe das Gewicht um 2,5-5kg wenn du alle Sätze mit RPE <7 geschafft hast.</p>
+                        <div class="alert alert-secondary">
+                            <strong>Beispiel:</strong> 100kg × 8 Wdh → 102,5kg × 8 Wdh
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>2️⃣ Wiederholungen erhöhen</h6>
+                        <p>Wenn du 12+ Wiederholungen schaffst, erhöhe das Gewicht und reduziere Wiederholungen.</p>
+                        <div class="alert alert-secondary">
+                            <strong>Beispiel:</strong> 80kg × 12 Wdh → 85kg × 8 Wdh
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>3️⃣ Sätze erhöhen</h6>
+                        <p>Füge zusätzliche Sätze hinzu, um das Volumen zu steigern.</p>
+                        <div class="alert alert-secondary">
+                            <strong>Beispiel:</strong> 3 Sätze → 4 Sätze
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success mt-3">
+                        <strong>✅ Regel:</strong> Erhöhe nur EINEN Faktor pro Training, nicht alle gleichzeitig!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h3 class="mb-0">📅 Deload-Woche</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Was ist das?</h5>
+                    <p>Eine <strong>Deload-Woche</strong> ist eine geplante Regenerationswoche mit reduziertem Trainingsvolumen und -intensität.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="mt-4">Wann Deload?</h5>
+                            <ul>
+                                <li>Alle <strong>4-6 Wochen</strong> (bei intensivem Training)</li>
+                                <li>Bei <strong>Ermüdungs-Index ≥60</strong></li>
+                                <li>Wenn du dich müde/erschöpft fühlst</li>
+                                <li>Bei Stagnation der Kraftwerte</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mt-4">Wie Deload?</h5>
+                            <ul>
+                                <li><strong>Volumen: -40-50%</strong> (weniger Sätze)</li>
+                                <li><strong>Intensität: -10%</strong> (leichteres Gewicht)</li>
+                                <li>Gleiche Übungen beibehalten</li>
+                                <li>RPE 5-7 statt 7-9</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success mt-3">
+                        <strong>💡 Wichtig:</strong> Deload ist KEIN Zeichen von Schwäche! Es ist essentiell für langfristigen Fortschritt und Verletzungsprävention.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center mb-4">
+                <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                    ← Zurück zum Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
