@@ -2522,6 +2522,14 @@ def equipment_management(request):
 
 
 @login_required
+def metriken_help(request):
+    """
+    Hilfsseite mit Erklärungen zu allen Metriken und Kennzahlen
+    """
+    return render(request, 'core/metriken_help.html')
+
+
+@login_required
 def toggle_equipment(request, equipment_id):
     """
     Toggle Equipment für User (An/Aus)
