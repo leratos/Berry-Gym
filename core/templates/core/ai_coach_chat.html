@@ -183,6 +183,9 @@
         let currentExerciseId = null;
         let currentSetNumber = null;
         
+        // 🆕 Chat-Historie für Konversationsgedächtnis
+        let chatHistory = [];
+        
         // Context beim Modal-Öffnen aktualisieren
         document.getElementById('aiCoachModal').addEventListener('show.bs.modal', function() {
             updateContext();
@@ -214,6 +217,9 @@
             // User Message anzeigen
             addMessage(question, 'user');
             
+            // 🆕 User-Frage zur Historie hinzufügen
+            chatHistory.push({ role: 'user', content: question });
+            
             // Input leeren & deaktivieren
             questionInput.value = '';
             questionInput.disabled = true;
@@ -235,7 +241,8 @@
                         session_id: sessionId,
                         question: question,
                         exercise_id: currentExerciseId,
-                        set_number: currentSetNumber
+                        set_number: currentSetNumber,
+                        chat_history: chatHistory.slice(-10)  // 🆕 Letzte 10 Nachrichten für Kontext
                     })
                 });
                 
@@ -249,6 +256,9 @@
                 } else {
                     // AI Antwort anzeigen
                     addMessage(data.answer, 'ai');
+                    
+                    // 🆕 AI-Antwort zur Historie hinzufügen
+                    chatHistory.push({ role: 'assistant', content: data.answer });
                     
                     // Kosten-Info (nur wenn > 0)
                     if (data.cost && data.cost > 0) {

@@ -131,13 +131,19 @@ class LiveGuidance:
         
         return context
     
-    def generate_prompt(self, context: Dict[str, Any], user_question: str) -> List[Dict[str, str]]:
+    def generate_prompt(
+        self, 
+        context: Dict[str, Any], 
+        user_question: str,
+        chat_history: Optional[List[Dict[str, str]]] = None
+    ) -> List[Dict[str, str]]:
         """
         Erstellt LLM Prompt für Live-Guidance
         
         Args:
             context: Context Dict von build_context()
             user_question: Frage des Users
+            chat_history: Bisherige Chat-Nachrichten [{role: 'user'/'assistant', content: '...'}]
         
         Returns:
             Messages List für LLM
@@ -196,15 +202,26 @@ FOKUS:
                         f"- Letzter Satz: {last['gewicht']}kg × {last['wiederholungen']} Wdh @ RPE {last.get('rpe', '?')}"
                     )
         
-        # User Frage
-        user_context_parts.append(f"\nFRAGE: {user_question}")
-        
-        user_prompt = "\n".join(user_context_parts)
+        # Context als erste User-Nachricht
+        context_prompt = "\n".join(user_context_parts)
         
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": context_prompt + "\n\n(Dies ist der aktuelle Training-Context für Referenz)"}
         ]
+        
+        # Chat-Historie einfügen (letzte 5 Nachrichten-Paare = 10 Messages)
+        if chat_history:
+            # Limitiere auf letzte 10 Messages (5 Q&A Paare)
+            recent_history = chat_history[-10:]
+            for msg in recent_history:
+                messages.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                })
+        
+        # Aktuelle Frage als letzte User-Nachricht
+        messages.append({"role": "user", "content": user_question})
         
         return messages
     
@@ -213,7 +230,8 @@ FOKUS:
         trainingseinheit_id: int,
         user_question: str,
         current_uebung_id: Optional[int] = None,
-        current_satz_number: Optional[int] = None
+        current_satz_number: Optional[int] = None,
+        chat_history: Optional[List[Dict[str, str]]] = None
     ) -> Dict[str, Any]:
         """
         Hauptmethode: Holt KI-Guidance für User-Frage
@@ -223,6 +241,7 @@ FOKUS:
             user_question: Frage des Users
             current_uebung_id: ID der aktuellen Übung (optional)
             current_satz_number: Satznummer (optional)
+            chat_history: Bisherige Chat-Nachrichten [{role, content}] (optional)
         
         Returns:
             {
@@ -238,6 +257,7 @@ FOKUS:
         print(f"   Session: {trainingseinheit_id}")
         print(f"   Übung: {current_uebung_id}")
         print(f"   Frage: {user_question}")
+        print(f"   Chat-Historie: {len(chat_history) if chat_history else 0} Nachrichten")
         
         # 1. Context sammeln
         context = self.build_context(
@@ -246,8 +266,8 @@ FOKUS:
             current_satz_number=current_satz_number
         )
         
-        # 2. Prompt erstellen
-        messages = self.generate_prompt(context, user_question)
+        # 2. Prompt erstellen (mit Chat-Historie)
+        messages = self.generate_prompt(context, user_question, chat_history)
         
         # 3. LLM Call
         llm_client = LLMClient(

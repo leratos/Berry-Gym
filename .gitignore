@@ -120,3 +120,6 @@ create_test_user.py
 db.sqlite3
 core/migrations/
 
+# Beta
+/beta/
+apply_beta.html

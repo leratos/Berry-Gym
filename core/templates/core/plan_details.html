@@ -29,7 +29,9 @@
   </head>
   <body>
 
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4">
+    {% include 'core/includes/global_header.html' %}
+
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary">
       <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}">
             <i class="bi bi-arrow-left"></i> Zurück
@@ -44,7 +46,7 @@
       </div>
     </nav>
 
-    <div class="container pb-5">
+    <div class="container pb-5 pt-3">
 
         <!-- Plan Info -->
         <div class="card card-stat border-primary mb-4 shadow">

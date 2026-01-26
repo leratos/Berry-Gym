@@ -15,7 +15,9 @@
       <script src="{% static 'core/js/theme-toggle.js' %}"></script>
 </head>
   <body>
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4">
+    {% include 'core/includes/global_header.html' %}
+
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary">
       <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
             <i class="bi bi-x-lg"></i> Abbrechen
@@ -28,7 +30,7 @@
       </div>
     </nav>
 
-    <div class="container">
+    <div class="container pt-3">
       
       <!-- Option 1: Freies Training -->
       <a href="{% url 'training_start_free' %}" class="card card-stat border-primary mb-4 text-decoration-none shadow">

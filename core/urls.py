@@ -3,11 +3,16 @@ from . import views
 
 urlpatterns = [
     # Auth
-    # path('register/', views.register, name='register'),  # DEAKTIVIERT - keine öffentliche Registrierung
+    path('apply-beta/', views.apply_beta, name='apply_beta'),
+    path('register/', views.register, name='register'),
+    
+    # Profile
+    path('profile/', views.profile, name='profile'),
     
     # PWA Files (must be at root)
     path('service-worker.js', views.service_worker, name='service_worker'),
     path('manifest.json', views.manifest, name='manifest'),
+    path('favicon.ico', views.favicon, name='favicon'),
     
     # Dashboard
     path('', views.dashboard, name='dashboard'),
