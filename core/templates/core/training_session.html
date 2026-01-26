@@ -63,7 +63,9 @@
   </head>
   <body data-context="training">
 
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-3 sticky-top shadow">
+    {% include 'core/includes/global_header.html' %}
+
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-3 shadow">
       <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}">
             <i class="bi bi-arrow-left"></i> Abbrechen
@@ -176,6 +178,22 @@
                         <span class="badge bg-secondary">{{ uebung_group.list|length }} Sätze</span>
                     </div>
                 </div>
+                <!-- Gewichtsempfehlung -->
+                {% if gewichts_empfehlungen %}
+                    {% with empf=gewichts_empfehlungen|get_item:uebung_group.grouper.id %}
+                        {% if empf %}
+                        <div class="px-3 py-2 bg-dark bg-opacity-50 border-bottom border-secondary">
+                            <small class="text-info">
+                                <i class="bi bi-lightbulb-fill me-1"></i>
+                                <strong>Empfehlung:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
+                                <span class="text-muted ms-2">
+                                    (Letztes Mal: {{ empf.letztes_gewicht }} kg × {{ empf.letzte_wdh }} — {{ empf.hint }})
+                                </span>
+                            </small>
+                        </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
 
                 <div class="card-body p-0">
                     <table class="table table-hover mb-0 align-middle">
@@ -570,10 +588,17 @@
             setTimeout(() => gewichtInput.focus(), 500);
         }
 
-        // API Call
+        // API Call - holt Gewichtsempfehlung mit Planziel
         async function fetchGhostData(id) {
             try {
-                const res = await fetch(`/api/last-set/${id}/`);
+                // Planziel für diese Übung ermitteln
+                let zielParam = '';
+                const planZiele = {{ plan_ziele|safe }};
+                if (planZiele && planZiele[id] && planZiele[id].wiederholungen_ziel) {
+                    zielParam = `?ziel=${planZiele[id].wiederholungen_ziel}`;
+                }
+                
+                const res = await fetch(`/api/last-set/${id}/${zielParam}`);
                 const data = await res.json();
                 if (data.success) {
                     gewichtInput.value = data.gewicht;

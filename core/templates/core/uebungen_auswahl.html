@@ -62,10 +62,12 @@
     </style>
 </head>
 <body>
+    {% include 'core/includes/global_header.html' %}
+
     <nav class="navbar navbar-dark bg-black border-bottom border-secondary">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <i class="bi bi-house-door"></i> HomeGym
+            <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
+                <i class="bi bi-arrow-left"></i> Dashboard
             </a>
             <span class="navbar-text">Übungs-Bibliothek</span>
                     <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">

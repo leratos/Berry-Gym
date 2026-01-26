@@ -1,6 +1,10 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from django import forms
-from .models import Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, ProgressPhoto, Equipment, MUSKELGRUPPEN
+from .models import (
+    Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, 
+    ProgressPhoto, Equipment, InviteCode, WaitlistEntry, MUSKELGRUPPEN
+)
 
 # --- ÜBUNGEN ---
 class UebungAdminForm(forms.ModelForm):
@@ -122,3 +126,98 @@ class EquipmentAdmin(admin.ModelAdmin):
     def anzahl_user(self, obj):
         return obj.users.count()
     anzahl_user.short_description = 'Anzahl User'
+
+
+# --- BETA-ZUGANG ---
+@admin.register(InviteCode)
+class InviteCodeAdmin(admin.ModelAdmin):
+    list_display = ('code', 'is_valid_status', 'used_count', 'max_uses', 'expires_at', 'created_by', 'created_at')
+    list_filter = ('created_at', 'expires_at')
+    search_fields = ('code',)
+    readonly_fields = ('used_count', 'created_at')
+    
+    def is_valid_status(self, obj):
+        if obj.is_valid():
+            return format_html('<span style="color: green;">✓ Gültig</span>')
+        return format_html('<span style="color: red;">✗ Ungültig</span>')
+    is_valid_status.short_description = 'Status'
+    
+    actions = ['generate_codes']
+    
+    def generate_codes(self, request, queryset):
+        """Bulk-Aktion: Codes generieren"""
+        import secrets
+        count = 10  # Anzahl zu erstellender Codes
+        for _ in range(count):
+            code = f"BETA{secrets.token_hex(6).upper()}"
+            InviteCode.objects.create(
+                code=code,
+                created_by=request.user,
+                max_uses=1
+            )
+        self.message_user(request, f'{count} Einladungscodes wurden erstellt')
+    generate_codes.short_description = 'Generiere 10 neue Codes'
+
+
+@admin.register(WaitlistEntry)
+class WaitlistEntryAdmin(admin.ModelAdmin):
+    list_display = ('email', 'status_badge', 'experience', 'created_at', 'approved_at', 'actions_column')
+    list_filter = ('status', 'experience', 'created_at')
+    search_fields = ('email', 'reason', 'github_username')
+    readonly_fields = ('created_at', 'approved_at', 'invite_code')
+    
+    fieldsets = (
+        ('Kontakt', {
+            'fields': ('email', 'github_username')
+        }),
+        ('Bewerbung', {
+            'fields': ('reason', 'experience', 'interests')
+        }),
+        ('Status', {
+            'fields': ('status', 'invite_code', 'created_at', 'approved_at')
+        }),
+    )
+    
+    def status_badge(self, obj):
+        colors = {
+            'pending': 'orange',
+            'approved': 'green',
+            'registered': 'blue',
+            'spam': 'red'
+        }
+        color = colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    
+    def actions_column(self, obj):
+        if obj.status == 'pending':
+            return format_html(
+                '<span style="color: orange; font-weight: bold;">⏳ Warte auf Approval</span>'
+            )
+        elif obj.status == 'approved' and obj.invite_code:
+            return format_html(
+                '<span style="color: green;">✓ Code: {}</span>',
+                obj.invite_code.code
+            )
+        return '-'
+    actions_column.short_description = 'Aktionen'
+    
+    actions = ['approve_selected', 'mark_as_spam']
+    
+    def approve_selected(self, request, queryset):
+        """Bulk-Approve"""
+        count = 0
+        for entry in queryset.filter(status='pending'):
+            if entry.approve_and_send_code():
+                count += 1
+        self.message_user(request, f'{count} Einträge wurden approved')
+    approve_selected.short_description = 'Ausgewählte approven & Code senden'
+    
+    def mark_as_spam(self, request, queryset):
+        """Als Spam markieren"""
+        count = queryset.update(status='spam')
+        self.message_user(request, f'{count} Einträge als Spam markiert')
+    mark_as_spam.short_description = 'Als Spam markieren'

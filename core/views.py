@@ -15,30 +15,172 @@ from django.conf import settings
 from decimal import Decimal
 from .models import (
     Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung, 
-    ProgressPhoto, Equipment, MUSKELGRUPPEN, BEWEGUNGS_TYP, GEWICHTS_TYP
+    ProgressPhoto, Equipment, MUSKELGRUPPEN, BEWEGUNGS_TYP, GEWICHTS_TYP,
+    InviteCode, WaitlistEntry
 )
 from django.db import models
 import re
 import json
 import random
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+# === BETA-ZUGANG & REGISTRIERUNG ===
+
+def apply_beta(request):
+    """Bewerbungsseite für Beta-Zugang"""
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        reason = request.POST.get('reason', '').strip()
+        experience = request.POST.get('experience')
+        interests = request.POST.getlist('interests')
+        github_username = request.POST.get('github_username', '').strip()
+        
+        if not email or not reason or not experience:
+            messages.error(request, 'Bitte fülle alle Pflichtfelder aus.')
+            return render(request, 'registration/apply_beta.html')
+        
+        if WaitlistEntry.objects.filter(email=email).exists():
+            messages.info(request, 'Diese E-Mail ist bereits auf der Warteliste.')
+            return redirect('apply_beta')
+        
+        from django.contrib.auth.models import User
+        if User.objects.filter(email=email).exists():
+            messages.info(request, 'Mit dieser E-Mail existiert bereits ein Account.')
+            return redirect('login')
+        
+        WaitlistEntry.objects.create(
+            email=email, reason=reason, experience=experience,
+            interests=interests, github_username=github_username or None
+        )
+        
+        messages.success(request, '✅ Bewerbung eingereicht! Du erhältst in 48h eine E-Mail.')
+        return redirect('login')
+    
+    return render(request, 'registration/apply_beta.html')
 
 
 def register(request):
-    """Registrierung neuer Benutzer."""
+    """Registrierung mit Einladungscode"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password1')
-            user = authenticate(username=username, password=password)
-            login(request, user)
-            messages.success(request, f'Account erfolgreich erstellt! Willkommen, {username}!')
-            return redirect('dashboard')
-    else:
-        form = UserCreationForm()
-    return render(request, 'registration/register.html', {'form': form})
+        code_str = request.POST.get('invite_code', '').strip().upper()
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip().lower()
+        pass1 = request.POST.get('password1')
+        pass2 = request.POST.get('password2')
+        
+        errors = []
+        if not code_str:
+            errors.append('Einladungscode fehlt.')
+        elif not InviteCode.objects.filter(code=code_str, used_count__lt=F('max_uses')).exists():
+            errors.append('Ungültiger oder aufgebrauchter Code.')
+        
+        from django.contrib.auth.models import User
+        if not username:
+            errors.append('Benutzername fehlt.')
+        elif User.objects.filter(username=username).exists():
+            errors.append('Benutzername vergeben.')
+        
+        if not email:
+            errors.append('E-Mail fehlt.')
+        elif User.objects.filter(email=email).exists():
+            errors.append('E-Mail bereits registriert.')
+        
+        if not pass1 or pass1 != pass2:
+            errors.append('Passwörter ungültig oder nicht identisch.')
+        elif len(pass1) < 8:
+            errors.append('Passwort zu kurz (min. 8 Zeichen).')
+        
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+            return render(request, 'registration/register_new.html', {'invite_code': code_str})
+        
+        user = User.objects.create_user(username=username, email=email, password=pass1)
+        invite = InviteCode.objects.get(code=code_str)
+        invite.use()
+        
+        entry = WaitlistEntry.objects.filter(email=email, invite_code=invite).first()
+        if entry:
+            entry.status = 'registered'
+            entry.save()
+        
+        user = authenticate(username=username, password=pass1)
+        login(request, user)
+        messages.success(request, f'🎉 Willkommen {username}!')
+        return redirect('dashboard')
+    
+    code_param = request.GET.get('code', '').strip().upper()
+    return render(request, 'registration/register_new.html', {'invite_code': code_param})
+
+
+@login_required
+def profile(request):
+    """Profil-Seite zum Bearbeiten von Benutzerdaten"""
+    from django.contrib.auth.hashers import check_password
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user = request.user
+        
+        if action == 'update_profile':
+            new_username = request.POST.get('username', '').strip()
+            new_email = request.POST.get('email', '').strip().lower()
+            
+            errors = []
+            
+            # Username validieren
+            if new_username and new_username != user.username:
+                from django.contrib.auth.models import User
+                if User.objects.filter(username=new_username).exists():
+                    errors.append('Dieser Benutzername ist bereits vergeben.')
+                elif len(new_username) < 3:
+                    errors.append('Benutzername muss mindestens 3 Zeichen haben.')
+                else:
+                    user.username = new_username
+            
+            # E-Mail validieren
+            if new_email and new_email != user.email:
+                from django.contrib.auth.models import User
+                if User.objects.filter(email=new_email).exists():
+                    errors.append('Diese E-Mail ist bereits registriert.')
+                else:
+                    user.email = new_email
+            
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+            else:
+                user.save()
+                messages.success(request, '✅ Profil erfolgreich aktualisiert!')
+            
+        elif action == 'change_password':
+            current_password = request.POST.get('current_password')
+            new_password = request.POST.get('new_password')
+            confirm_password = request.POST.get('confirm_password')
+            
+            if not check_password(current_password, user.password):
+                messages.error(request, 'Aktuelles Passwort ist falsch.')
+            elif len(new_password) < 8:
+                messages.error(request, 'Neues Passwort muss mindestens 8 Zeichen haben.')
+            elif new_password != confirm_password:
+                messages.error(request, 'Passwörter stimmen nicht überein.')
+            else:
+                user.set_password(new_password)
+                user.save()
+                # Nach Passwortänderung neu einloggen
+                login(request, user)
+                messages.success(request, '✅ Passwort erfolgreich geändert!')
+        
+        return redirect('profile')
+    
+    return render(request, 'core/profile.html')
 
 
 @login_required
@@ -487,6 +629,60 @@ def training_session(request, training_id):
                 'wiederholungen_ziel': pu.wiederholungen_ziel
             }
 
+    # Gewichtsempfehlungen für alle Übungen im Plan berechnen
+    gewichts_empfehlungen = {}
+    if training.plan:
+        for pu in training.plan.uebungen.all():
+            uebung_id = pu.uebung_id
+            # Letzten echten Satz dieser Übung finden (aus vorherigen Trainings)
+            letzter_satz = Satz.objects.filter(
+                einheit__user=request.user,
+                uebung_id=uebung_id,
+                ist_aufwaermsatz=False
+            ).exclude(einheit=training).order_by('-einheit__datum', '-satz_nr').first()
+            
+            if letzter_satz:
+                empfohlenes_gewicht = float(letzter_satz.gewicht)
+                empfohlene_wdh = letzter_satz.wiederholungen
+                
+                # Ziel-Wiederholungen aus dem Plan extrahieren (z.B. "8-10" → max 10)
+                ziel_wdh_str = pu.wiederholungen_ziel or "8-12"
+                try:
+                    if '-' in ziel_wdh_str:
+                        ziel_wdh_max = int(ziel_wdh_str.split('-')[1])
+                        ziel_wdh_min = int(ziel_wdh_str.split('-')[0])
+                    else:
+                        ziel_wdh_max = int(ziel_wdh_str)
+                        ziel_wdh_min = int(ziel_wdh_str)
+                except ValueError:
+                    ziel_wdh_max = 12
+                    ziel_wdh_min = 8
+                
+                # Progressive Overload Logik - berücksichtigt Planziel
+                if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
+                    # RPE zu leicht → mehr Gewicht
+                    empfohlenes_gewicht += 2.5
+                    hint = f"RPE {letzter_satz.rpe} → +2.5kg"
+                elif letzter_satz.wiederholungen >= ziel_wdh_max:
+                    # Obere Grenze erreicht → mehr Gewicht, Wdh zurück auf Minimum
+                    empfohlenes_gewicht += 2.5
+                    empfohlene_wdh = ziel_wdh_min
+                    hint = f"{ziel_wdh_max}+ Wdh → +2.5kg"
+                elif letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
+                    # RPE hoch aber noch im Wdh-Bereich → Wdh erhöhen (max bis Ziel)
+                    empfohlene_wdh = min(empfohlene_wdh + 1, ziel_wdh_max)
+                    hint = f"RPE {letzter_satz.rpe} → mehr Wdh"
+                else:
+                    hint = "Niveau halten"
+                
+                gewichts_empfehlungen[uebung_id] = {
+                    'gewicht': empfohlenes_gewicht,
+                    'wdh': empfohlene_wdh,
+                    'letztes_gewicht': float(letzter_satz.gewicht),
+                    'letzte_wdh': letzter_satz.wiederholungen,
+                    'hint': hint,
+                }
+
     context = {
         'training': training,
         'uebungen': uebungen,
@@ -494,6 +690,7 @@ def training_session(request, training_id):
         'total_volume': round(total_volume, 1),
         'arbeitssaetze_count': arbeitssaetze.count(),
         'plan_ziele': plan_ziele,
+        'gewichts_empfehlungen': gewichts_empfehlungen,
     }
     return render(request, 'core/training_session.html', context)
 
@@ -793,6 +990,19 @@ def delete_training(request, training_id):
 @login_required
 def get_last_set(request, uebung_id):
     """API: Liefert die Werte des letzten 'echten' Satzes einer Übung zurück."""
+    # Optionales Wiederholungsziel aus Query-Parameter (z.B. ?ziel=8-10)
+    ziel_wdh_str = request.GET.get('ziel', '8-12')
+    try:
+        if '-' in ziel_wdh_str:
+            ziel_wdh_max = int(ziel_wdh_str.split('-')[1])
+            ziel_wdh_min = int(ziel_wdh_str.split('-')[0])
+        else:
+            ziel_wdh_max = int(ziel_wdh_str)
+            ziel_wdh_min = int(ziel_wdh_str)
+    except ValueError:
+        ziel_wdh_max = 12
+        ziel_wdh_min = 8
+    
     # Wir suchen den allerletzten Satz dieser Übung (trainingübergreifend)
     # Wichtig: Wir ignorieren Aufwärmsätze (ist_aufwaermsatz=False)
     letzter_satz = Satz.objects.filter(
@@ -802,24 +1012,23 @@ def get_last_set(request, uebung_id):
     ).order_by('-einheit__datum', '-satz_nr').first()
 
     if letzter_satz:
-        # Progressive Overload Logik
+        # Progressive Overload Logik - berücksichtigt Planziel
         empfohlenes_gewicht = float(letzter_satz.gewicht)
         empfohlene_wdh = letzter_satz.wiederholungen
         
-        # Wenn letztes Mal RPE sehr leicht war (< 7), mehr vorschlagen
         if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
-            # Bei RPE < 7: +2.5kg vorschlagen
+            # RPE zu leicht → mehr Gewicht
             empfohlenes_gewicht += 2.5
-            progression_hint = f"Letztes Mal RPE {letzter_satz.rpe} → versuch mehr Gewicht!"
+            progression_hint = f"RPE {letzter_satz.rpe} war leicht → versuch +2.5kg!"
+        elif letzter_satz.wiederholungen >= ziel_wdh_max:
+            # Obere Zielgrenze erreicht → mehr Gewicht, Wdh zurück auf Minimum
+            empfohlenes_gewicht += 2.5
+            empfohlene_wdh = ziel_wdh_min
+            progression_hint = f"{ziel_wdh_max}+ Wdh geschafft → Zeit für +2.5kg!"
         elif letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
-            # Bei RPE >= 9: Gewicht halten, aber mehr Wdh anstreben
-            empfohlene_wdh = min(empfohlene_wdh + 1, 15)  # Max 15 Wdh
-            progression_hint = f"Letztes Mal RPE {letzter_satz.rpe} → versuch mehr Wiederholungen!"
-        elif letzter_satz.wiederholungen >= 12:
-            # Wenn 12+ Wdh geschafft, mehr Gewicht vorschlagen
-            empfohlenes_gewicht += 2.5
-            empfohlene_wdh = 8  # Zurück zu niedrigeren Wdh
-            progression_hint = "12+ Wdh geschafft → Zeit für mehr Gewicht!"
+            # RPE hoch aber noch im Wdh-Bereich → Wdh erhöhen (max bis Ziel)
+            empfohlene_wdh = min(empfohlene_wdh + 1, ziel_wdh_max)
+            progression_hint = f"RPE {letzter_satz.rpe} → versuch mehr Wiederholungen!"
         else:
             progression_hint = "Halte das Niveau oder steigere dich leicht"
         
@@ -2617,6 +2826,7 @@ def live_guidance_api(request):
         question = data.get('question', '').strip()
         exercise_id = data.get('exercise_id')
         set_number = data.get('set_number')
+        chat_history = data.get('chat_history', [])  # Chat-Historie für Konversationsgedächtnis
         
         if not session_id or not question:
             return JsonResponse({'error': 'session_id und question erforderlich'}, status=400)
@@ -2635,7 +2845,8 @@ def live_guidance_api(request):
             trainingseinheit_id=session_id,
             user_question=question,
             current_uebung_id=exercise_id,
-            current_satz_number=set_number
+            current_satz_number=set_number,
+            chat_history=chat_history  # Chat-Historie für Konversationsgedächtnis
         )
         
         return JsonResponse({
@@ -3735,6 +3946,17 @@ def service_worker(request):
         return HttpResponse(content, content_type='application/javascript')
     except FileNotFoundError:
         return HttpResponse('Service Worker not found', status=404)
+
+
+def favicon(request):
+    """Serve favicon.ico from static files."""
+    from django.http import FileResponse
+    favicon_path = os.path.join(settings.BASE_DIR, 'core', 'static', 'core', 'images', 'icon-192x192.png')
+    
+    try:
+        return FileResponse(open(favicon_path, 'rb'), content_type='image/png')
+    except FileNotFoundError:
+        return HttpResponse(status=204)  # No Content
 
 
 @login_required

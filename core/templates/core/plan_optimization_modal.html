@@ -9,12 +9,11 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <!-- Cost Info -->
+                <!-- Info -->
                 <div class="alert alert-info d-flex align-items-center mb-4">
                     <i class="bi bi-info-circle me-2"></i>
                     <div class="flex-grow-1">
                         <strong>Analyse abgeschlossen</strong><br>
-                        <span id="optimizationCost">Kosten: 0.003€</span> | 
                         <span id="optimizationModel">Model: llama-3.1-70b</span>
                     </div>
                 </div>
@@ -89,8 +88,7 @@ function showOptimizationModal(optimizations, cost, model) {
     currentOptimizations = optimizations;
     selectedOptimizations.clear();
     
-    // Update Cost & Model Info
-    document.getElementById('optimizationCost').textContent = `Kosten: ${cost.toFixed(4)}€`;
+    // Update Model Info
     document.getElementById('optimizationModel').textContent = `Model: ${model}`;
     
     // Render Optimizations

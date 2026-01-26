@@ -16,7 +16,9 @@
 </head>
   <body>
 
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4">
+    {% include 'core/includes/global_header.html' %}
+
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary">
       <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
             <i class="bi bi-arrow-left"></i> Dashboard
@@ -29,7 +31,7 @@
       </div>
     </nav>
 
-    <div class="container">
+    <div class="container pt-3">
       
       {% if not trainings_data %}
         <div class="text-center py-5 text-muted">
