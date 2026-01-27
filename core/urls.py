@@ -9,6 +9,10 @@ urlpatterns = [
     # Profile
     path('profile/', views.profile, name='profile'),
     
+    # Legal Pages
+    path('impressum/', views.impressum, name='impressum'),
+    path('datenschutz/', views.datenschutz, name='datenschutz'),
+    
     # PWA Files (must be at root)
     path('service-worker.js', views.service_worker, name='service_worker'),
     path('manifest.json', views.manifest, name='manifest'),
