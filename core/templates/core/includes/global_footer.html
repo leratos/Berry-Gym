@@ -1,0 +1,21 @@
+<!-- Global Footer - Include in allen Seiten -->
+<footer class="py-4 mt-5 border-top border-secondary">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                <span class="text-muted">
+                    &copy; {{ current_year|default:"2026" }} HomeGym
+                    <span class="d-none d-sm-inline">- Dein persönliches Fitness-Tracking</span>
+                </span>
+            </div>
+            <div class="col-md-6 text-center text-md-end">
+                <a href="{% url 'datenschutz' %}" class="text-muted text-decoration-none me-3">
+                    <i class="bi bi-shield-check"></i> Datenschutz
+                </a>
+                <a href="{% url 'impressum' %}" class="text-muted text-decoration-none">
+                    <i class="bi bi-file-text"></i> Impressum
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>

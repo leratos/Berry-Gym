@@ -518,10 +518,9 @@ Deine Bewerbung wurde geprüft und du bist jetzt für die Beta-Phase freigeschal
 {self.invite_code.code}
 
 📝 So geht's weiter:
-1. Gehe zu: {settings.SITE_URL}/register/
-2. Gib deinen Code ein
-3. Erstelle deinen Account
-4. Starte dein erstes Training!
+1. Gehe zu: {settings.SITE_URL}/register/?code={self.invite_code.code}
+2. Erstelle deinen Account
+3. Starte dein erstes Training!
 
 Der Code ist 30 Tage gültig und kann nur einmal verwendet werden.
 
@@ -534,11 +533,12 @@ Was HomeGym bietet:
 
 Viel Erfolg beim Training!
 
-Das HomeGym Team
+Dein HomeGym Team
+https://gym.last-strawberry.com
 
 ---
 Diese E-Mail wurde automatisch generiert.
-Bei Fragen: GitHub Issues oder Discussions
+Bei Fragen: marcus.kohtz@signz-vision.com
 """
         
         try:

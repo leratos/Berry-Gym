@@ -71,6 +71,11 @@
                     placeholder="Passwort"
                     required
                   >
+                  <div class="text-end mt-1">
+                    <a href="{% url 'password_reset' %}" class="small text-muted text-decoration-none">
+                      Passwort vergessen?
+                    </a>
+                  </div>
                 </div>
 
                 <input type="hidden" name="next" value="{{ next }}" />
@@ -107,7 +112,10 @@
           <!-- Footer -->
           <div class="text-center mt-3">
             <small class="text-muted">
-              © 2026 HomeGym App
+              © 2026 HomeGym App<br>
+              <a href="{% url 'impressum' %}" class="text-muted text-decoration-none">Impressum</a>
+              <span class="mx-1">·</span>
+              <a href="{% url 'datenschutz' %}" class="text-muted text-decoration-none">Datenschutz</a>
             </small>
           </div>
 
