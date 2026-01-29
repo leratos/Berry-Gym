@@ -156,6 +156,47 @@ class PlanGenerator:
         
         # Extrahiere JSON aus Result-Dict
         plan_json = llm_result.get('response') if isinstance(llm_result, dict) else llm_result
+        
+        # Debug: Prüfe was wir bekommen haben
+        if not plan_json:
+            print(f"\n❌ LLM hat leere Response geliefert!")
+            print(f"   llm_result Typ: {type(llm_result)}")
+            if isinstance(llm_result, dict):
+                print(f"   llm_result Keys: {llm_result.keys()}")
+            return {
+                'success': False,
+                'errors': ['LLM Response war leer - bitte erneut versuchen'],
+                'plan_data': None,
+                'analysis_data': analysis_data
+            }
+        
+        print(f"   ✓ Plan JSON erhalten mit Keys: {list(plan_json.keys()) if isinstance(plan_json, dict) else 'KEIN DICT!'}")
+        
+        # Prüfe ob Schema komplett falsch ist (Ollama 8B Problem)
+        required_keys = {'plan_name', 'sessions'}
+        actual_keys = set(plan_json.keys()) if isinstance(plan_json, dict) else set()
+        
+        if not required_keys.intersection(actual_keys):
+            print(f"\n⚠️ Schema komplett falsch! Erwartet: {required_keys}, Erhalten: {actual_keys}")
+            
+            # Wenn Fallback erlaubt → OpenRouter versuchen
+            if self.fallback_to_openrouter and not self.use_openrouter:
+                print("→ Versuche OpenRouter (größeres Modell folgt Schema besser)...")
+                
+                # Neuen LLM Client mit OpenRouter erstellen
+                llm_client_or = LLMClient(
+                    temperature=self.llm_temperature,
+                    use_openrouter=True,
+                    fallback_to_openrouter=False
+                )
+                llm_result = llm_client_or.generate_training_plan(
+                    messages=messages,
+                    max_tokens=4000,
+                    timeout=120
+                )
+                plan_json = llm_result.get('response') if isinstance(llm_result, dict) else llm_result
+                print(f"   ✓ OpenRouter Plan JSON mit Keys: {list(plan_json.keys()) if isinstance(plan_json, dict) else 'KEIN DICT!'}")
+        
         plan_json = self._ensure_periodization_metadata(plan_json)
         
         # 5. Validierung mit Smart Retry
@@ -285,12 +326,14 @@ class PlanGenerator:
                     trainingstag=day_name,
                     reihenfolge=exercise_data.get('order', 1),
                     saetze_ziel=exercise_data.get('sets', 3),
-                    wiederholungen_ziel=exercise_data.get('reps', '8-10')
+                    wiederholungen_ziel=exercise_data.get('reps', '8-10'),
+                    pausenzeit=exercise_data.get('rest_seconds', 120)
                 )
                 
                 rpe = exercise_data.get('rpe_target', '-')
+                rest = exercise_data.get('rest_seconds', 120)
                 notes = exercise_data.get('notes', '')
-                print(f"      ✓ {ex_name}: {exercise_data.get('sets')}x{exercise_data.get('reps')} (RPE {rpe})")
+                print(f"      ✓ {ex_name}: {exercise_data.get('sets')}x{exercise_data.get('reps')} (RPE {rpe}, Pause {rest}s)")
                 if notes:
                     print(f"        💡 {notes}")
             

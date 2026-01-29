@@ -533,10 +533,16 @@ def dashboard(request):
     import json
     training_heatmap_json = json.dumps(training_heatmap)
     
+    # OpenRouter Flag für AI Plan Generator
+    # Auf dem Server (DEBUG=False) immer OpenRouter verwenden (keine lokale GPU)
+    from django.conf import settings
+    use_openrouter = not settings.DEBUG or os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
+    
     context = {
         'letztes_training': letztes_training,
         'letzter_koerperwert': letzter_koerperwert,
         'trainings_diese_woche': trainings_diese_woche,
+        'use_openrouter': use_openrouter,
         'streak': streak,
         'favoriten': favoriten,
         'gesamt_trainings': gesamt_trainings,
@@ -738,12 +744,27 @@ def training_session(request, training_id):
                 else:
                     hint = "Niveau halten"
                 
+                # Pausenempfehlung: Aus Plan nehmen falls vorhanden, sonst berechnen
+                plan_pausenzeit = pu.pausenzeit if hasattr(pu, 'pausenzeit') and pu.pausenzeit else None
+                
+                if plan_pausenzeit:
+                    # Plan hat Pausenzeit definiert → nutze diese
+                    empfohlene_pause = plan_pausenzeit
+                elif '+2.5kg' in hint:
+                    empfohlene_pause = 180  # 3 Min für Kraftsteigerung
+                elif 'mehr Wdh' in hint:
+                    empfohlene_pause = 90   # 90s für Volumen/Ausdauer
+                else:
+                    empfohlene_pause = 120  # 2 Min Standard
+                
                 gewichts_empfehlungen[uebung_id] = {
                     'gewicht': empfohlenes_gewicht,
                     'wdh': empfohlene_wdh,
                     'letztes_gewicht': float(letzter_satz.gewicht),
                     'letzte_wdh': letzter_satz.wiederholungen,
                     'hint': hint,
+                    'pause': empfohlene_pause,
+                    'pause_from_plan': bool(plan_pausenzeit),
                 }
 
     context = {
@@ -2899,9 +2920,10 @@ def live_guidance_api(request):
         
         # Live Guidance importieren (korrekter Package-Import)
         from ai_coach.live_guidance import LiveGuidance
+        from django.conf import settings
         
-        # Use OpenRouter auf Server, Ollama lokal
-        use_openrouter = os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
+        # Auf dem Server (DEBUG=False) immer OpenRouter verwenden (keine lokale GPU)
+        use_openrouter = not settings.DEBUG or os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
         
         guidance = LiveGuidance(use_openrouter=use_openrouter)
         result = guidance.get_guidance(
@@ -2931,6 +2953,7 @@ def generate_plan_api(request):
     """
     API Endpoint für KI-Plan-Generierung über Web-Interface
     POST: { plan_type, sets_per_session, analysis_days? }
+    oder: { saveCachedPlan: true, plan_data: {...} }
     Returns: { success, plan_ids, cost, message }
     """
     if request.method != 'POST':
@@ -2938,6 +2961,29 @@ def generate_plan_api(request):
     
     try:
         data = json.loads(request.body)
+        
+        # Check ob wir einen gecachten Plan speichern sollen
+        if data.get('saveCachedPlan') and data.get('plan_data'):
+            # Direkt den gecachten Plan speichern ohne neu zu generieren
+            from ai_coach.plan_generator import PlanGenerator
+            
+            generator = PlanGenerator(
+                user_id=request.user.id,
+                plan_type='3er-split',  # Dummy, wird nicht genutzt
+            )
+            
+            plan_data = data['plan_data']
+            
+            # Plan in DB speichern
+            plan_ids = generator._save_plan_to_db(plan_data)
+            
+            return JsonResponse({
+                'success': True,
+                'plan_ids': plan_ids,
+                'plan_name': plan_data.get('plan_name', ''),
+                'sessions': len(plan_data.get('sessions', [])),
+                'message': f"Plan '{plan_data.get('plan_name', '')}' erfolgreich gespeichert!"
+            })
         
         plan_type = data.get('plan_type', '3er-split')
         sets_per_session = int(data.get('sets_per_session', 18))
@@ -2964,9 +3010,10 @@ def generate_plan_api(request):
         
         # Plan Generator importieren (korrekter Package-Import)
         from ai_coach.plan_generator import PlanGenerator
+        from django.conf import settings
         
-        # Use OpenRouter auf Server, Ollama lokal
-        use_openrouter = os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
+        # Auf dem Server (DEBUG=False) immer OpenRouter verwenden (keine lokale GPU)
+        use_openrouter = not settings.DEBUG or os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
         
         generator = PlanGenerator(
             user_id=request.user.id,

@@ -144,17 +144,20 @@
                         <div class="form-text">Bestimmt RPE- und Wiederholungs-Zonen</div>
                     </div>
                     
-                    <!-- Kosten-Anzeige -->
-                    <div class="text-center mb-3">
-                        <span class="cost-badge">
-                            <i class="bi bi-lightning-charge"></i> Kosten: <span id="costDisplay">0.003€</span>
-                        </span>
-                    </div>
-                    
-                    <!-- Submit Button -->
+                    <!-- Submit Button - Text je nach Modus -->
                     <button type="submit" class="btn btn-success w-100 fw-bold" id="generateBtn">
-                        <i class="bi bi-stars"></i> Vorschau erstellen
+                        <i class="bi bi-stars"></i> 
+                        {% if use_openrouter %}
+                            Vorschau erstellen
+                        {% else %}
+                            Plan generieren & speichern
+                        {% endif %}
                     </button>
+                    {% if not use_openrouter %}
+                    <small class="text-muted d-block text-center mt-2">
+                        <i class="bi bi-cpu"></i> Lokale KI - Plan wird direkt gespeichert
+                    </small>
+                    {% endif %}
                 </form>
                 
                 <!-- Plan Preview Container (initially hidden) -->
@@ -224,16 +227,16 @@
         const confirmSaveBtn = document.getElementById('confirmSaveBtn');
         const cancelPreviewBtn = document.getElementById('cancelPreviewBtn');
         
+        // Bei lokalem Ollama: keine Vorschau (zu langsam für doppelte Generierung)
+        const useOpenRouter = {{ use_openrouter|yesno:"true,false" }};
+        const skipPreview = !useOpenRouter;  // Lokal = keine Vorschau
+        
         let currentPlanData = null;
         
         // Update Sätze Value
         window.updateSetsValue = function(value) {
             document.getElementById('setsValue').textContent = value;
         };
-        
-        // Update Kosten basierend auf Server/Lokal
-        const isServer = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-        costDisplay.textContent = isServer ? '0.003€' : '0€ (lokal)';
         
         // Cancel Preview
         cancelPreviewBtn.addEventListener('click', function() {
@@ -282,8 +285,7 @@
                         successMessage.style.display = 'block';
                         successText.innerHTML = `
                             ${data.message || 'Plan erfolgreich gespeichert!'}<br>
-                            <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt<br>
-                            <small class="text-muted">Kosten: ${data.cost || 0}€ | Model: ${data.model || 'LLM'}</small>
+                            <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt
                         `;
                         planPreviewContainer.style.display = 'none';
                         
@@ -323,24 +325,14 @@
             progressContainer.style.display = 'block';
             generateBtn.disabled = true;
             
-            // Form Data
+            // Form Data - Bei lokalem Ollama direkt speichern (keine Vorschau)
             const formData = {
                 plan_type: document.getElementById('planType').value,
                 sets_per_session: parseInt(document.getElementById('setsPerSession').value),
                 analysis_days: parseInt(document.getElementById('analysisDays').value),
                 periodization: document.getElementById('periodization').value,
                 target_profile: document.getElementById('targetProfile').value,
-                previewOnly: true
-            };
-            
-            // Speichere OHNE previewOnly für späteren Save
-            currentPlanData = {
-                plan_type: document.getElementById('planType').value,
-                sets_per_session: parseInt(document.getElementById('setsPerSession').value),
-                analysis_days: parseInt(document.getElementById('analysisDays').value),
-                periodization: document.getElementById('periodization').value,
-                target_profile: document.getElementById('targetProfile').value,
-                previewOnly: false
+                previewOnly: !skipPreview  // false bei Ollama = direkt speichern
             };
             
             try {
@@ -378,7 +370,7 @@
                 const data = await response.json();
                 
                 if (data.success && data.preview) {
-                    // Show Preview
+                    // Show Preview (nur bei OpenRouter)
                     progressBar.style.width = '100%';
                     progressBar.textContent = '100%';
                     progressBar.classList.remove('progress-bar-animated');
@@ -388,7 +380,38 @@
                         progressContainer.style.display = 'none';
                         aiPlanForm.style.display = 'none';
                         planPreviewContainer.style.display = 'block';
+                        
+                        // Cache den generierten Plan für späteres Speichern
+                        currentPlanData = {
+                            plan_data: data.plan_data,  // Der generierte Plan
+                            saveCachedPlan: true        // Signal an API: speichere diesen Plan
+                        };
+                        
                         renderPreview(data.plan_data);
+                    }, 500);
+                } else if (data.success && skipPreview) {
+                    // Direkt gespeichert (bei lokalem Ollama)
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
+                    progressBar.classList.remove('progress-bar-animated');
+                    stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Gespeichert!';
+                    
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        successMessage.style.display = 'block';
+                        successText.innerHTML = `
+                            ${data.message || 'Plan erfolgreich erstellt!'}<br>
+                            <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt
+                        `;
+                        
+                        // Redirect nach 2 Sekunden
+                        setTimeout(() => {
+                            if (data.plan_ids && data.plan_ids.length > 0) {
+                                window.location.href = `/plan/${data.plan_ids[0]}/`;
+                            } else {
+                                window.location.href = '/plaene/';
+                            }
+                        }, 2000);
                     }, 500);
                 } else {
                     // Error
@@ -437,11 +460,13 @@
                         <ul class="list-unstyled mb-0">`;
                 
                 session.exercises.forEach(ex => {
+                    const restInfo = ex.rest_seconds ? `<span class="badge bg-warning text-dark ms-2"><i class="bi bi-stopwatch"></i> ${ex.rest_seconds}s</span>` : '';
                     html += `<li class="mb-2">
                         <i class="bi bi-check-circle text-success"></i>
                         <strong>${ex.exercise_name}</strong> - 
                         ${ex.sets} Sätze × ${ex.reps} Wdh 
-                        ${ex.rpe ? `@ RPE ${ex.rpe}` : ''}
+                        ${ex.rpe_target ? `@ RPE ${ex.rpe_target}` : ''}
+                        ${restInfo}
                         ${ex.notes ? `<br><small class="text-muted ms-4">${ex.notes}</small>` : ''}
                     </li>`;
                 });
