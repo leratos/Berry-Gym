@@ -15,7 +15,7 @@
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <div class="text-center mb-4">
-                <a href="{% url 'login' %}" class="text-decoration-none">
+                <a href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}" class="text-decoration-none">
                     <h1 class="text-success"><i class="bi bi-house-heart-fill"></i> HomeGym</h1>
                 </a>
             </div>
