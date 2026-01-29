@@ -285,26 +285,75 @@ class LLMClient:
         Llama wrapped manchmal JSON in ```json ... ```
         """
         
-        # Entferne markdown code blocks
+        if not content or not content.strip():
+            print("❌ Leere LLM Response erhalten!")
+            raise ValueError("Leere LLM Response")
+        
+        original_content = content
+        
+        # Entferne markdown code blocks - suche nach ```json ... ```
         if '```json' in content:
             start = content.find('```json') + 7
             end = content.find('```', start)
-            content = content[start:end].strip()
+            if end > start:
+                content = content[start:end].strip()
+                print(f"   ℹ️ JSON aus ```json Block extrahiert ({len(content)} Zeichen)")
         elif '```' in content:
             start = content.find('```') + 3
             end = content.find('```', start)
-            content = content[start:end].strip()
+            if end > start:
+                content = content[start:end].strip()
+                print(f"   ℹ️ JSON aus ``` Block extrahiert ({len(content)} Zeichen)")
+        
+        # Falls noch Text vor dem JSON steht, entferne ihn
+        first_brace = content.find('{')
+        if first_brace > 0:
+            print(f"   ℹ️ {first_brace} Zeichen Text vor JSON entfernt")
+            content = content[first_brace:]
+        
+        # Finde das letzte passende }
+        last_brace = content.rfind('}')
+        if last_brace > 0 and last_brace < len(content) - 1:
+            content = content[:last_brace + 1]
+        
+        # Fix für häufige JSON-Fehler
+        import re
+        
+        # 1. Unquotete Ranges: 8-12 → "8-12" (nach : und vor , oder } oder ])
+        content = re.sub(r':\s*(\d+)-(\d+)\s*([,}\]])', r': "\1-\2"\3', content)
+        
+        # 2. Trailing commas vor } oder ] entfernen
+        content = re.sub(r',\s*([}\]])', r'\1', content)
+        
+        # 3. Fehlende Kommas zwischen Objekten
+        content = re.sub(r'}\s*{', r'},{', content)
+        content = re.sub(r'"\s*{', r'",{', content)
         
         # Parse JSON
         try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            # Fallback: Suche nach erstem { bis letztem }
-            start = content.find('{')
-            end = content.rfind('}') + 1
-            if start >= 0 and end > start:
-                return json.loads(content[start:end])
-            raise
+            result = json.loads(content)
+            if not isinstance(result, dict):
+                raise ValueError(f"JSON ist kein Dict sondern {type(result)}")
+            return result
+        except json.JSONDecodeError as e:
+            # Zeige wo genau der Fehler ist
+            error_line = e.lineno
+            error_col = e.colno
+            lines = content.split('\n')
+            
+            print(f"\n❌ JSON Parse Error: {e.msg}")
+            print(f"   Zeile {error_line}, Spalte {error_col}")
+            if error_line <= len(lines):
+                error_line_content = lines[error_line - 1]
+                print(f"   Problemzeile: {error_line_content[:80]}")
+                if error_col > 0:
+                    print(f"   Position:     {' ' * (error_col - 1)}^")
+            
+            print(f"\n   Content Länge: {len(original_content)} Zeichen")
+            print(f"   Erste 300 Zeichen nach Extraktion:")
+            print(content[:300])
+            
+            raise ValueError(f"Konnte JSON nicht parsen: {e}")
     
     def validate_plan(
         self, 
@@ -323,6 +372,15 @@ class LLMClient:
         """
         
         errors = []
+        
+        # Prüfe ob plan_json überhaupt ein Dict ist
+        if not isinstance(plan_json, dict):
+            errors.append(f"Plan ist kein gültiges Dict sondern: {type(plan_json)}")
+            return False, errors
+        
+        if not plan_json:
+            errors.append("Plan ist leer (leeres Dict)")
+            return False, errors
         
         # Required fields check
         required_fields = ['plan_name', 'sessions']

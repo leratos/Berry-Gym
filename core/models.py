@@ -260,6 +260,13 @@ class PlanUebung(models.Model):
     saetze_ziel = models.PositiveIntegerField(default=3, verbose_name="Geplante Sätze")
     wiederholungen_ziel = models.CharField(max_length=50, blank=True, verbose_name="Ziel-Wdh (z.B. 8-12)")
     
+    # NEU: Pausenzeit zwischen Sätzen (in Sekunden)
+    pausenzeit = models.PositiveIntegerField(
+        default=120,
+        verbose_name="Pausenzeit (Sekunden)",
+        help_text="Empfohlene Pause zwischen Sätzen (60-300s)"
+    )
+    
     # Superset/Circuit Support
     superset_gruppe = models.PositiveIntegerField(
         default=0,

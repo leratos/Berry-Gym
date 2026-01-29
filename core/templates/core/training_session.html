@@ -186,8 +186,14 @@
                             <small class="text-info">
                                 <i class="bi bi-lightbulb-fill me-1"></i>
                                 <strong>Empfehlung:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
+                                <button class="btn btn-sm {% if empf.pause_from_plan %}btn-warning{% else %}btn-outline-warning{% endif %} py-0 px-2 ms-2" 
+                                        onclick="setTimerDuration({{ empf.pause }}); startRestTimer();" 
+                                        title="{% if empf.pause_from_plan %}Pause aus KI-Plan{% else %}Berechnete Pause{% endif %} - Klick zum Starten">
+                                    <i class="bi bi-stopwatch"></i> {{ empf.pause }}s
+                                    {% if empf.pause_from_plan %}<i class="bi bi-robot ms-1" style="font-size: 0.7rem;"></i>{% endif %}
+                                </button>
                                 <span class="text-muted ms-2">
-                                    (Letztes Mal: {{ empf.letztes_gewicht }} kg × {{ empf.letzte_wdh }} — {{ empf.hint }})
+                                    ({{ empf.hint }})
                                 </span>
                             </small>
                         </div>
@@ -232,6 +238,12 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end pe-3 text-nowrap">
+                                    <!-- TIMER BUTTON -->
+                                    <button class="btn btn-link text-warning opacity-75 text-decoration-none px-1" 
+                                            onclick="startRestTimer()" title="Pausenuhr starten">
+                                        <i class="bi bi-stopwatch"></i>
+                                    </button>
+                                    
                                     <!-- EDIT BUTTON -->
                                     <button class="btn btn-link text-info opacity-75 text-decoration-none px-2" 
                                             onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}', '{{ satz.notiz|default_if_none:''|escapejs }}', '{{ satz.superset_gruppe }}')">>
