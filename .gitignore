@@ -123,3 +123,4 @@ core/migrations/
 # Beta
 /beta/
 apply_beta.html
+db.sqlite3

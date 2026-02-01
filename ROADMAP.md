@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
-**Stand:** 24.01.2026  
-**Version:** 0.6.1
+**Stand:** 01.02.2026  
+**Version:** 0.7.2
 
 ---
 
@@ -191,7 +191,7 @@
 
 ---
 
-## 🔄 PHASE 4: Erweiterte Features (40% - IN ARBEIT)
+## 🔄 PHASE 4: Erweiterte Features (55% - IN ARBEIT)
 
 ### In-App Plan-Editor
 - [x] **Pläne in der App erstellen (ohne Admin)** ✅
@@ -207,9 +207,23 @@
   - QR-Code für Plan-Link
   - Übersichtstabelle mit Muskelgruppen
   - Professionelles Layout
-- [ ] Plan duplizieren
-- [ ] Plan teilen (QR-Code/Link)
-- [ ] Öffentliche Plan-Bibliothek
+- [x] **Plan/Gruppe duplizieren** ✅ (01.02.2026)
+  - Einzelne Pläne duplizieren
+  - Komplette Gruppen (Splits) duplizieren
+  - Automatische "(Kopie)"-Benennung
+  - Übernimmt alle Übungen, Superset-Gruppen, Pausenzeiten
+- [x] **Plan/Gruppe teilen (QR-Code/Link)** ✅ (01.02.2026)
+  - Dedizierte Share-Seite pro Plan/Gruppe
+  - QR-Code Generator für mobiles Scannen
+  - Direkter Link zum Kopieren
+  - Teilen via WhatsApp, Telegram, E-Mail
+  - Öffentlich/Privat Toggle
+- [x] **Öffentliche Plan-Bibliothek** ✅ (01.02.2026)
+  - Durchsuchbare Bibliothek aller öffentlichen Pläne
+  - Gruppierte Anzeige von Split-Plänen
+  - 1-Klick Kopieren in eigene Sammlung
+  - Suchfunktion
+  - Link im Footer für alle Nutzer
 
 ### Übungsdatenbank
 - [x] **Anatomische Muskelgruppen-Map** (SVG mit 50+ Regionen) ✅
@@ -519,6 +533,54 @@
 - [ ] **Bessere Error-Messages** (User-freundliche Fehlerbeschreibungen)
 - [ ] **Toast-Notifications** (statt Alerts für Erfolgs-Meldungen)
 - [ ] **Autocomplete für Übungssuche** (Typeahead)
+
+---
+
+## 🎉 Neue Features in Version 0.7.2 (01.02.2026)
+
+### Plan-Sharing & Bibliothek
+Die App hat jetzt ein vollständiges Sharing-System für Trainingspläne:
+
+1. **Plan/Gruppe duplizieren**
+   - Einzelne Pläne als Kopie erstellen
+   - Komplette Split-Gruppen duplizieren
+   - Übernimmt alle Übungen, Superset-Gruppen, Pausenzeiten
+   - Automatische "(Kopie)"-Benennung
+
+2. **Plan/Gruppe teilen**
+   - Dedizierte Share-Seite (`/plan/<id>/share/`)
+   - QR-Code Generator für mobiles Scannen
+   - Direkter Link zum Kopieren
+   - Social-Sharing (WhatsApp, Telegram, E-Mail)
+   - Öffentlich/Privat Toggle direkt auf der Seite
+
+3. **Öffentliche Plan-Bibliothek**
+   - Neue Seite: `/plan-library/`
+   - Durchsuchbare Sammlung aller öffentlichen Pläne
+   - Gruppierte Anzeige von Split-Plänen
+   - 1-Klick Kopieren in eigene Sammlung
+   - Suchfunktion nach Namen/Beschreibung
+   - Link im Footer für alle Nutzer
+
+4. **Plan-Gruppen Management**
+   - Gruppen umbenennen
+   - Reihenfolge innerhalb der Gruppe ändern
+   - Gruppierung aufheben
+   - Ganze Gruppe löschen (mit Doppel-Bestätigung)
+
+5. **Trainingspartner-Sharing** *(NEU)*
+   - Pläne privat mit einzelnen Usern teilen (ohne öffentlich zu machen)
+   - User-Suche mit Autocomplete direkt auf der Share-Seite
+   - "Mit mir geteilt" Tab in der Planauswahl
+   - Badge zeigt Anzahl geteilter Pläne
+   - Freigaben können jederzeit entfernt werden
+   - Funktioniert für einzelne Pläne und ganze Gruppen
+
+**Technische Details:**
+- Views: `duplicate_plan`, `duplicate_group`, `share_plan`, `share_group`, `plan_library`, `plan_library_group`, `copy_group`, `toggle_plan_public`, `toggle_group_public`, `api_search_users`, `api_share_plan_with_user`, `api_unshare_plan_with_user`, `api_share_group_with_user`, `api_unshare_group_with_user`, `api_get_plan_shares`, `api_get_group_shares`
+- Templates: `share_plan.html`, `share_group.html`, `plan_library.html`, `plan_library_group.html`
+- Model: `Plan.shared_with` ManyToManyField (Migration 0020)
+- URLs: 17 neue Routen für Plan-Management und Sharing-API
 
 ---
 

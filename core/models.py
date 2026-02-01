@@ -240,6 +240,15 @@ class Plan(models.Model):
     is_public = models.BooleanField(default=False, verbose_name="Öffentlich")
     erstellt_am = models.DateTimeField(auto_now_add=True)
     
+    # Trainingspartner-Sharing: Mit wem wurde der Plan privat geteilt
+    shared_with = models.ManyToManyField(
+        User,
+        related_name="shared_plans",
+        blank=True,
+        verbose_name="Geteilt mit",
+        help_text="User, die diesen Plan sehen können (ohne öffentlich zu sein)"
+    )
+    
     # NEU: Gruppierung von zusammenhängenden Plänen (z.B. Push/Pull/Legs Split)
     # Pläne mit gleicher gruppe_id gehören zusammen
     gruppe_id = models.UUIDField(
