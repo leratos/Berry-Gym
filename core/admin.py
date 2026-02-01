@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django import forms
 from .models import (
     Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, 
-    ProgressPhoto, Equipment, InviteCode, WaitlistEntry, MUSKELGRUPPEN
+    ProgressPhoto, Equipment, InviteCode, WaitlistEntry, Feedback, MUSKELGRUPPEN
 )
 
 # --- ÜBUNGEN ---
@@ -221,3 +221,39 @@ class WaitlistEntryAdmin(admin.ModelAdmin):
         count = queryset.update(status='spam')
         self.message_user(request, f'{count} Einträge als Spam markiert')
     mark_as_spam.short_description = 'Als Spam markieren'
+
+
+# --- FEEDBACK (Beta) ---
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('title', 'feedback_type', 'user', 'status', 'priority', 'created_at')
+    list_filter = ('feedback_type', 'status', 'priority', 'created_at')
+    search_fields = ('title', 'description', 'user__username')
+    ordering = ('-created_at',)
+    readonly_fields = ('user', 'feedback_type', 'title', 'description', 'created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Feedback-Details (vom User)', {
+            'fields': ('user', 'feedback_type', 'title', 'description', 'created_at')
+        }),
+        ('Status & Bearbeitung', {
+            'fields': ('status', 'priority', 'admin_response', 'updated_at')
+        }),
+    )
+    
+    actions = ['mark_accepted', 'mark_rejected', 'mark_done']
+    
+    def mark_accepted(self, request, queryset):
+        count = queryset.update(status='ACCEPTED')
+        self.message_user(request, f'{count} Feedback(s) als angenommen markiert')
+    mark_accepted.short_description = '✅ Als angenommen markieren'
+    
+    def mark_rejected(self, request, queryset):
+        count = queryset.update(status='REJECTED')
+        self.message_user(request, f'{count} Feedback(s) als abgelehnt markiert')
+    mark_rejected.short_description = '❌ Als abgelehnt markieren'
+    
+    def mark_done(self, request, queryset):
+        count = queryset.update(status='DONE')
+        self.message_user(request, f'{count} Feedback(s) als umgesetzt markiert')
+    mark_done.short_description = '🎉 Als umgesetzt markieren'

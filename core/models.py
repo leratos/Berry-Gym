@@ -560,3 +560,64 @@ Bei Fragen: marcus.kohtz@signz-vision.com
         except Exception as e:
             print(f"Email sending failed: {e}")
             return False
+
+
+# --- FEEDBACK SYSTEM (Beta) ---
+
+FEEDBACK_TYPE_CHOICES = [
+    ('BUG', '🐛 Bugreport'),
+    ('FEATURE', '💡 Verbesserungsvorschlag'),
+    ('QUESTION', '❓ Frage'),
+]
+
+FEEDBACK_STATUS_CHOICES = [
+    ('NEW', '🆕 Neu'),
+    ('ACCEPTED', '✅ Angenommen'),
+    ('REJECTED', '❌ Abgelehnt'),
+    ('IN_PROGRESS', '🔄 In Bearbeitung'),
+    ('DONE', '🎉 Umgesetzt'),
+]
+
+FEEDBACK_PRIORITY_CHOICES = [
+    ('LOW', '🟢 Niedrig'),
+    ('MEDIUM', '🟡 Mittel'),
+    ('HIGH', '🔴 Hoch'),
+]
+
+
+class Feedback(models.Model):
+    """Beta-Feedback: Bugreports und Verbesserungsvorschläge"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedbacks')
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPE_CHOICES, default='FEATURE')
+    title = models.CharField(max_length=200, verbose_name="Kurzbeschreibung")
+    description = models.TextField(verbose_name="Detaillierte Beschreibung")
+    
+    # Status-Tracking
+    status = models.CharField(max_length=20, choices=FEEDBACK_STATUS_CHOICES, default='NEW')
+    priority = models.CharField(max_length=20, choices=FEEDBACK_PRIORITY_CHOICES, default='MEDIUM', blank=True)
+    
+    # Admin-Antwort
+    admin_response = models.TextField(blank=True, null=True, verbose_name="Admin-Antwort")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Feedback"
+        verbose_name_plural = "Feedbacks"
+    
+    def __str__(self):
+        return f"[{self.get_feedback_type_display()}] {self.title} - {self.user.username}"
+    
+    def get_status_badge_class(self):
+        """Bootstrap Badge-Klasse basierend auf Status"""
+        badge_classes = {
+            'NEW': 'bg-info',
+            'ACCEPTED': 'bg-success',
+            'REJECTED': 'bg-danger',
+            'IN_PROGRESS': 'bg-warning text-dark',
+            'DONE': 'bg-primary',
+        }
+        return badge_classes.get(self.status, 'bg-secondary')

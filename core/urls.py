@@ -13,6 +13,11 @@ urlpatterns = [
     path('impressum/', views.impressum, name='impressum'),
     path('datenschutz/', views.datenschutz, name='datenschutz'),
     
+    # Feedback (Beta)
+    path('feedback/', views.feedback_list, name='feedback_list'),
+    path('feedback/new/', views.feedback_create, name='feedback_create'),
+    path('feedback/<int:feedback_id>/', views.feedback_detail, name='feedback_detail'),
+    
     # PWA Files (must be at root)
     path('service-worker.js', views.service_worker, name='service_worker'),
     path('manifest.json', views.manifest, name='manifest'),

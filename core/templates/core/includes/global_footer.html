@@ -9,6 +9,11 @@
                 </span>
             </div>
             <div class="col-md-6 text-center text-md-end">
+                {% if user.is_authenticated %}
+                <a href="{% url 'feedback_list' %}" class="text-muted text-decoration-none me-3">
+                    <i class="bi bi-chat-dots"></i> Feedback
+                </a>
+                {% endif %}
                 <a href="{% url 'datenschutz' %}" class="text-muted text-decoration-none me-3">
                     <i class="bi bi-shield-check"></i> Datenschutz
                 </a>
