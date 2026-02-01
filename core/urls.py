@@ -96,7 +96,19 @@ urlpatterns = [
     path('api/plan-templates/<str:template_key>/', views.get_template_detail, name='get_template_detail'),
     path('api/plan-templates/<str:template_key>/create/', views.create_plan_from_template, name='create_plan_from_template'),
     
+    # Plan Gruppierung & Management API
+    path('api/ungroup-plans/', views.api_ungroup_plans, name='api_ungroup_plans'),
+    path('api/group-plans/', views.api_group_plans, name='api_group_plans'),
+    path('api/delete-plan/', views.api_delete_plan, name='api_delete_plan'),
+    path('api/delete-group/', views.api_delete_group, name='api_delete_group'),
+    path('api/rename-group/', views.api_rename_group, name='api_rename_group'),
+    path('api/reorder-group/', views.api_reorder_group, name='api_reorder_group'),
+    
     # Exercise Management (Admin Only)
     path('uebungen/export/', views.export_uebungen, name='export_uebungen'),
     path('uebungen/import/', views.import_uebungen, name='import_uebungen'),
+    
+    # Plan Gruppierung API
+    path('api/plans/ungroup/', views.api_ungroup_plans, name='api_ungroup_plans'),
+    path('api/plans/group/', views.api_group_plans, name='api_group_plans'),
 ]
