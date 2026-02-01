@@ -105,10 +105,18 @@
       <!-- Filter-Buttons -->
       <div class="btn-group w-100 mb-3" role="group">
         <a href="?filter=eigene" class="btn btn-outline-secondary {% if filter_type == 'eigene' %}active{% endif %}">
-            <i class="bi bi-person-fill me-1"></i>Meine Pläne
+            <i class="bi bi-person-fill me-1"></i>Meine
+        </a>
+        <a href="?filter=shared" class="btn btn-outline-secondary {% if filter_type == 'shared' %}active{% endif %} position-relative">
+            <i class="bi bi-people-fill me-1"></i>Geteilt
+            {% if shared_count > 0 and filter_type != 'shared' %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">
+                {{ shared_count }}
+            </span>
+            {% endif %}
         </a>
         <a href="?filter=public" class="btn btn-outline-secondary {% if filter_type == 'public' %}active{% endif %}">
-            <i class="bi bi-globe me-1"></i>Öffentliche Pläne
+            <i class="bi bi-globe me-1"></i>Öffentlich
         </a>
       </div>
       
@@ -140,6 +148,9 @@
         <div class="alert alert-secondary text-center">
             {% if filter_type == 'eigene' %}
                 <i class="bi bi-info-circle me-2"></i> Noch keine Pläne erstellt. Erstelle deinen ersten Plan!
+            {% elif filter_type == 'shared' %}
+                <i class="bi bi-people me-2"></i> Noch keine Pläne mit dir geteilt.
+                <br><small class="text-muted">Trainingspartner können Pläne über die Teilen-Funktion mit dir teilen.</small>
             {% else %}
                 <i class="bi bi-info-circle me-2"></i> Noch keine öffentlichen Pläne verfügbar.
             {% endif %}
@@ -215,11 +226,22 @@
                         </div>
                         
                         {% if filter_type == 'eigene' %}
-                        <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
-                            <small class="text-muted">
-                                <i class="bi bi-lightbulb me-1"></i>
-                                Trainiere die Tage der Reihe nach
-                            </small>
+                        <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'duplicate_group' gruppe_key %}" class="btn btn-sm btn-outline-primary" title="Gruppe duplizieren">
+                                    <i class="bi bi-copy"></i>
+                                </a>
+                                <a href="{% url 'share_group' gruppe_key %}" class="btn btn-sm btn-outline-success" title="Gruppe teilen">
+                                    <i class="bi bi-share"></i>
+                                </a>
+                                <a href="{% url 'toggle_group_public' gruppe_key %}" class="btn btn-sm btn-outline-{% if gruppe.plaene.0.is_public %}warning{% else %}info{% endif %}" title="{% if gruppe.plaene.0.is_public %}Privat machen{% else %}Öffentlich machen{% endif %}">
+                                    {% if gruppe.plaene.0.is_public %}
+                                    <i class="bi bi-lock-fill"></i>
+                                    {% else %}
+                                    <i class="bi bi-globe"></i>
+                                    {% endif %}
+                                </a>
+                            </div>
                             <div class="d-flex gap-2">
                                 <button class="btn btn-sm btn-outline-warning" onclick="ungroupPlans('{{ gruppe_key }}')" title="Gruppierung aufheben">
                                     <i class="bi bi-folder-minus"></i>
@@ -274,16 +296,22 @@
                     </div>
                     {% endif %}
                     
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
                         {% if filter_type == 'eigene' %}
                             <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-primary flex-grow-1">
                                 <i class="bi bi-play-circle-fill me-1"></i> Starten
                             </a>
-                            <a href="{% url 'plan_details' plan.id %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'plan_details' plan.id %}" class="btn btn-outline-secondary" title="Details">
                                 <i class="bi bi-info-circle"></i>
                             </a>
-                            <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info">
+                            <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info" title="Bearbeiten">
                                 <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a href="{% url 'duplicate_plan' plan.id %}" class="btn btn-outline-primary" title="Duplizieren">
+                                <i class="bi bi-copy"></i>
+                            </a>
+                            <a href="{% url 'share_plan' plan.id %}" class="btn btn-outline-success" title="Teilen">
+                                <i class="bi bi-share"></i>
                             </a>
                             <button class="btn btn-outline-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')" title="Löschen">
                                 <i class="bi bi-trash"></i>

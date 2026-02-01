@@ -616,12 +616,15 @@ def training_select_plan(request):
     """Zeigt alle verfügbaren Pläne zur Auswahl an."""
     from collections import OrderedDict
     
-    # Filter-Parameter (eigene oder öffentliche)
+    # Filter-Parameter (eigene, public oder shared)
     filter_type = request.GET.get('filter', 'eigene')
     
     if filter_type == 'public':
         # Öffentliche Pläne von allen Usern (außer eigene)
         plaene = Plan.objects.filter(is_public=True).exclude(user=request.user).order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
+    elif filter_type == 'shared':
+        # Mit mir geteilte Pläne (von Trainingspartnern)
+        plaene = request.user.shared_plans.all().order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
     else:
         # Eigene Pläne (Standard) - sortiert nach Reihenfolge innerhalb Gruppe
         plaene = Plan.objects.filter(user=request.user).order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
@@ -644,19 +647,27 @@ def training_select_plan(request):
             # Einzelner Plan ohne Gruppe
             einzelne_plaene.append(plan)
     
+    # Zähle geteilte Pläne für Badge
+    shared_count = request.user.shared_plans.count()
+    
     context = {
         'plaene': plaene,  # Für Fallback
         'plan_gruppen': plan_gruppen,  # Gruppierte Pläne (dict mit 'name' und 'plaene')
         'einzelne_plaene': einzelne_plaene,  # Nicht gruppierte Pläne
-        'filter_type': filter_type
+        'filter_type': filter_type,
+        'shared_count': shared_count
     }
     return render(request, 'core/training_select_plan.html', context)
 
 def plan_details(request, plan_id):
     """Zeigt Details eines Trainingsplans mit allen Übungen."""
-    # Zugriff nur auf eigene Pläne oder öffentliche Pläne
+    # Zugriff auf: eigene Pläne, öffentliche Pläne, oder mit mir geteilte Pläne
     from django.db.models import Q
-    plan = get_object_or_404(Plan, Q(user=request.user) | Q(is_public=True), id=plan_id)
+    plan = get_object_or_404(
+        Plan, 
+        Q(user=request.user) | Q(is_public=True) | Q(shared_with=request.user), 
+        id=plan_id
+    )
     
     # Prüfe ob User der Owner ist
     is_owner = plan.user == request.user
@@ -1734,6 +1745,331 @@ def copy_plan(request, plan_id):
     
     messages.success(request, f'Plan "{original_plan.name}" wurde in deine Pläne kopiert!')
     return redirect('plan_details', plan_id=new_plan.id)
+
+
+@login_required
+def duplicate_plan(request, plan_id):
+    """Dupliziert einen eigenen Plan."""
+    original_plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+    
+    # Erstelle Kopie
+    new_plan = Plan.objects.create(
+        user=request.user,
+        name=f"{original_plan.name} (Kopie)",
+        beschreibung=original_plan.beschreibung,
+        is_public=False  # Duplikate sind standardmäßig privat
+    )
+    
+    # Kopiere alle Übungen
+    for plan_uebung in original_plan.uebungen.all().order_by('reihenfolge'):
+        PlanUebung.objects.create(
+            plan=new_plan,
+            uebung=plan_uebung.uebung,
+            reihenfolge=plan_uebung.reihenfolge,
+            trainingstag=plan_uebung.trainingstag,
+            saetze_ziel=plan_uebung.saetze_ziel,
+            wiederholungen_ziel=plan_uebung.wiederholungen_ziel,
+            pausenzeit=plan_uebung.pausenzeit,
+            superset_gruppe=plan_uebung.superset_gruppe
+        )
+    
+    messages.success(request, f'Plan "{original_plan.name}" wurde dupliziert!')
+    return redirect('plan_details', plan_id=new_plan.id)
+
+
+@login_required
+def duplicate_group(request, gruppe_id):
+    """Dupliziert eine komplette Plan-Gruppe."""
+    import uuid
+    
+    # Alle Pläne dieser Gruppe finden
+    original_plans = Plan.objects.filter(
+        user=request.user, 
+        gruppe_id=gruppe_id
+    ).order_by('gruppe_reihenfolge', 'name')
+    
+    if not original_plans.exists():
+        messages.error(request, 'Gruppe nicht gefunden.')
+        return redirect('training_select_plan')
+    
+    # Neue Gruppe-ID erstellen
+    new_gruppe_id = uuid.uuid4()
+    
+    # Original-Gruppenname mit "(Kopie)" ergänzen
+    original_gruppe_name = original_plans.first().gruppe_name or 'Gruppe'
+    new_gruppe_name = f"{original_gruppe_name} (Kopie)"
+    
+    # Alle Pläne der Gruppe kopieren
+    for idx, original_plan in enumerate(original_plans):
+        new_plan = Plan.objects.create(
+            user=request.user,
+            name=original_plan.name,
+            beschreibung=original_plan.beschreibung,
+            is_public=False,
+            gruppe_id=new_gruppe_id,
+            gruppe_name=new_gruppe_name,
+            gruppe_reihenfolge=idx
+        )
+        
+        # Übungen kopieren
+        for plan_uebung in original_plan.uebungen.all().order_by('reihenfolge'):
+            PlanUebung.objects.create(
+                plan=new_plan,
+                uebung=plan_uebung.uebung,
+                reihenfolge=plan_uebung.reihenfolge,
+                trainingstag=plan_uebung.trainingstag,
+                saetze_ziel=plan_uebung.saetze_ziel,
+                wiederholungen_ziel=plan_uebung.wiederholungen_ziel,
+                pausenzeit=plan_uebung.pausenzeit,
+                superset_gruppe=plan_uebung.superset_gruppe
+            )
+    
+    messages.success(request, f'Gruppe "{original_gruppe_name}" wurde dupliziert ({original_plans.count()} Pläne)!')
+    return redirect('training_select_plan')
+
+
+def share_plan(request, plan_id):
+    """Zeigt Sharing-Seite mit QR-Code für einen Plan."""
+    from django.db.models import Q
+    
+    plan = get_object_or_404(Plan, Q(is_public=True) | Q(user=request.user), id=plan_id)
+    
+    # Prüfe ob User der Owner ist
+    is_owner = request.user.is_authenticated and plan.user == request.user
+    
+    # Generiere Share-URL
+    share_url = request.build_absolute_uri(f'/plan/{plan.id}/')
+    
+    # QR-Code als Base64 generieren
+    qr_base64 = None
+    try:
+        import qrcode
+        from io import BytesIO
+        import base64
+        
+        qr = qrcode.QRCode(version=1, box_size=10, border=2)
+        qr.add_data(share_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+    except ImportError:
+        pass  # QR-Code Package nicht installiert
+    
+    context = {
+        'plan': plan,
+        'share_url': share_url,
+        'qr_base64': qr_base64,
+        'is_owner': is_owner,
+    }
+    return render(request, 'core/share_plan.html', context)
+
+
+def share_group(request, gruppe_id):
+    """Zeigt Sharing-Seite mit QR-Code für eine Plan-Gruppe."""
+    from django.db.models import Q
+    
+    # Finde alle Pläne dieser Gruppe (öffentlich oder eigene)
+    if request.user.is_authenticated:
+        plans = Plan.objects.filter(
+            Q(is_public=True) | Q(user=request.user),
+            gruppe_id=gruppe_id
+        ).order_by('gruppe_reihenfolge', 'name')
+    else:
+        plans = Plan.objects.filter(
+            is_public=True,
+            gruppe_id=gruppe_id
+        ).order_by('gruppe_reihenfolge', 'name')
+    
+    if not plans.exists():
+        messages.error(request, 'Gruppe nicht gefunden oder nicht zugänglich.')
+        return redirect('training_select_plan')
+    
+    gruppe_name = plans.first().gruppe_name or 'Gruppe'
+    is_owner = request.user.is_authenticated and plans.first().user == request.user
+    
+    # Generiere Share-URL zur Gruppen-Bibliothek
+    share_url = request.build_absolute_uri(f'/plan-library/group/{gruppe_id}/')
+    
+    # QR-Code als Base64 generieren
+    qr_base64 = None
+    try:
+        import qrcode
+        from io import BytesIO
+        import base64
+        
+        qr = qrcode.QRCode(version=1, box_size=10, border=2)
+        qr.add_data(share_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+    except ImportError:
+        pass
+    
+    context = {
+        'plans': plans,
+        'gruppe_name': gruppe_name,
+        'gruppe_id': gruppe_id,
+        'share_url': share_url,
+        'qr_base64': qr_base64,
+        'is_owner': is_owner,
+    }
+    return render(request, 'core/share_group.html', context)
+
+
+def plan_library(request):
+    """Öffentliche Plan-Bibliothek - zeigt alle öffentlichen Pläne und Gruppen."""
+    from collections import OrderedDict
+    
+    # Suchfilter
+    search_query = request.GET.get('q', '').strip()
+    
+    # Alle öffentlichen Pläne
+    public_plans = Plan.objects.filter(is_public=True).order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
+    
+    if search_query:
+        public_plans = public_plans.filter(
+            models.Q(name__icontains=search_query) |
+            models.Q(beschreibung__icontains=search_query) |
+            models.Q(gruppe_name__icontains=search_query)
+        )
+    
+    # Gruppiere nach gruppe_id
+    plan_gruppen = OrderedDict()
+    einzelne_plaene = []
+    
+    for plan in public_plans:
+        if plan.gruppe_id:
+            gruppe_key = str(plan.gruppe_id)
+            if gruppe_key not in plan_gruppen:
+                plan_gruppen[gruppe_key] = {
+                    'name': plan.gruppe_name or 'Unbenannte Gruppe',
+                    'plaene': [],
+                    'user': plan.user
+                }
+            plan_gruppen[gruppe_key]['plaene'].append(plan)
+        else:
+            einzelne_plaene.append(plan)
+    
+    context = {
+        'plan_gruppen': plan_gruppen,
+        'einzelne_plaene': einzelne_plaene,
+        'search_query': search_query,
+        'total_count': public_plans.count(),
+    }
+    return render(request, 'core/plan_library.html', context)
+
+
+def plan_library_group(request, gruppe_id):
+    """Detail-Ansicht einer Plan-Gruppe in der Bibliothek."""
+    # Finde alle öffentlichen Pläne dieser Gruppe
+    plans = Plan.objects.filter(
+        is_public=True,
+        gruppe_id=gruppe_id
+    ).order_by('gruppe_reihenfolge', 'name')
+    
+    if not plans.exists():
+        messages.error(request, 'Gruppe nicht gefunden.')
+        return redirect('plan_library')
+    
+    gruppe_name = plans.first().gruppe_name or 'Gruppe'
+    owner = plans.first().user
+    
+    context = {
+        'plans': plans,
+        'gruppe_name': gruppe_name,
+        'gruppe_id': gruppe_id,
+        'owner': owner,
+    }
+    return render(request, 'core/plan_library_group.html', context)
+
+
+@login_required
+def copy_group(request, gruppe_id):
+    """Kopiert eine öffentliche Gruppe in die eigenen Pläne."""
+    import uuid
+    
+    # Alle öffentlichen Pläne dieser Gruppe finden
+    original_plans = Plan.objects.filter(
+        is_public=True,
+        gruppe_id=gruppe_id
+    ).order_by('gruppe_reihenfolge', 'name')
+    
+    if not original_plans.exists():
+        messages.error(request, 'Gruppe nicht gefunden.')
+        return redirect('plan_library')
+    
+    # Neue Gruppe-ID erstellen
+    new_gruppe_id = uuid.uuid4()
+    
+    original_gruppe_name = original_plans.first().gruppe_name or 'Gruppe'
+    new_gruppe_name = f"{original_gruppe_name} (Kopie)"
+    
+    # Alle Pläne kopieren
+    for idx, original_plan in enumerate(original_plans):
+        new_plan = Plan.objects.create(
+            user=request.user,
+            name=original_plan.name,
+            beschreibung=original_plan.beschreibung,
+            is_public=False,
+            gruppe_id=new_gruppe_id,
+            gruppe_name=new_gruppe_name,
+            gruppe_reihenfolge=idx
+        )
+        
+        # Übungen kopieren
+        for plan_uebung in original_plan.uebungen.all().order_by('reihenfolge'):
+            PlanUebung.objects.create(
+                plan=new_plan,
+                uebung=plan_uebung.uebung,
+                reihenfolge=plan_uebung.reihenfolge,
+                trainingstag=plan_uebung.trainingstag,
+                saetze_ziel=plan_uebung.saetze_ziel,
+                wiederholungen_ziel=plan_uebung.wiederholungen_ziel,
+                pausenzeit=plan_uebung.pausenzeit,
+                superset_gruppe=plan_uebung.superset_gruppe
+            )
+    
+    messages.success(request, f'Gruppe "{original_gruppe_name}" wurde in deine Pläne kopiert ({original_plans.count()} Pläne)!')
+    return redirect('training_select_plan')
+
+
+@login_required
+def toggle_plan_public(request, plan_id):
+    """Toggle public/private Status eines Plans."""
+    plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+    plan.is_public = not plan.is_public
+    plan.save()
+    
+    status = "öffentlich" if plan.is_public else "privat"
+    messages.success(request, f'Plan "{plan.name}" ist jetzt {status}.')
+    return redirect('plan_details', plan_id=plan_id)
+
+
+@login_required
+def toggle_group_public(request, gruppe_id):
+    """Toggle public/private Status aller Pläne einer Gruppe."""
+    plans = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id)
+    
+    if not plans.exists():
+        messages.error(request, 'Gruppe nicht gefunden.')
+        return redirect('training_select_plan')
+    
+    # Checke aktuellen Status (alle öffentlich?)
+    all_public = all(p.is_public for p in plans)
+    new_status = not all_public
+    
+    plans.update(is_public=new_status)
+    
+    gruppe_name = plans.first().gruppe_name or 'Gruppe'
+    status = "öffentlich" if new_status else "privat"
+    messages.success(request, f'Gruppe "{gruppe_name}" ist jetzt {status}.')
+    return redirect('training_select_plan')
 
 
 @login_required
@@ -4532,3 +4868,220 @@ def api_reorder_group(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== TRAININGSPARTNER-SHARING API ==========
+
+@login_required
+@require_http_methods(["GET"])
+def api_search_users(request):
+    """Sucht User per Username für Trainingspartner-Einladung."""
+    from django.contrib.auth.models import User
+    
+    query = request.GET.get('q', '').strip()
+    
+    if len(query) < 2:
+        return JsonResponse({'users': []})
+    
+    # Suche nach Username (nicht eigenen User)
+    users = User.objects.filter(
+        username__icontains=query
+    ).exclude(
+        id=request.user.id
+    ).values('id', 'username')[:10]
+    
+    return JsonResponse({'users': list(users)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_share_plan_with_user(request):
+    """Teilt einen Plan mit einem Trainingspartner."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        plan_id = data.get('plan_id')
+        username = data.get('username', '').strip()
+        
+        if not plan_id or not username:
+            return JsonResponse({'success': False, 'error': 'Plan-ID und Username erforderlich'}, status=400)
+        
+        # Plan muss dem User gehören
+        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        
+        # Ziel-User finden
+        from django.contrib.auth.models import User
+        try:
+            target_user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': f'User "{username}" nicht gefunden'}, status=404)
+        
+        if target_user == request.user:
+            return JsonResponse({'success': False, 'error': 'Du kannst nicht mit dir selbst teilen'}, status=400)
+        
+        # Bereits geteilt?
+        if plan.shared_with.filter(id=target_user.id).exists():
+            return JsonResponse({'success': False, 'error': f'Bereits mit "{username}" geteilt'}, status=400)
+        
+        # Teilen
+        plan.shared_with.add(target_user)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Plan wurde mit "{username}" geteilt',
+            'user': {'id': target_user.id, 'username': target_user.username}
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_unshare_plan_with_user(request):
+    """Entfernt Trainingspartner-Freigabe."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        plan_id = data.get('plan_id')
+        user_id = data.get('user_id')
+        
+        if not plan_id or not user_id:
+            return JsonResponse({'success': False, 'error': 'Plan-ID und User-ID erforderlich'}, status=400)
+        
+        # Plan muss dem User gehören
+        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        
+        # Ziel-User finden
+        from django.contrib.auth.models import User
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'User nicht gefunden'}, status=404)
+        
+        # Freigabe entfernen
+        plan.shared_with.remove(target_user)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Freigabe für "{target_user.username}" wurde entfernt'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_share_group_with_user(request):
+    """Teilt eine komplette Plan-Gruppe mit einem Trainingspartner."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        gruppe_id = data.get('gruppe_id')
+        username = data.get('username', '').strip()
+        
+        if not gruppe_id or not username:
+            return JsonResponse({'success': False, 'error': 'Gruppe-ID und Username erforderlich'}, status=400)
+        
+        # Alle Pläne der Gruppe (müssen dem User gehören)
+        plans = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id)
+        
+        if not plans.exists():
+            return JsonResponse({'success': False, 'error': 'Keine Pläne in dieser Gruppe'}, status=404)
+        
+        # Ziel-User finden
+        from django.contrib.auth.models import User
+        try:
+            target_user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': f'User "{username}" nicht gefunden'}, status=404)
+        
+        if target_user == request.user:
+            return JsonResponse({'success': False, 'error': 'Du kannst nicht mit dir selbst teilen'}, status=400)
+        
+        # Alle Pläne der Gruppe teilen
+        for plan in plans:
+            plan.shared_with.add(target_user)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Gruppe wurde mit "{username}" geteilt ({plans.count()} Pläne)',
+            'user': {'id': target_user.id, 'username': target_user.username}
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_unshare_group_with_user(request):
+    """Entfernt Trainingspartner-Freigabe für eine komplette Gruppe."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        gruppe_id = data.get('gruppe_id')
+        user_id = data.get('user_id')
+        
+        if not gruppe_id or not user_id:
+            return JsonResponse({'success': False, 'error': 'Gruppe-ID und User-ID erforderlich'}, status=400)
+        
+        # Alle Pläne der Gruppe
+        plans = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id)
+        
+        if not plans.exists():
+            return JsonResponse({'success': False, 'error': 'Keine Pläne in dieser Gruppe'}, status=404)
+        
+        # Ziel-User finden
+        from django.contrib.auth.models import User
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'User nicht gefunden'}, status=404)
+        
+        # Freigabe für alle Pläne entfernen
+        for plan in plans:
+            plan.shared_with.remove(target_user)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Freigabe für "{target_user.username}" wurde entfernt'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def api_get_plan_shares(request, plan_id):
+    """Gibt Liste der User zurück, mit denen ein Plan geteilt ist."""
+    plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+    
+    shared_users = list(plan.shared_with.values('id', 'username'))
+    
+    return JsonResponse({
+        'success': True,
+        'shared_with': shared_users
+    })
+
+
+@login_required
+def api_get_group_shares(request, gruppe_id):
+    """Gibt Liste der User zurück, mit denen eine Gruppe geteilt ist."""
+    # Erster Plan der Gruppe
+    plan = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).first()
+    
+    if not plan:
+        return JsonResponse({'success': False, 'error': 'Gruppe nicht gefunden'}, status=404)
+    
+    shared_users = list(plan.shared_with.values('id', 'username'))
+    
+    return JsonResponse({
+        'success': True,
+        'shared_with': shared_users
+    })

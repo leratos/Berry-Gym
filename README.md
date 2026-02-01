@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square)
 ![Database](https://img.shields.io/badge/Database-MariaDB%20%7C%20SQLite-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
-![Version](https://img.shields.io/badge/Version-0.5.0-brightgreen?style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.7.2-brightgreen?style=flat-square)
 
 **Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach & professionellen PDF-Reports**
 
@@ -136,7 +136,23 @@ python ai_coach/plan_generator.py --user-id 1
 
 **Technologie-Stack**: xhtml2pdf, matplotlib (Agg backend), cairosvg, Pillow
 
-### �🔐 User Management
+### 📚 Plan-Sharing & Bibliothek
+
+- **Plan duplizieren**: Eigene Pläne oder Gruppen als Kopie erstellen
+- **Plan teilen**: 
+  - QR-Code für mobiles Scannen
+  - Direkter Link zum Kopieren
+  - Social-Sharing (WhatsApp, Telegram, E-Mail)
+- **Öffentliche Plan-Bibliothek** (`/plan-library/`):
+  - Durchsuchbare Sammlung aller öffentlichen Pläne
+  - Gruppierte Anzeige von Split-Plänen
+  - 1-Klick Kopieren in eigene Sammlung
+- **Plan-Gruppen Management**:
+  - Gruppen umbenennen & sortieren
+  - Öffentlich/Privat Toggle
+  - Gruppierung aufheben oder löschen
+
+### 🔐 User Management
 
 - Multi-User Support mit vollständiger Datenisolation
 - Django Authentication (Login, Logout, Registration)

@@ -32,6 +32,15 @@ urlpatterns = [
     path('plan/<int:plan_id>/edit/', views.edit_plan, name='edit_plan'),
     path('plan/<int:plan_id>/delete/', views.delete_plan, name='delete_plan'),
     path('plan/<int:plan_id>/copy/', views.copy_plan, name='copy_plan'),
+    path('plan/<int:plan_id>/duplicate/', views.duplicate_plan, name='duplicate_plan'),
+    path('plan/<int:plan_id>/share/', views.share_plan, name='share_plan'),
+    path('plan/<int:plan_id>/toggle-public/', views.toggle_plan_public, name='toggle_plan_public'),
+    path('group/<str:gruppe_id>/duplicate/', views.duplicate_group, name='duplicate_group'),
+    path('group/<str:gruppe_id>/share/', views.share_group, name='share_group'),
+    path('group/<str:gruppe_id>/copy/', views.copy_group, name='copy_group'),
+    path('group/<str:gruppe_id>/toggle-public/', views.toggle_group_public, name='toggle_group_public'),
+    path('plan-library/', views.plan_library, name='plan_library'),
+    path('plan-library/group/<str:gruppe_id>/', views.plan_library_group, name='plan_library_group'),
     path('uebungen/', views.uebungen_auswahl, name='uebungen_auswahl'),
     path('muscle-map/', views.muscle_map, name='muscle_map'),
     path('uebung/<int:uebung_id>/', views.uebung_detail, name='uebung_detail'),
@@ -103,6 +112,15 @@ urlpatterns = [
     path('api/delete-group/', views.api_delete_group, name='api_delete_group'),
     path('api/rename-group/', views.api_rename_group, name='api_rename_group'),
     path('api/reorder-group/', views.api_reorder_group, name='api_reorder_group'),
+    
+    # Trainingspartner-Sharing API
+    path('api/search-users/', views.api_search_users, name='api_search_users'),
+    path('api/share-plan/', views.api_share_plan_with_user, name='api_share_plan_with_user'),
+    path('api/unshare-plan/', views.api_unshare_plan_with_user, name='api_unshare_plan_with_user'),
+    path('api/share-group/', views.api_share_group_with_user, name='api_share_group_with_user'),
+    path('api/unshare-group/', views.api_unshare_group_with_user, name='api_unshare_group_with_user'),
+    path('api/plan/<int:plan_id>/shares/', views.api_get_plan_shares, name='api_get_plan_shares'),
+    path('api/group/<str:gruppe_id>/shares/', views.api_get_group_shares, name='api_get_group_shares'),
     
     # Exercise Management (Admin Only)
     path('uebungen/export/', views.export_uebungen, name='export_uebungen'),
