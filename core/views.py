@@ -614,18 +614,40 @@ def dashboard(request):
 
 def training_select_plan(request):
     """Zeigt alle verfügbaren Pläne zur Auswahl an."""
+    from collections import OrderedDict
+    
     # Filter-Parameter (eigene oder öffentliche)
     filter_type = request.GET.get('filter', 'eigene')
     
     if filter_type == 'public':
         # Öffentliche Pläne von allen Usern (außer eigene)
-        plaene = Plan.objects.filter(is_public=True).exclude(user=request.user)
+        plaene = Plan.objects.filter(is_public=True).exclude(user=request.user).order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
     else:
-        # Eigene Pläne (Standard)
-        plaene = Plan.objects.filter(user=request.user)
+        # Eigene Pläne (Standard) - sortiert nach Reihenfolge innerhalb Gruppe
+        plaene = Plan.objects.filter(user=request.user).order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
+    
+    # Gruppiere Pläne nach gruppe_id (echte Datenbankbeziehung)
+    plan_gruppen = OrderedDict()
+    einzelne_plaene = []
+    
+    for plan in plaene:
+        if plan.gruppe_id:
+            # Plan gehört zu einer Gruppe
+            gruppe_key = str(plan.gruppe_id)
+            if gruppe_key not in plan_gruppen:
+                plan_gruppen[gruppe_key] = {
+                    'name': plan.gruppe_name or 'Unbenannte Gruppe',
+                    'plaene': []
+                }
+            plan_gruppen[gruppe_key]['plaene'].append(plan)
+        else:
+            # Einzelner Plan ohne Gruppe
+            einzelne_plaene.append(plan)
     
     context = {
-        'plaene': plaene,
+        'plaene': plaene,  # Für Fallback
+        'plan_gruppen': plan_gruppen,  # Gruppierte Pläne (dict mit 'name' und 'plaene')
+        'einzelne_plaene': einzelne_plaene,  # Nicht gruppierte Pläne
         'filter_type': filter_type
     }
     return render(request, 'core/training_select_plan.html', context)
@@ -2714,42 +2736,58 @@ def workout_recommendations(request):
             })
     
     # === 3. STAGNIERENDE ÜBUNGEN ===
-    # Nur Übungen mit vielen Sätzen analysieren (häufig trainiert)
-    haeufige_uebungen = letzte_60_tage_saetze.values('uebung').annotate(
-        anzahl=Count('id')
-    ).filter(anzahl__gte=8).values_list('uebung', flat=True)  # Mindestens 8 Sätze für relevante Analyse
+    # Analysiere das MAX-Gewicht pro TRAINING (nicht pro Satz!)
+    # Mindestens 4 verschiedene Trainings mit der Übung nötig
     
-    for uebung_id in haeufige_uebungen:
-        uebung = Uebung.objects.get(id=uebung_id)
+    from django.db.models import Max
+    from collections import defaultdict
+    
+    # Gruppiere Sätze nach Übung und Trainingsdatum, nimm Max-Gewicht pro Training
+    uebung_trainings = defaultdict(list)
+    
+    for satz in letzte_60_tage_saetze.select_related('uebung', 'einheit'):
+        if satz.gewicht and satz.gewicht > 0:
+            key = satz.uebung_id
+            datum = satz.einheit.datum
+            uebung_trainings[key].append({'datum': datum, 'gewicht': float(satz.gewicht)})
+    
+    for uebung_id, saetze_list in uebung_trainings.items():
+        # Gruppiere nach Datum und nimm Max pro Training
+        trainings_max = defaultdict(float)
+        for s in saetze_list:
+            datum_key = s['datum']
+            trainings_max[datum_key] = max(trainings_max[datum_key], s['gewicht'])
         
-        # Letzte 8 Sätze mit dieser Übung
-        letzte_saetze = alle_saetze.filter(uebung=uebung).order_by('-einheit__datum')[:8]
+        # Sortiere nach Datum (älteste zuerst)
+        sortierte_trainings = sorted(trainings_max.items(), key=lambda x: x[0])
+        max_gewichte = [g for d, g in sortierte_trainings]
         
-        if len(letzte_saetze) >= 8:  # Mindestens 8 Sätze für sinnvolle Stagnations-Analyse
-            # Gewichte in chronologischer Reihenfolge (älteste zuerst)
-            gewichte_chronologisch = [float(s.gewicht) for s in reversed(list(letzte_saetze)) if s.gewicht]
+        # Mindestens 4 verschiedene Trainings für sinnvolle Stagnations-Analyse
+        if len(max_gewichte) >= 4:
+            uebung = Uebung.objects.get(id=uebung_id)
             
-            if len(gewichte_chronologisch) >= 8:
-                # Vergleiche Durchschnitt der ersten 4 vs. letzten 4 Sätze
-                erste_haelfte = gewichte_chronologisch[:4]
-                letzte_haelfte = gewichte_chronologisch[-4:]
-                
-                avg_erste = sum(erste_haelfte) / len(erste_haelfte)
-                avg_letzte = sum(letzte_haelfte) / len(letzte_haelfte)
-                
-                # Stagnation nur wenn kein Fortschritt (weniger als 2.5% Steigerung)
-                fortschritt_prozent = ((avg_letzte - avg_erste) / avg_erste * 100) if avg_erste > 0 else 0
-                
-                if fortschritt_prozent < 2.5 and max(gewichte_chronologisch) == min(gewichte_chronologisch):
-                    # Echte Stagnation: Alle Gewichte gleich UND kein Trend
-                    empfehlungen.append({
-                        'typ': 'stagnation',
-                        'prioritaet': 'niedrig',
-                        'titel': f'{uebung.bezeichnung}: Stagnation',
-                        'beschreibung': f'Bei dieser Übung gab es in den letzten {len(gewichte_chronologisch)} Trainings keinen Fortschritt (konstant {gewichte_chronologisch[-1]} kg).',
-                        'empfehlung': 'Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren',
-                        'uebungen': []
-                    })
+            # Vergleiche älteste 2 Trainings vs. neueste 2 Trainings
+            erste_trainings = max_gewichte[:2]
+            letzte_trainings = max_gewichte[-2:]
+            
+            avg_erste = sum(erste_trainings) / len(erste_trainings)
+            avg_letzte = sum(letzte_trainings) / len(letzte_trainings)
+            
+            # Stagnation nur wenn:
+            # 1. Kein Fortschritt (weniger als 2.5% Steigerung)
+            # 2. Alle Max-Gewichte sind identisch
+            fortschritt_prozent = ((avg_letzte - avg_erste) / avg_erste * 100) if avg_erste > 0 else 0
+            alle_gleich = len(set(max_gewichte)) == 1  # Alle Werte identisch
+            
+            if fortschritt_prozent < 2.5 and alle_gleich:
+                empfehlungen.append({
+                    'typ': 'stagnation',
+                    'prioritaet': 'niedrig',
+                    'titel': f'{uebung.bezeichnung}: Stagnation',
+                    'beschreibung': f'Bei dieser Übung gab es in den letzten {len(max_gewichte)} Trainings keinen Fortschritt (konstant {max_gewichte[-1]} kg).',
+                    'empfehlung': 'Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren',
+                    'uebungen': []
+                })
     
     # === 4. TRAININGSFREQUENZ ===
     trainings_letzte_woche = Trainingseinheit.objects.filter(
@@ -4262,3 +4300,235 @@ def manifest(request):
         return HttpResponse(content, content_type='application/json')
     except FileNotFoundError:
         return HttpResponse('Manifest not found', status=404)
+
+
+# ============================================================
+# PLAN GRUPPIERUNG API
+# ============================================================
+
+@login_required
+@require_http_methods(["POST"])
+def api_ungroup_plans(request):
+    """Löst die Gruppierung von Plänen auf (entfernt gruppe_id)."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        gruppe_id = data.get('gruppe_id')
+        
+        if not gruppe_id:
+            return JsonResponse({'success': False, 'error': 'Keine Gruppe angegeben'}, status=400)
+        
+        # Finde alle Pläne mit dieser gruppe_id und entferne die Gruppierung
+        updated = Plan.objects.filter(
+            user=request.user,
+            gruppe_id=gruppe_id
+        ).update(gruppe_id=None, gruppe_name='')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{updated} Pläne wurden aus der Gruppe entfernt'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_group_plans(request):
+    """Gruppiert mehrere Pläne unter einer neuen Gruppe."""
+    import json as json_module
+    import uuid
+    
+    try:
+        data = json_module.loads(request.body)
+        plan_ids = data.get('plan_ids', [])
+        gruppe_name = data.get('gruppe_name', 'Neue Gruppe')
+        
+        if len(plan_ids) < 2:
+            return JsonResponse({'success': False, 'error': 'Mindestens 2 Pläne nötig'}, status=400)
+        
+        # Erstelle neue Gruppen-ID
+        neue_gruppe_id = uuid.uuid4()
+        
+        # Aktualisiere alle angegebenen Pläne mit Reihenfolge
+        plans = Plan.objects.filter(
+            user=request.user,
+            id__in=plan_ids
+        ).order_by('name')  # Alphabetisch sortieren für initiale Reihenfolge
+        
+        for i, plan in enumerate(plans):
+            plan.gruppe_id = neue_gruppe_id
+            plan.gruppe_name = gruppe_name
+            plan.gruppe_reihenfolge = i
+            plan.save(update_fields=['gruppe_id', 'gruppe_name', 'gruppe_reihenfolge'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{plans.count()} Pläne wurden gruppiert',
+            'gruppe_id': str(neue_gruppe_id)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_delete_plan(request):
+    """Löscht einen einzelnen Plan."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        plan_id = data.get('plan_id')
+        
+        if not plan_id:
+            return JsonResponse({'success': False, 'error': 'Keine Plan-ID angegeben'}, status=400)
+        
+        # Plan finden und prüfen ob er dem User gehört
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        
+        if not plan:
+            return JsonResponse({'success': False, 'error': 'Plan nicht gefunden oder keine Berechtigung'}, status=404)
+        
+        plan_name = plan.name
+        plan.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Plan "{plan_name}" wurde gelöscht'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_delete_group(request):
+    """Löscht alle Pläne einer Gruppe."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        gruppe_id = data.get('gruppe_id')
+        
+        if not gruppe_id:
+            return JsonResponse({'success': False, 'error': 'Keine Gruppe angegeben'}, status=400)
+        
+        # Alle Pläne dieser Gruppe finden (nur die des Users)
+        plans_to_delete = Plan.objects.filter(
+            user=request.user,
+            gruppe_id=gruppe_id
+        )
+        
+        count = plans_to_delete.count()
+        
+        if count == 0:
+            return JsonResponse({'success': False, 'error': 'Keine Pläne in dieser Gruppe gefunden'}, status=404)
+        
+        plans_to_delete.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{count} Pläne wurden gelöscht'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_rename_group(request):
+    """Benennt eine Plan-Gruppe um."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        gruppe_id = data.get('gruppe_id')
+        new_name = data.get('new_name', '').strip()
+        
+        if not gruppe_id:
+            return JsonResponse({'success': False, 'error': 'Keine Gruppe angegeben'}, status=400)
+        
+        if not new_name:
+            return JsonResponse({'success': False, 'error': 'Kein Name angegeben'}, status=400)
+        
+        # Alle Pläne dieser Gruppe umbenennen
+        updated = Plan.objects.filter(
+            user=request.user,
+            gruppe_id=gruppe_id
+        ).update(gruppe_name=new_name)
+        
+        if updated == 0:
+            return JsonResponse({'success': False, 'error': 'Keine Pläne in dieser Gruppe gefunden'}, status=404)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Gruppe wurde zu "{new_name}" umbenannt'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_reorder_group(request):
+    """Ändert die Reihenfolge der Pläne innerhalb einer Gruppe."""
+    import json as json_module
+    
+    try:
+        data = json_module.loads(request.body)
+        gruppe_id = data.get('gruppe_id')
+        plan_id = data.get('plan_id')
+        direction = data.get('direction')  # 'up' oder 'down'
+        
+        if not gruppe_id or not plan_id or not direction:
+            return JsonResponse({'success': False, 'error': 'Fehlende Parameter'}, status=400)
+        
+        # Alle Pläne dieser Gruppe holen, sortiert nach Reihenfolge
+        plans = list(Plan.objects.filter(
+            user=request.user,
+            gruppe_id=gruppe_id
+        ).order_by('gruppe_reihenfolge', 'name'))
+        
+        if not plans:
+            return JsonResponse({'success': False, 'error': 'Keine Pläne in dieser Gruppe'}, status=404)
+        
+        # Index des zu verschiebenden Plans finden
+        current_index = None
+        for i, p in enumerate(plans):
+            if p.id == plan_id:
+                current_index = i
+                break
+        
+        if current_index is None:
+            return JsonResponse({'success': False, 'error': 'Plan nicht gefunden'}, status=404)
+        
+        # Neuen Index berechnen
+        if direction == 'up' and current_index > 0:
+            new_index = current_index - 1
+        elif direction == 'down' and current_index < len(plans) - 1:
+            new_index = current_index + 1
+        else:
+            return JsonResponse({'success': True, 'message': 'Keine Änderung nötig'})
+        
+        # Pläne tauschen
+        plans[current_index], plans[new_index] = plans[new_index], plans[current_index]
+        
+        # Neue Reihenfolge speichern
+        for i, p in enumerate(plans):
+            p.gruppe_reihenfolge = i
+            p.save(update_fields=['gruppe_reihenfolge'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Reihenfolge wurde aktualisiert'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

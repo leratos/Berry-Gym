@@ -284,9 +284,15 @@ class PlanGenerator:
         from core.models import Plan, PlanUebung, Uebung
         from django.contrib.auth.models import User
         from django.utils import timezone
+        import uuid
         
         user = User.objects.get(id=self.user_id)
         plan_ids = []
+        
+        # Wenn mehrere Sessions (Split-Plan), generiere eine gemeinsame gruppe_id
+        is_split = len(plan_json['sessions']) > 1
+        split_gruppe_id = uuid.uuid4() if is_split else None
+        split_gruppe_name = plan_json['plan_name'] if is_split else ''
         
         # Für jede Session einen separaten Plan erstellen
         for session_index, session in enumerate(plan_json['sessions'], start=1):
@@ -302,7 +308,10 @@ class PlanGenerator:
                 user=user,
                 name=f"{plan_json['plan_name']} - {day_name}",
                 beschreibung="\n\n".join([p for p in beschreibungsteile if p]),
-                erstellt_am=timezone.now()
+                erstellt_am=timezone.now(),
+                gruppe_id=split_gruppe_id,
+                gruppe_name=split_gruppe_name,
+                gruppe_reihenfolge=session_index - 1  # 0-basiert: Tag 1 = 0, Tag 2 = 1, etc.
             )
             
             plan_ids.append(plan.id)
