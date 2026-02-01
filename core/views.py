@@ -184,6 +184,56 @@ def datenschutz(request):
 
 
 @login_required
+def feedback_list(request):
+    """Liste aller eigenen Feedbacks"""
+    from .models import Feedback
+    feedbacks = Feedback.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'core/feedback_list.html', {'feedbacks': feedbacks})
+
+
+@login_required
+def feedback_create(request):
+    """Neues Feedback (Bug/Feature) erstellen"""
+    from .models import Feedback
+    
+    if request.method == 'POST':
+        feedback_type = request.POST.get('feedback_type', 'FEATURE')
+        title = request.POST.get('title', '').strip()
+        description = request.POST.get('description', '').strip()
+        
+        if not title or not description:
+            return render(request, 'core/feedback_create.html', {
+                'error': 'Bitte fülle alle Felder aus.',
+                'feedback_type': feedback_type,
+                'title': title,
+                'description': description,
+            })
+        
+        Feedback.objects.create(
+            user=request.user,
+            feedback_type=feedback_type,
+            title=title,
+            description=description,
+        )
+        
+        from django.contrib import messages
+        messages.success(request, '✅ Danke für dein Feedback! Wir werden es prüfen.')
+        return redirect('feedback_list')
+    
+    # GET - Formular anzeigen
+    feedback_type = request.GET.get('type', 'FEATURE')
+    return render(request, 'core/feedback_create.html', {'feedback_type': feedback_type})
+
+
+@login_required
+def feedback_detail(request, feedback_id):
+    """Feedback-Details anzeigen"""
+    from .models import Feedback
+    feedback = get_object_or_404(Feedback, id=feedback_id, user=request.user)
+    return render(request, 'core/feedback_detail.html', {'feedback': feedback})
+
+
+@login_required
 def profile(request):
     """Profil-Seite zum Bearbeiten von Benutzerdaten"""
     from django.contrib.auth.hashers import check_password
@@ -2636,15 +2686,20 @@ def workout_recommendations(request):
         if s.wiederholungen and s.rpe
     )
     
+    # Zusätzlich Sätze zählen für konsistentere Anzeige mit PDF
+    push_saetze = letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=push_gruppen).count()
+    pull_saetze = letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=pull_gruppen).count()
+    
     if push_effektiv > 0 and pull_effektiv > 0:
         ratio = push_effektiv / pull_effektiv if pull_effektiv > 0 else 999
+        saetze_ratio = push_saetze / pull_saetze if pull_saetze > 0 else 999
         
         if ratio > 1.5:  # Zu viel Push
             empfehlungen.append({
                 'typ': 'balance',
                 'prioritaet': 'mittel',
                 'titel': 'Push/Pull Unbalance',
-                'beschreibung': f'Dein Push-Training ({int(push_effektiv)} eff. Wdh) ist {ratio:.1f}x intensiver als dein Pull-Training ({int(pull_effektiv)} eff. Wdh). Dies kann zu Haltungsschäden führen.',
+                'beschreibung': f'Dein Push-Training ({push_saetze} Sätze, {int(push_effektiv)} eff. Wdh) ist {ratio:.1f}x intensiver als dein Pull-Training ({pull_saetze} Sätze, {int(pull_effektiv)} eff. Wdh). Dies kann zu Haltungsschäden führen.',
                 'empfehlung': 'Mehr Zugübungen (Rücken, Bizeps) trainieren',
                 'uebungen': [{'id': u.id, 'name': u.bezeichnung} for u in Uebung.objects.filter(muskelgruppe__in=pull_gruppen)[:3]]
             })
@@ -2653,7 +2708,7 @@ def workout_recommendations(request):
                 'typ': 'balance',
                 'prioritaet': 'mittel',
                 'titel': 'Push/Pull Unbalance',
-                'beschreibung': f'Dein Pull-Training ({int(pull_effektiv)} eff. Wdh) ist intensiver als dein Push-Training ({int(push_effektiv)} eff. Wdh).',
+                'beschreibung': f'Dein Pull-Training ({pull_saetze} Sätze, {int(pull_effektiv)} eff. Wdh) ist intensiver als dein Push-Training ({push_saetze} Sätze, {int(push_effektiv)} eff. Wdh).',
                 'empfehlung': 'Mehr Druckübungen (Brust, Schultern, Trizeps) einbauen',
                 'uebungen': [{'id': u.id, 'name': u.bezeichnung} for u in Uebung.objects.filter(muskelgruppe__in=push_gruppen)[:3]]
             })
@@ -2671,18 +2726,30 @@ def workout_recommendations(request):
         letzte_saetze = alle_saetze.filter(uebung=uebung).order_by('-einheit__datum')[:8]
         
         if len(letzte_saetze) >= 8:  # Mindestens 8 Sätze für sinnvolle Stagnations-Analyse
-            gewichte = [float(s.gewicht) for s in letzte_saetze if s.gewicht]
+            # Gewichte in chronologischer Reihenfolge (älteste zuerst)
+            gewichte_chronologisch = [float(s.gewicht) for s in reversed(list(letzte_saetze)) if s.gewicht]
             
-            # Echte Stagnation: Kein Fortschritt über längeren Zeitraum
-            if gewichte and len(gewichte) >= 8 and max(gewichte) == min(gewichte):
-                empfehlungen.append({
-                    'typ': 'stagnation',
-                    'prioritaet': 'niedrig',
-                    'titel': f'{uebung.bezeichnung}: Stagnation',
-                    'beschreibung': f'Bei dieser Übung gab es in den letzten {len(gewichte)} Trainings keinen Fortschritt (konstant {gewichte[0]} kg).',
-                    'empfehlung': 'Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren',
-                    'uebungen': []
-                })
+            if len(gewichte_chronologisch) >= 8:
+                # Vergleiche Durchschnitt der ersten 4 vs. letzten 4 Sätze
+                erste_haelfte = gewichte_chronologisch[:4]
+                letzte_haelfte = gewichte_chronologisch[-4:]
+                
+                avg_erste = sum(erste_haelfte) / len(erste_haelfte)
+                avg_letzte = sum(letzte_haelfte) / len(letzte_haelfte)
+                
+                # Stagnation nur wenn kein Fortschritt (weniger als 2.5% Steigerung)
+                fortschritt_prozent = ((avg_letzte - avg_erste) / avg_erste * 100) if avg_erste > 0 else 0
+                
+                if fortschritt_prozent < 2.5 and max(gewichte_chronologisch) == min(gewichte_chronologisch):
+                    # Echte Stagnation: Alle Gewichte gleich UND kein Trend
+                    empfehlungen.append({
+                        'typ': 'stagnation',
+                        'prioritaet': 'niedrig',
+                        'titel': f'{uebung.bezeichnung}: Stagnation',
+                        'beschreibung': f'Bei dieser Übung gab es in den letzten {len(gewichte_chronologisch)} Trainings keinen Fortschritt (konstant {gewichte_chronologisch[-1]} kg).',
+                        'empfehlung': 'Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren',
+                        'uebungen': []
+                    })
     
     # === 4. TRAININGSFREQUENZ ===
     trainings_letzte_woche = Trainingseinheit.objects.filter(
