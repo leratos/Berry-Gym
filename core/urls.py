@@ -129,4 +129,9 @@ urlpatterns = [
     # Plan Gruppierung API
     path('api/plans/ungroup/', views.api_ungroup_plans, name='api_ungroup_plans'),
     path('api/plans/group/', views.api_group_plans, name='api_group_plans'),
+    
+    # Cardio Tracking
+    path('cardio/', views.cardio_list, name='cardio_list'),
+    path('cardio/add/', views.cardio_add, name='cardio_add'),
+    path('cardio/<int:cardio_id>/delete/', views.cardio_delete, name='cardio_delete'),
 ]

@@ -425,6 +425,27 @@
       </div>
       {% endif %}
 
+      <!-- Cardio diese Woche -->
+      {% if cardio_diese_woche > 0 %}
+      <div class="card card-stat border-danger mb-3 shadow-sm">
+        <div class="card-body py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">
+                        <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio diese Woche
+                    </h6>
+                    <small class="text-muted">{{ cardio_diese_woche }} Einheit{% if cardio_diese_woche > 1 %}en{% endif %}</small>
+                </div>
+                <div class="text-end">
+                    <div class="fs-4 fw-bold text-danger">{{ cardio_minuten_diese_woche }}</div>
+                    <small class="text-muted">Minuten</small>
+                </div>
+            </div>
+            <a href="{% url 'cardio_list' %}" class="stretched-link"></a>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Ermüdungs-Index -->
       {% if gesamt_trainings >= 4 %}
       <div class="card card-stat border-{{ fatigue_color }} mb-3 shadow-sm">
@@ -531,6 +552,13 @@
       <div class="d-grid gap-3 mt-5">
         <a href="{% url 'training_select_plan' %}" class="btn btn-success btn-action fw-bold rounded-4 shadow">
             <i class="bi bi-play-circle-fill me-2"></i> Training starten
+        </a>
+        
+        <a href="{% url 'cardio_add' %}" class="btn btn-outline-danger btn-action fw-bold rounded-4">
+            <i class="bi bi-heart-pulse-fill me-2"></i> Cardio hinzufügen
+            {% if cardio_diese_woche > 0 %}
+            <span class="badge bg-danger ms-2">{{ cardio_diese_woche }}×</span>
+            {% endif %}
         </a>
         
         <button type="button" class="btn btn-warning btn-action fw-bold rounded-4 shadow" data-bs-toggle="modal" data-bs-target="#aiPlanGeneratorModal">

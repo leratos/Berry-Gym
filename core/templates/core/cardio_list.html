@@ -1,0 +1,167 @@
+{% load static %}
+<!doctype html>
+<html lang="de" data-bs-theme="dark" id="htmlRoot">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cardio-Übersicht - HomeGym</title>
+    <meta name="theme-color" content="#198754">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="icon" href="{% static 'core/images/icon-192x192.png' %}" type="image/png">
+    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+    <style>
+        .card-stat { border-radius: 1rem; }
+        .list-group-item { transition: background-color 0.2s; }
+    </style>
+</head>
+<body>
+<div class="container py-4">
+    <!-- Header mit Navigation -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio-Tracking
+            </h1>
+        </div>
+        <a href="{% url 'cardio_add' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle me-1"></i>Hinzufügen
+        </a>
+    </div>
+    
+    <!-- Statistik-Karten -->
+    <div class="row g-3 mb-4">
+        <div class="col-6">
+            <div class="card card-stat h-100">
+                <div class="card-body text-center">
+                    <div class="fs-2 text-danger fw-bold">{{ total_einheiten }}</div>
+                    <div class="text-muted small">Einheiten{% if not show_all %} (30 Tage){% endif %}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card card-stat h-100">
+                <div class="card-body text-center">
+                    <div class="fs-2 text-primary fw-bold">{{ total_minuten }}</div>
+                    <div class="text-muted small">Minuten gesamt</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter -->
+    <div class="mb-3">
+        {% if show_all %}
+            <a href="{% url 'cardio_list' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-calendar3 me-1"></i>Nur letzte 30 Tage
+            </a>
+        {% else %}
+            <a href="{% url 'cardio_list' %}?all=1" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-calendar-range me-1"></i>Alle anzeigen
+            </a>
+        {% endif %}
+    </div>
+    
+    <!-- Cardio-Liste -->
+    {% if cardio_einheiten %}
+    <div class="list-group">
+        {% for cardio in cardio_einheiten %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <!-- Icon basierend auf Aktivität -->
+                <div class="me-3 fs-4">
+                    {% if cardio.aktivitaet == 'SCHWIMMEN' %}
+                        <i class="bi bi-water text-info"></i>
+                    {% elif cardio.aktivitaet == 'LAUFEN' %}
+                        <i class="bi bi-person-walking text-success"></i>
+                    {% elif cardio.aktivitaet == 'RADFAHREN' %}
+                        <i class="bi bi-bicycle text-warning"></i>
+                    {% elif cardio.aktivitaet == 'RUDERN' %}
+                        <i class="bi bi-tsunami text-primary"></i>
+                    {% elif cardio.aktivitaet == 'GEHEN' %}
+                        <i class="bi bi-signpost-split text-secondary"></i>
+                    {% elif cardio.aktivitaet == 'HIIT' %}
+                        <i class="bi bi-lightning-fill text-danger"></i>
+                    {% elif cardio.aktivitaet == 'STEPPER' %}
+                        <i class="bi bi-stairs text-info"></i>
+                    {% elif cardio.aktivitaet == 'SEILSPRINGEN' %}
+                        <i class="bi bi-arrow-repeat text-success"></i>
+                    {% else %}
+                        <i class="bi bi-heart-pulse text-danger"></i>
+                    {% endif %}
+                </div>
+                <div>
+                    <h6 class="mb-0">{{ cardio.get_aktivitaet_display }}</h6>
+                    <small class="text-muted">
+                        {{ cardio.datum|date:"D, d.m.Y" }}
+                        {% if cardio.notiz %} · {{ cardio.notiz }}{% endif %}
+                    </small>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <!-- Dauer -->
+                <span class="badge bg-primary rounded-pill">{{ cardio.dauer_minuten }} Min</span>
+                
+                <!-- Intensität -->
+                {% if cardio.intensitaet == 'LEICHT' %}
+                    <span class="badge bg-success">Leicht</span>
+                {% elif cardio.intensitaet == 'MODERAT' %}
+                    <span class="badge bg-warning text-dark">Moderat</span>
+                {% else %}
+                    <span class="badge bg-danger">Intensiv</span>
+                {% endif %}
+                
+                <!-- Ermüdungspunkte -->
+                <span class="badge bg-secondary" title="Ermüdungspunkte">
+                    <i class="bi bi-battery-half"></i> {{ cardio.ermuedungs_punkte }}
+                </span>
+                
+                <!-- Löschen -->
+                <form method="post" action="{% url 'cardio_delete' cardio.id %}" class="d-inline" 
+                      onsubmit="return confirm('{{ cardio.get_aktivitaet_display }} wirklich löschen?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-secondary text-center">
+        <i class="bi bi-heart-pulse me-2"></i>
+        Noch keine Cardio-Einheiten erfasst.
+        <br>
+        <a href="{% url 'cardio_add' %}" class="btn btn-success mt-3">
+            <i class="bi bi-plus-circle me-1"></i>Erste Cardio-Einheit hinzufügen
+        </a>
+    </div>
+    {% endif %}
+    
+    <!-- Quick Info -->
+    <div class="card card-stat mt-4">
+        <div class="card-body">
+            <h6 class="text-muted mb-2"><i class="bi bi-info-circle me-1"></i>Info</h6>
+            <p class="mb-0 small text-muted">
+                Cardio-Einheiten werden im <strong>Ermüdungs-Index</strong> berücksichtigt und helfen dem 
+                <strong>KI-Coach</strong>, dein Krafttraining besser zu planen. Leichtes Cardio fördert 
+                die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% include 'core/includes/global_footer.html' %}
+</body>
+</html>
