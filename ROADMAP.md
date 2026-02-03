@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
-**Stand:** 01.02.2026  
-**Version:** 0.7.2
+**Stand:** 03.02.2026  
+**Version:** 0.7.3
 
 ---
 
@@ -531,8 +531,92 @@
 - [ ] **Undo-Funktion für gelöschte Sätze** (5 Sekunden Rückgängig-Fenster)
 - [ ] **Keyboard-Shortcuts** (Enter = Speichern, Esc = Schließen)
 - [ ] **Bessere Error-Messages** (User-freundliche Fehlerbeschreibungen)
-- [ ] **Toast-Notifications** (statt Alerts für Erfolgs-Meldungen)
+- [x] **Toast-Notifications** (statt Alerts für Erfolgs-Meldungen) ✅ (03.02.2026)
 - [ ] **Autocomplete für Übungssuche** (Typeahead)
+
+---
+
+## 🎉 Neue Features in Version 0.7.4 (03.02.2026)
+
+### Toast-Notifications System
+Moderne Toast-Benachrichtigungen ersetzen alle Browser-Alerts:
+
+1. **Toast-Typen**
+   - ✅ Success (grün) - für Erfolgsaktionen
+   - ❌ Error (rot) - für Fehler
+   - ⚠️ Warning (gelb) - für Warnungen
+   - ℹ️ Info (blau) - für Hinweise
+
+2. **Features**
+   - Animierte Ein-/Ausblendung (slide from right)
+   - Auto-dismiss nach 3-4 Sekunden
+   - Manuelles Schließen möglich
+   - Stapelbar (mehrere Toasts gleichzeitig)
+   - Dark Mode kompatibel
+   - Responsive (mobile-optimiert)
+
+3. **Geänderte Seiten**
+   - Plan teilen (share_plan.html)
+   - Gruppe teilen (share_group.html)
+   - Trainingsplan-Auswahl (training_select_plan.html)
+   - Fortschrittsfotos (progress_photos.html)
+   - Plan erstellen (create_plan.html)
+   - Plan-Optimierung Modal (plan_optimization_modal.html)
+
+**Technische Details:**
+- `core/static/core/js/toast.js` - Toast-Klasse mit show/success/error/warning/info
+- `core/static/core/css/toast.css` - Styles mit Gradient-Backgrounds
+- Globaler `toast` Instanz verfügbar nach Script-Include
+
+---
+
+## 🎉 Neue Features in Version 0.7.3 (03.02.2026)
+
+### Lite Cardio Tracking
+Die App unterstützt jetzt einfaches Cardio-Tracking ohne Trainingsplan:
+
+1. **Cardio-Einheiten erfassen**
+   - Schnelles Hinzufügen vom Dashboard ("Cardio hinzufügen" Button)
+   - 9 vordefinierte Aktivitäten: Schwimmen, Laufen, Radfahren, Rudern, Gehen, HIIT, Stepper, Seilspringen, Sonstiges
+   - Dauer in Minuten
+   - 3 Intensitätsstufen: Leicht (Zone 2), Moderat (Zone 3), Intensiv (Zone 4-5)
+   - Optionale Notiz (z.B. "Brustschwimmen", "Intervalle")
+   - Datum wählbar (auch rückwirkend)
+
+2. **Cardio-Übersicht**
+   - Neue Seite: `/cardio/`
+   - Liste aller Cardio-Einheiten (Standard: letzte 30 Tage)
+   - Statistiken: Anzahl Einheiten, Gesamtminuten
+   - Aktivitäts-Icons (Schwimmen=Wasser, Laufen=Person, etc.)
+   - Löschen-Funktion
+
+3. **Ermüdungsindex-Integration**
+   - Cardio fließt automatisch in den Ermüdungsindex ein
+   - Ermüdungspunkte basierend auf Intensität × Dauer:
+     * Leicht: 0.1 Punkte/Minute (60 Min = 6 Punkte)
+     * Moderat: 0.2 Punkte/Minute (60 Min = 12 Punkte)
+     * Intensiv: 0.4 Punkte/Minute (60 Min = 24 Punkte)
+   - Ab 30 Punkte/Woche: +5 auf Ermüdungsindex
+   - Ab 60 Punkte/Woche: +10 (Warnung "Moderates Cardio-Volumen")
+   - Ab 120 Punkte/Woche: +20 (Warnung "Hohes Cardio-Volumen")
+
+4. **Dashboard-Integration**
+   - "Cardio hinzufügen" Button direkt unter "Training starten"
+   - Cardio-Statistik-Karte (Einheiten + Minuten diese Woche)
+   - Cardio-Link im Footer für alle Nutzer
+
+**Technische Details:**
+- Model: `CardioEinheit` mit user, datum, aktivitaet, dauer_minuten, intensitaet, notiz
+- Views: `cardio_list`, `cardio_add`, `cardio_delete`
+- Templates: `cardio_list.html`, `cardio_add.html`
+- Migration: `0021_add_cardio_einheit.py`
+- URLs: `/cardio/`, `/cardio/add/`, `/cardio/<id>/delete/`
+
+**Warum dieses Feature?**
+- KI-Coach erhält vollständiges Bild der Trainingsbelastung
+- Ermüdungsindex wird genauer (Schwimmen am Sonntag beeinflusst Beine am Montag)
+- "Aktive Erholung" vs. Ruhetage erkennbar
+- Trainingsfrequenz/Streak berücksichtigt auch Cardio
 
 ---
 

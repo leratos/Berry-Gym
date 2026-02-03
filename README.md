@@ -47,6 +47,13 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit
   - Progress Photos (optional)
   - Langzeit-Trend-Analysen
 
+- **Cardio-Tracking (Lite)**
+  - Schnelles Erfassen von Cardio ohne Trainingsplan
+  - 9 Aktivitäten: Schwimmen, Laufen, Radfahren, Rudern, Gehen, HIIT, Stepper, Seilspringen
+  - 3 Intensitätsstufen mit Ermüdungspunkten
+  - Automatische Integration in Ermüdungsindex
+  - Dashboard-Statistiken (Einheiten & Minuten pro Woche)
+
 - **1RM Tracking & PRs**
   - Automatische 1RM Berechnung (Epley-Formel)
   - Personal Records mit Benachrichtigungen

@@ -507,6 +507,28 @@ def dashboard(request):
         elif last_7_days >= 5:
             fatigue_index += 15
     
+    # NEU: Faktor 4: Cardio-Ermüdung (zusätzliche Punkte)
+    from .models import CardioEinheit
+    cardio_letzte_7_tage = CardioEinheit.objects.filter(
+        user=request.user,
+        datum__gte=heute - timedelta(days=7)
+    )
+    cardio_fatigue_total = sum(c.ermuedungs_punkte for c in cardio_letzte_7_tage)
+    
+    # Cardio-Ermüdung: max 20 Punkte (bei 120+ Ermüdungspunkten aus Cardio)
+    if cardio_fatigue_total >= 120:
+        fatigue_index += 20
+        fatigue_warnings.append(f'Hohes Cardio-Volumen ({cardio_fatigue_total:.0f} Punkte)')
+    elif cardio_fatigue_total >= 60:
+        fatigue_index += 10
+        fatigue_warnings.append(f'Moderates Cardio-Volumen ({cardio_fatigue_total:.0f} Punkte)')
+    elif cardio_fatigue_total >= 30:
+        fatigue_index += 5
+    
+    # Cardio-Statistik für Dashboard
+    cardio_diese_woche = cardio_letzte_7_tage.count()
+    cardio_minuten_diese_woche = sum(c.dauer_minuten for c in cardio_letzte_7_tage)
+    
     # Ermüdungs-Bewertung
     if fatigue_index >= 60:
         fatigue_rating = 'Hoch'
@@ -609,6 +631,9 @@ def dashboard(request):
         'fatigue_warnings': fatigue_warnings,
         'motivation_quote': motivation_quote,
         'training_heatmap_json': training_heatmap_json,
+        # Cardio-Statistiken
+        'cardio_diese_woche': cardio_diese_woche,
+        'cardio_minuten_diese_woche': cardio_minuten_diese_woche,
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -5085,3 +5110,110 @@ def api_get_group_shares(request, gruppe_id):
         'success': True,
         'shared_with': shared_users
     })
+
+
+# =============================================================================
+# CARDIO TRACKING (Lite Cardio - Ausdauertraining ohne Trainingsplan)
+# =============================================================================
+
+from .models import CardioEinheit, CARDIO_AKTIVITAETEN, CARDIO_INTENSITAET
+
+
+@login_required
+def cardio_list(request):
+    """Zeigt alle Cardio-Einheiten des Users (letzte 30 Tage)."""
+    from datetime import timedelta
+    
+    # Filter: letzte 30 Tage oder alle
+    show_all = request.GET.get('all', False)
+    
+    if show_all:
+        cardio_einheiten = CardioEinheit.objects.filter(user=request.user)
+    else:
+        thirty_days_ago = timezone.now().date() - timedelta(days=30)
+        cardio_einheiten = CardioEinheit.objects.filter(
+            user=request.user, 
+            datum__gte=thirty_days_ago
+        )
+    
+    # Statistiken
+    total_minuten = sum(c.dauer_minuten for c in cardio_einheiten)
+    total_einheiten = cardio_einheiten.count()
+    
+    context = {
+        'cardio_einheiten': cardio_einheiten,
+        'total_minuten': total_minuten,
+        'total_einheiten': total_einheiten,
+        'show_all': show_all,
+    }
+    return render(request, 'core/cardio_list.html', context)
+
+
+@login_required
+def cardio_add(request):
+    """Fügt eine neue Cardio-Einheit hinzu."""
+    if request.method == 'POST':
+        aktivitaet = request.POST.get('aktivitaet')
+        dauer = request.POST.get('dauer_minuten')
+        intensitaet = request.POST.get('intensitaet', 'MODERAT')
+        notiz = request.POST.get('notiz', '')
+        datum_str = request.POST.get('datum')
+        
+        # Datum parsen
+        if datum_str:
+            from datetime import datetime
+            try:
+                datum = datetime.strptime(datum_str, '%Y-%m-%d').date()
+            except ValueError:
+                datum = timezone.now().date()
+        else:
+            datum = timezone.now().date()
+        
+        # Validierung
+        if not aktivitaet or not dauer:
+            messages.error(request, 'Bitte Aktivität und Dauer angeben.')
+            return redirect('cardio_add')
+        
+        try:
+            dauer_int = int(dauer)
+            if dauer_int <= 0:
+                raise ValueError
+        except ValueError:
+            messages.error(request, 'Bitte eine gültige Dauer in Minuten angeben.')
+            return redirect('cardio_add')
+        
+        # Speichern
+        CardioEinheit.objects.create(
+            user=request.user,
+            datum=datum,
+            aktivitaet=aktivitaet,
+            dauer_minuten=dauer_int,
+            intensitaet=intensitaet,
+            notiz=notiz[:200] if notiz else ''
+        )
+        
+        messages.success(request, f'{dict(CARDIO_AKTIVITAETEN).get(aktivitaet, aktivitaet)} ({dauer_int} Min) hinzugefügt!')
+        return redirect('cardio_list')
+    
+    # GET: Formular anzeigen
+    context = {
+        'aktivitaeten': CARDIO_AKTIVITAETEN,
+        'intensitaeten': CARDIO_INTENSITAET,
+        'heute': timezone.now().date().isoformat(),
+    }
+    return render(request, 'core/cardio_add.html', context)
+
+
+@login_required
+def cardio_delete(request, cardio_id):
+    """Löscht eine Cardio-Einheit."""
+    cardio = get_object_or_404(CardioEinheit, id=cardio_id, user=request.user)
+    
+    if request.method == 'POST':
+        aktivitaet = cardio.get_aktivitaet_display()
+        cardio.delete()
+        messages.success(request, f'{aktivitaet} gelöscht.')
+        return redirect('cardio_list')
+    
+    # GET: Bestätigungs-Seite (oder redirect)
+    return redirect('cardio_list')
