@@ -2412,9 +2412,14 @@ def uebungen_auswahl(request):
         
         uebungen_nach_gruppe[mg_label].append(uebung)
     
+    # Get all tags for filter dropdown
+    from core.models import UebungTag
+    all_tags = UebungTag.objects.all().order_by('name')
+    
     context = {
         'uebungen_nach_gruppe': uebungen_nach_gruppe,
         'user_equipment': request.user.verfuegbares_equipment.all(),
+        'all_tags': all_tags,
     }
     return render(request, 'core/uebungen_auswahl.html', context)
 
