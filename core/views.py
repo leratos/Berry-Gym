@@ -3484,31 +3484,62 @@ def equipment_management(request):
     all_equipment = Equipment.objects.all().order_by('name')
     user_equipment_ids = request.user.verfuegbares_equipment.values_list('id', flat=True)
     
-    # Kategorien für bessere Darstellung
+    # Kategorien für bessere Darstellung mit Icons
     equipment_categories = {
-        'Freie Gewichte': ['LANGHANTEL', 'KURZHANTEL', 'KETTLEBELL'],
-        'Racks & Stangen': ['KLIMMZUG', 'DIP', 'SMITHMASCHINE'],
-        'Bänke': ['BANK', 'SCHRAEGBANK'],
-        'Maschinen': ['KABELZUG', 'BEINPRESSE', 'LEG_CURL', 'LEG_EXT', 'HACKENSCHMIDT', 'RUDERMASCHINE'],
-        'Sonstiges': ['WIDERSTANDSBAND', 'SUSPENSION', 'MEDIZINBALL', 'BOXEN', 'MATTE', 'KOERPER'],
+        'Freie Gewichte': {
+            'icon': 'bi-hammer',
+            'equipment': ['LANGHANTEL', 'KURZHANTEL', 'KETTLEBELL'],
+            'color': 'primary'
+        },
+        'Racks & Stangen': {
+            'icon': 'bi-border-all',
+            'equipment': ['KLIMMZUG', 'DIP', 'SMITHMASCHINE'],
+            'color': 'success'
+        },
+        'Bänke': {
+            'icon': 'bi-layout-wtf',
+            'equipment': ['BANK', 'SCHRAEGBANK'],
+            'color': 'info'
+        },
+        'Maschinen': {
+            'icon': 'bi-gear-wide-connected',
+            'equipment': ['KABELZUG', 'BEINPRESSE', 'LEG_CURL', 'LEG_EXT', 'HACKENSCHMIDT', 'RUDERMASCHINE', 'ADDUKTOREN_MASCHINE', 'ABDUKTOREN_MASCHINE'],
+            'color': 'warning'
+        },
+        'Funktionell': {
+            'icon': 'bi-bezier2',
+            'equipment': ['WIDERSTANDSBAND', 'SUSPENSION', 'MEDIZINBALL', 'BOXEN'],
+            'color': 'secondary'
+        },
+        'Basics': {
+            'icon': 'bi-person',
+            'equipment': ['MATTE', 'KOERPER'],
+            'color': 'dark'
+        }
     }
     
     categorized_equipment = {}
-    for category, eq_codes in equipment_categories.items():
-        categorized_equipment[category] = all_equipment.filter(name__in=eq_codes)
+    for category, config in equipment_categories.items():
+        eq_list = all_equipment.filter(name__in=config['equipment'])
+        if eq_list.exists():
+            categorized_equipment[category] = {
+                'icon': config['icon'],
+                'color': config['color'],
+                'items': eq_list
+            }
     
     # Statistik: Übungen mit verfügbarem Equipment
-    total_uebungen = Uebung.objects.count()
+    total_uebungen = Uebung.objects.filter(is_custom=False).count()
     if user_equipment_ids:
         # Übungen die ALLE ihre benötigten Equipment-Teile beim User verfügbar haben
         available_uebungen = 0
-        for uebung in Uebung.objects.prefetch_related('equipment'):
+        for uebung in Uebung.objects.filter(is_custom=False).prefetch_related('equipment'):
             required_eq = set(uebung.equipment.values_list('id', flat=True))
             if not required_eq or required_eq.issubset(set(user_equipment_ids)):
                 available_uebungen += 1
     else:
         # Nur Übungen ohne Equipment-Anforderung
-        available_uebungen = Uebung.objects.filter(equipment__isnull=True).count()
+        available_uebungen = Uebung.objects.filter(is_custom=False, equipment__isnull=True).count()
     
     context = {
         'categorized_equipment': categorized_equipment,
@@ -3519,6 +3550,61 @@ def equipment_management(request):
     }
     
     return render(request, 'core/equipment_management.html', context)
+
+
+@login_required
+def suggest_alternative_exercises(request, exercise_id):
+    """
+    Schlägt alternative Übungen vor basierend auf:
+    - Gleiche Muskelgruppe
+    - Verfügbares Equipment
+    - Ähnlicher Bewegungstyp
+    """
+    original_exercise = get_object_or_404(Uebung, id=exercise_id)
+    user_equipment_ids = set(request.user.verfuegbares_equipment.values_list('id', flat=True))
+    
+    # Alternative finden
+    alternatives = Uebung.objects.filter(
+        muskelgruppe=original_exercise.muskelgruppe,
+        is_custom=False
+    ).exclude(id=original_exercise.id)
+    
+    # Filter nach verfügbarem Equipment
+    available_alternatives = []
+    for alt in alternatives:
+        required_eq = set(alt.equipment.values_list('id', flat=True))
+        if not required_eq or required_eq.issubset(user_equipment_ids):
+            # Score berechnen für Sortierung
+            score = 0
+            if alt.bewegungstyp == original_exercise.bewegungstyp:
+                score += 10
+            if set(alt.hilfsmuskeln) & set(original_exercise.hilfsmuskeln if original_exercise.hilfsmuskeln else []):
+                score += 5
+            available_alternatives.append({
+                'exercise': alt,
+                'score': score
+            })
+    
+    # Sortieren nach Score
+    available_alternatives.sort(key=lambda x: x['score'], reverse=True)
+    
+    # Top 5
+    top_alternatives = [item['exercise'] for item in available_alternatives[:5]]
+    
+    return JsonResponse({
+        'original': {
+            'id': original_exercise.id,
+            'name': original_exercise.bezeichnung,
+            'muscle': original_exercise.get_muskelgruppe_display()
+        },
+        'alternatives': [{
+            'id': alt.id,
+            'name': alt.bezeichnung,
+            'muscle': alt.get_muskelgruppe_display(),
+            'movement': alt.get_bewegungstyp_display(),
+            'equipment': [eq.get_name_display() for eq in alt.equipment.all()]
+        } for alt in top_alternatives]
+    })
 
 
 @login_required
