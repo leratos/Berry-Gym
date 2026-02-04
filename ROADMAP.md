@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
 **Stand:** 04.02.2026  
-**Version:** 0.7.7
+**Version:** 0.7.8
 
 ---
 
@@ -242,7 +242,11 @@
   - "Nur Favoriten anzeigen" Filter
   - Toast-Benachrichtigungen
   - ManyToMany User-Übung Relation
-- [ ] Custom Übungen erstellen
+- [x] **Custom Übungen erstellen** ✅ (04.02.2026)
+  - Model CustomUebung mit user, name, muskelgruppen, beschreibung, equipment
+  - UI im Plan-Editor und Training-Session
+  - CRUD API-Endpoints + Templates
+  - Integration in Übungsauswahl mit Filter "Meine Übungen"
 - [ ] Tags für Übungen (Compound, Isolation, etc.)
 - [ ] Schwierigkeitsgrad anzeigen
 
@@ -435,12 +439,13 @@
 
 **Warum:** Senkt Einstiegshürde massiv, schneller Start für neue User
 
-**4. AI Coach UI-Verbesserungen** ⭐ Impact: 6/10 | Aufwand: 3h
-- [x] **Plan-Generierung Web** (heute implementiert!) ✅
-- [x] **Plan-Optimierung Web** (heute implementiert!) ✅
-- [ ] **Auto-Suggest nach Training**
+**4. AI Coach UI-Verbesserungen** ⭐ Impact: 6/10 | Aufwand: 3h ✅ FERTIG
+- [x] **Plan-Generierung Web** ✅
+- [x] **Plan-Optimierung Web** ✅
+- [x] **Auto-Suggest nach Training** ✅ (04.02.2026)
   - Button: "Plan optimieren?" nach jedem 3. Training
   - Zeigt Performance-Warnings im Dashboard
+  - Proaktive Empfehlungen basierend auf Trainingshistorie
 - [ ] **Onboarding-Tour**
   - Erste Schritte für AI Coach
   - Tooltips für Equipment-Setup
@@ -551,7 +556,96 @@
   - Integration in training_session.html
 - [ ] **Bessere Error-Messages** (User-freundliche Fehlerbeschreibungen)
 - [x] **Toast-Notifications** (statt Alerts für Erfolgs-Meldungen) ✅ (03.02.2026)
-- [ ] **Autocomplete für Übungssuche** (Typeahead)
+
+---
+
+## 🎉 Neue Features in Version 0.7.8 (04.02.2026)
+
+### Custom Übungen erstellen
+Nutzer können jetzt eigene Übungen erstellen und in ihren Plänen verwenden:
+
+1. **CustomUebung Model**
+   - user (ForeignKey) - Übung gehört einem User
+   - name, muskelgruppen, hilfsmuskelgruppen
+   - beschreibung, equipment (optional)
+   - is_active für Soft-Delete
+
+2. **UI Integration**
+   - "Eigene Übung erstellen" Button in Übungsauswahl
+   - Modal mit Formular (Name, Muskelgruppen, Beschreibung, Equipment)
+   - Filter "Meine Übungen" in uebungen_auswahl.html
+   - Integration in Plan-Editor und Training-Session
+
+3. **CRUD API-Endpoints**
+   - POST /api/custom-uebung/create/
+   - GET /api/custom-uebungen/
+   - PUT /api/custom-uebung/<id>/update/
+   - DELETE /api/custom-uebung/<id>/delete/
+
+4. **Training Integration**
+   - Custom Übungen erscheinen in Übungsauswahl
+   - Ghosting funktioniert wie bei Standard-Übungen
+   - Statistiken und 1RM-Berechnung identisch
+
+**Technische Details:**
+- Model: CustomUebung in core/models.py
+- Views: custom_uebung_create, custom_uebung_list, custom_uebung_update, custom_uebung_delete
+- Templates: custom_uebung_modal.html
+- JavaScript: custom-uebung.js
+
+### AI Coach Auto-Suggest nach Training
+Der AI Coach schlägt jetzt automatisch Optimierungen vor:
+
+1. **Automatische Trigger**
+   - Nach jedem 3. Training: "Plan optimieren?" Button
+   - Performance-Warnings im Dashboard (Top 3)
+   - Proaktive Benachrichtigungen bei kritischen Problemen
+
+2. **Dashboard-Integration**
+   - Performance-Warnings Card zeigt aktuelle Probleme
+   - Direkt-Link zur Plan-Optimierung
+   - Badge zeigt Anzahl offener Warnings
+
+3. **Smart Timing**
+   - Nur bei relevanten Daten (mind. 8 Trainings)
+   - Nicht öfter als alle 3 Trainings
+   - User kann Suggest deaktivieren (Einstellungen)
+
+4. **Verbesserungen**
+   - Analyse läuft im Hintergrund
+   - Cached Results für schnellere Anzeige
+   - Toast-Benachrichtigung mit "Jetzt optimieren"-Link
+
+**Technische Details:**
+- Training-Counter in Session
+- Dashboard-Template mit Performance-Card
+- Auto-Suggest-Logic in training_complete View
+- LocalStorage für User-Präferenzen
+
+### Sicherheits-Updates (Security-Patch)
+Alle GitHub CodeQL Alerts behoben:
+
+1. **Information Disclosure** (30+ Instanzen)
+   - Entfernt `str(e)` aus allen JsonResponse Errors
+   - Generische User-Fehlermeldungen
+   - Server-seitige Logs mit exc_info=True
+
+2. **ReDoS Prevention** (3 Instanzen)
+   - Bounded regex quantifiers (`{0,50}`, `{1,4}`, `{1,10}`)
+   - Schutz vor Denial-of-Service Angriffen
+
+3. **XSS Protection** (1 Instanz)
+   - AI Chat verwendet textContent statt innerHTML
+   - DOM-based XSS verhindert
+
+4. **URL Sanitization** (1 Instanz)
+   - Service Worker: hostname === statt includes()
+   - Verhindert Subdomain-Bypass
+
+**Dateien:**
+- core/views.py (30+ Fixes)
+- core/templates/core/ai_coach_chat.html
+- core/static/core/service-worker.js
 
 ---
 
@@ -1065,7 +1159,7 @@ Die App hat jetzt einen vollständigen AI Coach für automatische Plan-Anpassung
 - **Phase 3.5:** 100% (10/10 Features)
 - **Phase 3.7:** 100% (8/8 Features - AI Coach)
 - **Phase 4:** 60% (6/10 Features - PDF, PWA/Offline, Templates, Übungsdb)
-- **Phase 5:** 40% (2/5 High Priority - Superset, PDF Report)
+- **Phase 5:** 80% (4/5 High Priority - Superset, PDF Report, AI Auto-Suggest, Custom Übungen)
 
 ### Key Numbers (Januar 2026)
 - **Übungsdatenbank:** 200+ Übungen mit anatomischen Daten
