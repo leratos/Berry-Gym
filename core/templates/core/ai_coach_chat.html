@@ -284,10 +284,16 @@
             const now = new Date();
             const timestamp = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             
-            messageDiv.innerHTML = `
-                <div>${text}</div>
-                <div class="timestamp">${timestamp}</div>
-            `;
+            // Security: Use textContent to prevent XSS
+            const textDiv = document.createElement('div');
+            textDiv.textContent = text;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'timestamp';
+            timeDiv.textContent = timestamp;
+            
+            messageDiv.appendChild(textDiv);
+            messageDiv.appendChild(timeDiv);
             
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;

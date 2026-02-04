@@ -4730,7 +4730,7 @@ def sync_offline_data(request):
                 results.append({
                     'id': item['id'],
                     'success': False,
-                    'error': str(e)
+                    'error': 'Fehler beim Verarbeiten dieses Eintrags'
                 })
         
         return JsonResponse({
