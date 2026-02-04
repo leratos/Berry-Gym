@@ -54,6 +54,13 @@
                             <span class="badge bg-secondary">
                                 {{ uebung.get_bewegungstyp_display }}
                             </span>
+                            {% if uebung.tags.all %}
+                                {% for tag in uebung.tags.all %}
+                                <span class="badge" style="background-color: {{ tag.farbe }}; color: white;">
+                                    {{ tag.get_name_display }}
+                                </span>
+                                {% endfor %}
+                            {% endif %}
                             {% if uebung.equipment.all %}
                                 <span class="badge bg-info">
                                     <i class="bi bi-tools me-1"></i>{{ uebung.equipment.count }} Equipment

@@ -51,6 +51,22 @@ BEWEGUNGS_TYP = [
     ('ISOLATION', 'Isolation / Sonstiges'),
 ]
 
+# NEU: Tags für Übungen (Phase 5)
+TAG_KATEGORIEN = [
+    ('COMPOUND', 'Compound (Mehrgelenksübung)'),
+    ('ISOLATION', 'Isolation (Eingelenkübung)'),
+    ('BEGINNER', 'Anfängerfreundlich'),
+    ('ADVANCED', 'Fortgeschritten'),
+    ('FUNCTIONAL', 'Funktionell'),
+    ('POWER', 'Explosiv / Power'),
+    ('MOBILITY', 'Mobilität / Beweglichkeit'),
+    ('CARDIO', 'Kardiovaskulär'),
+    ('CORE', 'Core / Rumpfstabilität'),
+    ('UNILATERAL', 'Unilateral (einseitig)'),
+    ('INJURY_PRONE', 'Verletzungsanfällig'),
+    ('LOW_IMPACT', 'Gelenkschonend'),
+]
+
 # NEU: Equipment / Ausrüstung
 EQUIPMENT_CHOICES = [
     ('LANGHANTEL', 'Langhantel'),
@@ -79,6 +95,26 @@ EQUIPMENT_CHOICES = [
 ]
 
 # --- MODELLE ---
+
+class UebungTag(models.Model):
+    """
+    Tags für Übungen zur besseren Kategorisierung und Filterung
+    """
+    name = models.CharField(max_length=50, choices=TAG_KATEGORIEN, unique=True, verbose_name="Tag")
+    beschreibung = models.TextField(blank=True, verbose_name="Beschreibung")
+    farbe = models.CharField(max_length=7, default='#6c757d', verbose_name="Badge-Farbe (Hex)", 
+                            help_text="z.B. #007bff für blau")
+    
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.get_name_display()
+    
+    class Meta:
+        verbose_name = "Übungs-Tag"
+        verbose_name_plural = "Übungs-Tags"
+        ordering = ['name']
+
 
 class Equipment(models.Model):
     """
@@ -119,6 +155,9 @@ class Uebung(models.Model):
 
     # Favoriten
     favoriten = models.ManyToManyField(User, related_name="favoriten_uebungen", blank=True)
+    
+    # Tags
+    tags = models.ManyToManyField(UebungTag, related_name="uebungen", blank=True, verbose_name="Tags")
     
     # Custom Übungen (User-spezifisch)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="custom_uebungen", null=True, blank=True, verbose_name="Erstellt von")

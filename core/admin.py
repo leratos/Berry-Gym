@@ -3,7 +3,8 @@ from django.utils.html import format_html
 from django import forms
 from .models import (
     Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, 
-    ProgressPhoto, Equipment, InviteCode, WaitlistEntry, Feedback, MUSKELGRUPPEN
+    ProgressPhoto, Equipment, InviteCode, WaitlistEntry, Feedback, MUSKELGRUPPEN,
+    UebungTag
 )
 
 # --- ÜBUNGEN ---
@@ -27,15 +28,15 @@ class UebungAdminForm(forms.ModelForm):
 @admin.register(Uebung)
 class UebungAdmin(admin.ModelAdmin):
     form = UebungAdminForm
-    list_display = ('bezeichnung', 'muskelgruppe', 'gewichts_typ', 'bewegungstyp', 'equipment_anzeige', 'hilfsmuskel_anzeige')
-    list_filter = ('muskelgruppe', 'bewegungstyp', 'gewichts_typ', 'equipment')
+    list_display = ('bezeichnung', 'muskelgruppe', 'gewichts_typ', 'bewegungstyp', 'tags_anzeige', 'equipment_anzeige', 'hilfsmuskel_anzeige')
+    list_filter = ('muskelgruppe', 'bewegungstyp', 'gewichts_typ', 'tags', 'equipment')
     search_fields = ('bezeichnung',)
     ordering = ('bezeichnung',)
-    filter_horizontal = ('equipment', 'favoriten')
+    filter_horizontal = ('equipment', 'favoriten', 'tags')
     
     fieldsets = (
         ('Grundinformationen', {
-            'fields': ('bezeichnung', 'muskelgruppe', 'hilfsmuskeln')
+            'fields': ('bezeichnung', 'muskelgruppe', 'hilfsmuskeln', 'tags')
         }),
         ('Trainingsdetails', {
             'fields': ('gewichts_typ', 'bewegungstyp', 'equipment')
@@ -45,6 +46,18 @@ class UebungAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def tags_anzeige(self, obj):
+        tags = obj.tags.all()
+        if tags:
+            return format_html(
+                ' '.join([
+                    f'<span style="background-color:{tag.farbe};color:white;padding:2px 6px;border-radius:3px;font-size:11px;margin-right:3px;">{tag.get_name_display()}</span>'
+                    for tag in tags
+                ])
+            )
+        return '-'
+    tags_anzeige.short_description = 'Tags'
     
     def equipment_anzeige(self, obj):
         equipment_list = obj.equipment.all()
@@ -257,3 +270,29 @@ class FeedbackAdmin(admin.ModelAdmin):
         count = queryset.update(status='DONE')
         self.message_user(request, f'{count} Feedback(s) als umgesetzt markiert')
     mark_done.short_description = '🎉 Als umgesetzt markieren'
+
+
+# --- ÜBUNGS-TAGS ---
+@admin.register(UebungTag)
+class UebungTagAdmin(admin.ModelAdmin):
+    list_display = ('name_display', 'farbe_preview', 'beschreibung', 'anzahl_uebungen')
+    list_filter = ('name',)
+    search_fields = ('name', 'beschreibung')
+    ordering = ('name',)
+    
+    def name_display(self, obj):
+        return obj.get_name_display()
+    name_display.short_description = 'Tag'
+    
+    def farbe_preview(self, obj):
+        return format_html(
+            '<span style="background-color:{};color:white;padding:4px 10px;border-radius:4px;font-weight:bold;">{}</span>',
+            obj.farbe,
+            obj.get_name_display()
+        )
+    farbe_preview.short_description = 'Vorschau'
+    
+    def anzahl_uebungen(self, obj):
+        count = obj.uebungen.count()
+        return f'{count} Übungen'
+    anzahl_uebungen.short_description = 'Verwendung'

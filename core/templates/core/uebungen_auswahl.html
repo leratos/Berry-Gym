@@ -121,10 +121,18 @@
 
         <!-- Filter -->
         <div class="row mb-4">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
+                <select class="form-select" id="tagFilter">
+                    <option value="">Alle Tags</option>
+                    {% for tag in all_tags %}
+                    <option value="{{ tag.id }}">{{ tag.get_name_display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
                 <div class="form-check form-switch d-flex align-items-center h-100">
                     <input class="form-check-input" type="checkbox" id="favoritenFilter" style="cursor: pointer;">
                     <label class="form-check-label ms-2" for="favoritenFilter" style="cursor: pointer;">
@@ -144,7 +152,9 @@
             
             <div class="row g-3">
                 {% for uebung in uebungen %}
-                <div class="col-lg-4 col-md-6 exercise-item" data-name="{{ uebung.bezeichnung|lower }}">
+                <div class="col-lg-4 col-md-6 exercise-item" 
+                     data-name="{{ uebung.bezeichnung|lower }}"
+                     data-tags="{% for tag in uebung.tags.all %}{{ tag.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
                     <a href="{% url 'exercise_detail' uebung.id %}" class="text-decoration-none">
                         <div class="card exercise-card bg-dark border-secondary h-100">
                             <div class="card-body">
@@ -193,6 +203,17 @@
                                 </small>
                                 {% endif %}
                             </div>
+
+                            <!-- Tags -->
+                            {% if uebung.tags.all %}
+                            <div class="mb-2">
+                                {% for tag in uebung.tags.all %}
+                                <span class="badge" style="background-color: {{ tag.farbe }}; color: white; font-size: 0.7rem; margin-right: 3px;">
+                                    {{ tag.get_name_display }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
 
                             <!-- Zusatzinfos -->
                             <div class="mt-auto pt-3 border-top border-secondary">
@@ -463,14 +484,34 @@
             }
         });
 
-        // Exercise Search
-        document.getElementById('searchExercises').addEventListener('input', function(e) {
-            const search = e.target.value.toLowerCase();
+        // Exercise Search & Filter
+        const searchInput = document.getElementById('searchExercises');
+        const tagFilter = document.getElementById('tagFilter');
+        const favoritenFilter = document.getElementById('favoritenFilter');
+
+        function filterExercises() {
+            const search = searchInput.value.toLowerCase();
+            const selectedTag = tagFilter.value;
+            const onlyFavorites = favoritenFilter.checked;
+
             document.querySelectorAll('.exercise-item').forEach(item => {
                 const name = item.dataset.name;
-                item.style.display = name.includes(search) ? 'block' : 'none';
+                const tags = item.dataset.tags ? item.dataset.tags.split(',') : [];
+                const isFavorite = item.querySelector('.favorit-btn.active') !== null;
+
+                // Check all conditions
+                const matchesSearch = name.includes(search);
+                const matchesTag = !selectedTag || tags.includes(selectedTag);
+                const matchesFavorite = !onlyFavorites || isFavorite;
+
+                // Show only if all conditions match
+                item.style.display = (matchesSearch && matchesTag && matchesFavorite) ? 'block' : 'none';
             });
-        });
+        }
+
+        searchInput.addEventListener('input', filterExercises);
+        tagFilter.addEventListener('change', filterExercises);
+        favoritenFilter.addEventListener('change', filterExercises);
 
         // Import File Preview (für Admin)
         {% if user.is_staff %}
