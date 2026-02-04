@@ -871,8 +871,8 @@ def training_start(request, plan_id=None):
             
             # Versuch 1: Wir lesen die Zahl aus dem Plan (z.B. "12" oder "8-12")
             ziel_text = plan_uebung.wiederholungen_ziel
-            # re.search sucht die erste Zahl im Text
-            match = re.search(r'\d+', str(ziel_text)) if ziel_text else None
+            # re.search sucht die erste Zahl im Text (bounded for safety)
+            match = re.search(r'\d{1,4}', str(ziel_text)) if ziel_text else None
             
             if match:
                 start_wdh = int(match.group())
@@ -2393,8 +2393,8 @@ def uebungen_auswahl(request):
             
             import re
             for hilfs_text in hilfs_texte:
-                # Clean text (remove parentheses content)
-                hilfs_text_clean = re.sub(r'\([^)]*\)', '', hilfs_text).strip()
+                # Clean text (remove parentheses content) - Safe regex with bounded quantifier
+                hilfs_text_clean = re.sub(r'\([^)]{0,50}\)', '', hilfs_text).strip()
                 # Try to get code
                 code = text_to_code.get(hilfs_text_clean)
                 if code:
@@ -4662,7 +4662,8 @@ def sync_offline_data(request):
                     # Update: Versuche Satz zu finden und aktualisieren
                     # Extrahiere Satz-ID aus URL (z.B. /set/123/update/)
                     import re
-                    match = re.search(r'/set/(\d+)/update/', action_url)
+                    # Safe regex with bounded quantifier
+                    match = re.search(r'/set/(\d{1,10})/update/', action_url)
                     
                     if match:
                         satz_id = int(match.group(1))
