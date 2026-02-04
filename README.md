@@ -11,7 +11,7 @@
 
 **Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach, Custom Übungen & AI Performance-Analyse**
 
-[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Documentation](#-documentation) • [Contributing](#-contributing)
+[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Roadmap](#-roadmap--known-limitations) • [Contributing](#-contributing)
 
 </div>
 
