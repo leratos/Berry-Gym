@@ -118,3 +118,8 @@ create_test_user.py
 # Beta
 /beta/
 apply_beta.html
+docs/BETA_SYSTEM.md
+docs/FIX_SERVICE_WORKER_SCOPE.md
+docs/OFFLINE_COMPLETE.md
+docs/OFFLINE_TESTING_GUIDE.md
+docs/SW_UPDATE_V3.md
