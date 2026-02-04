@@ -191,22 +191,34 @@ class Uebung(models.Model):
         if not self.video_link:
             return None
         
+        from urllib.parse import urlparse
+        
         url = self.video_link
         
-        # YouTube
-        if 'youtube.com' in url or 'youtu.be' in url:
-            if 'watch?v=' in url:
-                video_id = url.split('watch?v=')[1].split('&')[0]
-            elif 'youtu.be/' in url:
-                video_id = url.split('youtu.be/')[1].split('?')[0]
-            else:
-                return url
-            return f'https://www.youtube.com/embed/{video_id}'
+        try:
+            parsed = urlparse(url)
+            hostname = parsed.hostname.lower() if parsed.hostname else ''
+            
+            # YouTube
+            if hostname in ('www.youtube.com', 'youtube.com', 'm.youtube.com'):
+                if 'watch?v=' in url:
+                    video_id = url.split('watch?v=')[1].split('&')[0]
+                else:
+                    return url
+                return f'https://www.youtube.com/embed/{video_id}'
+            
+            elif hostname in ('youtu.be', 'www.youtu.be'):
+                video_id = parsed.path.lstrip('/').split('?')[0]
+                return f'https://www.youtube.com/embed/{video_id}'
+            
+            # Vimeo
+            elif hostname in ('vimeo.com', 'www.vimeo.com'):
+                video_id = parsed.path.lstrip('/').split('?')[0]
+                return f'https://player.vimeo.com/video/{video_id}'
         
-        # Vimeo
-        elif 'vimeo.com' in url:
-            video_id = url.split('vimeo.com/')[1].split('?')[0]
-            return f'https://player.vimeo.com/video/{video_id}'
+        except Exception:
+            # Bei Parse-Fehler Original-URL zurückgeben
+            pass
         
         return url
 
