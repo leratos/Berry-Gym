@@ -3756,10 +3756,9 @@ def generate_plan_api(request):
             })
     
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f'Generate Plan API Error: {e}', exc_info=True)
         return JsonResponse({
-            'error': str(e),
+            'error': 'Plan-Generierung fehlgeschlagen. Bitte später erneut versuchen.',
             'success': False
         }, status=500)
 
