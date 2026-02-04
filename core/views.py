@@ -2983,7 +2983,7 @@ def export_training_pdf(request):
         html_string = render_to_string('core/training_pdf_simple.html', context)
     except Exception as e:
         logger.error(f'Template rendering failed: {str(e)}', exc_info=True)
-        messages.error(request, f'Template-Fehler: {str(e)}')
+        messages.error(request, 'Template-Fehler: PDF konnte nicht erstellt werden.')
         return redirect('training_stats')
     
     # PDF generieren mit xhtml2pdf
@@ -3002,7 +3002,7 @@ def export_training_pdf(request):
         
     except Exception as e:
         logger.error(f'PDF export failed: {str(e)}', exc_info=True)
-        messages.error(request, f'PDF-Generierung fehlgeschlagen: {str(e)}')
+        messages.error(request, 'PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.')
         return redirect('training_stats')
 
 
@@ -3225,7 +3225,7 @@ def export_plan_pdf(request, plan_id):
         
     except Exception as e:
         logger.error(f'Plan PDF export failed: {str(e)}', exc_info=True)
-        messages.error(request, f'PDF-Generierung fehlgeschlagen: {str(e)}')
+        messages.error(request, 'PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.')
         return redirect('plan_details', plan_id=plan_id)
 
 
@@ -3588,10 +3588,9 @@ def exercise_api_detail(request, exercise_id):
         
         return JsonResponse(data)
     except Exception as e:
-        logger.error(f'Generate Plan API Error: {e}')
+        logger.error(f'Generate Plan API Error: {e}', exc_info=True)
         return JsonResponse({
-            'error': 'Plan konnte nicht generiert werden. Bitte später erneut versuchen.',
-            'technical_error': str(e) if settings.DEBUG else None
+            'error': 'Plan konnte nicht generiert werden. Bitte später erneut versuchen.'
         }, status=500)
 
 
@@ -3645,9 +3644,8 @@ def live_guidance_api(request):
     except Trainingseinheit.DoesNotExist:
         return JsonResponse({'error': 'Trainingseinheit nicht gefunden'}, status=404)
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f'Live Feedback API Error: {e}', exc_info=True)
+        return JsonResponse({'error': 'Feedback konnte nicht gespeichert werden. Bitte später erneut versuchen.'}, status=500)
 
 
 @login_required
@@ -3800,10 +3798,9 @@ def analyze_plan_api(request):
         })
     
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f'Analyze Plan API Error: {e}', exc_info=True)
         return JsonResponse({
-            'error': str(e),
+            'error': 'Plan-Analyse fehlgeschlagen. Bitte später erneut versuchen.',
             'success': False
         }, status=500)
 
@@ -3854,10 +3851,9 @@ def optimize_plan_api(request):
         })
     
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f'Optimize Plan API Error: {e}', exc_info=True)
         return JsonResponse({
-            'error': str(e),
+            'error': 'Plan-Optimierung fehlgeschlagen. Bitte später erneut versuchen.',
             'success': False
         }, status=500)
 
@@ -4005,10 +4001,9 @@ def apply_optimizations_api(request):
         })
     
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f'Apply Optimizations API Error: {e}', exc_info=True)
         return JsonResponse({
-            'error': str(e),
+            'error': 'Optimierungen konnten nicht angewendet werden. Bitte später erneut versuchen.',
             'success': False
         }, status=500)
 
@@ -4219,7 +4214,8 @@ def import_uebungen(request):
             messages.warning(request, f'{len(errors)} Fehler: ' + '; '.join(errors[:5]))
         
     except Exception as e:
-        messages.error(request, f'Import fehlgeschlagen: {str(e)}')
+        logger.error(f'Import failed: {str(e)}', exc_info=True)
+        messages.error(request, 'Import fehlgeschlagen. Bitte überprüfe das JSON-Format.')
     
     return redirect('uebungen_auswahl')
 
@@ -4250,7 +4246,8 @@ def get_plan_templates(request):
         
         return JsonResponse(templates_overview)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f'Get Plan Templates Error: {e}', exc_info=True)
+        return JsonResponse({'error': 'Templates konnten nicht geladen werden. Bitte später erneut versuchen.'}, status=500)
 
 
 @login_required
@@ -4355,8 +4352,8 @@ def get_template_detail(request, template_key):
         
         return JsonResponse(adapted_template)
     except Exception as e:
-        logger.error(f'Template detail error: {str(e)}', exc_info=True)
-        return JsonResponse({'error': str(e), 'template_key': template_key}, status=500)
+        logger.error(f'Template detail error: {e}', exc_info=True)
+        return JsonResponse({'error': 'Trainingsplan-Vorlage konnte nicht geladen werden.', 'template_key': template_key}, status=500)
 
 
 def find_substitute_exercise(original_name, required_equipment, available_equipment):
@@ -4633,8 +4630,8 @@ def create_plan_from_template(request, template_key):
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f'Plan creation error: {str(e)}', exc_info=True)
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f'Plan creation error: {e}', exc_info=True)
+        return JsonResponse({'error': 'Trainingsplan konnte nicht erstellt werden.'}, status=500)
 
 
 @csrf_exempt
@@ -4744,7 +4741,8 @@ def sync_offline_data(request):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Ungültiges JSON'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Offline data sync error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Offline-Daten konnten nicht synchronisiert werden.'}, status=500)
 
 
 @cache_control(max_age=0, no_cache=True, no_store=True, must_revalidate=True)
@@ -5024,7 +5022,8 @@ def api_ungroup_plans(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Ungroup plans error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Pläne konnten nicht aus der Gruppe entfernt werden.'}, status=500)
 
 
 @login_required
@@ -5064,7 +5063,8 @@ def api_group_plans(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Group plans error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Pläne konnten nicht gruppiert werden.'}, status=500)
 
 
 @login_required
@@ -5095,7 +5095,8 @@ def api_delete_plan(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Delete plan error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Plan konnte nicht gelöscht werden.'}, status=500)
 
 
 @login_required
@@ -5130,7 +5131,8 @@ def api_delete_group(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Delete group error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Gruppe konnte nicht gelöscht werden.'}, status=500)
 
 
 @login_required
@@ -5165,7 +5167,8 @@ def api_rename_group(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Rename group error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Gruppe konnte nicht umbenannt werden.'}, status=500)
 
 
 @login_required
@@ -5224,7 +5227,8 @@ def api_reorder_group(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Reorder group error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Reihenfolge konnte nicht aktualisiert werden.'}, status=500)
 
 
 # ========== TRAININGSPARTNER-SHARING API ==========
@@ -5291,7 +5295,8 @@ def api_share_plan_with_user(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Share plan with user error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Plan konnte nicht geteilt werden.'}, status=500)
 
 
 @login_required
@@ -5327,7 +5332,8 @@ def api_unshare_plan_with_user(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Unshare plan with user error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Freigabe konnte nicht entfernt werden.'}, status=500)
 
 
 @login_required
@@ -5371,7 +5377,8 @@ def api_share_group_with_user(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Share group with user error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Gruppe konnte nicht geteilt werden.'}, status=500)
 
 
 @login_required
@@ -5411,7 +5418,8 @@ def api_unshare_group_with_user(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'Unshare group with user error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Freigabe konnte nicht entfernt werden.'}, status=500)
 
 
 @login_required
@@ -5635,4 +5643,5 @@ def create_custom_uebung(request):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Ungültige JSON-Daten'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f'API request error: {e}', exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Anfrage konnte nicht verarbeitet werden.'}, status=500)
