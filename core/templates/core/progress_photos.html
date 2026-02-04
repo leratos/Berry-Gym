@@ -61,12 +61,12 @@
     {% include 'core/includes/global_header.html' %}
 
     <!-- Sub-Navbar -->
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary">
+    <nav class="navbar navbar-page border-bottom">
       <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'body_stats' %}">
             <i class="bi bi-arrow-left"></i> Zurück
         </a>
-        <span class="navbar-text text-white fw-bold">Fortschrittsfotos</span>
+        <span class="navbar-text page-title fw-bold">Fortschrittsfotos</span>
         <button class="btn btn-primary border-0" data-bs-toggle="modal" data-bs-target="#uploadModal">
             <i class="bi bi-camera"></i> Foto
         </button>

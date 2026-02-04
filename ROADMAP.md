@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
-**Stand:** 03.02.2026  
-**Version:** 0.7.3
+**Stand:** 04.02.2026  
+**Version:** 0.7.7
 
 ---
 
@@ -236,7 +236,12 @@
 - [ ] Video-Anleitungen hochladen
 - [ ] Animationen für Übungen
 - [ ] Alternative Übungen vorschlagen
-- [ ] Übungen favorisieren (Quick-Access)
+- [x] **Übungen favorisieren** ✅ (04.02.2026)
+  - Stern-Button in Übungsliste und Detail-Ansicht
+  - Toggle-Favorit API-Endpoint
+  - "Nur Favoriten anzeigen" Filter
+  - Toast-Benachrichtigungen
+  - ManyToMany User-Übung Relation
 - [ ] Custom Übungen erstellen
 - [ ] Tags für Übungen (Compound, Isolation, etc.)
 - [ ] Schwierigkeitsgrad anzeigen
@@ -527,9 +532,23 @@
 - [ ] --
 
 ### Verbesserungen
-- [ ] **Loading-States bei API-Calls** (Spinner während LLM-Anfragen)
-- [ ] **Undo-Funktion für gelöschte Sätze** (5 Sekunden Rückgängig-Fenster)
-- [ ] **Keyboard-Shortcuts** (Enter = Speichern, Esc = Schließen)
+- [x] **Undo-Funktion für gelöschte Sätze** ✅ (04.02.2026)
+  - 5 Sekunden Rückgängig-Fenster
+  - Toast mit "Rückgängig"-Button
+  - Optimistic UI (Satz wird sofort ausgeblendet)
+  - Countdown-Animation (Progress Bar)
+- [x] **Keyboard-Shortcuts** ✅ (04.02.2026)
+  - Enter = Satz speichern (in Modals)
+  - Esc = Modal schließen
+  - N = Neuer Satz (nur im Training)
+  - S = Satz hinzufügen (nur im Training)
+  - Visuelle Badges mit Shortcuts
+- [x] **Autocomplete für Übungssuche** ✅ (04.02.2026)
+  - Fuzzy matching
+  - Tastatur-Navigation (↑↓Enter)
+  - Highlight-Match
+  - Score-basiertes Ranking
+  - Integration in training_session.html
 - [ ] **Bessere Error-Messages** (User-freundliche Fehlerbeschreibungen)
 - [x] **Toast-Notifications** (statt Alerts für Erfolgs-Meldungen) ✅ (03.02.2026)
 - [ ] **Autocomplete für Übungssuche** (Typeahead)
@@ -861,12 +880,131 @@ Die App hat jetzt einen vollständigen professionellen PDF-Export mit anatomisch
 - **Dependencies:** cairosvg, matplotlib, Pillow, xhtml2pdf
 
 ### Bugfixes & Verbesserungen
-- ✅ Push/Pull Keys korrigiert (BRUST statt brust, etc.)
+- ✅ Push/Pull Keys7 (04.02.2026) - Quick Wins
+
+### UX Improvements: 3 neue Produktivitäts-Features
+
+**1. Undo-Funktion für gelöschte Sätze**
+Verhindert versehentliche Datenverluste mit 5-Sekunden-Fenster:
+- **Optimistic Delete:** Satz wird sofort ausgeblendet (nicht blockierend)
+- **Undo-Toast:** Erscheint rechts unten mit "Rückgängig"-Button
+- **Countdown-Animation:** Progress Bar zeigt verbleibende Zeit (5 Sek.)
+- **Auto-Delete:** Nach Timeout wird Satz endgültig per POST gelöscht
+- **Fehler-Handling:** Bei Netzwerkfehler wird Satz automatisch wiederhergestellt
+
+**Technische Details:**
+- JavaScript Array `deletedSets[]` für temporäre Speicherung
+- setTimeout für Timeout-Management
+- Theme-aware Toast-Styling (Dark/Light Mode)
+- Slide-in Animation von rechts
+
+**2. Keyboard-Shortcuts**
+Power-User Feature für 30-40% schnellere Eingabe:
+- **Enter:** Satz speichern (in Add/Edit Modals)
+- **Esc:** Aktives Modal schließen
+- **N:** Neuer Satz öffnen (nur im Training)
+- **S:** Satz hinzufügen (nur im Training)
+- **Visuelle Badges:** `<kbd>Enter</kbd>` Hinweise auf Buttons
+
+**Technische Details:**
+- `keyboard-shortcuts.js` mit Context-Awareness
+- Funktioniert auch in Input-Feldern (Enter/Esc)
+- Ignoriert Shortcuts in Textareas (Shift+Enter)
+- Auto-Badge-Injection bei Modal-Öffnung
+
+**3. Autocomplete für Übungssuche**
+Intelligente Typeahead-Suche für 200+ Übungen:
+- **Fuzzy Matching:** "bndrcke" findet "Bankdrücken"
+- **Score-basiertes Ranking:**
+  - Exakt-Match: 1000 Punkte
+  - Starts-with: 500 Punkte
+  - Contains: 250 Punkte
+  - Fuzzy: 100 Punkte
+  - Muskelgruppe: 50 Punkte
+- **Tastatur-Navigation:** ↑↓ Enter Esc
+- **Highlight-Match:** Suchbegriff wird farbig hervorgehoben
+- **Auto-Select:** Wählt automatisch Muskelgruppe + Übung
+
+**Technische Details:**
+- `exercise-autocomplete.js` Klasse (wiederverwendbar)
+- Dropdown mit max. 8 Ergebnissen
+- Theme-aware Styling
+- Integration in training_session.html
+- onSelect Callback für Custom Actions
+
+**Dateien:**
+- core/templates/core/training_session.html (+140 Zeilen Undo-Logic)
+- core/static/core/js/exercise-autocomplete.js (NEU - 300+ Zeilen)
+- core/static/core/js/keyboard-shortcuts.js (bereits vorhanden)
+
+---
+
+## 🎉 Version 0.7. korrigiert (BRUST statt brust, etc.)
 - ✅ h2 border-bottom entfernt bei Chart-Überschriften (keine Linien durch Grafiken)
 - ✅ Page-break-after: avoid bei Überschriften (bleiben mit Inhalt zusammen)
 - ✅ Legenden-Schrift vergrößert (16px, einheitlich)
 - ✅ Deckblatt-Layout optimiert (kompakt, alles auf eine Seite)
 - ✅ Body-Map Skalierung (62% width für optimale Darstellung)
+
+---
+
+## 🎉 Version 0.7.6 (04.02.2026)
+
+### Loading-States bei API-Calls
+Professionelle Loading-Indicators für alle wichtigen API-Anfragen:
+
+**LoadingManager JavaScript-Klasse:**
+- **Button Loading:** Deaktiviert Button, zeigt Spinner, speichert Original-Text
+- **Overlay Loading:** Transparentes Overlay mit Spinner über Container
+- **Fetch Wrapper:** Automatische Loading-State Integration
+- **Auto-Reset:** Finally-Block stellt UI wieder her bei Erfolg oder Fehler
+
+**Integrierte Templates:**
+- edit_plan.html: KI-Optimierung, Performance-Analyse
+- create_plan.html: Template-Loading
+- equipment_management.html: Equipment Toggle
+- training_session.html: Set-Loading, Ghosting
+
+**UX-Verbesserungen:**
+- Keine mehrfachen Clicks möglich während Request
+- Visuelles Feedback für alle Netzwerk-Operationen
+- Konsistentes Loading-Design über alle Features
+- Toast-Benachrichtigungen nach Abschluss
+
+**Technische Details:**
+- CSS Animations: Spinning Border, Fade-in Overlay
+- Bootstrap Integration: Nutzt spinner-border
+- Error Handling: UI-Reset bei Fehlern
+- Globale Instanz: `window.loadingManager`
+
+**Dateien:**
+- `core/static/core/js/loading-manager.js` (250+ Zeilen)
+- Updates in 4 Templates mit API-Calls
+
+---
+
+## 🎉 Version 0.7.5 (04.02.2026)
+
+### Übungen Favorisieren
+Nutzer können jetzt Übungen als Favoriten markieren für schnellen Zugriff:
+
+**Features:**
+- **Favoriten-Button:** Stern-Icon in Übungsliste und Detail-Ansicht
+- **Toggle-API:** POST /uebung/<id>/toggle-favorit/ mit JSON Response
+- **Filter:** "Nur Favoriten anzeigen" Checkbox in Übungsliste
+- **Toast-Benachrichtigungen:** Bestätigung beim Hinzufügen/Entfernen
+- **Persistenz:** ManyToMany User-Übung Relation in Datenbank
+
+**Technische Details:**
+- View: `toggle_favorit()` in core/views.py
+- Model: `Uebung.favoriten` ManyToManyField (bereits vorhanden)
+- JavaScript: favoriten.js mit optimistic UI updates
+- Templates: uebungen_auswahl.html, exercise_detail.html
+
+**UX:**
+- Optimistic UI: Icon wechselt sofort, Server-Sync im Hintergrund
+- Filter aktualisiert sich automatisch bei Favorit-Änderung
+- Stern-Button immer sichtbar, auch in Kartenansicht
 
 ---
 

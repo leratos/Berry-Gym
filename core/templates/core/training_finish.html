@@ -42,12 +42,12 @@
   </head>
   <body>
 
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4">
+    <nav class="navbar navbar-page border-bottom mb-4">
       <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'training_session' training.id %}">
             <i class="bi bi-arrow-left"></i> Zurück
         </a>
-        <span class="navbar-text text-white fw-bold">Training beenden</span>
+        <span class="navbar-text page-title fw-bold">Training beenden</span>
         <div style="width: 40px;">            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
               <i class="bi bi-moon-fill" id="themeIcon"></i>
             </button>
@@ -103,6 +103,27 @@
         {% endif %}
 
       </div>
+
+      <!-- AI Auto-Suggest: Optimierungsvorschlag (jedes 3. Training) -->
+      {% if ai_suggestion %}
+      <div class="alert alert-{{ ai_suggestion.color }} border-{{ ai_suggestion.color }} mb-4" role="alert">
+        <div class="d-flex align-items-start">
+          <i class="bi {{ ai_suggestion.icon }} fs-2 me-3"></i>
+          <div class="flex-grow-1">
+            <h5 class="alert-heading mb-2">
+              <i class="bi bi-lightbulb-fill me-2"></i>AI-Trainings-Tipp #{{ training_count }}
+            </h5>
+            <p class="mb-2"><strong>{{ ai_suggestion.title }}</strong></p>
+            <p class="mb-2">{{ ai_suggestion.message }}</p>
+            <hr>
+            <p class="mb-0">
+              <i class="bi bi-arrow-right-circle me-2"></i>
+              <strong>Empfehlung:</strong> {{ ai_suggestion.action }}
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Formular für Dauer & Kommentar -->
       <form method="post">

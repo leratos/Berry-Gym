@@ -40,12 +40,12 @@
   <body>
     {% include 'core/includes/global_header.html' %}
 
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary">
+    <nav class="navbar navbar-page border-bottom">
       <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
             <i class="bi bi-arrow-left"></i> Dashboard
         </a>
-        <span class="navbar-text text-white fw-bold">Plan-Bibliothek</span>
+        <span class="navbar-text page-title fw-bold">Plan-Bibliothek</span>
         <div style="width: 40px;">
             <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
                 <i class="bi bi-moon-fill" id="themeIcon"></i>

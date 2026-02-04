@@ -101,7 +101,7 @@ class Equipment(models.Model):
 
 
 class Uebung(models.Model):
-    bezeichnung = models.CharField(max_length=100, unique=True, verbose_name="Name der Übung")
+    bezeichnung = models.CharField(max_length=100, verbose_name="Name der Übung")
     muskelgruppe = models.CharField(max_length=50, choices=MUSKELGRUPPEN, verbose_name="Hauptmuskel")
     hilfsmuskeln = models.JSONField(default=list, blank=True, verbose_name="Hilfsmuskelgruppen")
     
@@ -119,11 +119,20 @@ class Uebung(models.Model):
 
     # Favoriten
     favoriten = models.ManyToManyField(User, related_name="favoriten_uebungen", blank=True)
+    
+    # Custom Übungen (User-spezifisch)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="custom_uebungen", null=True, blank=True, verbose_name="Erstellt von")
+    is_custom = models.BooleanField(default=False, verbose_name="Benutzerdefinierte Übung")
 
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.bezeichnung
+    
+    @property
+    def is_global(self):
+        """True wenn Übung für alle sichtbar ist (keine Custom-Übung)"""
+        return not self.is_custom
 
     class Meta:
         verbose_name = "Übung"

@@ -15,12 +15,12 @@
 
     {% include 'core/includes/global_header.html' %}
 
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary">
+    <nav class="navbar navbar-page border-bottom">
       <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
             <i class="bi bi-arrow-left"></i> Dashboard
         </a>
-        <span class="navbar-text text-white fw-bold">Statistiken</span>
+        <span class="navbar-text page-title fw-bold">Statistiken</span>
         <div>
             <a href="{% url 'export_training_pdf' %}" class="btn btn-outline-danger border-0 me-2" title="Als PDF exportieren">
                 <i class="bi bi-file-pdf"></i> PDF

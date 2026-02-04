@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Count, Max, Sum, Avg, F
+from django.db.models import Count, Max, Sum, Avg, F, Q
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.contrib import messages
@@ -610,6 +610,133 @@ def dashboard(request):
     from django.conf import settings
     use_openrouter = not settings.DEBUG or os.getenv('USE_OPENROUTER', 'False').lower() == 'true'
     
+    # AI Auto-Suggest: Performance-Warnungen analysieren
+    performance_warnings = []
+    
+    if gesamt_trainings >= 4:
+        # 1. PLATEAU-Erkennung: Keine Progression bei Top-Übungen (letzte 4 Wochen)
+        four_weeks_ago = heute - timedelta(days=28)
+        
+        for fav in favoriten[:3]:  # Top 3 Übungen prüfen
+            uebung_id = fav['uebung__id']
+            uebung_name = fav['uebung__bezeichnung']
+            
+            # Letzte 8 Sätze dieser Übung
+            recent_sets = Satz.objects.filter(
+                einheit__user=request.user,
+                uebung_id=uebung_id,
+                ist_aufwaermsatz=False,
+                datum__gte=four_weeks_ago
+            ).order_by('-datum')[:8]
+            
+            if recent_sets.count() >= 4:
+                # Berechne max Gewicht der letzten 4 vs. vorherige 4 Sätze
+                latest_4 = list(recent_sets[:4])
+                previous_4 = list(recent_sets[4:8])
+                
+                if len(previous_4) >= 2:
+                    latest_max = max([float(s.gewicht or 0) for s in latest_4])
+                    previous_max = max([float(s.gewicht or 0) for s in previous_4])
+                    
+                    # Plateau wenn kein Anstieg in 4 Wochen
+                    if latest_max <= previous_max and latest_max > 0:
+                        performance_warnings.append({
+                            'type': 'plateau',
+                            'severity': 'warning',
+                            'exercise': uebung_name,
+                            'message': f'Kein Progress seit 4 Wochen',
+                            'suggestion': 'Versuche Intensitätstechniken wie Drop-Sets oder erhöhe das Volumen um 10-15%',
+                            'icon': 'bi-graph-down',
+                            'color': 'warning'
+                        })
+        
+        # 2. RÜCKSCHRITT-Erkennung: Leistungsabfall bei Übungen
+        two_weeks_ago = heute - timedelta(days=14)
+        
+        # Prüfe alle Übungen die in den letzten 2 Wochen trainiert wurden
+        recent_exercises = Satz.objects.filter(
+            einheit__user=request.user,
+            datum__gte=two_weeks_ago,
+            ist_aufwaermsatz=False
+        ).values('uebung__bezeichnung', 'uebung_id').annotate(
+            avg_gewicht=Avg('gewicht')
+        ).filter(avg_gewicht__isnull=False)
+        
+        for ex in recent_exercises:
+            ex_id = ex['uebung_id']
+            ex_name = ex['uebung__bezeichnung']
+            current_avg = float(ex['avg_gewicht'])
+            
+            # Vergleiche mit 2-4 Wochen davor
+            comparison_sets = Satz.objects.filter(
+                einheit__user=request.user,
+                uebung_id=ex_id,
+                ist_aufwaermsatz=False,
+                datum__gte=heute - timedelta(days=28),
+                datum__lt=two_weeks_ago
+            ).aggregate(Avg('gewicht'))
+            
+            previous_avg = float(comparison_sets['gewicht__avg'] or 0)
+            
+            # Rückschritt wenn >15% Leistungsabfall
+            if previous_avg > 0 and current_avg < previous_avg * 0.85:
+                drop_percent = round(((previous_avg - current_avg) / previous_avg) * 100)
+                performance_warnings.append({
+                    'type': 'regression',
+                    'severity': 'danger',
+                    'exercise': ex_name,
+                    'message': f'Leistungsabfall von {drop_percent}%',
+                    'suggestion': 'Prüfe Regeneration, Ernährung und Schlaf. Erwäge eine Deload-Woche.',
+                    'icon': 'bi-arrow-down-circle',
+                    'color': 'danger'
+                })
+        
+        # 3. STAGNATION-Erkennung: Lange Pause bei Muskelgruppen
+        # Prüfe welche Muskelgruppen lange nicht trainiert wurden
+        all_muscle_groups = dict(MUSKELGRUPPEN)
+        trained_recently = set(
+            Satz.objects.filter(
+                einheit__user=request.user,
+                datum__gte=heute - timedelta(days=14),
+                ist_aufwaermsatz=False
+            ).values_list('uebung__muskelgruppe', flat=True)
+        )
+        
+        # Muskelgruppen die User Equipment hat aber nicht trainiert
+        user_exercises = Uebung.objects.filter(
+            Q(is_custom=False) | Q(created_by=request.user)
+        ).values_list('muskelgruppe', flat=True).distinct()
+        
+        for mg in user_exercises:
+            if mg not in trained_recently:
+                # Prüfe wann zuletzt trainiert
+                last_training = Satz.objects.filter(
+                    einheit__user=request.user,
+                    uebung__muskelgruppe=mg,
+                    ist_aufwaermsatz=False
+                ).order_by('-datum').first()
+                
+                if last_training:
+                    days_ago = (heute.date() - last_training.datum.date()).days
+                    if days_ago >= 14:  # 2 Wochen keine Aktivität
+                        mg_label = all_muscle_groups.get(mg, mg)
+                        performance_warnings.append({
+                            'type': 'stagnation',
+                            'severity': 'info',
+                            'exercise': mg_label,
+                            'message': f'Seit {days_ago} Tagen nicht trainiert',
+                            'suggestion': 'Integriere diese Muskelgruppe wieder in deinen Trainingsplan',
+                            'icon': 'bi-pause-circle',
+                            'color': 'info'
+                        })
+        
+        # Limitiere auf Top 3 wichtigste Warnungen (Priorität: Rückschritt > Plateau > Stagnation)
+        warnings_sorted = sorted(
+            performance_warnings,
+            key=lambda x: {'regression': 0, 'plateau': 1, 'stagnation': 2}[x['type']]
+        )
+        performance_warnings = warnings_sorted[:3]
+    
     context = {
         'letztes_training': letztes_training,
         'letzter_koerperwert': letzter_koerperwert,
@@ -634,6 +761,8 @@ def dashboard(request):
         # Cardio-Statistiken
         'cardio_diese_woche': cardio_diese_woche,
         'cardio_minuten_diese_woche': cardio_minuten_diese_woche,
+        # AI Auto-Suggest
+        'performance_warnings': performance_warnings,
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -1561,6 +1690,109 @@ def finish_training(request, training_id):
     else:
         dauer_geschaetzt = 60
     
+    # AI Auto-Suggest: Optimierungsvorschlag nach jedem 3. Training
+    ai_suggestion = None
+    training_count = Trainingseinheit.objects.filter(user=request.user).count()
+    
+    if training_count > 0 and training_count % 3 == 0:
+        # Analysiere die letzten 3 Trainings
+        recent_trainings = Trainingseinheit.objects.filter(
+            user=request.user
+        ).order_by('-datum')[:3]
+        
+        # Berechne durchschnittlichen RPE der letzten 3 Trainings
+        recent_sets = Satz.objects.filter(
+            einheit__in=recent_trainings,
+            ist_aufwaermsatz=False,
+            rpe__isnull=False
+        )
+        
+        if recent_sets.exists():
+            avg_rpe = recent_sets.aggregate(Avg('rpe'))['rpe__avg']
+            
+            # Volumen-Analyse der letzten 3 vs. vorherige 3 Trainings
+            previous_trainings = Trainingseinheit.objects.filter(
+                user=request.user
+            ).order_by('-datum')[3:6]
+            
+            recent_volume = sum(
+                float(s.gewicht or 0) * int(s.wiederholungen or 0)
+                for t in recent_trainings
+                for s in t.saetze.filter(ist_aufwaermsatz=False)
+            )
+            
+            previous_volume = sum(
+                float(s.gewicht or 0) * int(s.wiederholungen or 0)
+                for t in previous_trainings
+                for s in t.saetze.filter(ist_aufwaermsatz=False)
+            ) if previous_trainings.exists() else 0
+            
+            # Generiere intelligente Vorschläge basierend auf Daten
+            suggestions = []
+            
+            # Vorschlag 1: Intensität anpassen
+            if avg_rpe < 6.5:
+                suggestions.append({
+                    'type': 'intensity',
+                    'title': 'Intensität erhöhen',
+                    'message': f'Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10',
+                    'action': 'Steigere das Gewicht um 5-10% oder reduziere die Pausenzeit',
+                    'icon': 'bi-arrow-up-circle',
+                    'color': 'info'
+                })
+            elif avg_rpe > 8.5:
+                suggestions.append({
+                    'type': 'intensity',
+                    'title': 'Regeneration priorisieren',
+                    'message': f'Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10',
+                    'action': 'Reduziere die Intensität oder plane einen Deload',
+                    'icon': 'bi-shield-check',
+                    'color': 'warning'
+                })
+            
+            # Vorschlag 2: Volumen anpassen
+            if previous_volume > 0:
+                volume_change = ((recent_volume - previous_volume) / previous_volume) * 100
+                
+                if volume_change < -15:
+                    suggestions.append({
+                        'type': 'volume',
+                        'title': 'Volumen gesunken',
+                        'message': f'Dein Volumen ist um {abs(volume_change):.0f}% gefallen',
+                        'action': 'Füge 1-2 Sätze pro Übung hinzu oder trainiere häufiger',
+                        'icon': 'bi-graph-down',
+                        'color': 'danger'
+                    })
+                elif volume_change > 30:
+                    suggestions.append({
+                        'type': 'volume',
+                        'title': 'Volumen stark gestiegen',
+                        'message': f'Dein Volumen ist um {volume_change:.0f}% gestiegen',
+                        'action': 'Achte auf ausreichend Regeneration zwischen Trainings',
+                        'icon': 'bi-graph-up',
+                        'color': 'warning'
+                    })
+            
+            # Vorschlag 3: Übungsvariation
+            trained_exercises = set(
+                recent_sets.values_list('uebung_id', flat=True).distinct()
+            )
+            
+            if len(trained_exercises) < 5:
+                suggestions.append({
+                    'type': 'variety',
+                    'title': 'Mehr Übungsvielfalt',
+                    'message': f'Du hast nur {len(trained_exercises)} verschiedene Übungen gemacht',
+                    'action': 'Integriere neue Übungen für besseres Muskelwachstum',
+                    'icon': 'bi-shuffle',
+                    'color': 'info'
+                })
+            
+            # Wähle den wichtigsten Vorschlag (höchste Priorität)
+            priority_order = {'danger': 0, 'warning': 1, 'info': 2}
+            if suggestions:
+                ai_suggestion = sorted(suggestions, key=lambda x: priority_order[x['color']])[0]
+    
     context = {
         'training': training,
         'arbeitssaetze_count': arbeitssaetze.count(),
@@ -1568,6 +1800,8 @@ def finish_training(request, training_id):
         'total_volume': round(total_volume, 1),
         'uebungen_count': uebungen_count,
         'dauer_geschaetzt': dauer_geschaetzt,
+        'training_count': training_count,
+        'ai_suggestion': ai_suggestion,
     }
     return render(request, 'core/training_finish.html', context)
 
@@ -2103,17 +2337,22 @@ def uebungen_auswahl(request):
     # Equipment-Filter: Nur Übungen mit verfügbarem Equipment
     user_equipment_ids = request.user.verfuegbares_equipment.values_list('id', flat=True)
     
+    # Include both global exercises and user's custom exercises
+    base_queryset = Uebung.objects.filter(
+        Q(is_custom=False) | Q(created_by=request.user)
+    ).prefetch_related('equipment', 'favoriten')
+    
     if user_equipment_ids:
         # Filter: Übungen die ALLE ihre benötigten Equipment haben ODER keine Equipment-Anforderungen
         uebungen = []
-        for uebung in Uebung.objects.prefetch_related('equipment').order_by('muskelgruppe', 'bezeichnung'):
+        for uebung in base_queryset.order_by('muskelgruppe', 'bezeichnung'):
             required_eq_ids = set(uebung.equipment.values_list('id', flat=True))
             # Verfügbar wenn: keine Equipment nötig ODER alle benötigten Equipment verfügbar
             if not required_eq_ids or required_eq_ids.issubset(set(user_equipment_ids)):
                 uebungen.append(uebung)
     else:
         # Keine Equipment ausgewählt: Nur Übungen ohne Equipment-Anforderung
-        uebungen = Uebung.objects.filter(equipment__isnull=True).distinct().order_by('muskelgruppe', 'bezeichnung')
+        uebungen = base_queryset.filter(equipment__isnull=True).distinct().order_by('muskelgruppe', 'bezeichnung')
     
     # Gruppiere nach Muskelgruppen
     uebungen_nach_gruppe = {}
@@ -2122,7 +2361,7 @@ def uebungen_auswahl(request):
         if mg_label not in uebungen_nach_gruppe:
             uebungen_nach_gruppe[mg_label] = []
         
-        # Hilfsmuskelgruppen-Labels abrufen
+        # Add hilfsmuskeln labels as temporary attribute for template
         hilfs_labels = []
         if uebung.hilfsmuskeln:
             # Handle string format (comma-separated)
@@ -2166,19 +2405,16 @@ def uebungen_auswahl(request):
                     # Fallback: use text as-is
                     hilfs_labels.append(hilfs_text_clean)
         
-        uebungen_nach_gruppe[mg_label].append({
-            'id': uebung.id,
-            'bezeichnung': uebung.bezeichnung,
-            'muskelgruppe': uebung.muskelgruppe,
-            'muskelgruppe_label': mg_label,
-            'hilfsmuskeln': hilfs_labels,
-            'hilfsmuskeln_count': len(hilfs_labels),
-            'bewegungstyp': uebung.get_bewegungstyp_display(),
-            'gewichts_typ': uebung.get_gewichts_typ_display(),
-        })
+        # Add temporary attributes for template (avoid modifying model)
+        uebung.muskelgruppe_label = mg_label
+        uebung.hilfsmuskeln_labels = hilfs_labels
+        uebung.hilfsmuskeln_count = len(hilfs_labels)
+        
+        uebungen_nach_gruppe[mg_label].append(uebung)
     
     context = {
         'uebungen_nach_gruppe': uebungen_nach_gruppe,
+        'user_equipment': request.user.verfuegbares_equipment.all(),
     }
     return render(request, 'core/uebungen_auswahl.html', context)
 
@@ -4650,6 +4886,102 @@ def exercise_detail(request, uebung_id):
     return render(request, 'core/exercise_detail.html', context)
 
 
+@login_required
+def get_alternative_exercises(request, uebung_id):
+    """
+    API Endpoint: Gibt alternative Übungen zurück basierend auf:
+    - Gleicher Bewegungstyp (Compound/Isolation)
+    - Gleiche Hauptmuskelgruppe
+    - Verfügbares Equipment des Users
+    
+    Scoring-System:
+    - Exakte Übereinstimmung (bewegungstyp + muskelgruppe): 100 Punkte
+    - Nur bewegungstyp: 50 Punkte
+    - Nur muskelgruppe: 40 Punkte
+    - Hilfsmuskel stimmt überein: +10 Punkte
+    """
+    original = get_object_or_404(Uebung, id=uebung_id)
+    
+    # User's verfügbares Equipment
+    user_equipment_ids = set(request.user.verfuegbares_equipment.values_list('id', flat=True))
+    
+    # Alle Übungen außer der aktuellen (global + eigene custom)
+    all_exercises = Uebung.objects.filter(
+        Q(is_custom=False) | Q(created_by=request.user)
+    ).exclude(id=original.id).prefetch_related('equipment')
+    
+    alternatives = []
+    
+    for exercise in all_exercises:
+        # Equipment-Filter: Übung muss mit verfügbarem Equipment machbar sein
+        required_eq_ids = set(exercise.equipment.values_list('id', flat=True))
+        
+        # Skip wenn Equipment nicht verfügbar
+        if required_eq_ids and not required_eq_ids.issubset(user_equipment_ids):
+            continue
+        
+        # Scoring
+        score = 0
+        match_reasons = []
+        
+        # Exakte Übereinstimmung (bewegungstyp + muskelgruppe)
+        if (exercise.bewegungstyp == original.bewegungstyp and 
+            exercise.muskelgruppe == original.muskelgruppe):
+            score += 100
+            match_reasons.append('Gleicher Bewegungstyp & Muskelgruppe')
+        else:
+            # Teilweise Übereinstimmung
+            if exercise.bewegungstyp == original.bewegungstyp:
+                score += 50
+                match_reasons.append('Gleicher Bewegungstyp')
+            
+            if exercise.muskelgruppe == original.muskelgruppe:
+                score += 40
+                match_reasons.append('Gleiche Hauptmuskelgruppe')
+        
+        # Bonus: Hilfsmuskel-Übereinstimmung
+        if original.hilfsmuskeln and exercise.hilfsmuskeln:
+            original_hilfs = set(original.hilfsmuskeln) if isinstance(original.hilfsmuskeln, list) else set()
+            exercise_hilfs = set(exercise.hilfsmuskeln) if isinstance(exercise.hilfsmuskeln, list) else set()
+            
+            common_hilfs = original_hilfs & exercise_hilfs
+            if common_hilfs:
+                score += 10 * len(common_hilfs)
+                match_reasons.append(f'{len(common_hilfs)} gemeinsame Hilfsmuskeln')
+        
+        # Nur Übungen mit mindestens 40 Punkten (irgendeine Übereinstimmung)
+        if score >= 40:
+            alternatives.append({
+                'id': exercise.id,
+                'bezeichnung': exercise.bezeichnung,
+                'muskelgruppe': exercise.muskelgruppe,
+                'muskelgruppe_label': dict(MUSKELGRUPPEN).get(exercise.muskelgruppe, exercise.muskelgruppe),
+                'bewegungstyp': exercise.get_bewegungstyp_display(),
+                'gewichts_typ': exercise.get_gewichts_typ_display(),
+                'is_custom': exercise.is_custom,
+                'score': score,
+                'match_reasons': match_reasons,
+            })
+    
+    # Sortiere nach Score (höchste zuerst)
+    alternatives.sort(key=lambda x: x['score'], reverse=True)
+    
+    # Limitiere auf Top 10
+    alternatives = alternatives[:10]
+    
+    return JsonResponse({
+        'success': True,
+        'original': {
+            'id': original.id,
+            'bezeichnung': original.bezeichnung,
+            'muskelgruppe_label': dict(MUSKELGRUPPEN).get(original.muskelgruppe, original.muskelgruppe),
+            'bewegungstyp': original.get_bewegungstyp_display(),
+        },
+        'alternatives': alternatives,
+        'count': len(alternatives)
+    })
+
+
 @cache_control(max_age=0, no_cache=True, no_store=True, must_revalidate=True)
 def manifest(request):
     """Serve the manifest from root path."""
@@ -5217,3 +5549,90 @@ def cardio_delete(request, cardio_id):
     
     # GET: Bestätigungs-Seite (oder redirect)
     return redirect('cardio_list')
+
+
+@login_required
+@require_http_methods(["POST"])
+def toggle_favorit(request, uebung_id):
+    """
+    Toggle Favorit-Status einer Übung für den aktuellen User.
+    Returns: JSON mit {'is_favorit': bool, 'message': str}
+    """
+    uebung = get_object_or_404(Uebung, id=uebung_id)
+    
+    # Toggle: Favorit hinzufügen oder entfernen
+    if request.user in uebung.favoriten.all():
+        uebung.favoriten.remove(request.user)
+        is_favorit = False
+        message = f'"{uebung.bezeichnung}" aus Favoriten entfernt'
+    else:
+        uebung.favoriten.add(request.user)
+        is_favorit = True
+        message = f'"{uebung.bezeichnung}" zu Favoriten hinzugefügt'
+    
+    return JsonResponse({
+        'is_favorit': is_favorit,
+        'message': message
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def create_custom_uebung(request):
+    """
+    Erstellt eine benutzerdefinierte Übung.
+    Returns: JSON mit {'success': bool, 'uebung_id': int, 'message': str}
+    """
+    try:
+        data = json.loads(request.body)
+        
+        bezeichnung = data.get('bezeichnung', '').strip()
+        muskelgruppe = data.get('muskelgruppe')
+        gewichts_typ = data.get('gewichts_typ', 'GESAMT')
+        bewegungstyp = data.get('bewegungstyp', 'ISOLATION')
+        beschreibung = data.get('beschreibung', '').strip()
+        equipment_ids = data.get('equipment', [])
+        
+        # Validation
+        if not bezeichnung:
+            return JsonResponse({'success': False, 'error': 'Name ist erforderlich'}, status=400)
+        
+        if not muskelgruppe:
+            return JsonResponse({'success': False, 'error': 'Muskelgruppe ist erforderlich'}, status=400)
+        
+        # Prüfe ob Name bereits existiert (nur für diesen User)
+        if Uebung.objects.filter(bezeichnung__iexact=bezeichnung, created_by=request.user).exists():
+            return JsonResponse({'success': False, 'error': 'Du hast bereits eine Übung mit diesem Namen'}, status=400)
+        
+        # Erstelle Custom-Übung
+        uebung = Uebung.objects.create(
+            bezeichnung=bezeichnung,
+            muskelgruppe=muskelgruppe,
+            gewichts_typ=gewichts_typ,
+            bewegungstyp=bewegungstyp,
+            beschreibung=beschreibung,
+            created_by=request.user,
+            is_custom=True
+        )
+        
+        # Equipment zuweisen
+        if equipment_ids:
+            equipment_objs = Equipment.objects.filter(id__in=equipment_ids)
+            uebung.equipment.set(equipment_objs)
+        
+        return JsonResponse({
+            'success': True,
+            'uebung_id': uebung.id,
+            'message': f'Übung "{bezeichnung}" erstellt',
+            'uebung': {
+                'id': uebung.id,
+                'name': uebung.bezeichnung,
+                'muskelgruppe': uebung.get_muskelgruppe_display(),
+                'is_custom': True
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Ungültige JSON-Daten'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
