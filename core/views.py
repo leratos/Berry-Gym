@@ -3635,10 +3635,15 @@ def live_guidance_api(request):
             chat_history=chat_history  # Chat-Historie für Konversationsgedächtnis
         )
         
+        # Security: Validate result structure before returning
+        if not isinstance(result, dict) or 'answer' not in result:
+            logger.error('Invalid result structure from get_guidance')
+            return JsonResponse({'error': 'Ungültige Antwort vom AI-Coach'}, status=500)
+        
         return JsonResponse({
-            'answer': result['answer'],
-            'cost': result['cost'],
-            'model': result['model']
+            'answer': result.get('answer', 'Keine Antwort'),
+            'cost': result.get('cost', 0),
+            'model': result.get('model', 'unknown')
         })
     
     except Trainingseinheit.DoesNotExist:
@@ -3991,8 +3996,8 @@ def apply_optimizations_api(request):
                     pass
                 
             except Exception as e:
-                errors.append(f"{opt_type}: {str(e)}")
-        
+                logger.error(f'Optimization error for {opt_type}: {e}', exc_info=True)
+                errors.append(f"{opt_type}: Fehler beim Anwenden")
         return JsonResponse({
             'success': True,
             'applied_count': applied_count,
