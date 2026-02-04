@@ -73,8 +73,8 @@ self.addEventListener('fetch', event => {
 
   // Skip cross-origin requests
   if (url.origin !== location.origin) {
-    // Cache CDN resources
-    if (url.host.includes('cdn.jsdelivr.net')) {
+    // Cache CDN resources - Security: exact hostname match
+    if (url.hostname === 'cdn.jsdelivr.net') {
       event.respondWith(
         caches.match(request).then(response => {
           return response || fetch(request).then(fetchResponse => {
