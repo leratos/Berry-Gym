@@ -11,6 +11,8 @@
 
 **Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach, Custom Übungen & AI Performance-Analyse**
 
+🌐 **[Live Demo & Beta Testing](https://gym.last-strawberry.com)** 🌐
+
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Roadmap](#-roadmap--known-limitations) • [Contributing](#-contributing)
 
 </div>
