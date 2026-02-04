@@ -1,0 +1,62 @@
+# HomeGym Gunicorn Systemd Service
+# ==================================
+# 
+# Installation:
+#   1. Pfade und Umgebungsvariablen anpassen (siehe unten)
+#   2. sudo cp deployment/homegym.service /etc/systemd/system/
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable homegym
+#   5. sudo systemctl start homegym
+#
+# Status prüfen:
+#   sudo systemctl status homegym
+#
+# Logs anschauen:
+#   sudo journalctl -u homegym -f
+
+[Unit]
+Description=HomeGym Fitness Tracker Gunicorn Daemon
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=notify
+User=your_username          # ANPASSEN: Linux User
+Group=your_group            # ANPASSEN: Linux Group (z.B. www-data, psaserv)
+
+# ANPASSEN: Pfad zu deinem Projekt
+WorkingDirectory=/path/to/your/project
+
+# ANPASSEN: Pfad zu venv
+Environment="PATH=/path/to/your/project/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=config.settings"
+
+# WICHTIG: Diese Secrets aus .env laden lassen!
+# Die .env Datei sollte folgende Variablen enthalten:
+#   - DJANGO_SECRET_KEY
+#   - DATABASE_NAME
+#   - DATABASE_USER
+#   - DATABASE_PASSWORD
+#   - DATABASE_HOST
+# Alternativ hier als Environment= setzen (NICHT ins Git committen!)
+
+# Gunicorn mit 4 Workern
+ExecStartPre=/bin/mkdir -p /path/to/your/project/logs
+ExecStart=/path/to/your/project/venv/bin/gunicorn \
+    --workers 4 \
+    --bind unix:/path/to/your/project/homegym.sock \
+    --timeout 60 \
+    --access-logfile /path/to/your/project/logs/gunicorn-access.log \
+    --error-logfile /path/to/your/project/logs/gunicorn-error.log \
+    --log-level info \
+    config.wsgi:application
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
