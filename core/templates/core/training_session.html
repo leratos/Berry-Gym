@@ -59,21 +59,154 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.08); }
         }
+        
+        /* Theme-aware Training Navbar */
+        .navbar-training {
+            background-color: var(--bs-body-bg);
+            border-bottom-color: var(--bs-border-color) !important;
+        }
+        
+        [data-bs-theme="dark"] .navbar-training {
+            background-color: #1a1d21;
+            border-bottom-color: #30363d !important;
+        }
+        
+        [data-bs-theme="light"] .navbar-training {
+            background-color: #f8f9fa;
+            border-bottom-color: #dee2e6 !important;
+        }
+        
+        .training-title {
+            color: var(--bs-body-color);
+        }
+        
+        [data-bs-theme="dark"] .training-title {
+            color: #e9ecef;
+        }
+        
+        [data-bs-theme="light"] .training-title {
+            color: #212529;
+        }
+        
+        /* Undo Toast Styling */
+        .toast-undo {
+            background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        [data-bs-theme="light"] .toast-undo {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #212529;
+            border: 1px solid #dee2e6;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes countdown {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        
+        .dropdown-menu-theme {
+            background-color: var(--bs-body-bg);
+            border-color: var(--bs-border-color);
+        }
+        
+        [data-bs-theme="dark"] .dropdown-menu-theme {
+            background-color: #1a1d21;
+            border-color: #30363d;
+        }
+        
+        [data-bs-theme="light"] .dropdown-menu-theme {
+            background-color: #ffffff;
+            border-color: #dee2e6;
+        }
+        
+        .dropdown-menu-theme .dropdown-item {
+            color: var(--bs-body-color);
+        }
+        
+        .dropdown-menu-theme .dropdown-item:hover {
+            background-color: var(--bs-secondary-bg);
+        }
+        
+        [data-bs-theme="dark"] .dropdown-menu-theme .dropdown-item:hover {
+            background-color: #30363d;
+        }
+        
+        [data-bs-theme="light"] .dropdown-menu-theme .dropdown-item:hover {
+            background-color: #e9ecef;
+        }
+        
+        .dropdown-menu-theme .dropdown-divider {
+            border-color: var(--bs-border-color);
+        }
+        
+        .dropdown-menu-theme .dropdown-header {
+            color: var(--bs-secondary-color);
+        }
+        
+        /* Mobile-optimierte Navbar */
+        @media (max-width: 576px) {
+            .training-navbar {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 0.5rem !important;
+            }
+            .training-navbar .navbar-text {
+                order: -1;
+                width: 100%;
+                text-align: center;
+                margin-bottom: 0.25rem;
+                font-size: 0.9rem;
+            }
+            .training-navbar .nav-actions {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                gap: 0.25rem;
+            }
+            .training-navbar .btn {
+                padding: 0.375rem 0.5rem;
+                font-size: 0.85rem;
+            }
+            .training-navbar .btn-group .btn {
+                padding: 0.375rem 0.4rem;
+            }
+            /* Timer-Text auf mobil ausblenden */
+            .training-navbar .timer-text {
+                display: none;
+            }
+        }
     </style>
   </head>
   <body data-context="training">
 
     {% include 'core/includes/global_header.html' %}
 
-    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-3 shadow">
-      <div class="container-fluid">
-        <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}">
-            <i class="bi bi-arrow-left"></i> Abbrechen
-        </a>
-        <span class="navbar-text text-white fw-bold">
+    <nav class="navbar navbar-training border-bottom mb-3 shadow">
+      <div class="container-fluid training-navbar">
+        <span class="navbar-text fw-bold training-title">
             Training #{{ training.id }}
         </span>
-        <div class="d-flex gap-2">
+        <div class="nav-actions d-flex gap-2">
+            <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}" title="Abbrechen">
+                <i class="bi bi-arrow-left"></i><span class="d-none d-sm-inline"> Abbrechen</span>
+            </a>
             <!-- Rest Timer Dropdown -->
             <div class="btn-group">
                 <button class="btn btn-outline-warning border-0" onclick="startRestTimer()" title="Pausenuhr starten">
@@ -82,7 +215,7 @@
                 <button class="btn btn-outline-warning border-0 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="Timer-Dauer wählen">
                     <span class="visually-hidden">Timer-Dauer</span>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width: 250px;">
+                <ul class="dropdown-menu dropdown-menu-theme dropdown-menu-end" style="min-width: 250px;">
                     <li><h6 class="dropdown-header">Pausendauer</h6></li>
                     <li><a class="dropdown-item" href="#" onclick="setTimerDuration(60); return false;">
                         <i class="bi bi-clock"></i> 60 Sekunden
@@ -114,13 +247,13 @@
                     </li>
                 </ul>
             </div>
-            <a class="btn btn-success border-0 fw-bold" href="{% url 'finish_training' training.id %}">
-                <i class="bi bi-check-circle"></i> Fertig
+            <a class="btn btn-success border-0 fw-bold" href="{% url 'finish_training' training.id %}" title="Training beenden">
+                <i class="bi bi-check-circle"></i><span class="d-none d-sm-inline"> Fertig</span>
             </a>
-                    <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
               <i class="bi bi-moon-fill" id="themeIcon"></i>
             </button>
-</div>
+        </div>
       </div>
     </nav>
 
@@ -320,6 +453,11 @@
             <div class="modal-body">
                 
                 <div class="mb-3">
+                    <label class="form-label text-secondary small text-uppercase">Übung suchen</label>
+                    <input type="text" id="exerciseSearchInput" class="form-control border-secondary mb-3" placeholder="Bankdrücken, Kniebeugen, ...">
+                </div>
+                
+                <div class="mb-3">
                     <label class="form-label text-secondary small text-uppercase">1. Muskelgruppe</label>
                     <select id="muscleFilter" class="form-select border-secondary mb-2">
                         <option value="">-- Bitte wählen --</option>
@@ -431,8 +569,14 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'core/js/loading-manager.js' %}"></script>
+    <script src="{% static 'core/js/keyboard-shortcuts.js' %}"></script>
+    <script src="{% static 'core/js/exercise-autocomplete.js' %}"></script>
     
     <script>
+        // Training Context für Keyboard Shortcuts
+        document.body.dataset.context = 'training';
+        
         // Daten für Filter
         // FIX: |escapejs verhindert Abstürze bei Namen wie "Farmer's Walk"
         const allExercises = [
@@ -463,9 +607,33 @@
         const notizInput = document.getElementById('notizInput');
         const progressionHint = document.getElementById('progressionHint');
         const progressionText = document.getElementById('progressionText');
+        const exerciseSearchInput = document.getElementById('exerciseSearchInput');
 
         // URL Basis für POST
         const addUrl = "{% url 'add_set' training.id %}";
+        
+        // Autocomplete initialisieren
+        if (exerciseSearchInput) {
+            const autocomplete = new ExerciseAutocomplete(exerciseSearchInput, allExercises, {
+                minChars: 2,
+                maxResults: 8,
+                onSelect: (exercise) => {
+                    // Muskelgruppe und Übung automatisch auswählen
+                    muscleFilter.value = exercise.muscleKey;
+                    updateExerciseDropdown(exercise.muscleKey, exercise.id);
+                    uebungSelect.value = exercise.id;
+                    
+                    // Ghosting laden
+                    loadGhosting(exercise.id);
+                    
+                    // Suchfeld leeren
+                    exerciseSearchInput.value = '';
+                    
+                    // Focus auf Gewicht
+                    setTimeout(() => gewichtInput.focus(), 100);
+                }
+            });
+        }
         
         // Filter Logic
         muscleFilter.addEventListener('change', function() {
@@ -632,13 +800,155 @@
             } catch (e) { console.error(e); }
         }
 
-        // Delete Confirmation
+        // ========== UNDO DELETE SYSTEM ==========
+        let deletedSets = []; // Array für gelöschte Sätze mit Timeout
+        
+        // Delete Confirmation mit Undo
         function confirmDelete(setId, exerciseName, weight, reps) {
-            document.getElementById('deleteExerciseName').innerText = exerciseName;
-            document.getElementById('deleteSetDetails').innerText = `${weight} kg × ${reps} Wdh`;
             const deleteUrl = `/set/${setId}/delete/`;
-            document.getElementById('confirmDeleteBtn').href = deleteUrl;
-            deleteModal.show();
+            
+            // Satz-Daten für Undo speichern
+            const setData = {
+                setId: setId,
+                exerciseName: exerciseName,
+                weight: weight,
+                reps: reps,
+                deleteUrl: deleteUrl,
+                timeout: null
+            };
+            
+            // Sofort aus UI entfernen (optimistic delete)
+            const setCard = document.querySelector(`[data-set-id="${setId}"]`);
+            if (setCard) {
+                setCard.style.opacity = '0.5';
+                setCard.style.pointerEvents = 'none';
+            }
+            
+            // Toast mit Undo-Button anzeigen
+            showUndoToast(setData);
+            
+            // Nach 5 Sekunden endgültig löschen
+            setData.timeout = setTimeout(() => {
+                executeDelete(setData);
+            }, 5000);
+            
+            deletedSets.push(setData);
+        }
+        
+        function showUndoToast(setData) {
+            // Toast mit Undo-Button erstellen
+            const toastHtml = `
+                <div class="toast-undo" data-set-id="${setData.setId}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <i class="bi bi-trash me-2"></i>
+                            <strong>${setData.exerciseName}</strong> gelöscht
+                            <small class="d-block text-muted">${setData.weight} kg × ${setData.reps} Wdh</small>
+                        </div>
+                        <button class="btn btn-sm btn-warning" onclick="undoDelete(${setData.setId})">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Rückgängig
+                        </button>
+                    </div>
+                    <div class="progress mt-2" style="height: 2px;">
+                        <div class="progress-bar bg-warning" style="width: 100%; animation: countdown 5s linear;"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Toast-Container (falls noch nicht vorhanden)
+            let toastContainer = document.getElementById('undoToastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'undoToastContainer';
+                toastContainer.style.cssText = 'position: fixed; bottom: 80px; right: 20px; z-index: 9999; max-width: 400px;';
+                document.body.appendChild(toastContainer);
+            }
+            
+            const toastDiv = document.createElement('div');
+            toastDiv.innerHTML = toastHtml;
+            toastContainer.appendChild(toastDiv.firstElementChild);
+            
+            // Auto-remove nach 5 Sekunden
+            setTimeout(() => {
+                const toastEl = toastContainer.querySelector(`[data-set-id="${setData.setId}"]`);
+                if (toastEl) {
+                    toastEl.style.opacity = '0';
+                    toastEl.style.transition = 'opacity 0.3s';
+                    setTimeout(() => toastEl.remove(), 300);
+                }
+            }, 5000);
+        }
+        
+        function undoDelete(setId) {
+            // Finde gelöschten Satz
+            const index = deletedSets.findIndex(s => s.setId === setId);
+            if (index === -1) return;
+            
+            const setData = deletedSets[index];
+            
+            // Timeout abbrechen
+            clearTimeout(setData.timeout);
+            
+            // Aus Array entfernen
+            deletedSets.splice(index, 1);
+            
+            // UI wiederherstellen
+            const setCard = document.querySelector(`[data-set-id="${setId}"]`);
+            if (setCard) {
+                setCard.style.opacity = '1';
+                setCard.style.pointerEvents = 'auto';
+            }
+            
+            // Toast entfernen
+            const toastEl = document.querySelector(`.toast-undo[data-set-id="${setId}"]`);
+            if (toastEl) {
+                toastEl.remove();
+            }
+            
+            // Bestätigungs-Toast
+            if (typeof toast !== 'undefined') {
+                toast.info('Satz wiederhergestellt');
+            }
+        }
+        
+        function executeDelete(setData) {
+            // Endgültiges Löschen via POST
+            fetch(setData.deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Seite neu laden nach erfolgreichem Delete
+                    location.reload();
+                } else {
+                    console.error('Delete fehlgeschlagen');
+                    // Bei Fehler: Satz wiederherstellen
+                    const setCard = document.querySelector(`[data-set-id="${setData.setId}"]`);
+                    if (setCard) {
+                        setCard.style.opacity = '1';
+                        setCard.style.pointerEvents = 'auto';
+                    }
+                    if (typeof toast !== 'undefined') {
+                        toast.error('Fehler beim Löschen');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Netzwerkfehler:', error);
+                if (typeof toast !== 'undefined') {
+                    toast.error('Netzwerkfehler beim Löschen');
+                }
+            });
+            
+            // Aus Array entfernen
+            const index = deletedSets.findIndex(s => s.setId === setData.setId);
+            if (index !== -1) {
+                deletedSets.splice(index, 1);
+            }
         }
 
         // ========== REST TIMER ==========

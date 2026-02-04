@@ -1,5 +1,5 @@
 <!-- Global Header - Include in allen authentifizierten Seiten -->
-<nav class="navbar navbar-dark bg-dark border-bottom border-secondary sticky-top">
+<nav class="navbar navbar-theme border-bottom sticky-top">
     <div class="container-fluid">
         <!-- Logo/Brand -->
         <a class="navbar-brand fw-bold d-flex align-items-center" href="{% url 'dashboard' %}">
@@ -9,7 +9,7 @@
         
         <!-- User Dropdown -->
         <div class="dropdown">
-            <button class="btn btn-dark dropdown-toggle d-flex align-items-center border-0" 
+            <button class="btn btn-theme dropdown-toggle d-flex align-items-center border-0" 
                     type="button" 
                     id="userDropdown" 
                     data-bs-toggle="dropdown" 
@@ -18,9 +18,10 @@
                 <div class="user-avatar me-2">
                     {{ user.username|slice:":1"|upper }}
                 </div>
-                <span class="d-none d-md-inline text-light">{{ user.username }}</span>
+                <span class="d-none d-md-inline">{{ user.username }}</span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="userDropdown">
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-theme" aria-labelledby="userDropdown">
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-theme" aria-labelledby="userDropdown">
                 <li>
                     <span class="dropdown-item-text text-muted small">
                         <i class="bi bi-envelope me-2"></i>{{ user.email|default:"Keine E-Mail" }}
@@ -57,6 +58,82 @@
 </nav>
 
 <style>
+/* Theme-aware Header Styles */
+.navbar-theme {
+    background-color: var(--bs-body-bg);
+    border-bottom-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .navbar-theme {
+    background-color: #1a1d21;
+    border-bottom-color: #30363d !important;
+}
+
+[data-bs-theme="light"] .navbar-theme {
+    background-color: #ffffff;
+    border-bottom-color: #dee2e6 !important;
+}
+
+.btn-theme {
+    background-color: transparent;
+    color: var(--bs-body-color);
+}
+
+.btn-theme:hover {
+    background-color: var(--bs-secondary-bg);
+}
+
+[data-bs-theme="dark"] .btn-theme {
+    color: #e9ecef;
+}
+
+[data-bs-theme="light"] .btn-theme {
+    color: #212529;
+}
+
+.dropdown-menu-theme {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .dropdown-menu-theme {
+    background-color: #1a1d21;
+    border-color: #30363d;
+}
+
+[data-bs-theme="light"] .dropdown-menu-theme {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+}
+
+.dropdown-menu-theme .dropdown-item {
+    color: var(--bs-body-color);
+}
+
+.dropdown-menu-theme .dropdown-item:hover {
+    background-color: var(--bs-secondary-bg);
+}
+
+[data-bs-theme="dark"] .dropdown-menu-theme .dropdown-item:hover {
+    background-color: #30363d;
+}
+
+[data-bs-theme="light"] .dropdown-menu-theme .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-menu-theme .dropdown-divider {
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .dropdown-menu-theme .dropdown-divider {
+    border-color: #30363d;
+}
+
+[data-bs-theme="light"] .dropdown-menu-theme .dropdown-divider {
+    border-color: #dee2e6;
+}
+
 .user-avatar {
     width: 32px;
     height: 32px;
@@ -68,15 +145,5 @@
     font-weight: bold;
     font-size: 0.9rem;
     color: white;
-}
-.dropdown-menu-dark {
-    background-color: #1a1d21;
-    border-color: #30363d;
-}
-.dropdown-menu-dark .dropdown-item:hover {
-    background-color: #30363d;
-}
-.dropdown-menu-dark .dropdown-divider {
-    border-color: #30363d;
 }
 </style>

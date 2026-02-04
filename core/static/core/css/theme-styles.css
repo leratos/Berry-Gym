@@ -128,3 +128,77 @@
     color: #212529;
 }
 
+/* ========== Theme-aware Navbar Styles ========== */
+
+/* Secondary Navbar (page-specific toolbars) */
+.navbar-page {
+    background-color: var(--bs-body-bg);
+    border-bottom-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .navbar-page {
+    background-color: #1a1d21;
+    border-bottom-color: #30363d !important;
+}
+
+[data-bs-theme="light"] .navbar-page {
+    background-color: #f8f9fa;
+    border-bottom-color: #dee2e6 !important;
+}
+
+/* Navbar text colors */
+.navbar-page .navbar-text,
+.navbar-page .page-title {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .navbar-page .navbar-text,
+[data-bs-theme="dark"] .navbar-page .page-title {
+    color: #e9ecef;
+}
+
+[data-bs-theme="light"] .navbar-page .navbar-text,
+[data-bs-theme="light"] .navbar-page .page-title {
+    color: #212529;
+}
+
+/* Theme-aware Dropdown Menu */
+.dropdown-menu-theme {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .dropdown-menu-theme {
+    background-color: #1a1d21;
+    border-color: #30363d;
+}
+
+[data-bs-theme="light"] .dropdown-menu-theme {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+}
+
+.dropdown-menu-theme .dropdown-item {
+    color: var(--bs-body-color);
+}
+
+.dropdown-menu-theme .dropdown-item:hover {
+    background-color: var(--bs-secondary-bg);
+}
+
+[data-bs-theme="dark"] .dropdown-menu-theme .dropdown-item:hover {
+    background-color: #30363d;
+}
+
+[data-bs-theme="light"] .dropdown-menu-theme .dropdown-item:hover {
+    background-color: #e9ecef;
+}
+
+.dropdown-menu-theme .dropdown-divider {
+    border-color: var(--bs-border-color);
+}
+
+.dropdown-menu-theme .dropdown-header {
+    color: var(--bs-secondary-color);
+}
+

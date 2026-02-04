@@ -297,6 +297,58 @@
       </div>
       {% endif %}
 
+      <!-- AI Auto-Suggest: Performance-Warnungen -->
+      {% if performance_warnings %}
+      <div class="card card-stat mb-4 shadow-sm border-warning">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">
+                    <i class="bi bi-lightbulb me-2 text-warning"></i>AI Performance-Analyse
+                </h6>
+                <span class="badge bg-warning text-dark">{{ performance_warnings|length }}</span>
+            </div>
+            
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                Automatische Erkennung von Plateau, Rückschritt und Stagnation
+            </p>
+            
+            <div class="list-group list-group-flush bg-transparent">
+                {% for warning in performance_warnings %}
+                <div class="list-group-item bg-transparent border-{{ warning.color }} border-start border-3 ps-3 mb-2">
+                    <div class="d-flex align-items-start">
+                        <i class="bi {{ warning.icon }} text-{{ warning.color }} fs-4 me-3 mt-1"></i>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <strong class="text-{{ warning.color }}">{{ warning.exercise }}</strong>
+                                <span class="badge bg-{{ warning.color }} bg-opacity-25 text-{{ warning.color }}">
+                                    {% if warning.type == 'plateau' %}Plateau
+                                    {% elif warning.type == 'regression' %}Rückschritt
+                                    {% elif warning.type == 'stagnation' %}Stagnation
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <p class="mb-2 small">{{ warning.message }}</p>
+                            <p class="mb-0 small text-muted">
+                                <i class="bi bi-lightbulb-fill me-1"></i>
+                                <strong>Tipp:</strong> {{ warning.suggestion }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-3 pt-3 border-top border-secondary">
+                <small class="text-muted">
+                    <i class="bi bi-cpu me-1"></i>
+                    Powered by AI-Algorithmus • Analysiert deine letzten 4 Wochen
+                </small>
+            </div>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="card card-stat mb-4 shadow-sm">
         <div class="card-body d-flex justify-content-between align-items-center">
             <div>
