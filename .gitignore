@@ -112,7 +112,6 @@ yarn.lock
 gunicorn.pid
 create_public_test_plan.py
 create_test_user.py
-core/migrations/
 
 # Beta
 /beta/
