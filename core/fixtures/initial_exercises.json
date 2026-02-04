@@ -160,7 +160,7 @@
         "BAUCH",
         "RUECKEN_OBERER"
       ],
-      "bewegungstyp": "HEBEN",
+      "bewegungstyp": "KOMPLEX",
       "gewichts_typ": "KOERPERGEWICHT",
       "equipment": [
         "Nur Körpergewicht"
@@ -273,7 +273,7 @@
         "PO",
         "BAUCH"
       ],
-      "bewegungstyp": "BEUGEN",
+      "bewegungstyp": "KOMPLEX",
       "gewichts_typ": "KOERPERGEWICHT",
       "equipment": [
         "Nur Körpergewicht"
@@ -307,7 +307,7 @@
         "BAUCH",
         "BEINE_QUAD"
       ],
-      "bewegungstyp": "HEBEN",
+      "bewegungstyp": "KOMPLEX",
       "gewichts_typ": "KOERPERGEWICHT",
       "equipment": [
         "Nur Körpergewicht"
@@ -316,13 +316,15 @@
     },
     {
       "id": 50,
-      "bezeichnung": "Butterfly / Pec Deck",
+      "bezeichnung": "Butterfly (Kabelzug)",
       "muskelgruppe": "BRUST",
       "hilfsmuskeln": [],
       "bewegungstyp": "ISOLATION",
       "gewichts_typ": "GESAMT",
-      "equipment": [],
-      "beschreibung": "Maschine für Brustflys. Arme fast gestreckt, Polster zur Mitte führen. Fokus auf Kontraktion der Brustmuskeln."
+      "equipment": [
+        "Kabelzug / Latzug"
+      ],
+      "beschreibung": "Kabelgriffe auf Brusthöhe oder leicht tiefer. Arme fast gestreckt zur Mitte führen, kontrolliert zurück. Konstante Spannung auf Brust."
     },
     {
       "id": 49,
@@ -330,7 +332,7 @@
       "muskelgruppe": "BRUST",
       "hilfsmuskeln": [],
       "bewegungstyp": "ISOLATION",
-      "gewichts_typ": "PRO_SEITE",
+      "gewichts_typ": "GESAMT",
       "equipment": [
         "Kabelzug / Latzug"
       ],
@@ -396,8 +398,7 @@
       "bewegungstyp": "BEUGEN",
       "gewichts_typ": "PRO_SEITE",
       "equipment": [
-        "Kurzhanteln",
-        "Langhantel"
+        "Kurzhanteln"
       ],
       "beschreibung": "Breiter Stand. Zu einer Seite tief beugen, anderes Bein gestreckt. Seitenwechsel."
     },
@@ -434,7 +435,6 @@
       "bewegungstyp": "DRUECKEN",
       "gewichts_typ": "KOERPERGEWICHT",
       "equipment": [
-        "Flachbank",
         "Nur Körpergewicht"
       ],
       "beschreibung": "Schulterblätter stabil. Kontrolliert absenken, Ellbogen nach hinten, hochdrücken ohne in die Schultern zu fallen."
@@ -666,22 +666,6 @@
       "beschreibung": "Langhantel auf Schultern. Hüfte nach hinten schieben (Hinge), Rücken neutral. Dehnung in Hamstrings spüren, dann Hüfte wieder strecken. Nur so tief wie stabil."
     },
     {
-      "id": 22,
-      "bezeichnung": "Good Mornings (Langhantel, leicht)",
-      "muskelgruppe": "RUECKEN_UNTEN",
-      "hilfsmuskeln": [
-        "BEINE_HAM",
-        "PO",
-        "BAUCH"
-      ],
-      "bewegungstyp": "HEBEN",
-      "gewichts_typ": "GESAMT",
-      "equipment": [
-        "Langhantel"
-      ],
-      "beschreibung": "Hinge mit Langhantel auf dem Rücken. Rücken neutral, Hüfte nach hinten. Nur so tief wie stabil."
-    },
-    {
       "id": 37,
       "bezeichnung": "Hammer Curls (Kurzhantel)",
       "muskelgruppe": "BIZEPS",
@@ -716,7 +700,7 @@
         "BAUCH",
         "WADEN"
       ],
-      "bewegungstyp": "HEBEN",
+      "bewegungstyp": "CARDIO",
       "gewichts_typ": "KOERPERGEWICHT",
       "equipment": [
         "Nur Körpergewicht"
@@ -772,7 +756,7 @@
         "PO",
         "BAUCH"
       ],
-      "bewegungstyp": "BEUGEN",
+      "bewegungstyp": "KOMPLEX",
       "gewichts_typ": "KOERPERGEWICHT",
       "equipment": [
         "Nur Körpergewicht"
@@ -969,7 +953,7 @@
       "equipment": [
         "Widerstandsbänder"
       ],
-      "beschreibung": "Rippen runter. Wirbelsäule einrollen (Crunch), nicht aus der Hüfte ziehen. Langsam zurück."
+      "beschreibung": "Band seitlich fixiert. Arme vor Brust, gegen Rotation stabilisieren. Arme strecken, dann kontrolliert zurück. Anti-Rotation-Training."
     },
     {
       "id": 73,
@@ -1190,7 +1174,9 @@
       "hilfsmuskeln": [],
       "bewegungstyp": "ISOLATION",
       "gewichts_typ": "PRO_SEITE",
-      "equipment": [],
+      "equipment": [
+        "Kabelzug / Latzug"
+      ],
       "beschreibung": "Kabelgriff seitlich bis Schulterhöhe ziehen. Konstante Spannung während der gesamten Bewegung."
     },
     {
@@ -1268,7 +1254,9 @@
       ],
       "bewegungstyp": "HEBEN",
       "gewichts_typ": "PRO_SEITE",
-      "equipment": [],
+      "equipment": [
+        "Flachbank"
+      ],
       "beschreibung": "Rücken auf Bank, ein Bein gestreckt. Hüfte heben, Po anspannen. Pro Seite."
     },
     {
@@ -1281,7 +1269,9 @@
       ],
       "bewegungstyp": "ZIEHEN",
       "gewichts_typ": "GESAMT",
-      "equipment": [],
+      "equipment": [
+        "Kabelzug / Latzug"
+      ],
       "beschreibung": "Neutraler Rücken. Griff zum Bauch ziehen, Schulterblätter zusammen. Langsame Exzentrik."
     },
     {
@@ -1320,8 +1310,7 @@
       "bewegungstyp": "HEBEN",
       "gewichts_typ": "PRO_SEITE",
       "equipment": [
-        "Kurzhanteln",
-        "Langhantel"
+        "Kurzhanteln"
       ],
       "beschreibung": "Beine fast gestreckt, Hanteln vor Körper senken. Rücken gerade, Hüfte nach hinten. Dehnung in Hamstrings."
     },
@@ -1336,8 +1325,7 @@
       "bewegungstyp": "BEUGEN",
       "gewichts_typ": "GESAMT",
       "equipment": [
-        "Kurzhanteln",
-        "Langhantel"
+        "Kurzhanteln"
       ],
       "beschreibung": "Breiter Stand, Füße nach außen. Tief beugen, Hantel zwischen Beinen. Adduktoren fokussieren."
     },
@@ -1404,24 +1392,12 @@
       "hilfsmuskeln": [
         "SCHULTER_HINT"
       ],
-      "bewegungstyp": "DRUECKEN",
+      "bewegungstyp": "ISOLATION",
       "gewichts_typ": "GESAMT",
       "equipment": [
         "Widerstandsbänder"
       ],
       "beschreibung": "Band oben fixieren. Ellbogen an der Seite, Unterarme strecken bis voll, kontrolliert zurück. Fokus auf Trizeps-Streckung."
-    },
-    {
-      "id": 10,
-      "bezeichnung": "Trizepsdrücken am Kabel (Pushdown)",
-      "muskelgruppe": "TRIZEPS",
-      "hilfsmuskeln": [
-        "UNTERARME"
-      ],
-      "bewegungstyp": "ISOLATION",
-      "gewichts_typ": "GESAMT",
-      "equipment": [],
-      "beschreibung": "Ellenbogen am Körper fix. Runterdrücken bis Streckung, oben nur bis Spannung bleibt. Kein Schwingen."
     },
     {
       "id": 75,
@@ -1457,18 +1433,10 @@
       "hilfsmuskeln": [],
       "bewegungstyp": "ISOLATION",
       "gewichts_typ": "GESAMT",
-      "equipment": [],
+      "equipment": [
+        "Calf Raise Maschine"
+      ],
       "beschreibung": "Unten Dehnung, oben maximale Plantarflexion. Pause oben/unten, keine Bounce-Wdh."
-    },
-    {
-      "id": 62,
-      "bezeichnung": "Wadenheben stehend (Calf Raises)",
-      "muskelgruppe": "WADEN",
-      "hilfsmuskeln": [],
-      "bewegungstyp": "ISOLATION",
-      "gewichts_typ": "GESAMT",
-      "equipment": [],
-      "beschreibung": "Auf Zehenspitzen heben, volle ROM. Langsam senken für maximale Wadendehnung."
     },
     {
       "id": 61,
@@ -1484,7 +1452,7 @@
       "equipment": [
         "Nur Körpergewicht"
       ],
-      "beschreibung": "Hamstring-Isolation. Fersen zu Po ziehen gegen Widerstand. Hüfte bleibt stabil."
+      "beschreibung": "Rücken an Wand, 90° Hüfte/Knie. Position halten. Isometrische Quad-Kraft und Ausdauer."
     },
     {
       "id": 39,
@@ -1493,7 +1461,9 @@
       "hilfsmuskeln": [],
       "bewegungstyp": "ISOLATION",
       "gewichts_typ": "GESAMT",
-      "equipment": [],
+      "equipment": [
+        "Kurzhanteln"
+      ],
       "beschreibung": "Unterarme auf Bank/Oberschenkel ablegen. Handgelenke beugen/strecken in sauberer ROM, langsam und kontrolliert."
     },
     {
