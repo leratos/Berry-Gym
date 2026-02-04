@@ -626,8 +626,8 @@ def dashboard(request):
                 einheit__user=request.user,
                 uebung_id=uebung_id,
                 ist_aufwaermsatz=False,
-                datum__gte=four_weeks_ago
-            ).order_by('-datum')[:8]
+                einheit__datum__gte=four_weeks_ago
+            ).order_by('-einheit__datum')[:8]
             
             if recent_sets.count() >= 4:
                 # Berechne max Gewicht der letzten 4 vs. vorherige 4 Sätze
@@ -672,8 +672,8 @@ def dashboard(request):
                 einheit__user=request.user,
                 uebung_id=ex_id,
                 ist_aufwaermsatz=False,
-                datum__gte=heute - timedelta(days=28),
-                datum__lt=two_weeks_ago
+                einheit__datum__gte=heute - timedelta(days=28),
+                einheit__datum__lt=two_weeks_ago
             ).aggregate(Avg('gewicht'))
             
             previous_avg = float(comparison_sets['gewicht__avg'] or 0)
@@ -697,7 +697,7 @@ def dashboard(request):
         trained_recently = set(
             Satz.objects.filter(
                 einheit__user=request.user,
-                datum__gte=heute - timedelta(days=14),
+                einheit__datum__gte=heute - timedelta(days=14),
                 ist_aufwaermsatz=False
             ).values_list('uebung__muskelgruppe', flat=True)
         )
@@ -714,10 +714,10 @@ def dashboard(request):
                     einheit__user=request.user,
                     uebung__muskelgruppe=mg,
                     ist_aufwaermsatz=False
-                ).order_by('-datum').first()
+                ).order_by('-einheit__datum').first()
                 
                 if last_training:
-                    days_ago = (heute.date() - last_training.datum.date()).days
+                    days_ago = (heute.date() - last_training.einheit.datum.date()).days
                     if days_ago >= 14:  # 2 Wochen keine Aktivität
                         mg_label = all_muscle_groups.get(mg, mg)
                         performance_warnings.append({
