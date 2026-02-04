@@ -79,10 +79,6 @@ yarn-error.log*
 backup_*.sql
 backup_*.sqlite3
 
-# Deployment Configs mit Secrets
-homegym.service
-homegym.nginx
-
 # Coverage reports
 htmlcov/
 .tox/
@@ -113,14 +109,11 @@ yarn.lock
 *.pyc
 
 # Server-specific (Plesk/Production)
-/deployment/
 gunicorn.pid
 create_public_test_plan.py
 create_test_user.py
-db.sqlite3
 core/migrations/
 
 # Beta
 /beta/
 apply_beta.html
-db.sqlite3
