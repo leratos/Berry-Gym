@@ -35,8 +35,10 @@ db.sqlite3-journal
 /staticfiles/
 /media/
 
-# Documentation (internal notes)
-/docs/
+# Documentation - Internal Notes (exclude work-in-progress docs)
+docs/README.md.backup
+docs/*_LOG.md
+docs/PROJECT_STATUS.md
 
 # Development scripts (local only)
 /dev-scripts/
