@@ -485,7 +485,7 @@ Fitness/
 
 ## 🐳 Production Deployment
 
-Siehe **[DEPLOYMENT.md](DEPLOYMENT.md)** für detaillierte Anweisungen.
+Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 **Quick Summary:**
 1. Server vorbereiten (Linux, MariaDB, Nginx)
@@ -670,8 +670,8 @@ Dieses Projekt ist unter der [MIT License](LICENSE) lizenziert.
 ## 📧 Support
 
 - **Issues:** [GitHub Issues](https://github.com/leratos/Fitness/issues)
-- **Dokumentation:** [ROADMAP.md](ROADMAP.md), [AI_COACH_CONCEPT.md](AI_COACH_CONCEPT.md)
-- **Deployment:** [DEPLOYMENT.md](DEPLOYMENT.md)
+- **Dokumentation:** [ROADMAP.md](ROADMAP.md), [AI_COACH_CONCEPT.md](docs/AI_COACH_CONCEPT.md), [Docs Index](docs/README.md)
+- **Deployment:** [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ---
 
