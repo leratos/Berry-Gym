@@ -247,8 +247,19 @@
   - UI im Plan-Editor und Training-Session
   - CRUD API-Endpoints + Templates
   - Integration in Übungsauswahl mit Filter "Meine Übungen"
-- [ ] Tags für Übungen (Compound, Isolation, etc.)
+- [x] **Tags für Übungen** ✅ (04.02.2026)
+  - 12 Tag-Kategorien (Compound, Isolation, Beginner, Advanced, etc.)
+  - Farbige Badges in Übungskarten
+  - Tag-Filter in Übungsliste (kombinierbar mit Suche + Favoriten)
+  - Admin-Interface mit Farb-Preview
+  - 54+ Standard-Übungen automatisch getaggt
 - [ ] Schwierigkeitsgrad anzeigen
+- [x] **Equipment-Manager UI** ✅ (04.02.2026)
+  - 6 Kategorien mit Icons (Freie Gewichte, Racks, Bänke, Maschinen, Funktionell, Basics)
+  - Live-Suche und Kategorie-Filter
+  - Card-basiertes Layout mit optimistic UI
+  - Alternative Übungen API-Endpoint
+  - Verbesserte Presets (Home Basic/Advanced, Fitness Studio, Bodyweight)
 
 ### PWA & Offline
 - [x] Progressive Web App Setup ✅
