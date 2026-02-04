@@ -656,7 +656,7 @@ def dashboard(request):
         # Prüfe alle Übungen die in den letzten 2 Wochen trainiert wurden
         recent_exercises = Satz.objects.filter(
             einheit__user=request.user,
-            datum__gte=two_weeks_ago,
+            einheit__datum__gte=two_weeks_ago,
             ist_aufwaermsatz=False
         ).values('uebung__bezeichnung', 'uebung_id').annotate(
             avg_gewicht=Avg('gewicht')
