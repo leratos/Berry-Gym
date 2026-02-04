@@ -16,6 +16,12 @@ class UebungAdminForm(forms.ModelForm):
         label='Hilfsmuskelgruppen'
     )
     
+    beschreibung = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4, 'cols': 80}),
+        required=False,
+        label='Anleitung / Notizen'
+    )
+    
     class Meta:
         model = Uebung
         fields = '__all__'
@@ -28,7 +34,7 @@ class UebungAdminForm(forms.ModelForm):
 @admin.register(Uebung)
 class UebungAdmin(admin.ModelAdmin):
     form = UebungAdminForm
-    list_display = ('bezeichnung', 'muskelgruppe', 'gewichts_typ', 'bewegungstyp', 'tags_anzeige', 'equipment_anzeige', 'hilfsmuskel_anzeige')
+    list_display = ('bezeichnung', 'muskelgruppe', 'gewichts_typ', 'bewegungstyp', 'tags_anzeige', 'equipment_anzeige', 'video_status', 'hilfsmuskel_anzeige')
     list_filter = ('muskelgruppe', 'bewegungstyp', 'gewichts_typ', 'tags', 'equipment')
     search_fields = ('bezeichnung',)
     ordering = ('bezeichnung',)
@@ -41,11 +47,23 @@ class UebungAdmin(admin.ModelAdmin):
         ('Trainingsdetails', {
             'fields': ('gewichts_typ', 'bewegungstyp', 'equipment')
         }),
+        ('Medien', {
+            'fields': ('bild', 'video_link', 'video_file', 'video_thumbnail'),
+            'description': 'YouTube/Vimeo Link ODER Video-Datei hochladen. Thumbnail ist optional.'
+        }),
         ('Zusätzliche Infos', {
-            'fields': ('beschreibung', 'bild', 'video_link'),
+            'fields': ('beschreibung',),
             'classes': ('collapse',)
         }),
     )
+    
+    def video_status(self, obj):
+        if obj.video_file:
+            return format_html('<span style="color:green;">✓ Upload</span>')
+        elif obj.video_link:
+            return format_html('<span style="color:blue;">✓ Link</span>')
+        return format_html('<span style="color:gray;">-</span>')
+    video_status.short_description = 'Video'
     
     def tags_anzeige(self, obj):
         tags = obj.tags.all()

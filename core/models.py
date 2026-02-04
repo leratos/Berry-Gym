@@ -151,7 +151,14 @@ class Uebung(models.Model):
 
     beschreibung = models.TextField(blank=True, verbose_name="Anleitung / Notizen")
     bild = models.ImageField(upload_to='uebungen_bilder/', blank=True, null=True, verbose_name="Foto/Grafik")
-    video_link = models.URLField(blank=True, null=True, verbose_name="YouTube Link")
+    
+    # Video-Optionen
+    video_link = models.URLField(blank=True, null=True, verbose_name="YouTube/Vimeo Link", 
+                                  help_text="z.B. https://www.youtube.com/watch?v=...")
+    video_file = models.FileField(upload_to='uebungen_videos/', blank=True, null=True, 
+                                   verbose_name="Video-Datei", help_text="Alternativ: MP4 hochladen")
+    video_thumbnail = models.ImageField(upload_to='uebungen_thumbnails/', blank=True, null=True, 
+                                        verbose_name="Video-Vorschaubild")
 
     # Favoriten
     favoriten = models.ManyToManyField(User, related_name="favoriten_uebungen", blank=True)
@@ -172,6 +179,36 @@ class Uebung(models.Model):
     def is_global(self):
         """True wenn Übung für alle sichtbar ist (keine Custom-Übung)"""
         return not self.is_custom
+    
+    @property
+    def has_video(self):
+        """True wenn Übung ein Video hat (Link oder Upload)"""
+        return bool(self.video_link or self.video_file)
+    
+    @property
+    def video_embed_url(self):
+        """Konvertiert YouTube/Vimeo URLs zu Embed-Format"""
+        if not self.video_link:
+            return None
+        
+        url = self.video_link
+        
+        # YouTube
+        if 'youtube.com' in url or 'youtu.be' in url:
+            if 'watch?v=' in url:
+                video_id = url.split('watch?v=')[1].split('&')[0]
+            elif 'youtu.be/' in url:
+                video_id = url.split('youtu.be/')[1].split('?')[0]
+            else:
+                return url
+            return f'https://www.youtube.com/embed/{video_id}'
+        
+        # Vimeo
+        elif 'vimeo.com' in url:
+            video_id = url.split('vimeo.com/')[1].split('?')[0]
+            return f'https://player.vimeo.com/video/{video_id}'
+        
+        return url
 
     class Meta:
         verbose_name = "Übung"

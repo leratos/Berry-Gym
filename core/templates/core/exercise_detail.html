@@ -79,6 +79,33 @@
                 </div>
                 {% endif %}
 
+                <!-- Video-Anleitung -->
+                {% if uebung.has_video %}
+                <div class="mt-3">
+                    <h6 class="text-secondary mb-2">
+                        <i class="bi bi-play-circle me-2"></i>Video-Anleitung
+                    </h6>
+                    <div class="ratio ratio-16x9 rounded overflow-hidden bg-dark">
+                        {% if uebung.video_file %}
+                            <!-- Hochgeladenes Video -->
+                            <video controls class="w-100 h-100" {% if uebung.video_thumbnail %}poster="{{ uebung.video_thumbnail.url }}"{% endif %}>
+                                <source src="{{ uebung.video_file.url }}" type="video/mp4">
+                                Dein Browser unterstützt das Video-Tag nicht.
+                            </video>
+                        {% elif uebung.video_embed_url %}
+                            <!-- YouTube/Vimeo Embed -->
+                            <iframe 
+                                src="{{ uebung.video_embed_url }}" 
+                                frameborder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen
+                                class="w-100 h-100">
+                            </iframe>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if uebung.equipment.all %}
                 <div class="mt-3">
                     <h6 class="text-secondary mb-2">
