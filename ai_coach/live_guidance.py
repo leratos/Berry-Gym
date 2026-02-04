@@ -334,9 +334,10 @@ FOKUS:
         except Exception as e:
             print(f"   ❌ Fehler: {e}")
             import traceback
+            # Log full traceback server-side for debugging, but do not expose details to the user
             traceback.print_exc()
             return {
-                'answer': f"Fehler beim Generieren der Antwort: {str(e)}",
+                'answer': "Es ist ein Fehler beim Generieren der Antwort aufgetreten. Bitte versuche es später erneut.",
                 'context': context,
                 'cost': 0.0,
                 'model': 'error'
