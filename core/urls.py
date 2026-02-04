@@ -88,6 +88,7 @@ urlpatterns = [
     # Help Pages
     path('help/metriken/', views.metriken_help, name='metriken_help'),
     path('equipment/toggle/<int:equipment_id>/', views.toggle_equipment, name='toggle_equipment'),
+    path('api/exercise/<int:exercise_id>/alternatives/', views.suggest_alternative_exercises, name='suggest_alternatives'),
     
     # Exercise API
     path('api/exercise/<int:exercise_id>/', views.exercise_api_detail, name='exercise_api_detail'),
