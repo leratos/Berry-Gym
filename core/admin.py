@@ -1,4 +1,4 @@
-﻿from django.contrib import admin
+from django.contrib import admin
 from django.utils.html import format_html
 from django import forms
 from .models import (
@@ -7,7 +7,7 @@ from .models import (
     UebungTag, MLPredictionModel
 )
 
-# --- ÃBUNGEN ---
+# --- ÜBUNGEN ---
 class UebungAdminForm(forms.ModelForm):
     hilfsmuskeln = forms.MultipleChoiceField(
         choices=MUSKELGRUPPEN,
@@ -51,7 +51,7 @@ class UebungAdmin(admin.ModelAdmin):
             'fields': ('bild', 'video_link', 'video_file', 'video_thumbnail'),
             'description': 'YouTube/Vimeo Link ODER Video-Datei hochladen. Thumbnail ist optional.'
         }),
-        ('ZusÃ¤tzliche Infos', {
+        ('Zusätzliche Infos', {
             'fields': ('beschreibung',),
             'classes': ('collapse',)
         }),
@@ -107,24 +107,24 @@ class TrainingseinheitAdmin(admin.ModelAdmin):
 
     def anzahl_saetze(self, obj):
         return obj.saetze.count()
-    anzahl_saetze.short_description = "SÃ¤tze"
+    anzahl_saetze.short_description = "Sätze"
 
-# --- PLÃNE (NEU) ---
+# --- PLÄNE (NEU) ---
 class PlanUebungInline(admin.TabularInline):
     model = PlanUebung
-    extra = 1 # Zeigt immer eine leere Zeile fÃ¼r neue Ãbungen
+    extra = 1 # Zeigt immer eine leere Zeile für neue Übungen
     ordering = ('reihenfolge',) # Sortiert nach deiner Reihenfolge
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = ('name', 'anzahl_uebungen')
-    inlines = [PlanUebungInline] # Hier fÃ¼gst du die Ãbungen hinzu
+    inlines = [PlanUebungInline] # Hier fügst du die Übungen hinzu
 
     def anzahl_uebungen(self, obj):
         return obj.uebungen.count()
-    anzahl_uebungen.short_description = "Ãbungen"
+    anzahl_uebungen.short_description = "Übungen"
 
-# --- KÃRPERWERTE ---
+# --- KÖRPERWERTE ---
 @admin.register(KoerperWerte)
 class KoerperWerteAdmin(admin.ModelAdmin):
     list_display = ('datum', 'gewicht', 'bmi', 'ffmi')
@@ -169,8 +169,8 @@ class InviteCodeAdmin(admin.ModelAdmin):
     
     def is_valid_status(self, obj):
         if obj.is_valid():
-            return format_html('<span style="color: green;">â GÃ¼ltig</span>')
-        return format_html('<span style="color: red;">â UngÃ¼ltig</span>')
+            return format_html('<span style="color: green;">â Gültig</span>')
+        return format_html('<span style="color: red;">â Ungültig</span>')
     is_valid_status.short_description = 'Status'
     
     actions = ['generate_codes']
@@ -244,13 +244,13 @@ class WaitlistEntryAdmin(admin.ModelAdmin):
         for entry in queryset.filter(status='pending'):
             if entry.approve_and_send_code():
                 count += 1
-        self.message_user(request, f'{count} EintrÃ¤ge wurden approved')
-    approve_selected.short_description = 'AusgewÃ¤hlte approven & Code senden'
+        self.message_user(request, f'{count} Einträge wurden approved')
+    approve_selected.short_description = 'Ausgewählte approven & Code senden'
     
     def mark_as_spam(self, request, queryset):
         """Als Spam markieren"""
         count = queryset.update(status='spam')
-        self.message_user(request, f'{count} EintrÃ¤ge als Spam markiert')
+        self.message_user(request, f'{count} Einträge als Spam markiert')
     mark_as_spam.short_description = 'Als Spam markieren'
 
 
@@ -290,7 +290,7 @@ class FeedbackAdmin(admin.ModelAdmin):
     mark_done.short_description = 'ð Als umgesetzt markieren'
 
 
-# --- ÃBUNGS-TAGS ---
+# --- ÜBUNGS-TAGS ---
 @admin.register(UebungTag)
 class UebungTagAdmin(admin.ModelAdmin):
     list_display = ('name_display', 'farbe_preview', 'beschreibung', 'anzahl_uebungen')
@@ -312,7 +312,7 @@ class UebungTagAdmin(admin.ModelAdmin):
     
     def anzahl_uebungen(self, obj):
         count = obj.uebungen.count()
-        return f'{count} Ãbungen'
+        return f'{count} Übungen'
     anzahl_uebungen.short_description = 'Verwendung'
 
 # --- ML PREDICTION MODELS ---
