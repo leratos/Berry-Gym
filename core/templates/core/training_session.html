@@ -358,6 +358,11 @@
                                 </td>
                                 <td>
                                     <span class="fw-bold fs-5">{{ satz.gewicht }}</span>
+                                    {% if satz.notiz %}
+                                        <span class="badge bg-info ms-1" title="{{ satz.notiz }}">
+                                            <i class="bi bi-chat-left-text"></i>
+                                        </span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <span class="fw-bold fs-5">{{ satz.wiederholungen }}</span>
@@ -365,8 +370,8 @@
                                         <small class="text-muted ms-1">@{{ satz.rpe }}</small>
                                     {% endif %}
                                     {% if satz.notiz %}
-                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">
-                                            <i class="bi bi-chat-left-text me-1"></i>{{ satz.notiz|truncatewords:10 }}
+                                        <div class="small text-muted mt-1 px-2 py-1 bg-dark rounded" style="font-size: 0.7rem;">
+                                            <i class="bi bi-chat-left-text me-1"></i>{{ satz.notiz|truncatewords:15 }}
                                         </div>
                                     {% endif %}
                                 </td>
@@ -520,8 +525,25 @@
                     <label class="form-label text-secondary">
                         <i class="bi bi-pencil-square me-1"></i>Notiz (optional)
                     </label>
-                    <textarea name="notiz" id="notizInput" class="form-control border-secondary" rows="2" placeholder="z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', 'Neue Schuhe'..." maxlength="500"></textarea>
-                    <small class="text-muted">Max. 500 Zeichen</small>
+                    
+                    <!-- Quick Tags -->
+                    <div class="btn-group btn-group-sm mb-2 flex-wrap" role="group" aria-label="Quick Tags">
+                        <button type="button" class="btn btn-outline-success" onclick="insertTag('⭐ Perfekt')">⭐ Perfekt</button>
+                        <button type="button" class="btn btn-outline-info" onclick="insertTag('👍 Gut')">👍 Gut</button>
+                        <button type="button" class="btn btn-outline-warning" onclick="insertTag('⚠️ Schwierig')">⚠️ Schwierig</button>
+                        <button type="button" class="btn btn-outline-danger" onclick="insertTag('🤕 Mit Hilfe')">🤕 Mit Hilfe</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="insertTag('😓 Schmerz')">😓 Schmerz</button>
+                    </div>
+                    
+                    <textarea name="notiz" id="notizInput" class="form-control border-secondary" rows="3" 
+                              placeholder="z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', 'Neue Schuhe'..." 
+                              maxlength="500" oninput="updateCharCount()"></textarea>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <small class="text-muted" id="charCount">0 / 500 Zeichen</small>
+                        <button type="button" class="btn btn-sm btn-link text-muted p-0" onclick="clearNotiz()">
+                            <i class="bi bi-x-circle"></i> Löschen
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Progressive Overload Hinweis -->
@@ -1355,13 +1377,7 @@
     <!-- Keyboard Shortcuts -->
     <script src="{% static 'core/js/keyboard-shortcuts.js' %}"></script>
     
-    <!-- Offline Manager -->
-    <script src="{% static 'core/js/offline-manager.js' %}"></script>
-    <script>
-        // Offline Manager ist bereits in offline-manager.js global initialisiert
-        // Verwende window.offlineManager
-        
-        // Funktion um offline Satz in UI hinzuzufügen
+    <!-- Funktion um offline Satz in UI hinzuzufügen -->
         function addOfflineSetToUI(setData) {
             // Finde oder erstelle Übungs-Container
             const uebungName = setData.uebung_name || 'Übung';
@@ -1472,11 +1488,54 @@
             }
         }
         
+        // Quick Tags für Notizen
+        function insertTag(tag) {
+            const notizInput = document.getElementById('notizInput');
+            const currentValue = notizInput.value.trim();
+            
+            if (currentValue) {
+                notizInput.value = currentValue + ' | ' + tag;
+            } else {
+                notizInput.value = tag;
+            }
+            
+            updateCharCount();
+            notizInput.focus();
+        }
+        
+        function clearNotiz() {
+            document.getElementById('notizInput').value = '';
+            updateCharCount();
+        }
+        
+        function updateCharCount() {
+            const notizInput = document.getElementById('notizInput');
+            const charCount = document.getElementById('charCount');
+            const length = notizInput.value.length;
+            
+            charCount.textContent = `${length} / 500 Zeichen`;
+            
+            if (length > 450) {
+                charCount.classList.add('text-warning');
+                charCount.classList.remove('text-muted');
+            } else if (length === 500) {
+                charCount.classList.add('text-danger');
+                charCount.classList.remove('text-warning', 'text-muted');
+            } else {
+                charCount.classList.add('text-muted');
+                charCount.classList.remove('text-warning', 'text-danger');
+            }
+        }
+        
         // Nach DOMContentLoaded laden
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadOfflineSets);
+            document.addEventListener('DOMContentLoaded', () => {
+                loadOfflineSets();
+                updateCharCount();
+            });
         } else {
             loadOfflineSets();
+            updateCharCount();
         }
     </script>
     

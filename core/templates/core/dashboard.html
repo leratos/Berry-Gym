@@ -218,6 +218,10 @@
               <a href="{% url 'equipment_management' %}" class="text-decoration-none small fw-bold text-warning" title="Ausrüstung verwalten">
                   <i class="bi bi-tools"></i> Equipment
               </a>
+              <!-- Push Notifications Toggle -->
+              <button onclick="togglePushNotifications()" class="btn btn-sm btn-outline-secondary border-0" id="pushToggleBtn" title="Push-Benachrichtigungen">
+                  <i class="bi bi-bell-slash" id="pushIcon"></i>
+              </button>
               <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
                   <i class="bi bi-moon-fill" id="themeIcon"></i>
               </button>
@@ -660,7 +664,88 @@
         window.addEventListener('DOMContentLoaded', function() {
             const currentTheme = localStorage.getItem('theme') || 'dark';
             updateThemeIcon(currentTheme);
+            
+            // Push Notifications Status prüfen
+            updatePushIcon();
         });
+        
+        // Push Notifications Toggle
+        async function togglePushNotifications() {
+            const btn = document.getElementById('pushToggleBtn');
+            const icon = document.getElementById('pushIcon');
+            
+            try {
+                // Prüfe ob pushManager verfügbar ist
+                if (typeof pushManager === 'undefined') {
+                    alert('Push Notifications werden geladen...\nBitte versuche es in wenigen Sekunden erneut.');
+                    return;
+                }
+                
+                // Initialisiere pushManager falls nötig
+                if (!pushManager.swRegistration) {
+                    await pushManager.init();
+                }
+                
+                // Status prüfen
+                const isSubscribed = await pushManager.isSubscribed();
+                
+                if (isSubscribed) {
+                    // Unsubscribe
+                    if (confirm('Push-Benachrichtigungen deaktivieren?')) {
+                        btn.disabled = true;
+                        const result = await pushManager.unsubscribe();
+                        if (result.success) {
+                            icon.className = 'bi bi-bell-slash';
+                            btn.classList.remove('text-primary');
+                            alert('✅ Push-Benachrichtigungen deaktiviert');
+                        }
+                        btn.disabled = false;
+                    }
+                } else {
+                    // Subscribe
+                    btn.disabled = true;
+                    const result = await pushManager.subscribe();
+                    if (result.success) {
+                        icon.className = 'bi bi-bell-fill';
+                        btn.classList.add('text-primary');
+                        alert('✅ Push-Benachrichtigungen aktiviert!\n\nDu erhältst jetzt Benachrichtigungen für:\n• Training-Erinnerungen\n• Achievements\n• Rest-Day Reminders');
+                    } else {
+                        alert('❌ Fehler: ' + result.message);
+                    }
+                    btn.disabled = false;
+                }
+                
+                updatePushIcon();
+            } catch (error) {
+                console.error('Push Toggle Error:', error);
+                alert('Fehler beim Aktivieren der Benachrichtigungen');
+                btn.disabled = false;
+            }
+        }
+        
+        // Push Icon Status aktualisieren
+        async function updatePushIcon() {
+            if (typeof pushManager === 'undefined') return;
+            
+            try {
+                await pushManager.init();
+                const isSubscribed = await pushManager.isSubscribed();
+                const icon = document.getElementById('pushIcon');
+                const btn = document.getElementById('pushToggleBtn');
+                
+                if (isSubscribed) {
+                    icon.className = 'bi bi-bell-fill';
+                    btn.classList.add('text-primary');
+                    btn.title = 'Push-Benachrichtigungen aktiv';
+                } else {
+                    icon.className = 'bi bi-bell-slash';
+                    btn.classList.remove('text-primary');
+                    btn.title = 'Push-Benachrichtigungen aktivieren';
+                }
+            } catch (error) {
+                console.error('Push Icon Update Error:', error);
+            }
+        }
 
         // PWA Service Worker Registrierung
         if ('serviceWorker' in navigator) {
@@ -794,13 +879,6 @@
         
         // Heatmap beim Laden generieren
         window.addEventListener('DOMContentLoaded', generateHeatmap);
-    </script>
-    
-    <!-- Offline Manager -->
-    <script src="{% static 'core/js/offline-manager.js' %}"></script>
-    <script>
-        // Offline Manager initialisieren
-        const offlineManager = new OfflineManager();
     </script>
     
     <!-- AI Plan Generator Modal -->

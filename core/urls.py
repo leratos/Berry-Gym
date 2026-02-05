@@ -78,6 +78,7 @@ urlpatterns = [
     # PDF Export
     path('export/training-pdf/', views.export_training_pdf, name='export_training_pdf'),
     path('plan/<int:plan_id>/pdf/', views.export_plan_pdf, name='export_plan_pdf'),
+    path('group/<str:gruppe_id>/pdf/', views.export_plan_group_pdf, name='export_plan_group_pdf'),
     
     # AI/ML Recommendations
     path('recommendations/', views.workout_recommendations, name='workout_recommendations'),
@@ -138,4 +139,9 @@ urlpatterns = [
     path('cardio/', views.cardio_list, name='cardio_list'),
     path('cardio/add/', views.cardio_add, name='cardio_add'),
     path('cardio/<int:cardio_id>/delete/', views.cardio_delete, name='cardio_delete'),
+    
+    # Push Notifications
+    path('api/push/subscribe/', views.subscribe_push, name='subscribe_push'),
+    path('api/push/unsubscribe/', views.unsubscribe_push, name='unsubscribe_push'),
+    path('api/push/vapid-key/', views.get_vapid_public_key, name='get_vapid_public_key'),
 ]

@@ -817,3 +817,34 @@ class Feedback(models.Model):
             'DONE': 'bg-primary',
         }
         return badge_classes.get(self.status, 'bg-secondary')
+
+
+class PushSubscription(models.Model):
+    """Web Push Notification Subscription für User"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='push_subscriptions')
+    
+    # Web Push Subscription Details (JSON vom Browser)
+    endpoint = models.TextField(unique=True, verbose_name="Push Endpoint")
+    p256dh = models.TextField(verbose_name="P256DH Key")
+    auth = models.TextField(verbose_name="Auth Secret")
+    
+    # Metadata
+    user_agent = models.CharField(max_length=500, blank=True, verbose_name="Browser/Gerät")
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(auto_now=True)
+    
+    # Notification Preferences
+    training_reminders = models.BooleanField(default=True, verbose_name="Trainings-Erinnerungen")
+    rest_day_reminders = models.BooleanField(default=True, verbose_name="Ruhetag-Benachrichtigungen")
+    achievement_notifications = models.BooleanField(default=True, verbose_name="Erfolgs-Benachrichtigungen")
+    
+    class Meta:
+        verbose_name = "Push Subscription"
+        verbose_name_plural = "Push Subscriptions"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.user_agent[:50]}"
