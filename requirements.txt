@@ -29,3 +29,7 @@ django-redis==5.4.0
 
 # Web Push Notifications
 pywebpush==1.14.1
+
+# ML Coach - Machine Learning (CPU-only, keine GPU)
+scikit-learn==1.6.1
+joblib==1.5.0

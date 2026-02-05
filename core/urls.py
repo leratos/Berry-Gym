@@ -144,4 +144,10 @@ urlpatterns = [
     path('api/push/subscribe/', views.subscribe_push, name='subscribe_push'),
     path('api/push/unsubscribe/', views.unsubscribe_push, name='unsubscribe_push'),
     path('api/push/vapid-key/', views.get_vapid_public_key, name='get_vapid_public_key'),
+    
+    # ML Prediction (scikit-learn, 100% lokal, CPU-only)
+    path('api/ml/train/', views.ml_train_model, name='ml_train_model'),
+    path('api/ml/predict/<int:uebung_id>/', views.ml_predict_weight, name='ml_predict_weight'),
+    path('api/ml/model-info/<int:uebung_id>/', views.ml_model_info, name='ml_model_info'),
+    path('ml/dashboard/', views.ml_dashboard, name='ml_dashboard'),
 ]
