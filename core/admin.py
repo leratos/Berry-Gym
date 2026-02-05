@@ -312,7 +312,9 @@ class UebungTagAdmin(admin.ModelAdmin):
     
     def anzahl_uebungen(self, obj):
         count = obj.uebungen.count()
-        return f'{count} Ãbungen'
+
+        return f'{count} Übungen'
+
     anzahl_uebungen.short_description = 'Verwendung'
 
 # --- ML PREDICTION MODELS ---
