@@ -11,7 +11,6 @@ import os
 import joblib
 import numpy as np
 from datetime import timedelta
-from django.utils import timezone
 from django.core.cache import cache
 
 
