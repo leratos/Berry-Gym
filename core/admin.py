@@ -1,13 +1,13 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django.utils.html import format_html
 from django import forms
 from .models import (
     Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, 
     ProgressPhoto, Equipment, InviteCode, WaitlistEntry, Feedback, MUSKELGRUPPEN,
-    UebungTag
+    UebungTag, MLPredictionModel
 )
 
-# --- ÜBUNGEN ---
+# --- ÃBUNGEN ---
 class UebungAdminForm(forms.ModelForm):
     hilfsmuskeln = forms.MultipleChoiceField(
         choices=MUSKELGRUPPEN,
@@ -51,7 +51,7 @@ class UebungAdmin(admin.ModelAdmin):
             'fields': ('bild', 'video_link', 'video_file', 'video_thumbnail'),
             'description': 'YouTube/Vimeo Link ODER Video-Datei hochladen. Thumbnail ist optional.'
         }),
-        ('Zusätzliche Infos', {
+        ('ZusÃ¤tzliche Infos', {
             'fields': ('beschreibung',),
             'classes': ('collapse',)
         }),
@@ -59,9 +59,9 @@ class UebungAdmin(admin.ModelAdmin):
     
     def video_status(self, obj):
         if obj.video_file:
-            return format_html('<span style="color:green;">✓ Upload</span>')
+            return format_html('<span style="color:green;">â Upload</span>')
         elif obj.video_link:
-            return format_html('<span style="color:blue;">✓ Link</span>')
+            return format_html('<span style="color:blue;">â Link</span>')
         return format_html('<span style="color:gray;">-</span>')
     video_status.short_description = 'Video'
     
@@ -81,7 +81,7 @@ class UebungAdmin(admin.ModelAdmin):
         equipment_list = obj.equipment.all()
         if equipment_list:
             return ', '.join(str(eq) for eq in equipment_list[:2]) + ('...' if len(equipment_list) > 2 else '')
-        return '❌ Kein Equipment'
+        return 'â Kein Equipment'
     equipment_anzeige.short_description = 'Equipment'
     
     def hilfsmuskel_anzeige(self, obj):
@@ -107,24 +107,24 @@ class TrainingseinheitAdmin(admin.ModelAdmin):
 
     def anzahl_saetze(self, obj):
         return obj.saetze.count()
-    anzahl_saetze.short_description = "Sätze"
+    anzahl_saetze.short_description = "SÃ¤tze"
 
-# --- PLÄNE (NEU) ---
+# --- PLÃNE (NEU) ---
 class PlanUebungInline(admin.TabularInline):
     model = PlanUebung
-    extra = 1 # Zeigt immer eine leere Zeile für neue Übungen
+    extra = 1 # Zeigt immer eine leere Zeile fÃ¼r neue Ãbungen
     ordering = ('reihenfolge',) # Sortiert nach deiner Reihenfolge
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = ('name', 'anzahl_uebungen')
-    inlines = [PlanUebungInline] # Hier fügst du die Übungen hinzu
+    inlines = [PlanUebungInline] # Hier fÃ¼gst du die Ãbungen hinzu
 
     def anzahl_uebungen(self, obj):
         return obj.uebungen.count()
-    anzahl_uebungen.short_description = "Übungen"
+    anzahl_uebungen.short_description = "Ãbungen"
 
-# --- KÖRPERWERTE ---
+# --- KÃRPERWERTE ---
 @admin.register(KoerperWerte)
 class KoerperWerteAdmin(admin.ModelAdmin):
     list_display = ('datum', 'gewicht', 'bmi', 'ffmi')
@@ -169,8 +169,8 @@ class InviteCodeAdmin(admin.ModelAdmin):
     
     def is_valid_status(self, obj):
         if obj.is_valid():
-            return format_html('<span style="color: green;">✓ Gültig</span>')
-        return format_html('<span style="color: red;">✗ Ungültig</span>')
+            return format_html('<span style="color: green;">â GÃ¼ltig</span>')
+        return format_html('<span style="color: red;">â UngÃ¼ltig</span>')
     is_valid_status.short_description = 'Status'
     
     actions = ['generate_codes']
@@ -226,11 +226,11 @@ class WaitlistEntryAdmin(admin.ModelAdmin):
     def actions_column(self, obj):
         if obj.status == 'pending':
             return format_html(
-                '<span style="color: orange; font-weight: bold;">⏳ Warte auf Approval</span>'
+                '<span style="color: orange; font-weight: bold;">â³ Warte auf Approval</span>'
             )
         elif obj.status == 'approved' and obj.invite_code:
             return format_html(
-                '<span style="color: green;">✓ Code: {}</span>',
+                '<span style="color: green;">â Code: {}</span>',
                 obj.invite_code.code
             )
         return '-'
@@ -244,13 +244,13 @@ class WaitlistEntryAdmin(admin.ModelAdmin):
         for entry in queryset.filter(status='pending'):
             if entry.approve_and_send_code():
                 count += 1
-        self.message_user(request, f'{count} Einträge wurden approved')
-    approve_selected.short_description = 'Ausgewählte approven & Code senden'
+        self.message_user(request, f'{count} EintrÃ¤ge wurden approved')
+    approve_selected.short_description = 'AusgewÃ¤hlte approven & Code senden'
     
     def mark_as_spam(self, request, queryset):
         """Als Spam markieren"""
         count = queryset.update(status='spam')
-        self.message_user(request, f'{count} Einträge als Spam markiert')
+        self.message_user(request, f'{count} EintrÃ¤ge als Spam markiert')
     mark_as_spam.short_description = 'Als Spam markieren'
 
 
@@ -277,20 +277,20 @@ class FeedbackAdmin(admin.ModelAdmin):
     def mark_accepted(self, request, queryset):
         count = queryset.update(status='ACCEPTED')
         self.message_user(request, f'{count} Feedback(s) als angenommen markiert')
-    mark_accepted.short_description = '✅ Als angenommen markieren'
+    mark_accepted.short_description = 'â Als angenommen markieren'
     
     def mark_rejected(self, request, queryset):
         count = queryset.update(status='REJECTED')
         self.message_user(request, f'{count} Feedback(s) als abgelehnt markiert')
-    mark_rejected.short_description = '❌ Als abgelehnt markieren'
+    mark_rejected.short_description = 'â Als abgelehnt markieren'
     
     def mark_done(self, request, queryset):
         count = queryset.update(status='DONE')
         self.message_user(request, f'{count} Feedback(s) als umgesetzt markiert')
-    mark_done.short_description = '🎉 Als umgesetzt markieren'
+    mark_done.short_description = 'ð Als umgesetzt markieren'
 
 
-# --- ÜBUNGS-TAGS ---
+# --- ÃBUNGS-TAGS ---
 @admin.register(UebungTag)
 class UebungTagAdmin(admin.ModelAdmin):
     list_display = ('name_display', 'farbe_preview', 'beschreibung', 'anzahl_uebungen')
@@ -312,5 +312,70 @@ class UebungTagAdmin(admin.ModelAdmin):
     
     def anzahl_uebungen(self, obj):
         count = obj.uebungen.count()
-        return f'{count} Übungen'
+        return f'{count} Ãbungen'
     anzahl_uebungen.short_description = 'Verwendung'
+
+# --- ML PREDICTION MODELS ---
+@admin.register(MLPredictionModel)
+class MLPredictionModelAdmin(admin.ModelAdmin):
+    list_display = ('user', 'model_type_display', 'uebung', 'status_display', 'training_samples', 'accuracy_display', 'trained_at', 'needs_retrain_display')
+    list_filter = ('model_type', 'status', 'trained_at')
+    search_fields = ('user__username', 'uebung__bezeichnung')
+    ordering = ('-trained_at',)
+    readonly_fields = ('model_path', 'trained_at', 'training_samples', 'accuracy_score', 'mean_absolute_error', 'feature_stats', 'hyperparameters')
+    
+    fieldsets = (
+        ('Model Info', {
+            'fields': ('user', 'model_type', 'uebung', 'status')
+        }),
+        ('Training Metrics', {
+            'fields': ('trained_at', 'training_samples', 'accuracy_score', 'mean_absolute_error')
+        }),
+        ('Technical Details', {
+            'fields': ('model_path', 'hyperparameters', 'feature_stats'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def model_type_display(self, obj):
+        return obj.get_model_type_display()
+    model_type_display.short_description = 'Typ'
+    
+    def status_display(self, obj):
+        colors = {
+            'TRAINING': 'orange',
+            'READY': 'green',
+            'OUTDATED': 'gray',
+            'ERROR': 'red',
+        }
+        return format_html('<span style="color:{};"> {}</span>', colors.get(obj.status, 'black'), obj.get_status_display())
+    status_display.short_description = 'Status'
+    
+    def accuracy_display(self, obj):
+        if obj.accuracy_score is not None:
+            return f'R²={obj.accuracy_score:.3f}, MAE={obj.mean_absolute_error:.1f}kg'
+        return '-'
+    accuracy_display.short_description = 'Genauigkeit'
+    
+    def needs_retrain_display(self, obj):
+        if obj.needs_retraining():
+            return format_html('<span style="color:orange;"> Ja</span>')
+        return format_html('<span style="color:green;"> Nein</span>')
+    needs_retrain_display.short_description = 'Neu trainieren?'
+    
+    actions = ['retrain_models']
+    
+    def retrain_models(self, request, queryset):
+        """Admin Action: Trainiert ausgewählte Modelle neu"""
+        from ml_coach.ml_trainer import MLTrainer
+        
+        count = 0
+        for ml_model in queryset:
+            trainer = MLTrainer(ml_model.user, ml_model.uebung)
+            new_model, metrics = trainer.train_model()
+            if new_model:
+                count += 1
+        
+        self.message_user(request, f'{count} Modelle neu trainiert')
+    retrain_models.short_description = ' Modelle neu trainieren'
+

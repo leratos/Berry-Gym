@@ -317,8 +317,8 @@
                         {% if empf %}
                         <div class="px-3 py-2 bg-dark bg-opacity-50 border-bottom border-secondary">
                             <small class="text-info">
-                                <i class="bi bi-lightbulb-fill me-1"></i>
-                                <strong>Empfehlung:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
+                                <i class="bi bi-cpu-fill me-1"></i>
+                                <strong>ML-Empfehlung:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
                                 <button class="btn btn-sm {% if empf.pause_from_plan %}btn-warning{% else %}btn-outline-warning{% endif %} py-0 px-2 ms-2" 
                                         onclick="setTimerDuration({{ empf.pause }}); startRestTimer();" 
                                         title="{% if empf.pause_from_plan %}Pause aus KI-Plan{% else %}Berechnete Pause{% endif %} - Klick zum Starten">
@@ -1377,6 +1377,7 @@
     <!-- Keyboard Shortcuts -->
     <script src="{% static 'core/js/keyboard-shortcuts.js' %}"></script>
     
+    <script>
     <!-- Funktion um offline Satz in UI hinzuzufügen -->
         function addOfflineSetToUI(setData) {
             // Finde oder erstelle Übungs-Container
