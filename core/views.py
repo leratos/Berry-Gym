@@ -6039,7 +6039,7 @@ def unsubscribe_push(request):
         
     except Exception as e:
         logger.error(f'Push unsubscribe error: {e}', exc_info=True)
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': 'An internal error has occurred while unsubscribing from push notifications.'}, status=500)
 
 
 @login_required
