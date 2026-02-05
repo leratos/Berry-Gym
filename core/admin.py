@@ -59,9 +59,9 @@ class UebungAdmin(admin.ModelAdmin):
     
     def video_status(self, obj):
         if obj.video_file:
-            return format_html('<span style="color:green;">â Upload</span>')
+            return format_html('<span style="color:green;">✓ Upload</span>')
         elif obj.video_link:
-            return format_html('<span style="color:blue;">â Link</span>')
+            return format_html('<span style="color:blue;">✓ Link</span>')
         return format_html('<span style="color:gray;">-</span>')
     video_status.short_description = 'Video'
     
@@ -81,7 +81,7 @@ class UebungAdmin(admin.ModelAdmin):
         equipment_list = obj.equipment.all()
         if equipment_list:
             return ', '.join(str(eq) for eq in equipment_list[:2]) + ('...' if len(equipment_list) > 2 else '')
-        return 'â Kein Equipment'
+        return '❌ Kein Equipment'
     equipment_anzeige.short_description = 'Equipment'
     
     def hilfsmuskel_anzeige(self, obj):
@@ -169,8 +169,8 @@ class InviteCodeAdmin(admin.ModelAdmin):
     
     def is_valid_status(self, obj):
         if obj.is_valid():
-            return format_html('<span style="color: green;">â Gültig</span>')
-        return format_html('<span style="color: red;">â Ungültig</span>')
+            return format_html('<span style="color: green;">✓ Gültig</span>')
+        return format_html('<span style="color: red;">✗ Ungültig</span>')
     is_valid_status.short_description = 'Status'
     
     actions = ['generate_codes']
@@ -226,11 +226,11 @@ class WaitlistEntryAdmin(admin.ModelAdmin):
     def actions_column(self, obj):
         if obj.status == 'pending':
             return format_html(
-                '<span style="color: orange; font-weight: bold;">â³ Warte auf Approval</span>'
+                '<span style="color: orange; font-weight: bold;">⏳ Warte auf Approval</span>'
             )
         elif obj.status == 'approved' and obj.invite_code:
             return format_html(
-                '<span style="color: green;">â Code: {}</span>',
+                '<span style="color: green;">✓ Code: {}</span>',
                 obj.invite_code.code
             )
         return '-'
@@ -282,7 +282,7 @@ class FeedbackAdmin(admin.ModelAdmin):
     def mark_rejected(self, request, queryset):
         count = queryset.update(status='REJECTED')
         self.message_user(request, f'{count} Feedback(s) als abgelehnt markiert')
-    mark_rejected.short_description = 'â Als abgelehnt markieren'
+    mark_rejected.short_description = '❌ Als abgelehnt markieren'
     
     def mark_done(self, request, queryset):
         count = queryset.update(status='DONE')
