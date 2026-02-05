@@ -2,11 +2,11 @@
 
 <div align="center">
 
-![Django](https://img.shields.io/badge/Django-5.0.3-green?style=flat-square)
+![Django](https://img.shields.io/badge/Django-5.1.15-green?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square)
 ![Database](https://img.shields.io/badge/Database-MariaDB%20%7C%20SQLite-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
-![Version](https://img.shields.io/badge/Version-0.7.8-brightgreen?style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.8.0-brightgreen?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-Ready-purple?style=flat-square)
 
 **Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach, Custom Übungen & AI Performance-Analyse**
@@ -53,18 +53,25 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit
   - Vollständige Integration in Training & Pläne
   - Custom-Badge zur Unterscheidung von globalen Übungen
 
+- **Übungs-Video-Anleitungen** (v0.8.0)
+  - Video-Links für Übungen (YouTube & Vimeo Support)
+  - Responsive Video-Player im Exercise Info Modal
+  - Automatische Konvertierung zu Embed-Format
+  - Formcheck-Videos direkt beim Training verfügbar
+
 - **Körperwerte & Statistiken**
   - Gewicht, Körperfettanteil, Muskelmasse tracking
   - BMI & FFMI Berechnung
   - Progress Photos (optional)
   - Langzeit-Trend-Analysen
 
-- **Cardio-Tracking (Lite)**
+- **Cardio-Tracking (Lite)** (v0.8.0)
   - Schnelles Erfassen von Cardio ohne Trainingsplan
-  - 9 Aktivitäten: Schwimmen, Laufen, Radfahren, Rudern, Gehen, HIIT, Stepper, Seilspringen
-  - 3 Intensitätsstufen mit Ermüdungspunkten
-  - Automatische Integration in Ermüdungsindex
+  - 9 Aktivitäten: Schwimmen, Laufen, Radfahren, Rudern, Gehen, HIIT, Stepper, Seilspringen, Sonstiges
+  - 3 Intensitätsstufen mit Ermüdungspunkten (Leicht: 0.1/Min, Moderat: 0.2/Min, Intensiv: 0.4/Min)
+  - Automatische Integration in Ermüdungsindex (max. 20 Punkte bei 120+ Fatigue)
   - Dashboard-Statistiken (Einheiten & Minuten pro Woche)
+  - Cardio-Liste mit Lösch-Funktion
 
 - **1RM Tracking & PRs**
   - Automatische 1RM Berechnung (Epley-Formel)
@@ -215,8 +222,8 @@ python ai_coach/plan_generator.py --user-id 1
 
 ```bash
 # 1. Repository klonen
-git clone https://github.com/leratos/Fitness.git
-cd Fitness
+git clone https://github.com/leratos/Berry-Gym.git
+cd Berry-Gym
 
 # 2. Virtual Environment erstellen
 python -m venv venv
@@ -502,7 +509,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 ## 🛠️ Technologie-Stack
 
-- **Backend:** Django 5.0.3, Python 3.12
+- **Backend:** Django 5.1.15, Python 3.12
 - **Frontend:** Bootstrap 5.3, Chart.js, Vanilla JavaScript
 - **Database:** MariaDB (Production), SQLite (Development)
 - **AI:** Ollama (lokal), OpenRouter (Cloud Fallback)
@@ -510,7 +517,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - **PWA:** Service Worker, Manifest.json
 - **PDF Generation:** xhtml2pdf 0.2.16, matplotlib 3.10.8, cairosvg 2.7.1, Pillow 12.1.0
 
-### Projekt-Statistiken (Version 0.7.8)
+### Projekt-Statistiken (Version 0.8.0)
 - **Lines of Code:** ~17,000+
 - **Python Files:** 60+
 - **Templates:** 30+ HTML/Django
@@ -537,7 +544,9 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 ## 🔮 Roadmap & Known Limitations
 
-### Aktuell verfügbar (v0.7.8)
+### Aktuell verfügbar (v0.8.0)
+- ✅ Cardio Lite Tracking (9 Aktivitäten mit Ermüdungsindex)
+- ✅ Video-Support für Übungen (YouTube & Vimeo)
 - ✅ Custom Übungen erstellen
 - ✅ AI Performance-Analyse (Dashboard Widget)
 - ✅ AI Training Counter (jedes 3. Training)
@@ -545,6 +554,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - ✅ Keyboard-Shortcuts
 - ✅ Undo-Funktion
 - ✅ Autocomplete für Übungssuche
+- ✅ Security Improvements (31+ Alerts behoben)
 
 ### Geplant (siehe ROADMAP.md)
 - 🔜 Progress Photos mit KI-Analyse
@@ -569,8 +579,8 @@ Contributions sind willkommen! Siehe [CONTRIBUTING.md](CONTRIBUTING.md) für Gui
 
 ```bash
 # Fork & Clone
-git clone https://github.com/leratos/Fitness.git
-cd homegym
+git clone https://github.com/leratos/Berry-Gym.git
+cd Berry-Gym
 
 # Branch erstellen
 git checkout -b feature/neue-funktion
@@ -671,7 +681,7 @@ Dieses Projekt ist unter der [MIT License](LICENSE) lizenziert.
 
 ## 📧 Support
 
-- **Issues:** [GitHub Issues](https://github.com/leratos/Fitness/issues)
+- **Issues:** [GitHub Issues](https://github.com/leratos/Berry-Gym/issues)
 - **Dokumentation:** [ROADMAP.md](ROADMAP.md), [AI_COACH_CONCEPT.md](docs/AI_COACH_CONCEPT.md), [Docs Index](docs/README.md)
 - **Deployment:** [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
