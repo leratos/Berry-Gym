@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
-**Stand:** 04.02.2026  
-**Version:** 0.7.8
+**Stand:** 05.02.2026  
+**Version:** 0.8.0
 
 ---
 
@@ -93,11 +93,22 @@
 - [x] **Trainings-Heatmap** (90-Tage Kalender-Aktivität)
 - [x] **Performance Form-Index** (0-100 Score aus Frequenz, RPE, Volumen, Konsistenz)
 - [x] **Durchschnittliches RPE pro Übung** (mit Trend-Anzeige: improving/stable/declining)
+- [x] **Cardio Lite Tracking** ✅ (30.01.2026)
+  - 9 Aktivitäten (Schwimmen, Laufen, Radfahren, Rudern, Gehen, HIIT, Stepper, Seilspringen, Sonstiges)
+  - 3 Intensitätsstufen (Leicht, Moderat, Intensiv)
+  - Ermüdungspunkte-Berechnung (0.1-0.4 Punkte pro Minute)
+  - Integration in Ermüdungsindex
+  - Dashboard-Statistiken (Anzahl + Minuten diese Woche)
+  - Cardio-Liste mit Lösch-Funktion
+  - API-Endpoints: cardio/add/, cardio/list/, cardio/delete/
 
 ### Deload & Recovery Management
 - [x] **Automatische Deload-Erkennung** (Warnung bei >20% Volumen-Spikes)
 - [x] **Volumen-Drop Erkennung** (Warnung bei >30% Rückgang)
-- [x] **Ermüdungs-Index** (0-100 Score aus Volumen-Spikes, hohem RPE, Trainingsfrequenz)
+- [x] **Ermüdungs-Index** (0-100 Score aus Volumen-Spikes, hohem RPE, Trainingsfrequenz, Cardio-Fatigue)
+  - Berücksichtigt Kraft-Training (Sets × RPE)
+  - Berücksichtigt Cardio-Training (Ermüdungspunkte basierend auf Intensität × Dauer)
+  - Max. 20 Punkte für Cardio-Ermüdung (bei 120+ Cardio-Fatigue-Punkten)
 - [x] **Empfehlungen für Regeneration** (automatische Warnungen bei hoher Ermüdung)
 
 ### Social & Motivation
@@ -233,7 +244,11 @@
 - [x] **Band-Alternativen für Kabelzug-Übungen** (Crossover, Crunches, Lat Pulldown, Straight-Arm Pulldown, Trizeps Pushdown) ✅
 - [x] **Cardio/Ganzkörper Ergänzungen** (Burpees, Jump Squats, Bear Crawls, High Knees, Broad Jumps) ✅
 - [x] **Datenbereinigung & Coverage** (Equipment-Mappings gefixt, Coverage ~91% mit vorhandenem Equipment) ✅
-- [ ] Video-Anleitungen hochladen
+- [x] **Video-Support** ✅ (01.02.2026)
+  - video_link Feld im Uebung Model
+  - Unterstützt YouTube & Vimeo URLs
+  - Auto-Konvertierung zu Embed-Format
+  - Video-Player in Exercise Info Modal
 - [ ] Animationen für Übungen
 - [ ] Alternative Übungen vorschlagen
 - [x] **Übungen favorisieren** ✅ (04.02.2026)
@@ -277,9 +292,16 @@
   - Automatisches Syncen wenn Verbindung zurück
   - Retry-Logic bei Fehlern
   - Markiert gesyncte Daten in IndexedDB
-- [ ] Push-Notifications aktivieren (vorbereitet, benötigt VAPID Keys)
+- [x] **Push-Notifications** ✅ (05.02.2026)
+  - PushSubscription Model (user, endpoint, p256dh, auth)
+  - API-Endpoints: subscribe, unsubscribe, vapid-key
+  - PushNotificationsManager Class (JavaScript)
+  - send_push_notification() Utility-Funktion
+  - VAPID Keys Support (generate_vapid_keys.py)
+  - Notification Preferences (training, rest day, achievements)
+  - pywebpush Integration
 
-**Status:** ✅ 85% Komplett (6/7 Features) - Push Notifications optional für später
+**Status:** ✅ 100% Komplett (7/7 Features)
 
 **Dateien:**
 - `core/static/core/js/offline-manager.js` (280 Zeilen - IndexedDB Manager)
@@ -308,18 +330,36 @@
 
 ### Export & Backup
 - [ ] CSV/Excel Export (alle Daten)
-- [ ] PDF-Report generieren (Monats-/Jahresreport)
+- [x] **PDF-Report generieren** ✅ (11.01.2026)
+  - Trainings-Statistik Report (Multi-Page)
+  - Body-Map Visualisierung
+  - Muskelgruppen-Analyse mit Charts
+  - Push/Pull Balance Assessment
+  - Intelligente Empfehlungen
 - [ ] Cloud-Backup (automatisch)
 - [ ] Daten-Import (CSV)
 - [ ] Google Drive Integration
 - [ ] Backup-Erinnerungen
 
 ### Fortgeschrittene Analytics
-- [ ] ML-basierte Trainingsempfehlungen
-- [ ] Verletzungsrisiko-Erkennung (Volumen-Spikes)
-- [ ] Plateau-Erkennung mit Lösungsvorschlägen
-- [ ] Optimale Trainingsfrequenz berechnen
-- [ ] Kraftvorhersage (z.B. "In 12 Wochen: 100kg Bankdrücken")
+- [x] **KI-basierte Trainingsempfehlungen** ✅ (AI Coach mit LLM)
+  - Plan-Generierung mit Historie-Analyse
+  - Plan-Optimierung mit Performance-Checks
+  - Live Training Guidance
+  - Hybrid System: Ollama (lokal, kostenlos) + OpenRouter Fallback (Cloud, ~0.003€)
+- [x] **ML-Vorhersagemodelle** ✅ (05.02.2026)
+  - Kraftvorhersage basierend auf Trainingshistorie (scikit-learn Random Forest Regressor)
+  - Optimale Trainingsfrequenz-Empfehlung (ML-basierte Analyse)
+  - Personalisierte Volumen-Empfehlungen (trainiert auf individuellen Daten)
+  - **Tech-Stack:** scikit-learn 1.6.1, joblib 1.5.0 (benötigt KEINE GPU, läuft auf CPU)
+  - **Training:** <5 Sekunden pro User-Modell (kleine Datensätze)
+  - **Inferenz:** <10ms für Vorhersagen
+  - **API Endpoints:** /api/ml/train/, /api/ml/predict/<id>/, /api/ml/model-info/<id>/
+  - **Dashboard:** /ml/dashboard/ mit Modell-Übersicht
+  - **Management Command:** python manage.py train_ml_models
+  - **Vorteil:** Kostenlos, privat, offline-fähig, keine API-Calls, keine GPU nötig
+- [x] **Verletzungsrisiko-Erkennung** ✅ (Volumen-Spikes + Cardio-Fatigue im Ermüdungsindex)
+- [x] **Plateau-Erkennung** ✅ (AI Coach erkennt stagnierende Übungen 4+ Wochen)
 - [ ] Muskelgruppen-Priorisierung vorschlagen
 
 ---
@@ -470,11 +510,21 @@
 
 ### ⚙️ Medium Priority (Nächste 1-2 Monate)
 
-**4. Notizen & Kommentare erweitern** Impact: 6/10 | Aufwand: 3h
-- [ ] **Satz-Notizen** (bereits vorhanden, aber UI verbessern)
+**4. Notizen & Kommentare erweitern** Impact: 6/10 | Aufwand: 4h (1h bereits investiert)
+- [x] **Satz-Notizen mit Quick-Tags** ✅ (05.02.2026)
+  - 5 Emoji-Tag-Buttons (⭐ Perfekt, 👍 Gut, ⚠️ Schwierig, 🤕 Mit Hilfe, 😓 Schmerz)
+  - insertTag(), clearNotiz(), updateCharCount() Funktionen
+  - Zeichenzähler (0/500)
+  - Notizen pro Satz persistent mit Anzeige in Historie
 - [ ] **Übungs-Notizen** (persistent, nicht nur pro Training)
+  - Separate Notiz pro Übung (unabhängig von Training)
+  - "Technik-Tipps", "Setup-Hinweise", "Warnung"
+  - Anzeige in Übungsauswahl und Training
 - [ ] **Trainingstag-Kommentare** (Tagesform, Schlaf, Stress)
-- [ ] **Rich Text Editor** (Bold, Listen, Emojis)
+  - Tagesform-Scale (1-10)
+  - Schlafqualität (1-10), Stress-Level (1-10)
+  - Freitext-Kommentar
+- [ ] **Rich Text Editor für Notizen** (Bold, Listen, erweiterter Emoji-Picker)
 
 **5. Plan-Templates & Sharing** Impact: 6/10 | Aufwand: 5h
 - [ ] **Plan-Templates** (Push/Pull/Legs, Upper/Lower, etc.)
@@ -492,6 +542,16 @@
 ### 🔮 Low Priority (Later / Community-Request)
 
 **7. Social Features** Impact: 4/10 | Aufwand: 10h+
+- [x] **Plan-Sharing** ✅ (01.02.2026)
+  - Öffentliche Plan-Bibliothek
+  - QR-Code & Link-Sharing
+  - Shared Plans Übersicht
+  - Trainingspartner einladen
+- [x] **Feedback-System** ✅ (28.01.2026)
+  - Feedback erstellen (Feature-Request, Bug, Verbesserung)
+  - Feedback-Liste mit Filter
+  - Admin-Kommentare
+  - Status-Tracking (Offen, In Bearbeitung, Erledigt)
 - [ ] User-Profile (öffentlich/privat)
 - [ ] Leaderboards (1RM Rankings)
 - [ ] Workout-Sharing (Social Feed)
@@ -516,29 +576,153 @@
 
 ---
 
-## 🎯 Empfohlene Reihenfolge (Nächste 4 Features)
+## 🎯 Nächste Schritte (Priorisiert nach Impact & User-Feedback)
 
-1. **Superset beim Plan-Erstellen** (4h)
-   - Model existiert bereits
-   - Nur UI im Plan-Editor fehlt
-   - Hoher User-Value
+### 🔥 Sofort (Nächste 1-2 Tage)
 
-2. **Plan als PDF exportieren** (4h)
-   - PDF-Export existiert bereits für Statistiken
-   - Code wiederverwenden
-   - Gym-freundliches Feature
+**1. Beta-Feature-Discovery verbessern** ⭐ Impact: 8/10 | Aufwand: 2h
+- [ ] **Onboarding-Tour für neue Beta-User**
+  - Tooltip-System mit Intro.js oder Shepherd.js
+  - Highlight wichtiger Features (Gewichtsempfehlungen, AI Coach, Plan-Templates)
+  - "Tour überspringen" Option
+- [ ] **Feature-Hints im Training**
+  - Erste 3 Trainings: Hinweis auf Gewichtsempfehlungen
+  - Erste 5 Trainings: Hinweis auf Quick-Tags für Notizen
+  - "Tipp des Tages" Carousel im Dashboard
+- [ ] **Beta-Feature-Liste im Dashboard**
+  - Collapsible Card "🎉 Neue Features"
+  - Checkboxen zum Abhaken (LocalStorage)
+  - Link zu detaillierter Doku
 
-3. **Plan-Templates** (5h)
-   - Schnellstart für neue User
-   - Reduziert Setup-Zeit massiv
-   - Gute Community-Feature Basis
+**Warum jetzt:** User finden Features nicht (Gewichtsempfehlungen waren versteckt)
 
-4. **AI Coach Auto-Suggest** (3h)
-   - Macht AI Coach proaktiver
-   - "Plan optimieren?" nach Training
-   - Dashboard-Integration
+### 🚀 Kurzfristig (Nächste 1-2 Wochen)
 
-**Gesamtaufwand:** ~16 Stunden für massive UX-Verbesserung
+**2. Gewichtsempfehlungen UI-Polish** ⭐ Impact: 7/10 | Aufwand: 3h
+- [ ] **Auffälligere Darstellung**
+  - Animierter Einblend-Effekt beim Öffnen einer Übung
+  - Pulsierender Badge bei neuer Empfehlung
+  - Farbcodierung (Grün = mehr Gewicht, Gelb = mehr Wdh, Blau = halten)
+- [ ] **Progressive Overload Visualisierung**
+  - Mini-Chart: Gewichtsverlauf letzte 5 Sessions
+  - "Streak" Anzeige (z.B. "3× in Folge gesteigert 🔥")
+  - Progression Badge (z.B. "+12.5kg in 4 Wochen")
+- [ ] **Empfehlungen als Overlay-Cards**
+  - Erscheint beim ersten Satz einer Übung
+  - "Übernehmen" Button zum Auto-Fill
+  - "Eigenes Gewicht wählen" Option
+
+**Warum wichtig:** Feature ist jetzt voll funktional, aber noch zu unauffällig
+
+**3. Notizen-System erweitern** ⭐ Impact: 6/10 | Aufwand: 3h (Quick-Tags bereits implementiert)
+- [x] **Satz-Notizen mit Quick-Tags** ✅ (05.02.2026)
+  - 5 Emoji-Tags, insertTag(), clearNotiz(), Zeichenzähler
+  - Notizen persistent pro Satz mit Historie-Anzeige
+- [ ] **Übungs-Notizen (persistent)**
+  - Separate Notiz pro Übung (nicht nur pro Training)
+  - "Technik-Tipps", "Setup-Hinweise", "Warnung"
+  - Anzeige in Übungsauswahl und Training
+- [ ] **Trainingstag-Kommentare**
+  - Tagesform-Scale (1-10)
+  - Schlafqualität (1-10)
+  - Stress-Level (1-10)
+  - Freitext-Kommentar
+- [ ] **Rich Text Editor für Notizen**
+  - Bold, Italic, Listen
+  - Emoji-Picker (erweitert)
+  - Text-Formatierung
+- [ ] **Notizen-Historie**
+  - Alle Notizen einer Übung durchsuchbar
+  - Datum + Training-ID
+  - "Häufigste Tags" Analyse
+
+**Warum jetzt:** Quick-Tags existieren schon, Erweiterung liegt nahe
+
+### 📊 Mittelfristig (Nächste 2-4 Wochen)
+
+**4. Enhanced Training Analytics** ⭐ Impact: 8/10 | Aufwand: 4h (Cardio ✅ bereits integriert)
+- [x] **Training-Heatmap mit Cardio** ✅ (30.01.2026)
+  - Heatmap zeigt Kraft-Training
+  - Cardio-Einheiten werden im Ermüdungsindex berücksichtigt
+- [x] **Cardio-Statistiken im Dashboard** ✅
+  - Anzahl Cardio-Einheiten diese Woche
+  - Gesamt-Minuten diese Woche
+  - Integration in Ermüdungsindex (Fatigue-Punkte)
+- [ ] **Training-Heatmap erweitern**
+  - Volumen pro Tag (Farbintensität)
+  - Tooltip mit Details (Übungen, Sets, Volumen)
+  - Filter: Nur Kraft / Nur Cardio / Beides
+- [ ] **Muscle Group Timeline**
+  - Wann wurde welche Muskelgruppe zuletzt trainiert?
+  - Ampel-System (Grün < 3 Tage, Gelb 3-7, Rot > 7)
+  - "Training empfohlen" Vorschläge
+- [ ] **Recovery Score**
+  - 0-100 basierend auf: letzte Trainings, Schlaf, Tagesform
+  - Empfehlung: "Heute Beine trainieren?" vs "Ruhetag?"
+  - Integration mit Cardio-Daten
+
+**5. Plan-Optimierung V2** ⭐ Impact: 7/10 | Aufwand: 5h
+- [ ] **Automatische Deload-Erkennung**
+  - Warnt bei 4+ Wochen ohne Deload
+  - Schlägt automatisch Deload-Woche vor
+  - "Jetzt Deload einplanen" Button
+- [ ] **Plateau-Breaking Vorschläge**
+  - Erkennt stagnierende Übungen (4+ Wochen kein Progress)
+  - Schlägt Variationen vor (Tempo, Griff, Winkel)
+  - Equipment-basierte Alternativen
+- [ ] **Volume Landmarks**
+  - "Du hast 10.000kg Volumen erreicht! 🎉"
+  - Monatliche/Wöchentliche Milestones
+  - Vergleich mit eigenem Durchschnitt
+
+**6. Mobile PWA Optimierungen** ⭐ Impact: 6/10 | Aufwand: 4h
+- [ ] **Fullscreen-Modus im Training**
+  - Verstecke Navbar beim Scrollen
+  - Fokus auf aktuelle Übung
+  - Swipe-Gesten (nächste Übung)
+- [ ] **Haptic Feedback**
+  - Vibration bei Satz gespeichert
+  - Vibration bei Timer-Ende (bereits vorhanden?)
+  - Vibration bei neuer PR
+- [ ] **Voice Input (experimentell)**
+  - "45 kg mal 10" → auto-fill
+  - "RPE 8" → RPE setzen
+  - Web Speech API
+
+### 🔮 Langfristig (1-2 Monate)
+
+**7. Social & Community** ⭐ Impact: 7/10 | Aufwand: 15h+
+- [ ] Öffentliche Profile (opt-in)
+- [ ] Leaderboards (1RM, Volumen, Streak)
+- [ ] Plan-Sharing erweitern (Kommentare, Bewertungen)
+- [ ] Training-Feed ("User X hat heute 5000kg Volumen!")
+
+**8. KI-Coach Erweiterungen** ⭐ Impact: 8/10 | Aufwand: 10h+
+- [ ] Video-Analyse (Formcheck via Kamera)
+- [ ] Sprachassistent während Training
+- [ ] Automatische Exercise-Logging (Kamera erkennt Übung)
+- [ ] Predictive Analytics ("In 8 Wochen: 100kg Bankdrücken")
+
+---
+
+## 📋 Empfohlene Umsetzungs-Reihenfolge
+
+**Phase 1 (Nächste Woche):**
+1. Beta-Feature-Discovery (2h) - Kritisch für User-Adoption
+2. Gewichtsempfehlungen UI-Polish (3h) - Feature ist da, braucht Sichtbarkeit
+**Gesamt: 5h**
+
+**Phase 2 (Woche 2-3):**
+3. Notizen-System erweitern (3h) - Quick-Tags ✅ bereits fertig, erweitern auf Übungs- & Trainingstag-Notizen
+4. Enhanced Training Analytics (4h) - Cardio ✅ bereits integriert, erweitern Heatmap + Timeline
+**Gesamt: 7h**
+
+**Phase 3 (Woche 4-6):**
+5. Plan-Optimierung V2 (5h)
+6. Mobile PWA Optimierungen (4h)
+**Gesamt: 9h**
+
+**Gesamtaufwand Phase 1-3:** ~21 Stunden für massive UX-Verbesserung und User-Engagement (Quick-Tags ✅ 1h + Cardio ✅ 2h bereits fertig)
 
 ---
 
@@ -546,6 +730,29 @@
 
 ### Bugs
 - [ ] --
+
+### Bug-Fixes (05.02.2026)
+- [x] **Gewichtsempfehlungen für freie Trainings** ✅
+  - Funktionierten vorher nur bei Trainings MIT Plan
+  - Jetzt auch für freie Trainings verfügbar
+  - Backend berechnet Empfehlungen für alle Übungen im aktuellen Training
+- [x] **JavaScript Rendering-Bug behoben** ✅
+  - Fehlendes `<script>`-Tag in training_session.html
+  - JavaScript-Code wurde als Text auf Seite angezeigt
+  - Notiz-Funktionen (insertTag, clearNotiz, updateCharCount) nun korrekt ausgeführt
+- [x] **Service Worker Cache v5** ✅
+  - Cache-Version erhöht für Browser-Update
+  - Alte JavaScript-Versionen werden nicht mehr cached
+- [x] **Push-Notifications vollständig implementiert** ✅
+  - Backend: PushSubscription Model, API-Endpoints, send_push_notification()
+  - Frontend: PushNotificationsManager mit subscribe/unsubscribe
+  - Infrastructure: VAPID Keys, pywebpush Integration
+- [x] **Security Fixes** ✅ (30.01-04.02.2026)
+  - Fixed XSS vulnerability in AI Chat (textContent statt innerHTML)
+  - Fixed Information Disclosure in API responses (removed technical error details)
+  - Fixed ReDoS vulnerability (bounded regex quantifiers)
+  - URL Sanitization in sharing features
+  - GitHub CodeQL Alerts closed (31+ alerts resolved)
 
 ### Verbesserungen
 - [x] **Undo-Funktion für gelöschte Sätze** ✅ (04.02.2026)
@@ -565,8 +772,80 @@
   - Highlight-Match
   - Score-basiertes Ranking
   - Integration in training_session.html
+- [x] **Notiz-System mit Quick-Tags** ✅ (05.02.2026)
+  - 5 Emoji-Tag-Buttons (⭐ Perfekt, 👍 Gut, ⚠️ Schwierig, 🤕 Mit Hilfe, 😓 Schmerz)
+  - insertTag(), clearNotiz(), updateCharCount() Funktionen
+  - Zeichenzähler (0/500)
+  - Notizen pro Satz persistent
+  - Anzeige in Trainingshistorie
 - [ ] **Bessere Error-Messages** (User-freundliche Fehlerbeschreibungen)
 - [x] **Toast-Notifications** (statt Alerts für Erfolgs-Meldungen) ✅ (03.02.2026)
+
+---
+
+## 🎉 Neue Features in Version 0.8.0 (30.01-05.02.2026)
+
+### Cardio Lite Tracking
+Einfaches Ausdauertraining-Tracking ohne Trainingsplan:
+
+1. **CardioEinheit Model**
+   - 9 Aktivitäten: Schwimmen, Laufen, Radfahren, Rudern, Gehen/Walking, HIIT, Stepper/Crosstrainer, Seilspringen, Sonstiges
+   - 3 Intensitätsstufen: Leicht (Zone 2), Moderat (Zone 3), Intensiv (Zone 4-5)
+   - Dauer in Minuten, Datum, optionale Notiz
+
+2. **Ermüdungspunkte-System**
+   - LEICHT: 0.1 Punkte/Min (z.B. 30 Min = 3.0 Punkte)
+   - MODERAT: 0.2 Punkte/Min (z.B. 45 Min = 9.0 Punkte)
+   - INTENSIV: 0.4 Punkte/Min (z.B. 20 Min HIIT = 8.0 Punkte)
+   - Integration in Ermüdungsindex (max. 20 Punkte bei 120+ Fatigue-Punkten)
+
+3. **Dashboard-Integration**
+   - Cardio diese Woche: Anzahl Einheiten
+   - Cardio-Minuten diese Woche
+   - Ermüdungs-Index berücksichtigt Cardio-Volumen
+
+4. **UI & Features**
+   - Schnelles Hinzufügen: cardio/add/
+   - Übersicht: cardio/list/ mit Datum, Aktivität, Dauer, Intensität
+   - Löschen-Funktion: cardio/delete/{id}/
+   - Toast-Benachrichtigungen
+
+**Technische Details:**
+- Model: `CardioEinheit` in core/models.py
+- Views: cardio_add, cardio_list, cardio_delete
+- Templates: cardio_add.html, cardio_list.html
+- API-Integration: Ermüdungsindex + Dashboard-Metriken
+
+**Warum wichtig:** Viele User machen zusätzlich Ausdauertraining, das jetzt ohne komplexen Trainingsplan getrackt werden kann. Ermüdungsindex wird genauer durch Cardio-Einbeziehung.
+
+### Video-Support für Übungen
+Übungen können jetzt Video-Anleitungen haben:
+
+1. **Video-Link Integration**
+   - Feld `video_link` im Uebung Model
+   - Unterstützt YouTube & Vimeo URLs
+   - Auto-Konvertierung zu Embed-Format
+
+2. **Anzeige**
+   - Video-Player in Exercise Info Modal
+   - Responsive Einbettung (16:9)
+   - Fallback wenn kein Video vorhanden
+
+**Technische Details:**
+- Migration: alter video_link CharField
+- Admin: Video-URL-Eingabe mit Vorschau
+- Template: Einbettung via iframe
+
+### Security & Maintenance
+- **GitHub Security Alerts behoben (31+ Alerts):**
+  - XSS in AI Chat (textContent statt innerHTML)
+  - Information Disclosure in API responses
+  - ReDoS vulnerability (bounded regex)
+  - URL Sanitization
+- **Code-Qualität:**
+  - Improved error handling
+  - Input validation
+  - Safe string interpolation
 
 ---
 

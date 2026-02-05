@@ -935,74 +935,86 @@ def training_session(request, training_id):
                 'wiederholungen_ziel': pu.wiederholungen_ziel
             }
 
-    # Gewichtsempfehlungen für alle Übungen im Plan berechnen
+    # Gewichtsempfehlungen für alle Übungen berechnen (auch ohne Plan!)
     gewichts_empfehlungen = {}
+    
+    # Übungen im aktuellen Training sammeln (aus QuerySet, nicht aus sortierter Liste)
+    uebungen_im_training = set(training.saetze.values_list('uebung_id', flat=True).distinct())
+    
+    # Wenn Plan vorhanden, auch Plan-Übungen einschließen
     if training.plan:
-        for pu in training.plan.uebungen.all():
-            uebung_id = pu.uebung_id
-            # Letzten echten Satz dieser Übung finden (aus vorherigen Trainings)
-            letzter_satz = Satz.objects.filter(
-                einheit__user=request.user,
-                uebung_id=uebung_id,
-                ist_aufwaermsatz=False
-            ).exclude(einheit=training).order_by('-einheit__datum', '-satz_nr').first()
+        uebungen_im_training.update(training.plan.uebungen.values_list('uebung_id', flat=True))
+    
+    for uebung_id in uebungen_im_training:
+        # Letzten echten Satz dieser Übung finden (aus vorherigen Trainings)
+        letzter_satz = Satz.objects.filter(
+            einheit__user=request.user,
+            uebung_id=uebung_id,
+            ist_aufwaermsatz=False
+        ).exclude(einheit=training).order_by('-einheit__datum', '-satz_nr').first()
+        
+        if letzter_satz:
+            empfohlenes_gewicht = float(letzter_satz.gewicht)
+            empfohlene_wdh = letzter_satz.wiederholungen
             
-            if letzter_satz:
-                empfohlenes_gewicht = float(letzter_satz.gewicht)
-                empfohlene_wdh = letzter_satz.wiederholungen
-                
-                # Ziel-Wiederholungen aus dem Plan extrahieren (z.B. "8-10" → max 10)
-                ziel_wdh_str = pu.wiederholungen_ziel or "8-12"
-                try:
-                    if '-' in ziel_wdh_str:
-                        ziel_wdh_max = int(ziel_wdh_str.split('-')[1])
-                        ziel_wdh_min = int(ziel_wdh_str.split('-')[0])
-                    else:
-                        ziel_wdh_max = int(ziel_wdh_str)
-                        ziel_wdh_min = int(ziel_wdh_str)
-                except ValueError:
-                    ziel_wdh_max = 12
-                    ziel_wdh_min = 8
-                
-                # Progressive Overload Logik - berücksichtigt Planziel
-                if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
-                    # RPE zu leicht → mehr Gewicht
-                    empfohlenes_gewicht += 2.5
-                    hint = f"RPE {letzter_satz.rpe} → +2.5kg"
-                elif letzter_satz.wiederholungen >= ziel_wdh_max:
-                    # Obere Grenze erreicht → mehr Gewicht, Wdh zurück auf Minimum
-                    empfohlenes_gewicht += 2.5
-                    empfohlene_wdh = ziel_wdh_min
-                    hint = f"{ziel_wdh_max}+ Wdh → +2.5kg"
-                elif letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
-                    # RPE hoch aber noch im Wdh-Bereich → Wdh erhöhen (max bis Ziel)
-                    empfohlene_wdh = min(empfohlene_wdh + 1, ziel_wdh_max)
-                    hint = f"RPE {letzter_satz.rpe} → mehr Wdh"
+            # Ziel-Wiederholungen: Aus Plan falls vorhanden, sonst Standard 8-12
+            ziel_wdh_str = "8-12"  # Standard
+            plan_pausenzeit = None
+            if training.plan:
+                pu = training.plan.uebungen.filter(uebung_id=uebung_id).first()
+                if pu and pu.wiederholungen_ziel:
+                    ziel_wdh_str = pu.wiederholungen_ziel
+                if pu and hasattr(pu, 'pausenzeit') and pu.pausenzeit:
+                    plan_pausenzeit = pu.pausenzeit
+            
+            try:
+                if '-' in ziel_wdh_str:
+                    ziel_wdh_max = int(ziel_wdh_str.split('-')[1])
+                    ziel_wdh_min = int(ziel_wdh_str.split('-')[0])
                 else:
-                    hint = "Niveau halten"
-                
-                # Pausenempfehlung: Aus Plan nehmen falls vorhanden, sonst berechnen
-                plan_pausenzeit = pu.pausenzeit if hasattr(pu, 'pausenzeit') and pu.pausenzeit else None
-                
-                if plan_pausenzeit:
-                    # Plan hat Pausenzeit definiert → nutze diese
-                    empfohlene_pause = plan_pausenzeit
-                elif '+2.5kg' in hint:
-                    empfohlene_pause = 180  # 3 Min für Kraftsteigerung
-                elif 'mehr Wdh' in hint:
-                    empfohlene_pause = 90   # 90s für Volumen/Ausdauer
-                else:
-                    empfohlene_pause = 120  # 2 Min Standard
-                
-                gewichts_empfehlungen[uebung_id] = {
-                    'gewicht': empfohlenes_gewicht,
-                    'wdh': empfohlene_wdh,
-                    'letztes_gewicht': float(letzter_satz.gewicht),
-                    'letzte_wdh': letzter_satz.wiederholungen,
-                    'hint': hint,
-                    'pause': empfohlene_pause,
-                    'pause_from_plan': bool(plan_pausenzeit),
-                }
+                    ziel_wdh_max = int(ziel_wdh_str)
+                    ziel_wdh_min = int(ziel_wdh_str)
+            except ValueError:
+                ziel_wdh_max = 12
+                ziel_wdh_min = 8
+            
+            # Progressive Overload Logik - berücksichtigt Planziel
+            if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
+                # RPE zu leicht → mehr Gewicht
+                empfohlenes_gewicht += 2.5
+                hint = f"RPE {letzter_satz.rpe} → +2.5kg"
+            elif letzter_satz.wiederholungen >= ziel_wdh_max:
+                # Obere Grenze erreicht → mehr Gewicht, Wdh zurück auf Minimum
+                empfohlenes_gewicht += 2.5
+                empfohlene_wdh = ziel_wdh_min
+                hint = f"{ziel_wdh_max}+ Wdh → +2.5kg"
+            elif letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
+                # RPE hoch aber noch im Wdh-Bereich → Wdh erhöhen (max bis Ziel)
+                empfohlene_wdh = min(empfohlene_wdh + 1, ziel_wdh_max)
+                hint = f"RPE {letzter_satz.rpe} → mehr Wdh"
+            else:
+                hint = "Niveau halten"
+            
+            # Pausenempfehlung: Aus Plan nehmen falls vorhanden, sonst berechnen
+            if plan_pausenzeit:
+                # Plan hat Pausenzeit definiert → nutze diese
+                empfohlene_pause = plan_pausenzeit
+            elif '+2.5kg' in hint:
+                empfohlene_pause = 180  # 3 Min für Kraftsteigerung
+            elif 'mehr Wdh' in hint:
+                empfohlene_pause = 90   # 90s für Volumen/Ausdauer
+            else:
+                empfohlene_pause = 120  # 2 Min Standard
+            
+            gewichts_empfehlungen[uebung_id] = {
+                'gewicht': empfohlenes_gewicht,
+                'wdh': empfohlene_wdh,
+                'letztes_gewicht': float(letzter_satz.gewicht),
+                'letzte_wdh': letzter_satz.wiederholungen,
+                'hint': hint,
+                'pause': empfohlene_pause,
+                'pause_from_plan': bool(plan_pausenzeit),
+            }
 
     context = {
         'training': training,
@@ -6130,3 +6142,206 @@ def send_push_notification(user, title, body, url='/', icon=None):
                 subscription.delete()
         except Exception as e:
             logger.error(f'Push notification error: {e}', exc_info=True)
+
+
+# =============================================================================
+# ML PREDICTION ENDPOINTS (scikit-learn, CPU-only, 100% lokal)
+# =============================================================================
+
+@login_required
+@require_http_methods(["POST"])
+def ml_train_model(request):
+    """
+    Trainiert ML-Modell für Gewichtsvorhersagen
+    POST /api/ml/train/ mit {"uebung_id": 123} oder ohne (alle Übungen)
+    """
+    from ml_coach.ml_trainer import MLTrainer
+    
+    try:
+        data = json.loads(request.body) if request.body else {}
+        uebung_id = data.get('uebung_id')
+        
+        if uebung_id:
+            # Einzelne Übung trainieren
+            uebung = get_object_or_404(Uebung, id=uebung_id)
+            trainer = MLTrainer(request.user, uebung)
+            ml_model, metrics = trainer.train_model()
+            
+            if ml_model:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Modell für {uebung.bezeichnung} trainiert',
+                    'metrics': metrics
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Nicht genug Trainingsdaten (mind. 10 Sätze benötigt)',
+                    'error': metrics.get('error', 'Unbekannter Fehler')
+                }, status=400)
+        else:
+            # Alle Übungen trainieren
+            results = MLTrainer.train_all_user_models(request.user, min_samples=10)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'{len(results)} Modelle trainiert',
+                'trained_models': [
+                    {
+                        'uebung': uebung.bezeichnung,
+                        'samples': metrics['samples'],
+                        'mae': metrics['mae'],
+                        'r2_score': metrics['r2_score']
+                    }
+                    for uebung, metrics in results
+                ]
+            })
+            
+    except Exception as e:
+        logger.error(f'ML Training Error: {e}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'Fehler beim Trainieren des Modells',
+            'error': 'Interner Serverfehler'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def ml_predict_weight(request, uebung_id):
+    """
+    Vorhersage des nächsten Gewichts für eine Übung
+    GET/POST /api/ml/predict/<uebung_id>/
+    Optional POST: {"last_weight": 80, "last_reps": 10, "rpe": 8}
+    """
+    from ml_coach.prediction_service import MLPredictor
+    
+    try:
+        uebung = get_object_or_404(Uebung, id=uebung_id)
+        predictor = MLPredictor(request.user, uebung)
+        
+        # Optional: Manuelle Daten für Vorhersage
+        last_weight = None
+        last_reps = None
+        rpe = None
+        
+        if request.method == 'POST' and request.body:
+            # Sichere JSON-Verarbeitung und Validierung der numerischen Felder
+            try:
+                data = json.loads(request.body)
+            except (TypeError, ValueError) as exc:
+                logger.warning(f'Ungültige JSON-Daten für ml_predict_weight: {exc}')
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Ungültige JSON-Daten'
+                }, status=400)
+
+            def _to_number(value, field_name):
+                """
+                Konvertiert Eingaben in numerische Werte oder None.
+                Erlaubt sind: None, int, float oder numerische Strings.
+                """
+                if value is None:
+                    return None
+                if isinstance(value, (int, float)):
+                    return value
+                if isinstance(value, str):
+                    stripped = value.strip()
+                    if stripped == '':
+                        return None
+                    try:
+                        return float(stripped)
+                    except ValueError:
+                        raise ValueError(field_name)
+                # Alle anderen Typen (dict, list, bool, etc.) sind ungültig
+                raise ValueError(field_name)
+
+            try:
+                last_weight = _to_number(data.get('last_weight'), 'last_weight')
+                last_reps = _to_number(data.get('last_reps'), 'last_reps')
+                rpe = _to_number(data.get('rpe'), 'rpe')
+            except ValueError as invalid_field:
+                field_name = invalid_field.args[0] if invalid_field.args else 'feld'
+                logger.warning(f'Ungültiger numerischer Wert für {field_name} in ml_predict_weight')
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Ungültiger numerischer Wert für {field_name}'
+                }, status=400)
+        
+        # Prediction
+        result = predictor.predict_next_weight(
+            last_weight=last_weight,
+            last_reps=last_reps,
+            rpe=rpe
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'uebung': uebung.bezeichnung,
+            'prediction': result
+        })
+        
+    except Exception as e:
+        logger.error(f'ML Prediction Error: {e}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'Fehler bei Gewichtsvorhersage'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def ml_model_info(request, uebung_id):
+    """
+    Info über trainiertes ML-Modell für eine Übung
+    GET /api/ml/model-info/<uebung_id>/
+    """
+    from ml_coach.prediction_service import MLPredictor
+    
+    try:
+        uebung = get_object_or_404(Uebung, id=uebung_id)
+        predictor = MLPredictor(request.user, uebung)
+        
+        info = predictor.get_model_info()
+        
+        if info:
+            return JsonResponse({
+                'success': True,
+                'uebung': uebung.bezeichnung,
+                'model_info': info
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Kein Modell für diese Übung trainiert'
+            }, status=404)
+            
+    except Exception as e:
+        logger.error(f'ML Model Info Error: {e}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'Fehler beim Abrufen der Modell-Infos'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def ml_dashboard(request):
+    """
+    Dashboard mit Übersicht aller trainierten ML-Modelle
+    GET /ml/dashboard/
+    """
+    from core.models import MLPredictionModel
+    
+    models = MLPredictionModel.objects.filter(
+        user=request.user
+    ).select_related('uebung').order_by('-trained_at')
+    
+    context = {
+        'ml_models': models,
+        'total_models': models.count(),
+        'ready_models': models.filter(status='READY').count(),
+        'needs_training': models.filter(status='OUTDATED').count(),
+    }
+    
+    return render(request, 'core/ml_dashboard.html', context)

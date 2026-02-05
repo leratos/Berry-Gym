@@ -1,0 +1,319 @@
+{% load static %}
+<!doctype html>
+<html lang="de" data-bs-theme="dark" id="htmlRoot">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ML Dashboard - HomeGym</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <script>
+        // Theme laden vor Render
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+    
+    <style>
+        [data-bs-theme="dark"] body {
+            background-color: #212529;
+            color: #fff;
+        }
+        
+        [data-bs-theme="dark"] .card {
+            background-color: #2b3035;
+            border-color: #495057;
+        }
+        
+        [data-bs-theme="dark"] .table {
+            color: #fff;
+        }
+        
+        [data-bs-theme="light"] body {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">
+            <i class="bi bi-house-door"></i> HomeGym
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'dashboard' %}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'ml_dashboard' %}">
+                        <i class="bi bi-robot"></i> ML Dashboard
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-0">
+                <i class="bi bi-robot"></i> ML Prediction Dashboard
+            </h1>
+            <p class="text-muted">Machine Learning Modelle für Gewichtsvorhersagen (100% lokal, CPU-only)</p>
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info border-info">
+                <h5 class="alert-heading">
+                    <i class="bi bi-info-circle-fill me-2"></i>Was macht das ML-System?
+                </h5>
+                <p class="mb-2">
+                    Das ML-System analysiert deine bisherigen Trainingseinheiten und erstellt <strong>Gewichtsvorhersagen</strong> 
+                    für deine nächsten Sätze. Je mehr du trainierst, desto präziser werden die Vorhersagen.
+                </p>
+                <hr>
+                <div class="row g-3 small">
+                    <div class="col-md-4">
+                        <strong class="d-block mb-1"><i class="bi bi-lightning-fill text-warning"></i> Wo wird es verwendet?</strong>
+                        <p class="mb-0">Im Training siehst du "Empfehlung: X kg × Y Wdh" - das kommt vom ML-System!</p>
+                    </div>
+                    <div class="col-md-4">
+                        <strong class="d-block mb-1"><i class="bi bi-graph-up-arrow text-success"></i> Was ist R² Score?</strong>
+                        <p class="mb-0">Zeigt wie genau das Modell vorhersagt. 1.000 = perfekt, >0.7 = gut, <0.5 = noch zu wenig Daten</p>
+                    </div>
+                    <div class="col-md-4">
+                        <strong class="d-block mb-1"><i class="bi bi-bullseye text-primary"></i> Was ist MAE (kg)?</strong>
+                        <p class="mb-0">Durchschnittlicher Vorhersagefehler in kg. Je niedriger, desto besser! <2.5kg = exzellent</p>
+                    </div>
+                </div>
+                <hr>
+                <p class="mb-0 small text-muted">
+                    <i class="bi bi-shield-check me-1"></i>
+                    <strong>100% privat:</strong> Läuft komplett auf deinem Server, keine Cloud, keine API-Calls, keine Kosten.
+                    <strong class="ms-3">CPU-only:</strong> Benötigt keine GPU, Training dauert nur 2-5 Sekunden.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-check-circle"></i> Einsatzbereit</h5>
+                    <h2 class="mb-0">{{ ready_models }}</h2>
+                    <small>Ready Models</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-cpu"></i> Total Modelle</h5>
+                    <h2 class="mb-0">{{ total_models }}</h2>
+                    <small>Trainierte Modelle</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-arrow-repeat"></i> Neu trainieren</h5>
+                    <h2 class="mb-0">{{ needs_training }}</h2>
+                    <small>Veraltete Modelle</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Aktionen</h5>
+                    <button class="btn btn-success me-2" onclick="trainAllModels()">
+                        <i class="bi bi-play-fill"></i> Alle Modelle trainieren
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i> Aktualisieren
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Models List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Trainierte Modelle</h5>
+                </div>
+                <div class="card-body">
+                    {% if ml_models %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Übung</th>
+                                        <th>Status</th>
+                                        <th>Samples</th>
+                                        <th>R² Score</th>
+                                        <th>MAE (kg)</th>
+                                        <th>Trainiert am</th>
+                                        <th>Aktionen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for model in ml_models %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ model.uebung.bezeichnung }}</strong><br>
+                                            <small class="text-muted">{{ model.get_model_type_display }}</small>
+                                        </td>
+                                        <td>
+                                            {% if model.status == 'READY' %}
+                                                <span class="badge bg-success">● Ready</span>
+                                            {% elif model.status == 'TRAINING' %}
+                                                <span class="badge bg-warning">● Training</span>
+                                            {% elif model.status == 'OUTDATED' %}
+                                                <span class="badge bg-secondary">● Veraltet</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">● Error</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ model.training_samples }}</td>
+                                        <td>
+                                            {% if model.accuracy_score %}
+                                                {{ model.accuracy_score|floatformat:3 }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if model.mean_absolute_error %}
+                                                {{ model.mean_absolute_error|floatformat:1 }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ model.trained_at|date:"d.m.Y H:i" }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    onclick="trainModel({{ model.uebung.id }})">
+                                                <i class="bi bi-arrow-repeat"></i> Neu trainieren
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Noch keine Modelle trainiert. 
+                            Klicke auf "Alle Modelle trainieren" um zu starten.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function trainAllModels() {
+    if (!confirm('Möchtest du alle ML-Modelle trainieren? Dies kann einige Minuten dauern.')) {
+        return;
+    }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Training läuft...';
+    
+    fetch('/api/ml/train/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ ${data.message}`);
+            location.reload();
+        } else {
+            alert(`❌ Fehler: ${data.message}`);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-play-fill"></i> Alle Modelle trainieren';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Fehler beim Trainieren der Modelle');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-play-fill"></i> Alle Modelle trainieren';
+    });
+}
+
+function trainModel(uebungId) {
+    if (!confirm('Modell für diese Übung neu trainieren?')) {
+        return;
+    }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Training...';
+    
+    fetch('/api/ml/train/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ uebung_id: uebungId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ ${data.message}`);
+            location.reload();
+        } else {
+            alert(`❌ ${data.message}`);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Neu trainieren';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Fehler beim Trainieren');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Neu trainieren';
+    });
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

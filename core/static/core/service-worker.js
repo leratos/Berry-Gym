@@ -1,4 +1,4 @@
-const CACHE_NAME = 'homegym-v3'; // Version erhöht für Update
+const CACHE_NAME = 'homegym-v5'; // Version erhöht für Cache-Clear
 const urlsToCache = [
   '/',
   '/dashboard/',
@@ -15,7 +15,7 @@ const urlsToCache = [
 
 // Install Event - Cache wichtige Assets
 self.addEventListener('install', event => {
-  console.log('[Service Worker] Installing v3...');
+  console.log('[Service Worker] Installing v5...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
