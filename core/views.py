@@ -6010,7 +6010,10 @@ def subscribe_push(request):
         
     except Exception as e:
         logger.error(f'Push subscription error: {e}', exc_info=True)
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse(
+            {'error': 'An internal error has occurred while subscribing to push notifications.'},
+            status=500
+        )
 
 
 @login_required
