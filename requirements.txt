@@ -26,3 +26,6 @@ keyring==25.5.0
 # Optional: Redis für Caching & Sessions
 redis==5.0.1
 django-redis==5.4.0
+
+# Web Push Notifications
+pywebpush==1.14.1

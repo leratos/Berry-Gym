@@ -175,3 +175,24 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'HomeGym <noreply@last-stra
 
 # Site URL (für Einladungs-Emails & Passwort-Reset)
 SITE_URL = os.getenv('SITE_URL', 'https://gym.last-strawberry.com')
+
+# Web Push Notifications
+VAPID_PRIVATE_KEY_FILE = os.getenv('VAPID_PRIVATE_KEY_FILE', 'vapid_private.pem')
+VAPID_PUBLIC_KEY_FILE = os.getenv('VAPID_PUBLIC_KEY_FILE', 'vapid_public.pem')
+VAPID_CLAIMS_EMAIL = os.getenv('VAPID_CLAIMS_EMAIL', 'mailto:noreply@last-strawberry.com')
+
+# VAPID Keys laden (falls vorhanden)
+VAPID_PRIVATE_KEY = None
+VAPID_PUBLIC_KEY = None
+try:
+    vapid_private_path = os.path.join(BASE_DIR, VAPID_PRIVATE_KEY_FILE)
+    vapid_public_path = os.path.join(BASE_DIR, VAPID_PUBLIC_KEY_FILE)
+    
+    if os.path.exists(vapid_private_path) and os.path.exists(vapid_public_path):
+        with open(vapid_private_path, 'r') as f:
+            VAPID_PRIVATE_KEY = f.read()
+        with open(vapid_public_path, 'r') as f:
+            VAPID_PUBLIC_KEY = f.read()
+except Exception as e:
+    print(f"⚠️  VAPID Keys nicht geladen: {e}")
+    print("   Push Notifications werden deaktiviert")

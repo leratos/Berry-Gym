@@ -164,9 +164,77 @@
                         </ul>
                     </section>
                     
-                    <!-- 7. Cookies -->
+                    <!-- 7. Push-Benachrichtigungen -->
                     <section class="mb-5">
-                        <h2 class="h4 text-success">7) Cookies und Session-Daten</h2>
+                        <h2 class="h4 text-success">7) Push-Benachrichtigungen (Web Push)</h2>
+                        
+                        <p><strong>7.1 Allgemeines</strong></p>
+                        <p>Die App bietet die Möglichkeit, Push-Benachrichtigungen zu aktivieren. Diese sind vollständig optional und können jederzeit aktiviert oder deaktiviert werden.</p>
+                        
+                        <p><strong>7.2 Erhobene Daten</strong></p>
+                        <p>Bei Aktivierung der Push-Benachrichtigungen werden folgende Daten gespeichert:</p>
+                        <ul>
+                            <li><strong>Push-Endpoint:</strong> Eindeutige URL zum Versenden von Benachrichtigungen (vom Browser generiert)</li>
+                            <li><strong>Verschlüsselungsschlüssel:</strong> P256DH und Auth-Keys zur sicheren Übertragung (vom Browser generiert)</li>
+                            <li><strong>User-Agent:</strong> Browser- und Geräteinformationen</li>
+                            <li><strong>Benachrichtigungs-Präferenzen:</strong> Deine gewählten Einstellungen (z.B. Training-Erinnerungen, Achievements)</li>
+                            <li><strong>Zeitstempel:</strong> Erstellungs- und letzte Nutzungszeit der Subscription</li>
+                        </ul>
+                        
+                        <p><strong>7.3 Zweck der Verarbeitung</strong></p>
+                        <p>Die Daten werden ausschließlich verwendet, um dir personalisierte Benachrichtigungen zu senden:</p>
+                        <ul>
+                            <li>Training-Erinnerungen</li>
+                            <li>Achievements und Meilensteine</li>
+                            <li>Optionale Rest-Day Reminders</li>
+                        </ul>
+                        
+                        <p><strong>7.4 Externe Push-Services</strong></p>
+                        <p>Push-Benachrichtigungen werden über die Push-Services deines Browsers zugestellt:</p>
+                        <ul>
+                            <li><strong>Google Chrome/Edge:</strong> Firebase Cloud Messaging (Google LLC)</li>
+                            <li><strong>Firefox:</strong> Mozilla Push Service (Mozilla Foundation)</li>
+                            <li><strong>Safari:</strong> Apple Push Notification Service (Apple Inc.)</li>
+                        </ul>
+                        <p>Diese Dienste erhalten beim Versand einer Benachrichtigung:</p>
+                        <ul>
+                            <li>Den verschlüsselten Push-Endpoint (keine persönlichen Daten einsehbar)</li>
+                            <li>Verschlüsselte Nachrichteninhalte (nur dein Browser kann sie entschlüsseln)</li>
+                        </ul>
+                        <p>Die Push-Services können <strong>nicht</strong> den Inhalt der Benachrichtigungen lesen, da diese Ende-zu-Ende verschlüsselt sind.</p>
+                        
+                        <p><strong>7.5 Rechtsgrundlage</strong></p>
+                        <p>Die Verarbeitung erfolgt auf Basis deiner <strong>Einwilligung gemäß Art. 6 Abs. 1 lit. a DSGVO</strong>. Du erteilst diese durch aktives Aktivieren der Push-Benachrichtigungen im Dashboard.</p>
+                        
+                        <p><strong>7.6 Widerruf und Löschung</strong></p>
+                        <p>Du kannst deine Einwilligung jederzeit widerrufen:</p>
+                        <ul>
+                            <li><strong>In der App:</strong> Klick auf das Glocken-Icon im Dashboard (🔔 → 🔕)</li>
+                            <li><strong>In den Browser-Einstellungen:</strong> Site-Einstellungen → Benachrichtigungen → Blockieren</li>
+                        </ul>
+                        <p>Bei Deaktivierung werden alle gespeicherten Push-Daten (Endpoint, Keys, Präferenzen) automatisch von unseren Servern gelöscht.</p>
+                        
+                        <p><strong>7.7 Speicherdauer</strong></p>
+                        <p>Push-Subscriptions werden gespeichert, bis:</p>
+                        <ul>
+                            <li>Du die Benachrichtigungen deaktivierst</li>
+                            <li>Dein Browser die Subscription automatisch widerruft (z.B. nach Deinstallation)</li>
+                            <li>Die Subscription vom Push-Service als abgelaufen markiert wird (HTTP 410)</li>
+                            <li>Dein Nutzerkonto gelöscht wird</li>
+                        </ul>
+                        <p>Abgelaufene oder ungültige Subscriptions werden automatisch aus unserer Datenbank entfernt.</p>
+                        
+                        <p><strong>7.8 Datenschutzerklärungen der Push-Services</strong></p>
+                        <ul>
+                            <li>Google Firebase: <a href="https://policies.google.com/privacy" target="_blank" class="text-success">policies.google.com/privacy</a></li>
+                            <li>Mozilla Push: <a href="https://www.mozilla.org/privacy/" target="_blank" class="text-success">mozilla.org/privacy</a></li>
+                            <li>Apple Push: <a href="https://www.apple.com/legal/privacy/" target="_blank" class="text-success">apple.com/legal/privacy</a></li>
+                        </ul>
+                    </section>
+                    
+                    <!-- 8. Cookies -->
+                    <section class="mb-5">
+                        <h2 class="h4 text-success">8) Cookies und Session-Daten</h2>
                         
                         <p>Die App verwendet ausschließlich technisch notwendige Cookies:</p>
                         <ul>
@@ -176,9 +244,9 @@
                         <p>Diese Cookies sind für den Betrieb der App zwingend erforderlich und werden nach Schließen der App bzw. nach Ablauf der Session automatisch gelöscht.</p>
                     </section>
                     
-                    <!-- 8. Rechte -->
+                    <!-- 9. Rechte -->
                     <section class="mb-5">
-                        <h2 class="h4 text-success">8) Deine Rechte</h2>
+                        <h2 class="h4 text-success">9) Deine Rechte</h2>
                         
                         <p>Du hast folgende Rechte bezüglich deiner personenbezogenen Daten:</p>
                         
@@ -196,16 +264,16 @@
                         <p>Zur Ausübung deiner Rechte kontaktiere uns unter: <a href="mailto:marcus.kohtz@signz-vision.com" class="text-success">marcus.kohtz@signz-vision.com</a></p>
                     </section>
                     
-                    <!-- 9. Speicherdauer -->
+                    <!-- 10. Speicherdauer -->
                     <section class="mb-5">
-                        <h2 class="h4 text-success">9) Speicherdauer</h2>
+                        <h2 class="h4 text-success">10) Speicherdauer</h2>
                         
                         <p>Deine Daten werden gespeichert, solange dein Nutzerkonto aktiv ist. Nach Löschung deines Kontos werden alle personenbezogenen Daten innerhalb von 30 Tagen unwiderruflich gelöscht, sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen.</p>
                     </section>
                     
-                    <!-- 10. Änderungen -->
+                    <!-- 11. Änderungen -->
                     <section class="mb-4">
-                        <h2 class="h4 text-success">10) Änderungen dieser Datenschutzerklärung</h2>
+                        <h2 class="h4 text-success">11) Änderungen dieser Datenschutzerklärung</h2>
                         
                         <p>Wir behalten uns vor, diese Datenschutzerklärung bei Bedarf anzupassen. Die aktuelle Version findest du immer in der App.</p>
                         

@@ -3235,6 +3235,234 @@ def export_plan_pdf(request, plan_id):
 
 
 @login_required
+def export_plan_group_pdf(request, gruppe_id):
+    """Exportiert eine komplette Trainingsplan-Gruppe (alle Tage) als ein PDF."""
+    from io import BytesIO
+    import logging
+    try:
+        from xhtml2pdf import pisa
+        import qrcode
+        import base64
+    except ImportError:
+        messages.error(request, 'PDF Export nicht verfügbar - Pakete fehlen')
+        return redirect('training_select_plan')
+    
+    logger = logging.getLogger(__name__)
+    
+    # Alle Pläne dieser Gruppe holen
+    plaene = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).order_by('gruppe_reihenfolge', 'name')
+    
+    if not plaene.exists():
+        messages.error(request, 'Keine Pläne in dieser Gruppe gefunden')
+        return redirect('training_select_plan')
+    
+    # QR-Code zur Pläne-Übersicht
+    plans_url = request.build_absolute_uri('/training/select/')
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr.add_data(plans_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffer = BytesIO()
+    qr_img.save(buffer, format='PNG')
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+    
+    # Gruppenbeschreibung (vom ersten Plan)
+    erster_plan = plaene.first()
+    gruppe_name = erster_plan.gruppe_name or 'Trainingsgruppe'
+    gruppen_beschreibung = erster_plan.beschreibung or f'{gruppe_name} - Wochenplan'
+    beschreibung_html = gruppen_beschreibung.replace('\n', '<br>')
+    
+    muskelgruppen_dict = dict(MUSKELGRUPPEN)
+    
+    # HTML Template
+    html_template = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @page {{
+                size: A4;
+                margin: 2cm;
+            }}
+            body {{
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+                line-height: 1.4;
+            }}
+            h1 {{
+                color: #198754;
+                font-size: 24pt;
+                margin-bottom: 10px;
+                border-bottom: 3px solid #198754;
+                padding-bottom: 5px;
+            }}
+            h2 {{
+                color: #0dcaf0;
+                font-size: 16pt;
+                margin-top: 25px;
+                margin-bottom: 10px;
+                border-left: 4px solid #0dcaf0;
+                padding-left: 10px;
+                page-break-before: auto;
+            }}
+            .header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: start;
+                margin-bottom: 30px;
+            }}
+            .plan-info {{
+                flex: 1;
+            }}
+            .qr-code {{
+                text-align: right;
+            }}
+            .qr-code img {{
+                width: 120px;
+                height: 120px;
+            }}
+            .group-overview {{
+                background-color: #f8f9fa;
+                border-left: 4px solid #198754;
+                padding: 15px;
+                margin-bottom: 20px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }}
+            th {{
+                background-color: #198754;
+                color: white;
+                padding: 8px;
+                text-align: left;
+                font-size: 9pt;
+            }}
+            td {{
+                padding: 6px 8px;
+                border-bottom: 1px solid #ddd;
+                font-size: 9pt;
+            }}
+            tr:nth-child(even) {{
+                background-color: #f8f9fa;
+            }}
+            .badge {{
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 3px;
+                font-size: 8pt;
+                font-weight: bold;
+            }}
+            .badge-primary {{
+                background-color: #198754;
+                color: white;
+            }}
+            .footer {{
+                position: fixed;
+                bottom: 1cm;
+                left: 2cm;
+                right: 2cm;
+                text-align: center;
+                font-size: 8pt;
+                color: #6c757d;
+                border-top: 1px solid #ddd;
+                padding-top: 5px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="plan-info">
+                <h1>{gruppe_name}</h1>
+                <div class="group-overview">
+                    <p><strong>Trainingsgruppe:</strong> {plaene.count()} Trainingstage</p>
+                    <p><strong>Beschreibung:</strong><br>{beschreibung_html}</p>
+                    <p><strong>Erstellt:</strong> {erster_plan.erstellt_am.strftime("%d.%m.%Y")}</p>
+                </div>
+            </div>
+            <div class="qr-code">
+                <img src="data:image/png;base64,{qr_base64}" alt="QR Code">
+                <p style="font-size: 8pt; color: #6c757d;">Scan für Details</p>
+            </div>
+        </div>
+    '''
+    
+    # Jeden Plan (Trainingstag) hinzufügen
+    for idx_plan, plan in enumerate(plaene, 1):
+        planuebungen = PlanUebung.objects.filter(plan=plan).select_related('uebung').order_by('reihenfolge')
+        
+        tag_name = f"Tag {idx_plan}: {plan.name}"
+        
+        html_template += f'''
+        <h2>{tag_name}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25px;">#</th>
+                    <th style="width: 30%;">Übung</th>
+                    <th style="width: 25%;">Muskelgruppe</th>
+                    <th style="width: 50px;">Sätze</th>
+                    <th style="width: 15%;">Wdh.</th>
+                    <th style="width: 50px;">Pause</th>
+                </tr>
+            </thead>
+            <tbody>
+        '''
+        
+        for idx, pu in enumerate(planuebungen, 1):
+            muskelgruppe = muskelgruppen_dict.get(pu.uebung.muskelgruppe, pu.uebung.muskelgruppe)
+            pause = f"{pu.pausenzeit}s" if pu.pausenzeit else "-"
+            
+            html_template += f'''
+                <tr>
+                    <td>{idx}</td>
+                    <td><strong>{pu.uebung.bezeichnung}</strong></td>
+                    <td><span class="badge badge-primary">{muskelgruppe}</span></td>
+                    <td>{pu.saetze_ziel or "-"}</td>
+                    <td>{pu.wiederholungen_ziel or "-"}</td>
+                    <td style="font-size: 8pt; color: #6c757d;">{pause}</td>
+                </tr>
+            '''
+        
+        html_template += '''
+            </tbody>
+        </table>
+        '''
+    
+    # Footer
+    html_template += f'''
+        <div class="footer">
+            HomeGym Trainingsgruppe | Erstellt: {timezone.now().strftime("%d.%m.%Y %H:%M")} | {plans_url}
+        </div>
+    </body>
+    </html>
+    '''
+    
+    # PDF generieren
+    try:
+        result = BytesIO()
+        pdf = pisa.pisaDocument(BytesIO(html_template.encode('utf-8')), result)
+        
+        if pdf.err:
+            logger.error(f'PDF generation errors: {pdf.err}')
+            messages.error(request, 'Fehler bei PDF-Generierung')
+            return redirect('training_select_plan')
+        
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        filename = f"gruppe_{gruppe_name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        logger.error(f'Group PDF export failed: {str(e)}', exc_info=True)
+        messages.error(request, 'PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.')
+        return redirect('training_select_plan')
+
+
+@login_required
 def workout_recommendations(request):
     """Intelligente Trainingsempfehlungen basierend auf Datenanalyse."""
     heute = timezone.now()
@@ -5741,3 +5969,164 @@ def create_custom_uebung(request):
     except Exception as e:
         logger.error(f'API request error: {e}', exc_info=True)
         return JsonResponse({'success': False, 'error': 'Anfrage konnte nicht verarbeitet werden.'}, status=500)
+
+
+# ==========================================
+# PUSH NOTIFICATIONS
+# ==========================================
+
+@login_required
+@require_http_methods(['POST'])
+def subscribe_push(request):
+    """Registriert eine neue Push-Subscription für den User"""
+    import json
+    from .models import PushSubscription
+    
+    try:
+        data = json.loads(request.body)
+        subscription = data.get('subscription')
+        
+        if not subscription:
+            return JsonResponse({'error': 'Subscription data missing'}, status=400)
+        
+        # User Agent für Geräteerkennung
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+        
+        # Subscription speichern oder aktualisieren
+        obj, created = PushSubscription.objects.update_or_create(
+            endpoint=subscription['endpoint'],
+            defaults={
+                'user': request.user,
+                'p256dh': subscription['keys']['p256dh'],
+                'auth': subscription['keys']['auth'],
+                'user_agent': user_agent,
+            }
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Push-Benachrichtigungen aktiviert' if created else 'Push-Benachrichtigungen aktualisiert'
+        })
+        
+    except Exception as e:
+        logger.error(f'Push subscription error: {e}', exc_info=True)
+        return JsonResponse(
+            {'error': 'An internal error has occurred while subscribing to push notifications.'},
+            status=500
+        )
+
+
+@login_required
+@require_http_methods(['POST'])
+def unsubscribe_push(request):
+    """Deaktiviert Push-Notifications für ein Gerät"""
+    import json
+    from .models import PushSubscription
+    
+    try:
+        data = json.loads(request.body)
+        endpoint = data.get('endpoint')
+        
+        if not endpoint:
+            return JsonResponse({'error': 'Endpoint missing'}, status=400)
+        
+        deleted_count, _ = PushSubscription.objects.filter(
+            user=request.user,
+            endpoint=endpoint
+        ).delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{deleted_count} Subscription(s) gelöscht'
+        })
+        
+    except Exception as e:
+        logger.error(f'Push unsubscribe error: {e}', exc_info=True)
+        return JsonResponse({'error': 'An internal error has occurred while unsubscribing from push notifications.'}, status=500)
+
+
+@login_required
+def get_vapid_public_key(request):
+    """Gibt den VAPID Public Key für die Frontend-Subscription zurück"""
+    from django.conf import settings
+    import base64
+    
+    if not settings.VAPID_PUBLIC_KEY:
+        return JsonResponse({'error': 'VAPID keys not configured'}, status=503)
+    
+    # Extrahiere nur den Key-Teil aus der PEM-Datei
+    public_key_pem = settings.VAPID_PUBLIC_KEY
+    # Entferne PEM Header/Footer und Zeilenumbrüche
+    public_key_pem = public_key_pem.replace('-----BEGIN PUBLIC KEY-----', '')
+    public_key_pem = public_key_pem.replace('-----END PUBLIC KEY-----', '')
+    public_key_pem = public_key_pem.replace('\n', '').replace('\r', '').strip()
+    
+    # Dekodiere Base64 -> DER format (ASN.1 encoded)
+    der_bytes = base64.b64decode(public_key_pem)
+    
+    # Extrahiere die rohen 65 Bytes des EC public key points
+    # DER Format: 91 bytes total, die letzten 65 bytes sind der uncompressed point (0x04 + X + Y)
+    # Der uncompressed point beginnt bei Byte 26 (0x1a) mit dem 0x04 prefix
+    raw_public_key = der_bytes[-65:]
+    
+    # Zurück zu base64 für JavaScript (URL-safe)
+    public_key_base64 = base64.urlsafe_b64encode(raw_public_key).decode('utf-8')
+    # Entferne padding (wird von urlBase64ToUint8Array wieder hinzugefügt)
+    public_key_base64 = public_key_base64.rstrip('=')
+    
+    return JsonResponse({
+        'publicKey': public_key_base64
+    })
+
+
+def send_push_notification(user, title, body, url='/', icon=None):
+    """Sendet eine Push-Notification an alle Geräte eines Users"""
+    from pywebpush import webpush, WebPushException
+    from django.conf import settings
+    from .models import PushSubscription
+    import json
+    import os
+    
+    if not settings.VAPID_PRIVATE_KEY or not settings.VAPID_PUBLIC_KEY:
+        logger.warning('VAPID keys not configured - push notifications disabled')
+        return
+    
+    subscriptions = PushSubscription.objects.filter(user=user)
+    
+    if not subscriptions.exists():
+        return
+    
+    payload = json.dumps({
+        'title': title,
+        'body': body,
+        'url': url,
+        'icon': icon or '/static/core/images/icon-192x192.png'
+    })
+    
+    # VAPID Private Key: Verwende Dateipfad statt String (robuster für pywebpush)
+    vapid_private_key_path = os.path.join(settings.BASE_DIR, settings.VAPID_PRIVATE_KEY_FILE)
+    
+    for subscription in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    'endpoint': subscription.endpoint,
+                    'keys': {
+                        'p256dh': subscription.p256dh,
+                        'auth': subscription.auth
+                    }
+                },
+                data=payload,
+                vapid_private_key=vapid_private_key_path,  # Dateipfad statt String!
+                vapid_claims={'sub': settings.VAPID_CLAIMS_EMAIL}
+            )
+            subscription.last_used = timezone.now()
+            subscription.save()  # Update last_used
+            
+        except WebPushException as e:
+            logger.error(f'WebPush error for {subscription.id}: {e}')
+            if e.response and e.response.status_code in [404, 410]:
+                # Subscription expired or invalid
+                subscription.delete()
+        except Exception as e:
+            logger.error(f'Push notification error: {e}', exc_info=True)
