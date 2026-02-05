@@ -6226,10 +6226,47 @@ def ml_predict_weight(request, uebung_id):
         rpe = None
         
         if request.method == 'POST' and request.body:
-            data = json.loads(request.body)
-            last_weight = data.get('last_weight')
-            last_reps = data.get('last_reps')
-            rpe = data.get('rpe')
+            # Sichere JSON-Verarbeitung und Validierung der numerischen Felder
+            try:
+                data = json.loads(request.body)
+            except (TypeError, ValueError) as exc:
+                logger.warning(f'Ungültige JSON-Daten für ml_predict_weight: {exc}')
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Ungültige JSON-Daten'
+                }, status=400)
+
+            def _to_number(value, field_name):
+                """
+                Konvertiert Eingaben in numerische Werte oder None.
+                Erlaubt sind: None, int, float oder numerische Strings.
+                """
+                if value is None:
+                    return None
+                if isinstance(value, (int, float)):
+                    return value
+                if isinstance(value, str):
+                    stripped = value.strip()
+                    if stripped == '':
+                        return None
+                    try:
+                        return float(stripped)
+                    except ValueError:
+                        raise ValueError(field_name)
+                # Alle anderen Typen (dict, list, bool, etc.) sind ungültig
+                raise ValueError(field_name)
+
+            try:
+                last_weight = _to_number(data.get('last_weight'), 'last_weight')
+                last_reps = _to_number(data.get('last_reps'), 'last_reps')
+                rpe = _to_number(data.get('rpe'), 'rpe')
+            except ValueError as invalid_field:
+                field_name = invalid_field.args[0] if invalid_field.args else 'feld'
+                logger.warning(f'Ungültiger numerischer Wert für {field_name} in ml_predict_weight')
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Ungültiger numerischer Wert für {field_name}'
+                }, status=400)
         
         # Prediction
         result = predictor.predict_next_weight(
