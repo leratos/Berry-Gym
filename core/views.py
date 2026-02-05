@@ -237,6 +237,7 @@ def feedback_detail(request, feedback_id):
 def profile(request):
     """Profil-Seite zum Bearbeiten von Benutzerdaten"""
     from django.contrib.auth.hashers import check_password
+    from django.contrib.auth import update_session_auth_hash
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -278,18 +279,20 @@ def profile(request):
             new_password = request.POST.get('new_password')
             confirm_password = request.POST.get('confirm_password')
             
-            if not check_password(current_password, user.password):
-                messages.error(request, 'Aktuelles Passwort ist falsch.')
+            if not current_password or not new_password or not confirm_password:
+                messages.error(request, '❌ Bitte alle Felder ausfüllen.')
+            elif not check_password(current_password, user.password):
+                messages.error(request, '❌ Aktuelles Passwort ist falsch. Bitte nochmal versuchen.')
             elif len(new_password) < 8:
-                messages.error(request, 'Neues Passwort muss mindestens 8 Zeichen haben.')
+                messages.error(request, '❌ Neues Passwort muss mindestens 8 Zeichen haben.')
             elif new_password != confirm_password:
-                messages.error(request, 'Passwörter stimmen nicht überein.')
+                messages.error(request, '❌ Die neuen Passwörter stimmen nicht überein. Bitte überprüfen!')
             else:
                 user.set_password(new_password)
                 user.save()
-                # Nach Passwortänderung neu einloggen
-                login(request, user)
-                messages.success(request, '✅ Passwort erfolgreich geändert!')
+                # Session aktualisieren ohne neu einzuloggen (behält Messages!)
+                update_session_auth_hash(request, user)
+                messages.success(request, '✅ Passwort erfolgreich geändert! Du bleibst eingeloggt.')
         
         return redirect('profile')
     

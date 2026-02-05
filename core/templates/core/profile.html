@@ -61,14 +61,25 @@
             <small class="text-muted">Mitglied seit {{ user.date_joined|date:"d.m.Y" }}</small>
         </div>
 
-        <!-- Messages -->
+        <!-- Messages mit verbessertem Styling -->
         {% if messages %}
+            <div class="messages-container mb-4">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
+                    <strong>
+                        {% if 'success' in message.tags %}
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                        {% elif 'error' in message.tags %}
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        {% else %}
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                        {% endif %}
+                    </strong>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             {% endfor %}
+            </div>
         {% endif %}
 
         <div class="row g-4">
@@ -190,5 +201,32 @@
     {% include 'core/includes/global_footer.html' %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Scroll zu Messages wenn vorhanden
+        document.addEventListener('DOMContentLoaded', function() {
+            const messagesContainer = document.querySelector('.messages-container');
+            if (messagesContainer) {
+                messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Auto-dismiss nach 5 Sekunden
+                setTimeout(() => {
+                    const alerts = messagesContainer.querySelectorAll('.alert');
+                    alerts.forEach(alert => {
+                        const bsAlert = bootstrap.Alert.getInstance(alert) || new bootstrap.Alert(alert);
+                        bsAlert.close();
+                    });
+                }, 5000);
+            }
+            
+            // Clear Passwort-Felder nach erfolgreicher Änderung
+            const successAlert = document.querySelector('.alert-success');
+            if (successAlert && successAlert.textContent.includes('Passwort')) {
+                const passwordForm = document.querySelector('form[action*="change_password"], form input[name="action"][value="change_password"]')?.closest('form');
+                if (passwordForm) {
+                    passwordForm.reset();
+                }
+            }
+        });
+    </script>
 </body>
 </html>
