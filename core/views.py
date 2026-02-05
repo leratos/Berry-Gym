@@ -6202,7 +6202,7 @@ def ml_train_model(request):
         return JsonResponse({
             'success': False,
             'message': 'Fehler beim Trainieren des Modells',
-            'error': str(e)
+            'error': 'Interner Serverfehler'
         }, status=500)
 
 
