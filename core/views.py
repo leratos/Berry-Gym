@@ -6248,8 +6248,7 @@ def ml_predict_weight(request, uebung_id):
         logger.error(f'ML Prediction Error: {e}', exc_info=True)
         return JsonResponse({
             'success': False,
-            'message': 'Fehler bei Gewichtsvorhersage',
-            'error': str(e)
+            'message': 'Fehler bei Gewichtsvorhersage'
         }, status=500)
 
 
@@ -6284,8 +6283,7 @@ def ml_model_info(request, uebung_id):
         logger.error(f'ML Model Info Error: {e}', exc_info=True)
         return JsonResponse({
             'success': False,
-            'message': 'Fehler beim Abrufen der Modell-Infos',
-            'error': str(e)
+            'message': 'Fehler beim Abrufen der Modell-Infos'
         }, status=500)
 
 
