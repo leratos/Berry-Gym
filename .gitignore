@@ -123,3 +123,5 @@ docs/FIX_SERVICE_WORKER_SCOPE.md
 docs/OFFLINE_COMPLETE.md
 docs/OFFLINE_TESTING_GUIDE.md
 docs/SW_UPDATE_V3.md
+vapid_public.pem
+vapid_private.pem
