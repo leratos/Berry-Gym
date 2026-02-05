@@ -235,6 +235,9 @@
                                 <a href="{% url 'share_group' gruppe_key %}" class="btn btn-sm btn-outline-success" title="Gruppe teilen">
                                     <i class="bi bi-share"></i>
                                 </a>
+                                <a href="{% url 'export_plan_group_pdf' gruppe_key %}" class="btn btn-sm btn-outline-secondary" title="Ganze Gruppe als PDF exportieren">
+                                    <i class="bi bi-file-pdf"></i>
+                                </a>
                                 <a href="{% url 'toggle_group_public' gruppe_key %}" class="btn btn-sm btn-outline-{% if gruppe.plaene.0.is_public %}warning{% else %}info{% endif %}" title="{% if gruppe.plaene.0.is_public %}Privat machen{% else %}Öffentlich machen{% endif %}">
                                     {% if gruppe.plaene.0.is_public %}
                                     <i class="bi bi-lock-fill"></i>
@@ -601,13 +604,6 @@
     
     <!-- Toast Notifications -->
     <script src="{% static 'core/js/toast.js' %}"></script>
-    
-    <!-- Offline Manager -->
-    <script src="{% static 'core/js/offline-manager.js' %}"></script>
-    <script>
-        // Offline Manager initialisieren
-        const offlineManager = new OfflineManager();
-    </script>
     
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
