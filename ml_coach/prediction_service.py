@@ -113,7 +113,9 @@ class MLPredictor:
             ).order_by('-einheit__datum').first()
             
             if previous_satz:
-                days_since_last = (last_satz.training.datum - previous_satz.training.datum).days
+
+                days_since_last = (last_satz.einheit.datum - previous_satz.einheit.datum).days
+
             else:
                 days_since_last = 7  # Default
         else:
