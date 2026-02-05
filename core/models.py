@@ -907,7 +907,7 @@ class MLPredictionModel(models.Model):
     
     def __str__(self):
         if self.uebung:
-            return f"{self.user.username} - {self.get_model_type_display()} - {self.uebung.name}"
+            return f"{self.user.username} - {self.get_model_type_display()} - {self.uebung.bezeichnung}"
         return f"{self.user.username} - {self.get_model_type_display()}"
     
     def is_ready(self):
