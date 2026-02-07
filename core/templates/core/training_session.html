@@ -1185,13 +1185,30 @@
         setForm.addEventListener('submit', async function(e) {
             e.preventDefault(); // Verhindere normalen Form Submit
             
+            // Emoji-Filter: Entferne 4-Byte-Emojis (temporär bis utf8mb4-Migration deployed ist)
+            const notizField = document.getElementById('notizInput');
+            if (notizField && notizField.value) {
+                const originalValue = notizField.value;
+                // Entferne alle 4-Byte UTF-8 Zeichen (Emojis)
+                const cleanedValue = originalValue.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+                
+                if (originalValue !== cleanedValue) {
+                    notizField.value = cleanedValue;
+                    showToast('ℹ️ Emojis wurden entfernt (noch nicht unterstützt)', 'warning', 3000);
+                }
+            }
+            
             const formData = new FormData(setForm);
             const submitBtn = setForm.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Speichern...';
             
-            // Versuche ZUERST Online-Submit (navigator.onLine ist unzuverlässig)
+            // Versuche ZUERST Online-Submit
             try {
+                // Timeout mit AbortController (Browser-kompatibel)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
                 const response = await fetch(setForm.action, {
                     method: 'POST',
                     body: formData,
@@ -1199,10 +1216,35 @@
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRFToken': getCSRFToken()
                     },
-                    // Timeout nach 3 Sekunden
-                    signal: AbortSignal.timeout(3000)
+                    signal: controller.signal
                 });
                 
+                clearTimeout(timeoutId); // Wichtig: Timer clearen bei Erfolg
+                
+                // Prüfe Response Status BEVOR du parsest
+                if (!response.ok) {
+                    // Server-Fehler (4xx, 5xx) - NICHT offline!
+                    let errorMsg = 'Serverfehler beim Speichern';
+                    
+                    try {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const data = await response.json();
+                            errorMsg = data.error || errorMsg;
+                        }
+                    } catch (parseError) {
+                        // HTML-Fehlerseite statt JSON - typisch für 500er Fehler
+                        console.error('[Server Error] Status:', response.status, response.statusText);
+                        errorMsg = `Serverfehler (${response.status}). Bitte versuche es erneut oder kontaktiere Support.`;
+                    }
+                    
+                    showToast(errorMsg, 'error', 5000);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Speichern';
+                    return; // Wichtig: NICHT in den Offline-Modus gehen!
+                }
+                
+                // Response OK - parse JSON
                 const data = await response.json();
                 
                 // Prüfe ob Service Worker Offline-Response zurückgegeben hat
@@ -1228,7 +1270,24 @@
                     submitBtn.innerHTML = 'Speichern';
                 }
             } catch (error) {
-                // Online-Submit fehlgeschlagen → Offline-Modus
+                // Prüfe ob es ein ECHTER Netzwerkfehler ist (offline) oder ein Parse/Timeout-Fehler
+                const isNetworkError = error.name === 'TypeError' || 
+                                      error.message.includes('Failed to fetch') ||
+                                      error.message.includes('NetworkError') ||
+                                      error.message.includes('Offline mode');
+                
+                const isTimeout = error.name === 'TimeoutError' || error.name === 'AbortError';
+                
+                if (!isNetworkError && !isTimeout) {
+                    // Unerwarteter Fehler (z.B. Parse-Error) - zeige Fehler, gehe NICHT offline
+                    console.error('[Submit Error]', error);
+                    showToast('Fehler beim Speichern: ' + error.message, 'error', 5000);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Speichern';
+                    return;
+                }
+                
+                // Echter Offline-Modus oder Timeout → Speichere lokal
                 console.log('[Offline] Server nicht erreichbar, speichere lokal:', error.message);
                 
                 try {

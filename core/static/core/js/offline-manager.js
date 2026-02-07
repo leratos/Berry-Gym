@@ -13,12 +13,21 @@ class OfflineManager {
         // IndexedDB initialisieren
         await this.openDB();
         
-        // Online/Offline Events
-        window.addEventListener('online', () => this.handleOnline());
+        // Online/Offline Events (mit zusätzlicher echter Prüfung)
+        window.addEventListener('online', async () => {
+            // Doppelt prüfen mit echtem Connectivity-Check
+            const reallyOnline = await this.checkRealConnectivity();
+            if (reallyOnline) {
+                this.handleOnline();
+            }
+        });
         window.addEventListener('offline', () => this.handleOffline());
         
-        // Initial Status setzen
-        this.updateConnectionStatus();
+        // Initial Status setzen (mit echter Prüfung)
+        await this.updateConnectionStatus();
+        
+        // Periodisch Status prüfen (alle 30 Sekunden für Desktop-PCs mit Problemen)
+        setInterval(() => this.updateConnectionStatus(), 30000);
         
         // Markiere offline Sätze in UI (falls auf Training-Session)
         if (window.location.pathname.includes('/training/')) {
@@ -242,8 +251,29 @@ class OfflineManager {
         this.showToast('⚠ Offline-Modus aktiv', 'warning');
     }
 
-    updateConnectionStatus() {
-        const isOnline = navigator.onLine;
+    async checkRealConnectivity() {
+        // Echte Server-Prüfung statt navigator.onLine (unzuverlässig auf Desktop)
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+            
+            const response = await fetch('/static/core/manifest.json', {
+                method: 'HEAD',
+                cache: 'no-cache',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            return response.ok;
+        } catch (error) {
+            console.log('[Connection Check] Failed:', error.message);
+            return false;
+        }
+    }
+
+    async updateConnectionStatus() {
+        // Nutze echte Server-Prüfung statt navigator.onLine
+        const isOnline = await this.checkRealConnectivity();
         const indicator = document.getElementById('connectionIndicator');
         
         if (!indicator) {
@@ -263,14 +293,17 @@ class OfflineManager {
         }
     }
 
-    createConnectionIndicator() {
+    async createConnectionIndicator() {
         // Prüfe ob schon vorhanden
         if (document.getElementById('connectionIndicator')) return;
         
+        // Echte Connectivity prüfen
+        const isOnline = await this.checkRealConnectivity();
+        
         const indicator = document.createElement('div');
         indicator.id = 'connectionIndicator';
-        indicator.className = navigator.onLine ? 'connection-indicator online' : 'connection-indicator offline';
-        indicator.innerHTML = navigator.onLine ? 
+        indicator.className = isOnline ? 'connection-indicator online' : 'connection-indicator offline';
+        indicator.innerHTML = isOnline ? 
             '<i class="bi bi-wifi"></i> Online' : 
             '<i class="bi bi-wifi-off"></i> Offline';
         
