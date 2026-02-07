@@ -1183,8 +1183,8 @@ def update_set(request, set_id):
                 logger.error(f"Validation error in update_set: {e}", exc_info=True)
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
-                        'success': False, 
-                        'error': f'Ungültige Eingabe: {str(e)}'
+                        'success': False,
+                        'error': 'Ungültige Eingabe'
                     }, status=400)
                 return redirect('training_session', training_id=training_id)
         
