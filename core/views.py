@@ -1196,7 +1196,7 @@ def update_set(request, set_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': False,
-                'error': f'Serverfehler: {str(e)}'  # Temporär: Zeige echten Fehler für Debugging
+                'error': 'Ein unerwarteter Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
             }, status=500)
         return redirect('dashboard')
 
