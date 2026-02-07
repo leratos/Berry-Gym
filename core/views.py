@@ -1774,13 +1774,16 @@ def finish_training(request, training_id):
     
     if training_count > 0 and training_count % 3 == 0:
         # Analysiere die letzten 3 Trainings
-        recent_trainings = Trainingseinheit.objects.filter(
-            user=request.user
-        ).order_by('-datum')[:3]
+        # Liste von IDs verwenden statt Subquery (MariaDB LIMIT-Kompatibilität)
+        recent_training_ids = list(
+            Trainingseinheit.objects.filter(user=request.user)
+            .order_by('-datum').values_list('id', flat=True)[:3]
+        )
+        recent_trainings = Trainingseinheit.objects.filter(id__in=recent_training_ids)
         
         # Berechne durchschnittlichen RPE der letzten 3 Trainings
         recent_sets = Satz.objects.filter(
-            einheit__in=recent_trainings,
+            einheit_id__in=recent_training_ids,
             ist_aufwaermsatz=False,
             rpe__isnull=False
         )
@@ -1789,9 +1792,11 @@ def finish_training(request, training_id):
             avg_rpe = recent_sets.aggregate(Avg('rpe'))['rpe__avg']
             
             # Volumen-Analyse der letzten 3 vs. vorherige 3 Trainings
-            previous_trainings = Trainingseinheit.objects.filter(
-                user=request.user
-            ).order_by('-datum')[3:6]
+            previous_training_ids = list(
+                Trainingseinheit.objects.filter(user=request.user)
+                .order_by('-datum').values_list('id', flat=True)[3:6]
+            )
+            previous_trainings = Trainingseinheit.objects.filter(id__in=previous_training_ids)
             
             recent_volume = sum(
                 float(s.gewicht or 0) * int(s.wiederholungen or 0)
