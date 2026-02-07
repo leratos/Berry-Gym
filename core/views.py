@@ -1117,25 +1117,88 @@ def delete_set(request, set_id):
 
 def update_set(request, set_id):
     """Speichert Änderungen an einem existierenden Satz."""
-    satz = get_object_or_404(Satz, id=set_id)
-    training_id = satz.einheit.id
-    
-    if request.method == 'POST':
-        satz.gewicht = request.POST.get('gewicht')
-        satz.wiederholungen = request.POST.get('wiederholungen')
-        satz.rpe = request.POST.get('rpe') if request.POST.get('rpe') else None
-        satz.ist_aufwaermsatz = request.POST.get('ist_aufwaermsatz') == 'on'
-        notiz = request.POST.get('notiz', '').strip()
-        satz.notiz = notiz if notiz else None
-        superset_gruppe = request.POST.get('superset_gruppe', 0)
-        satz.superset_gruppe = int(superset_gruppe)
-        satz.save()
+    try:
+        logger.info(f"update_set called for set_id={set_id}, method={request.method}")
+        satz = get_object_or_404(Satz, id=set_id)
+        training_id = satz.einheit.id
         
-        # AJAX Request? Sende JSON
+        if request.method == 'POST':
+            logger.info(f"POST data: {request.POST.dict()}")
+            
+            # Parse und validiere Eingaben
+            try:
+                gewicht_raw = request.POST.get('gewicht', '').strip()
+                wiederholungen_raw = request.POST.get('wiederholungen', '').strip()
+                rpe_raw = request.POST.get('rpe', '').strip()
+                
+                logger.info(f"Raw values - gewicht: '{gewicht_raw}', wdh: '{wiederholungen_raw}', rpe: '{rpe_raw}'")
+                
+                # Gewicht validieren
+                gewicht = None
+                if gewicht_raw:
+                    # Ersetze Komma durch Punkt (deutsche Eingabe)
+                    gewicht_raw = gewicht_raw.replace(',', '.')
+                    gewicht = float(gewicht_raw)
+                    if gewicht < 0 or gewicht > 1000:
+                        raise ValueError("Gewicht außerhalb gültiger Bereich (0-1000)")
+                
+                # Wiederholungen validieren
+                wiederholungen = None
+                if wiederholungen_raw:
+                    wiederholungen = int(wiederholungen_raw)
+                    if wiederholungen < 0 or wiederholungen > 999:
+                        raise ValueError("Wiederholungen außerhalb gültiger Bereich (0-999)")
+                
+                # RPE validieren
+                rpe = None
+                if rpe_raw:
+                    rpe_raw = rpe_raw.replace(',', '.')
+                    rpe = float(rpe_raw)
+                    if rpe < 0 or rpe > 10:
+                        raise ValueError("RPE muss zwischen 0 und 10 sein")
+                
+                logger.info(f"Validated values - gewicht: {gewicht}, wdh: {wiederholungen}, rpe: {rpe}")
+                
+                # Speichere validierte Werte
+                satz.gewicht = gewicht
+                satz.wiederholungen = wiederholungen
+                satz.rpe = rpe
+                satz.ist_aufwaermsatz = request.POST.get('ist_aufwaermsatz') == 'on'
+                notiz = request.POST.get('notiz', '').strip()
+                satz.notiz = notiz if notiz else None
+                superset_gruppe = request.POST.get('superset_gruppe', '0').strip()
+                satz.superset_gruppe = int(superset_gruppe) if superset_gruppe else 0
+                
+                logger.info(f"Saving satz {set_id}...")
+                satz.save()
+                logger.info(f"Satz {set_id} saved successfully")
+                
+                # AJAX Request? Sende JSON
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True})
+                
+                return redirect('training_session', training_id=training_id)
+                
+            except (ValueError, TypeError) as e:
+                logger.error(f"Validation error in update_set: {e}", exc_info=True)
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False, 
+                        'error': f'Ungültige Eingabe: {str(e)}'
+                    }, status=400)
+                return redirect('training_session', training_id=training_id)
+        
+        # GET Request - redirect to session
+        return redirect('training_session', training_id=training_id)
+        
+    except Exception as e:
+        logger.exception(f"Unexpected error in update_set for set_id={set_id}: {e}")
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True})
-    
-    return redirect('training_session', training_id=training_id)
+            return JsonResponse({
+                'success': False,
+                'error': f'Serverfehler: {str(e)}'  # Temporär: Zeige echten Fehler für Debugging
+            }, status=500)
+        return redirect('dashboard')
 
 @login_required
 def add_koerperwert(request):
