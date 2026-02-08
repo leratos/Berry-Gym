@@ -129,8 +129,10 @@ def dashboard(request):
             week_volume = Satz.objects.filter(
                 einheit__datum__gte=week_start,
                 einheit__datum__lt=week_end,
-                einheit__user=request.user,
-                ist_aufwaermsatz=False
+
+                ist_aufwaermsatz=False,
+                einheit__user=request.user
+
             ).aggregate(
                 total=Sum(F('gewicht') * F('wiederholungen'), output_field=DecimalField())
             )
