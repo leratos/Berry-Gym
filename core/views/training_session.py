@@ -471,16 +471,31 @@ def finish_training(request, training_id):
 
     if request.method == 'POST':
         # Dauer und Kommentar speichern
-        dauer = request.POST.get('dauer_minuten')
+        dauer_raw = request.POST.get('dauer_minuten')
         kommentar = request.POST.get('kommentar')
 
-        if dauer:
-            training.dauer_minuten = dauer
+        has_error = False
+
+        if dauer_raw:
+            try:
+                dauer = int(dauer_raw)
+            except (TypeError, ValueError):
+                messages.error(request, "Bitte eine gültige Trainingsdauer in Minuten angeben.")
+                has_error = True
+            else:
+                # Plausibilitätsprüfung: Dauer muss positiv und realistisch sein
+                if dauer <= 0 or dauer > 1440:
+                    messages.error(request, "Die Trainingsdauer muss zwischen 1 und 1440 Minuten liegen.")
+                    has_error = True
+                else:
+                    training.dauer_minuten = dauer
+
         if kommentar:
             training.kommentar = kommentar
-        training.save()
 
-        return redirect('dashboard')
+        if not has_error:
+            training.save()
+            return redirect('dashboard')
 
     # Statistiken für die Zusammenfassung berechnen
     arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
