@@ -14,7 +14,7 @@ Functions:
 
 from datetime import datetime, timedelta, date
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Count, Max, Sum, Avg, F, Q
+from django.db.models import Count, Max, Sum, Avg, F, Q, DecimalField
 from django.http import JsonResponse
 from django.utils import timezone
 from django.contrib import messages
@@ -129,9 +129,10 @@ def dashboard(request):
             week_volume = Satz.objects.filter(
                 einheit__datum__gte=week_start,
                 einheit__datum__lt=week_end,
-                ist_aufwaermsatz=False
+                ist_aufwaermsatz=False,
+                einheit__user=request.user
             ).aggregate(
-                total=Sum('gewicht') * Sum('wiederholungen')
+                total=Sum(F('gewicht') * F('wiederholungen'), output_field=DecimalField())
             )
             if week_volume['total']:
                 last_4_weeks.append(float(week_volume['total'] or 0))
