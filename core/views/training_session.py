@@ -368,10 +368,12 @@ def add_set(request, training_id):
         return redirect('training_session', training_id=training_id)
 
 
+@login_required
+@require_http_methods(["POST"])
 def delete_set(request, set_id):
     """Löscht einen Satz und kehrt zur Liste zurück"""
-    # Wir holen den Satz. Wenn er nicht existiert, gibt's nen 404 Fehler.
-    satz = get_object_or_404(Satz, id=set_id)
+    # Wir holen den Satz des eingeloggten Nutzers. Wenn er nicht existiert oder nicht dem Nutzer gehört, gibt's einen 404 Fehler.
+    satz = get_object_or_404(Satz, id=set_id, einheit__user=request.user)
 
     # Wir merken uns die Training-ID, bevor wir löschen, damit wir zurückspringen können
     training_id = satz.einheit.id
