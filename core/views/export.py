@@ -72,7 +72,7 @@ def export_training_csv(request):
                 training.datum.strftime('%d.%m.%Y'),
                 satz.uebung.bezeichnung,
                 satz.uebung.get_muskelgruppe_display(),
-                satz.satznummer,
+                satz.satz_nr,
                 float(satz.gewicht) if satz.gewicht else '',
                 satz.wiederholungen,
                 satz.rpe if satz.rpe else '',
