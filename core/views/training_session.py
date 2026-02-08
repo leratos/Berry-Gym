@@ -171,7 +171,7 @@ def training_session(request, training_id):
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
     # Sortieren für Gruppierung: Erst Muskelgruppe, dann Übungsname
-    # Include both global exercises and user's custom exercises
+    # include both global exercises and user's custom exercises
     uebungen = Uebung.objects.filter(
         Q(is_custom=False) | Q(created_by=request.user)
     ).order_by('muskelgruppe', 'bezeichnung')
