@@ -339,7 +339,8 @@ def add_set(request, training_id):
             # Hole bisheriges Maximum für diese Übung
             alte_saetze = Satz.objects.filter(
                 uebung=uebung,
-                ist_aufwaermsatz=False
+                ist_aufwaermsatz=False,
+                einheit__user=request.user,
             ).exclude(id=neuer_satz.id)
 
             if alte_saetze.exists():
