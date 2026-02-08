@@ -110,7 +110,6 @@ def export_training_pdf(request):
     # Collect data
     heute = timezone.now()
     letzte_30_tage = heute - timedelta(days=30)
-    letzte_90_tage = heute - timedelta(days=90)
 
     # Training sessions
     trainings = Trainingseinheit.objects.filter(
