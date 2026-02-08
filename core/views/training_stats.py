@@ -27,11 +27,9 @@ import logging
 import random
 
 from ..models import (
-    Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung,
-    ProgressPhoto, Equipment, MUSKELGRUPPEN, BEWEGUNGS_TYP, GEWICHTS_TYP,
-    InviteCode, WaitlistEntry, CardioEinheit
+    Trainingseinheit, KoerperWerte, Uebung, Satz,
+    MUSKELGRUPPEN, CardioEinheit
 )
-
 logger = logging.getLogger(__name__)
 
 
