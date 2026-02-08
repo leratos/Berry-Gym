@@ -535,9 +535,14 @@ def delete_training(request, training_id):
 
 
 @login_required
+@login_required
 def exercise_stats(request, uebung_id):
     """Berechnet 1RM-Verlauf und Rekorde für eine Übung."""
-    uebung = get_object_or_404(Uebung, id=uebung_id)
+    uebung = get_object_or_404(
+        Uebung,
+        Q(is_custom=False) | Q(created_by=request.user),
+        id=uebung_id,
+    )
 
     # Alle Arbeitssätze holen (keine Warmups), chronologisch sortiert
     saetze = Satz.objects.filter(
