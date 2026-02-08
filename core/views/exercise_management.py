@@ -258,7 +258,13 @@ def import_uebungen(request):
                                     found = True
                                     break
                                 except Equipment.DoesNotExist:
-                                    pass
+                                    logger.warning(
+                                        'Equipment with internal name "%s" not found while resolving display name "%s".',
+                                        choice_value,
+                                        eq_name,
+                                    )
+                                    # Continue searching other equipment choices for a matching entry.
+                                    continue
                         if not found:
                             errors.append(f'Equipment "{eq_name}" nicht gefunden für Übung "{bezeichnung}"')
 
