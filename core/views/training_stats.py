@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 def dashboard(request):
     letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
-    letzter_koerperwert = KoerperWerte.objects.first()
+    letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
 
     # Trainingsfrequenz diese Woche (Montag bis Sonntag)
     heute = timezone.now()
