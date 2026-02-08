@@ -391,7 +391,9 @@ def share_group(request, gruppe_id):
         img.save(buffer, format='PNG')
         qr_base64 = base64.b64encode(buffer.getvalue()).decode()
     except ImportError:
-        pass
+        # QR-Code-Generierung ist optional: Wenn das 'qrcode'-Paket nicht installiert ist,
+        # wird einfach kein QR-Code angezeigt und die Seite funktioniert weiterhin.
+        logger.warning("QR code generation skipped because the 'qrcode' package is not installed.")
 
     context = {
         'plans': plans,
