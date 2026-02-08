@@ -171,7 +171,9 @@ def training_session(request, training_id):
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
     # Sortieren für Gruppierung: Erst Muskelgruppe, dann Übungsname
-    uebungen = Uebung.objects.all().order_by('muskelgruppe', 'bezeichnung')
+    uebungen = Uebung.objects.filter(
+        Q(is_custom=False) | Q(created_by=request.user)
+    ).order_by('muskelgruppe', 'bezeichnung')
 
     # Sortierung nach Plan-Reihenfolge wenn Training aus Plan gestartet wurde
     if training.plan:
