@@ -33,6 +33,7 @@ from ..models import (
 logger = logging.getLogger(__name__)
 
 
+@login_required
 def dashboard(request):
     letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
     letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
@@ -500,6 +501,7 @@ def dashboard(request):
     return render(request, 'core/dashboard.html', context)
 
 
+@login_required
 def training_list(request):
     """Zeigt eine Liste aller vergangenen Trainings."""
     # Wir holen NUR die Trainings des aktuellen Users, sortiert nach Datum (neu -> alt)
@@ -523,6 +525,7 @@ def training_list(request):
     return render(request, 'core/training_list.html', context)
 
 
+@login_required
 def delete_training(request, training_id):
     """Löscht ein komplettes Training aus der Historie."""
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
@@ -531,6 +534,7 @@ def delete_training(request, training_id):
     return redirect('training_list')
 
 
+@login_required
 def exercise_stats(request, uebung_id):
     """Berechnet 1RM-Verlauf und Rekorde für eine Übung."""
     uebung = get_object_or_404(Uebung, id=uebung_id)
@@ -633,6 +637,7 @@ def exercise_stats(request, uebung_id):
     return render(request, 'core/stats_exercise.html', context)
 
 
+@login_required
 def training_stats(request):
     """Erweiterte Trainingsstatistiken mit Volumen-Progression und Analyse."""
     # Alle Trainings mit Volumen
