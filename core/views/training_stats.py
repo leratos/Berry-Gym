@@ -236,6 +236,7 @@ def dashboard(request):
 
         # Faktor 3: Hohe Frequenz ohne Ruhetag (30% Gewicht)
         last_7_days = Trainingseinheit.objects.filter(
+            user=request.user,
             datum__gte=heute - timedelta(days=7)
         ).count()
 
