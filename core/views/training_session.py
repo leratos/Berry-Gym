@@ -464,9 +464,10 @@ def update_set(request, set_id):
         return redirect('dashboard')
 
 
+@login_required
 def finish_training(request, training_id):
     """Zeigt Zusammenfassung und ermöglicht Speichern von Dauer/Kommentar."""
-    training = get_object_or_404(Trainingseinheit, id=training_id)
+    training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
     if request.method == 'POST':
         # Dauer und Kommentar speichern
