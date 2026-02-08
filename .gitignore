@@ -126,3 +126,6 @@ docs/SW_UPDATE_V3.md
 vapid_public.pem
 vapid_private.pem
 
+.claude/
+core/views_old.py
+nul
