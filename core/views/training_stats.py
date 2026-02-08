@@ -538,7 +538,6 @@ def delete_training(request, training_id):
 
 
 @login_required
-@login_required
 def exercise_stats(request, uebung_id):
     """Berechnet 1RM-Verlauf und Rekorde für eine Übung."""
     uebung = get_object_or_404(
