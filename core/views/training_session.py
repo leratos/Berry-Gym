@@ -29,6 +29,7 @@ from ..models import (
 logger = logging.getLogger(__name__)
 
 
+@login_required
 def training_select_plan(request):
     """Zeigt alle verfügbaren Pläne zur Auswahl an."""
     from collections import OrderedDict
