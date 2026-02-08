@@ -44,6 +44,7 @@ from core.chart_generator import (
 logger = logging.getLogger(__name__)
 
 
+@login_required
 def export_training_csv(request):
     """Export all training data as CSV.
 
