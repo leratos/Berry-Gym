@@ -34,18 +34,42 @@ class UebungAdminForm(forms.ModelForm):
 @admin.register(Uebung)
 class UebungAdmin(admin.ModelAdmin):
     form = UebungAdminForm
-    list_display = ('bezeichnung', 'muskelgruppe', 'gewichts_typ', 'bewegungstyp', 'tags_anzeige', 'equipment_anzeige', 'video_status', 'hilfsmuskel_anzeige')
+    list_display = (
+        'bezeichnung',
+        'muskelgruppe',
+        'gewichts_typ',
+        'bewegungstyp',
+        'standard_beginner',
+        'standard_intermediate',
+        'standard_advanced',
+        'standard_elite',
+        'tags_anzeige',
+        'equipment_anzeige',
+        'video_status',
+        'hilfsmuskel_anzeige'
+    )
     list_filter = ('muskelgruppe', 'bewegungstyp', 'gewichts_typ', 'tags', 'equipment')
     search_fields = ('bezeichnung',)
     ordering = ('bezeichnung',)
     filter_horizontal = ('equipment', 'favoriten', 'tags')
-    
+
     fieldsets = (
         ('Grundinformationen', {
             'fields': ('bezeichnung', 'muskelgruppe', 'hilfsmuskeln', 'tags')
         }),
         ('Trainingsdetails', {
             'fields': ('gewichts_typ', 'bewegungstyp', 'equipment')
+        }),
+        ('1RM Kraftstandards (bei 80kg Körpergewicht)', {
+            'fields': (
+                'standard_beginner',
+                'standard_intermediate',
+                'standard_advanced',
+                'standard_elite'
+            ),
+            'description': 'Standards in kg für einen 80kg schweren Athleten. '
+                          'Werden automatisch nach Körpergewicht skaliert.',
+            'classes': ('collapse',)
         }),
         ('Medien', {
             'fields': ('bild', 'video_link', 'video_file', 'video_thumbnail'),
