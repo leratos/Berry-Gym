@@ -87,7 +87,7 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit
 #### 1. **AI Performance-Analyse** (v0.7.8)
 
 **Dashboard Widget - Top 3 Warnungen:**
-- **Plateau-Erkennung**: Keine Progression bei Top-Übungen (4 Wochen)
+- **Plateau-Erkennung**: Session-basierter Vergleich (letzte 2 Wochen vs. Wochen 2-4)
 - **Rückschritt-Erkennung**: >15% Leistungsabfall erkannt
 - **Stagnation-Erkennung**: Muskelgruppen >14 Tage nicht trainiert
 - Automatische Verbesserungsvorschläge (Drop-Sets, Volumen-Erhöhung, etc.)
