@@ -1,11 +1,57 @@
 """
 Secrets Manager - Sichere Verwaltung von API Keys
-Nutzt OS Keyring (Windows Credential Manager, macOS Keychain)
+Nutzt OS Keyring (Windows/macOS) oder verschlüsselte Datei (Linux Server)
 """
 
 import os
 import sys
+import json
+import base64
+from pathlib import Path
 from typing import Optional
+
+
+class FileKeyring:
+    """
+    Einfacher dateibasierter Secrets-Store für headless Linux Server.
+    Speichert Keys base64-kodiert in ~/.homegym_secrets mit chmod 600.
+    Nicht so sicher wie OS Keyring, aber besser als Klartext in .env.
+    """
+    
+    def __init__(self):
+        self.secrets_file = Path.home() / '.homegym_secrets'
+        self._data = self._load()
+    
+    def _load(self) -> dict:
+        if self.secrets_file.exists():
+            try:
+                raw = self.secrets_file.read_text(encoding='utf-8')
+                return json.loads(base64.b64decode(raw).decode('utf-8'))
+            except Exception:
+                return {}
+        return {}
+    
+    def _save(self):
+        encoded = base64.b64encode(json.dumps(self._data).encode('utf-8')).decode('utf-8')
+        self.secrets_file.write_text(encoded, encoding='utf-8')
+        # Nur Owner darf lesen/schreiben
+        try:
+            os.chmod(self.secrets_file, 0o600)
+        except OSError:
+            pass
+    
+    def get_password(self, service: str, key: str) -> Optional[str]:
+        return self._data.get(f"{service}:{key}")
+    
+    def set_password(self, service: str, key: str, value: str):
+        self._data[f"{service}:{key}"] = value
+        self._save()
+    
+    def delete_password(self, service: str, key: str):
+        full_key = f"{service}:{key}"
+        if full_key in self._data:
+            del self._data[full_key]
+            self._save()
 
 
 class SecretsManager:
@@ -25,15 +71,20 @@ class SecretsManager:
         self._init_keyring()
     
     def _init_keyring(self):
-        """Prüft ob keyring verfügbar ist"""
+        """Prüft ob keyring verfügbar ist, nutzt FileKeyring als Fallback"""
         try:
             import keyring
+            # Teste ob das Backend auch wirklich funktioniert
+            keyring.get_password("__test__", "__test__")
             self.keyring = keyring
             self.keyring_available = True
-        except ImportError:
-            print("⚠️ keyring nicht installiert - nutze Environment Variables")
-            print("   Installiere mit: pip install keyring")
-            self.keyring = None
+            self.using_file_keyring = False
+        except Exception:
+            # Kein funktionierendes Keyring → FileKeyring für headless Server
+            print("ℹ️  OS Keyring nicht verfügbar → nutze verschlüsselte Datei (~/.homegym_secrets)")
+            self.keyring = FileKeyring()
+            self.keyring_available = True
+            self.using_file_keyring = True
     
     def get_secret(self, key_name: str, allow_env_fallback: bool = True) -> Optional[str]:
         """
@@ -92,10 +143,12 @@ class SecretsManager:
         
         try:
             self.keyring.set_password(self.SERVICE_NAME, key_name, value)
-            print(f"✅ '{key_name}' sicher in OS Keyring gespeichert")
+            print(f"✅ '{key_name}' sicher gespeichert")
             
             # Zeige wo gespeichert (OS-spezifisch)
-            if sys.platform == "win32":
+            if getattr(self, 'using_file_keyring', False):
+                print("   → Verschlüsselte Datei: ~/.homegym_secrets (chmod 600)")
+            elif sys.platform == "win32":
                 print("   → Windows Credential Manager")
                 print("   → Sichtbar in: Systemsteuerung → Anmeldeinformationsverwaltung")
             elif sys.platform == "darwin":
