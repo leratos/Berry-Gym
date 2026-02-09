@@ -1,7 +1,7 @@
 # 🏋️ HomeGym App - Roadmap & Feature-Tracking
 
-**Stand:** 05.02.2026  
-**Version:** 0.8.0
+**Stand:** 09.02.2026
+**Version:** 0.9.0
 
 ---
 
@@ -202,7 +202,7 @@
 
 ---
 
-## 🔄 PHASE 4: Erweiterte Features (55% - IN ARBEIT)
+## 🔄 PHASE 4: Erweiterte Features (65% - IN ARBEIT)
 
 ### In-App Plan-Editor
 - [x] **Pläne in der App erstellen (ohne Admin)** ✅
@@ -329,7 +329,7 @@
 - [ ] Compact/Comfortable View Mode
 
 ### Export & Backup
-- [ ] CSV/Excel Export (alle Daten)
+- [x] **CSV-Export** ✅ (09.02.2026) - Alle Trainingsdaten als CSV-Download
 - [x] **PDF-Report generieren** ✅ (11.01.2026)
   - Trainings-Statistik Report (Multi-Page)
   - Body-Map Visualisierung
@@ -360,6 +360,22 @@
   - **Vorteil:** Kostenlos, privat, offline-fähig, keine API-Calls, keine GPU nötig
 - [x] **Verletzungsrisiko-Erkennung** ✅ (Volumen-Spikes + Cardio-Fatigue im Ermüdungsindex)
 - [x] **Plateau-Erkennung** ✅ (AI Coach erkennt stagnierende Übungen 4+ Wochen)
+- [x] **1RM Kraftstandards & Leistungsbewertung** ✅ (09.02.2026)
+  - 4 Leistungsstufen pro Übung: Anfänger, Fortgeschritten, Erfahren, Elite
+  - Körpergewicht-skalierte Standards (Referenz: 80kg)
+  - 6-Monats 1RM-Entwicklung pro Übung (Epley-Formel)
+  - Fortschrittsbalken zum nächsten Level
+  - Standards in Uebung-Model gespeichert (Migration 0052/0053)
+  - Automatische Befüllung via populate-Migration
+- [x] **Advanced Training Statistics** ✅ (09.02.2026)
+  - Plateau-Analyse mit 5 Status-Stufen (Progression → Langzeit-Plateau)
+  - Konsistenz-Metriken (Streak, Adherence-Rate, Avg. Pause)
+  - Erweiterter Ermüdungs-Index mit Deload-Empfehlungen
+  - RPE-Qualitätsanalyse (Junk Volume, Optimal Intensity, Failure Rate)
+  - Modulares Utility-System (`core/utils/advanced_stats.py`, 587 Zeilen)
+- [x] **CSV-Export** ✅ (09.02.2026)
+  - Alle Trainingsdaten als CSV-Download (Datum, Übung, Gewicht, Wdh, RPE, Volumen)
+  - UTF-8 BOM für korrekte Excel-Darstellung
 - [ ] Muskelgruppen-Priorisierung vorschlagen
 
 ---
@@ -780,6 +796,76 @@
   - Anzeige in Trainingshistorie
 - [ ] **Bessere Error-Messages** (User-freundliche Fehlerbeschreibungen)
 - [x] **Toast-Notifications** (statt Alerts für Erfolgs-Meldungen) ✅ (03.02.2026)
+
+---
+
+## 🎉 Neue Features in Version 0.9.0 (09.02.2026)
+
+### 1RM Kraftstandards & Leistungsbewertung
+Übungen haben jetzt evidenzbasierte Kraftstandards zur Einordnung der eigenen Leistung:
+
+1. **4 Leistungsstufen pro Übung**
+   - Anfänger, Fortgeschritten, Erfahren, Elite
+   - Standards basierend auf 80kg Referenz-Körpergewicht
+   - Automatische Skalierung auf individuelles Körpergewicht
+
+2. **1RM-Berechnung & Vergleich**
+   - Epley-Formel: 1RM = Gewicht × (1 + Wiederholungen/30)
+   - 6-Monats 1RM-Entwicklung pro Übung
+   - Fortschrittsbalken zum nächsten Level
+   - Vergleich mit Leistungsstandards
+
+3. **Datenbank-Integration**
+   - Felder: `standard_beginner`, `standard_intermediate`, `standard_advanced`, `standard_elite` im Uebung-Model
+   - Migration 0052: Schema-Erweiterung
+   - Migration 0053: Automatische Befüllung mit Standards für alle Hauptübungen
+
+**Technische Details:**
+- Model: `Uebung` erweitert um 4 DecimalFields
+- Utils: `calculate_1rm_standards()` in `core/utils/advanced_stats.py`
+- Skalierung: `standard × (user_gewicht / 80.0)`
+
+### Advanced Training Statistics (Erweiterter PDF-Report)
+Der PDF-Report wurde um 5 neue Analyse-Module erweitert:
+
+1. **Plateau-Analyse**
+   - 5 Status-Stufen: Aktive Progression → Beobachten → Leichtes Plateau → Plateau → Langzeit-Plateau
+   - Regression-Erkennung (>10% Leistungsabfall)
+   - Progression pro Monat (kg/Monat)
+   - Farbcodierte Status-Badges (success/warning/danger)
+
+2. **Konsistenz-Metriken**
+   - Aktueller Streak (Wochen in Folge mit Training)
+   - Längster Streak aller Zeiten
+   - Adherence-Rate (% der Wochen mit Training)
+   - Durchschnittliche Pause zwischen Trainings
+   - 5-stufige Bewertung (Exzellent → Inkonsistent)
+
+3. **Erweiterter Ermüdungs-Index**
+   - Volumen-Spike Detection (40% Gewichtung)
+   - RPE-Trend Analyse (30% Gewichtung)
+   - Trainingsfrequenz-Bewertung (30% Gewichtung)
+   - Deload-Empfehlungen mit Datum
+   - 4-stufige Warnstufen (Niedrig → Kritisch)
+
+4. **RPE-Qualitätsanalyse**
+   - Optimale Intensitätsrate (% Sätze bei RPE 7-9)
+   - Junk Volume Rate (% Sätze bei RPE <6)
+   - Failure Rate (% Sätze bei RPE 10)
+   - Empfehlungen zur Trainingsintensität
+   - 4-stufige Bewertung (Exzellent → Verbesserung nötig)
+
+5. **CSV-Export**
+   - Alle Trainingsdaten als CSV-Download
+   - Felder: Datum, Übung, Muskelgruppe, Satz Nr., Gewicht, Wdh, RPE, Volumen, Aufwärmsatz, Notiz
+   - UTF-8 BOM für korrekte Excel-Darstellung
+
+**Technische Details:**
+- `core/utils/advanced_stats.py` (587 Zeilen - 5 Analyse-Funktionen)
+- `core/views/export.py` (erweiterter PDF-Export + CSV-Export)
+- `core/templates/core/training_pdf_simple.html` (erweitert um ~450 Zeilen)
+- Fixtures: `initial_exercises.json` aktualisiert mit 1RM Standards
+- Validierung: `validate_exercises_json.py` für Datenintegrität
 
 ---
 
@@ -1428,7 +1514,7 @@ Die App hat jetzt einen vollständigen AI Coach für automatische Plan-Anpassung
 
 ---
 
-**Letzte Aktualisierung:** 16.01.2026  
+**Letzte Aktualisierung:** 09.02.2026
 **Nächstes Review:** Nach Abschluss Phase 5 (Next Features)
 
 ---
@@ -1436,9 +1522,9 @@ Die App hat jetzt einen vollständigen AI Coach für automatische Plan-Anpassung
 ## 📊 Statistiken & Metriken
 
 ### Codebase
-- **Gesamtzeilen Code:** ~16.500+ Zeilen
-- **Python Backend:** ~8.500 Zeilen
-- **Templates (HTML/Django):** ~5.000 Zeilen
+- **Gesamtzeilen Code:** ~19.500+ Zeilen
+- **Python Backend:** ~9.500 Zeilen (inkl. advanced_stats.py, export.py)
+- **Templates (HTML/Django):** ~5.500 Zeilen (erweitertes PDF-Template)
 - **JavaScript:** ~2.500 Zeilen (inkl. Offline Manager)
 - **Service Worker:** ~250 Zeilen
 
@@ -1448,15 +1534,16 @@ Die App hat jetzt einen vollständigen AI Coach für automatische Plan-Anpassung
 - **Phase 3:** 100% (15/15 Features)
 - **Phase 3.5:** 100% (10/10 Features)
 - **Phase 3.7:** 100% (8/8 Features - AI Coach)
-- **Phase 4:** 60% (6/10 Features - PDF, PWA/Offline, Templates, Übungsdb)
-- **Phase 5:** 80% (4/5 High Priority - Superset, PDF Report, AI Auto-Suggest, Custom Übungen)
+- **Phase 4:** 65% (7/10 Features - PDF, PWA/Offline, Templates, Übungsdb, CSV-Export)
+- **Phase 5:** 85% (4/5 High Priority + Advanced Stats)
 
-### Key Numbers (Januar 2026)
-- **Übungsdatenbank:** 200+ Übungen mit anatomischen Daten
+### Key Numbers (Februar 2026)
+- **Übungsdatenbank:** 200+ Übungen mit anatomischen Daten + 1RM Standards
 - **SVG Muskelregionen:** 50+ identifizierbare Bereiche
 - **AI Coach Cost:** ~0.003€ pro Plan-Generierung/Optimierung
-- **PDF Seiten:** 7 Seiten professioneller Report
+- **PDF Seiten:** 7+ Seiten professioneller Report (mit erweiterten Analysen)
 - **Charts:** 4 (Body-Map, Heatmap, Volumen-Line, Push/Pull-Pie)
 - **IndexedDB Stores:** 3 (trainingData, exercises, plans)
 - **Offline-Fähig:** Ja (Service Worker + IndexedDB + Background Sync)
 - **Deployment:** Produktiv auf last-strawberry.com
+- **1RM Standards:** 4 Levels (Anfänger → Elite) pro Übung, körpergewicht-skaliert

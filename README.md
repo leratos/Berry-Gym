@@ -6,10 +6,10 @@
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square)
 ![Database](https://img.shields.io/badge/Database-MariaDB%20%7C%20SQLite-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
-![Version](https://img.shields.io/badge/Version-0.8.0-brightgreen?style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.9.0-brightgreen?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-Ready-purple?style=flat-square)
 
-**Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach, Custom Übungen & AI Performance-Analyse**
+**Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach, 1RM Kraftstandards, Advanced Analytics & AI Performance-Analyse**
 
 🌐 **[Live Demo & Beta Testing](https://gym.last-strawberry.com)** 🌐
 
@@ -79,6 +79,8 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit
   - Progressions-Charts pro Übung
   - Plateau-Erkennung (4+ Wochen Stagnation)
   - **Alternative Übungen**: Intelligentes Matching nach Bewegungstyp & Muskelgruppe (v0.7.8)
+  - **1RM Kraftstandards** (v0.9.0): 4 Leistungsstufen pro Übung (Anfänger → Elite), körpergewicht-skaliert
+  - **6-Monats 1RM-Entwicklung** mit Fortschrittsbalken zum nächsten Level
 
 ### 🤖 AI Coach Features
 
@@ -137,19 +139,29 @@ python ai_coach/plan_generator.py --user-id 1
 - **Performance Form-Index**: 0-100 Score (Frequenz + RPE + Volumen)
 - **Ermüdungs-Index**: Automatische Deload-Empfehlungen
 - **RPE-Statistiken**: Durchschnitt & Trend pro Übung
+- **Plateau-Analyse** (v0.9.0): 5-stufige Progressions-Erkennung mit Regression-Detection
+- **Konsistenz-Metriken** (v0.9.0): Streak-Tracking, Adherence-Rate, Trainings-Regelmäßigkeit
+- **RPE-Qualitätsanalyse** (v0.9.0): Junk Volume & optimale Intensität erkennen
+- **1RM Kraftstandards** (v0.9.0): Leistungsbewertung gegen evidenzbasierte Standards
+- **CSV-Export** (v0.9.0): Alle Trainingsdaten als Download für Excel/Sheets
 
 ### � Professional PDF Reports
 
-**7-seitiger professioneller Trainingsreport** mit xhtml2pdf:
+**Professioneller Trainingsreport (7+ Seiten)** mit xhtml2pdf:
 
 #### Aufbau:
 1. **Cover Page** mit anatomischer Body-Map
-2. **Table of Contents** (6 Kapitel)
+2. **Table of Contents**
 3. **Executive Summary** mit Kerndaten & Data-Quality-Warnings
 4. **Muskelgruppen-Analyse** mit Status-Badges & Erklärungen
 5. **Push/Pull Balance** mit Pie-Chart & Empfehlungen
 6. **Training Progress** (Top-5 Kraftzuwächse)
 7. **Trainer Recommendations** (Stärken, Schwächen, Next Steps)
+8. **Plateau-Analyse** mit 5-stufiger Progressions-Bewertung (v0.9.0)
+9. **Konsistenz-Metriken** mit Streak & Adherence-Rate (v0.9.0)
+10. **Ermüdungs-Index** mit Deload-Empfehlungen (v0.9.0)
+11. **1RM Kraftstandards** mit Leistungsstufen-Vergleich (v0.9.0)
+12. **RPE-Qualitätsanalyse** mit Intensitäts-Bewertung (v0.9.0)
 
 #### Features:
 - **Anatomische Body-Map** (SVG → PNG via cairosvg):
@@ -176,7 +188,7 @@ python ai_coach/plan_generator.py --user-id 1
   - 16px Legenden-Font
   - Border-less chart headers
 
-**Technologie-Stack**: xhtml2pdf, matplotlib (Agg backend), cairosvg, Pillow
+**Technologie-Stack**: xhtml2pdf, matplotlib (Agg backend), cairosvg, Pillow, scikit-learn (ML-Modelle)
 
 ### 📚 Plan-Sharing & Bibliothek
 
@@ -470,8 +482,12 @@ Fitness/
 │   ├── fixtures/               # Initial-Daten
 │   │   ├── initial_exercises.json  # 98 vordefinierte Übungen
 │   │   └── plan_templates.json     # Beispiel-Pläne
+│   ├── utils/                  # Utility Module
+│   │   └── advanced_stats.py         # Erweiterte Analyse-Funktionen (587 Zeilen)
+│   ├── views/                  # Modulare Views
+│   │   └── export.py                 # CSV & PDF Export (975 Zeilen)
 │   ├── management/commands/    # Custom Management Commands
-│   └── migrations/             # Datenbank Migrationen (22+)
+│   └── migrations/             # Datenbank Migrationen (53+)
 ├── deployment/                 # Production Configs (Templates)
 │   ├── homegym.service         # Systemd Service (Gunicorn)
 │   └── homegym.nginx           # Nginx Reverse Proxy
@@ -517,13 +533,14 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - **PWA:** Service Worker, Manifest.json
 - **PDF Generation:** xhtml2pdf 0.2.16, matplotlib 3.10.8, cairosvg 2.7.1, Pillow 12.1.0
 
-### Projekt-Statistiken (Version 0.8.0)
-- **Lines of Code:** ~17,000+
-- **Python Files:** 60+
+### Projekt-Statistiken (Version 0.9.0)
+- **Lines of Code:** ~19,500+
+- **Python Files:** 65+
 - **Templates:** 30+ HTML/Django
-- **Exercise Library:** 98 vordefinierte Übungen + Custom Übungen
+- **Exercise Library:** 200+ Übungen mit anatomischen Daten + 1RM Standards + Custom Übungen
 - **Muscle Groups:** 19 (anatomisch korrekt)
-- **PDF Report:** 7 Seiten mit 4 Charts
+- **PDF Report:** 7+ Seiten mit 4 Charts + 5 erweiterte Analysen
+- **1RM Standards:** 4 Levels pro Übung (körpergewicht-skaliert)
 - **Development Time:** 14+ Monate
 
 ---
@@ -531,7 +548,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 ## 📊 Datenbank Schema
 
 **Core Models:**
-- `Uebung`: 98 vordefinierte Übungen + Custom Übungen (Bezeichnung, Muskelgruppe, Equipment, created_by)
+- `Uebung`: 200+ Übungen + Custom Übungen (Bezeichnung, Muskelgruppe, Equipment, 1RM Standards, created_by)
 - `Plan`: User-spezifische Trainingspläne
 - `PlanUebung`: M2M Junction mit Reihenfolge, Sätze, Wdh
 - `Trainingseinheit`: Einzelnes Training (Datum, Dauer, Kommentar)
@@ -544,24 +561,26 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 ## 🔮 Roadmap & Known Limitations
 
-### Aktuell verfügbar (v0.8.0)
+### Aktuell verfügbar (v0.9.0)
+- ✅ **1RM Kraftstandards**: 4 Leistungsstufen pro Übung (Anfänger → Elite), körpergewicht-skaliert
+- ✅ **Advanced Training Statistics**: Plateau-Analyse, Konsistenz-Metriken, RPE-Qualität, Ermüdungs-Index
+- ✅ **CSV-Export**: Alle Trainingsdaten als Download
+- ✅ **Erweiterter PDF-Report**: 5 neue Analyse-Module im professionellen Report
 - ✅ Cardio Lite Tracking (9 Aktivitäten mit Ermüdungsindex)
 - ✅ Video-Support für Übungen (YouTube & Vimeo)
 - ✅ Custom Übungen erstellen
 - ✅ AI Performance-Analyse (Dashboard Widget)
 - ✅ AI Training Counter (jedes 3. Training)
 - ✅ Alternative Übungen mit Scoring
-- ✅ Keyboard-Shortcuts
-- ✅ Undo-Funktion
-- ✅ Autocomplete für Übungssuche
+- ✅ Keyboard-Shortcuts, Undo-Funktion, Autocomplete
 - ✅ Security Improvements (31+ Alerts behoben)
 
 ### Geplant (siehe ROADMAP.md)
-- 🔜 Progress Photos mit KI-Analyse
+- 🔜 Onboarding-Tour & Feature-Discovery
+- 🔜 Gewichtsempfehlungen UI-Polish
+- 🔜 Notizen-System erweitern (Übungs- & Trainingstag-Notizen)
+- 🔜 Social Features (Leaderboards, Challenges)
 - 🔜 Nutrition Tracking (Makros & Kalorien)
-- 🔜 Training Templates Library
-- 🔜 Social Features (Freunde, Leaderboards)
-- 🔜 Mobile App (React Native)
 
 ### Bekannte Limitierungen
 - PDF Reports benötigen Cairo-Installation für optimale Body-Maps (Pillow-Fallback verfügbar)
@@ -647,7 +666,7 @@ A:
 - **Hosting:** Abhängig von deinem Server/Hosting-Anbieter
 
 **Q: Kann ich meine Daten exportieren?**
-A: Ja! Du kannst Trainingspläne als JSON exportieren. Full-Database-Export über Django's `dumpdata` Command.
+A: Ja! CSV-Export für alle Trainingsdaten, professioneller PDF-Report mit Analysen, Plan-PDF mit QR-Code, sowie JSON-Export über Django's `dumpdata` Command.
 
 **Q: Ist Multi-User-Betrieb möglich?**
 A: Ja! Jeder User hat eigene Daten, Pläne und Custom-Übungen. Vollständige Datenisolation.
