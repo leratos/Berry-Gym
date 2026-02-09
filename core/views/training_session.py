@@ -348,6 +348,7 @@ def training_session(request, training_id):
         profile = request.user.profile
         is_deload_week = profile.is_deload_week()
     except UserProfile.DoesNotExist:
+        # Kein UserProfile vorhanden: Standardwert (kein Deload) beibehalten.
         pass
 
     context = {
