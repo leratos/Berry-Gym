@@ -313,6 +313,11 @@ class Trainingseinheit(models.Model):
     datum = models.DateTimeField(auto_now_add=True)
     dauer_minuten = models.PositiveIntegerField(blank=True, null=True, verbose_name="Dauer (Min)")
     kommentar = models.TextField(blank=True, null=True, verbose_name="Wie lief's?")
+    ist_deload = models.BooleanField(
+        default=False,
+        verbose_name="Deload-Training",
+        help_text="Deload-Trainings werden nicht in Statistiken (1RM, Volumen-Trends, Plateaus) eingerechnet"
+    )
 
     def __str__(self):
         return f"Training vom {self.datum.strftime('%d.%m.%Y %H:%M')}"

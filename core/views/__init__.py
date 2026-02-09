@@ -23,6 +23,7 @@ from .training_session import (
     delete_set,
     update_set,
     finish_training,
+    toggle_deload,
 )
 
 # Training stats views
@@ -170,7 +171,7 @@ __all__ = [
     'apply_beta', 'register', 'profile', 'feedback_list', 'feedback_create', 'feedback_detail',
     # Training sessions
     'training_select_plan', 'plan_details', 'training_start', 'training_session',
-    'add_set', 'delete_set', 'update_set', 'finish_training',
+    'add_set', 'delete_set', 'update_set', 'finish_training', 'toggle_deload',
     # Training stats
     'dashboard', 'training_list', 'delete_training', 'training_stats', 'exercise_stats',
     # Body tracking

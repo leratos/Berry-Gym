@@ -259,6 +259,25 @@
 
     <div class="container pb-5 mb-5">
       
+        <!-- Deload-Toggle -->
+        <div class="alert {% if training.ist_deload or is_deload_week %}alert-info{% else %}alert-dark{% endif %} border-secondary d-flex justify-content-between align-items-center mb-2 py-2" id="deloadBanner">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="deloadToggle" 
+                       {% if training.ist_deload or is_deload_week %}checked{% endif %}
+                       onchange="toggleDeload(this.checked)">
+                <label class="form-check-label small" for="deloadToggle">
+                    <i class="bi bi-arrow-down-circle"></i> Deload-Training
+                </label>
+            </div>
+            <small class="text-muted" id="deloadHint">
+                {% if training.ist_deload or is_deload_week %}
+                    <i class="bi bi-info-circle"></i> Wird nicht in Statistik gezählt
+                {% else %}
+                    Zählt für Statistik
+                {% endif %}
+            </small>
+        </div>
+
         <!-- Volumen-Anzeige -->
         {% if saetze %}
         <div class="alert alert-dark border-secondary d-flex justify-content-between align-items-center mb-3">
@@ -1018,6 +1037,30 @@
         function toggleSound() {
             soundEnabled = document.getElementById('soundToggle').checked;
             localStorage.setItem('soundEnabled', soundEnabled);
+        }
+
+        // Deload-Toggle: Speichert Status per AJAX
+        function toggleDeload(isDeload) {
+            const banner = document.getElementById('deloadBanner');
+            const hint = document.getElementById('deloadHint');
+            
+            if (isDeload) {
+                banner.className = banner.className.replace('alert-dark', 'alert-info');
+                hint.innerHTML = '<i class="bi bi-info-circle"></i> Wird nicht in Statistik gezählt';
+            } else {
+                banner.className = banner.className.replace('alert-info', 'alert-dark');
+                hint.innerHTML = 'Zählt für Statistik';
+            }
+
+            fetch(`/api/training/{{ training.id }}/toggle-deload/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ ist_deload: isDeload })
+            }).catch(err => console.warn('Deload-Toggle Fehler:', err));
         }
 
         function updateVolume(value) {

@@ -275,7 +275,8 @@ def training_session(request, training_id):
         letzter_satz = Satz.objects.filter(
             einheit__user=request.user,
             uebung_id=uebung_id,
-            ist_aufwaermsatz=False
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
         ).exclude(einheit=training).order_by('-einheit__datum', '-satz_nr').first()
 
         if letzter_satz:
@@ -341,6 +342,14 @@ def training_session(request, training_id):
                 'pause_from_plan': bool(plan_pausenzeit),
             }
 
+    # Deload-Status: Checkbox-Default basierend auf Zyklus
+    is_deload_week = False
+    try:
+        profile = request.user.profile
+        is_deload_week = profile.is_deload_week()
+    except UserProfile.DoesNotExist:
+        pass
+
     context = {
         'training': training,
         'uebungen': uebungen,
@@ -349,6 +358,7 @@ def training_session(request, training_id):
         'arbeitssaetze_count': arbeitssaetze.count(),
         'plan_ziele': plan_ziele,
         'gewichts_empfehlungen': gewichts_empfehlungen,
+        'is_deload_week': is_deload_week,
     }
     return render(request, 'core/training_session.html', context)
 
@@ -398,6 +408,7 @@ def add_set(request, training_id):
                 uebung=uebung,
                 ist_aufwaermsatz=False,
                 einheit__user=request.user,
+                einheit__ist_deload=False,
             ).exclude(id=neuer_satz.id)
 
             if alte_saetze.exists():
@@ -528,6 +539,21 @@ def update_set(request, set_id):
 
 
 @login_required
+@require_http_methods(["POST"])
+def toggle_deload(request, training_id):
+    """Setzt oder entfernt den Deload-Status eines Trainings via AJAX."""
+    training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
+    try:
+        data = json.loads(request.body)
+        training.ist_deload = bool(data.get('ist_deload', False))
+        training.save(update_fields=['ist_deload'])
+        return JsonResponse({'success': True, 'ist_deload': training.ist_deload})
+    except (json.JSONDecodeError, Exception) as e:
+        logger.warning(f"toggle_deload error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
 def finish_training(request, training_id):
     """Zeigt Zusammenfassung und ermöglicht Speichern von Dauer/Kommentar."""
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
@@ -584,7 +610,7 @@ def finish_training(request, training_id):
         # Analysiere die letzten 3 Trainings
         # Liste von IDs verwenden statt Subquery (MariaDB LIMIT-Kompatibilität)
         recent_training_ids = list(
-            Trainingseinheit.objects.filter(user=request.user)
+            Trainingseinheit.objects.filter(user=request.user, ist_deload=False)
             .order_by('-datum').values_list('id', flat=True)[:3]
         )
         recent_trainings = Trainingseinheit.objects.filter(id__in=recent_training_ids)
@@ -593,6 +619,7 @@ def finish_training(request, training_id):
         recent_sets = Satz.objects.filter(
             einheit_id__in=recent_training_ids,
             ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
             rpe__isnull=False
         )
 
@@ -601,7 +628,7 @@ def finish_training(request, training_id):
 
             # Volumen-Analyse der letzten 3 vs. vorherige 3 Trainings
             previous_training_ids = list(
-                Trainingseinheit.objects.filter(user=request.user)
+                Trainingseinheit.objects.filter(user=request.user, ist_deload=False)
                 .order_by('-datum').values_list('id', flat=True)[3:6]
             )
             previous_trainings = Trainingseinheit.objects.filter(id__in=previous_training_ids)

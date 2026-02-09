@@ -110,7 +110,8 @@ class LLMClient:
                 
                 self.openrouter_client = OpenAI(
                     api_key=api_key,
-                    base_url="https://openrouter.ai/api/v1"
+                    base_url="https://openrouter.ai/api/v1",
+                    timeout=90.0  # 90s max, damit Gunicorn nicht vorher killt
                 )
                 print("✓ OpenRouter Client bereit (Key aus sicherer Quelle)")
             except ImportError:
@@ -144,7 +145,7 @@ class LLMClient:
         
         # Strategie 1: OpenRouter direkt
         if self.use_openrouter:
-            return self._generate_with_openrouter(messages, max_tokens)
+            return self._generate_with_openrouter(messages, max_tokens, timeout)
         
         # Strategie 2: Ollama mit OpenRouter Fallback
         if self.ollama_available:
@@ -154,13 +155,13 @@ class LLMClient:
                 if self.fallback_to_openrouter:
                     print(f"\n⚠️ Ollama fehlgeschlagen: {e}")
                     print("→ Versuche OpenRouter Fallback...\n")
-                    return self._generate_with_openrouter(messages, max_tokens)
+                    return self._generate_with_openrouter(messages, max_tokens, timeout)
                 else:
                     raise
         
         # Strategie 3: Nur OpenRouter (Ollama nicht verfügbar)
         if self.fallback_to_openrouter:
-            return self._generate_with_openrouter(messages, max_tokens)
+            return self._generate_with_openrouter(messages, max_tokens, timeout)
         
         raise Exception("Kein LLM verfügbar - weder Ollama noch OpenRouter konfiguriert")
     
@@ -221,7 +222,8 @@ class LLMClient:
     def _generate_with_openrouter(
         self,
         messages: List[Dict[str, str]],
-        max_tokens: int
+        max_tokens: int,
+        timeout: int = 90
     ) -> Dict[str, Any]:
         """Generiert Plan mit OpenRouter (70B Remote)"""
         
