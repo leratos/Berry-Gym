@@ -93,19 +93,19 @@
                         <form method="post">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="update_profile">
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Benutzername</label>
-                                <input type="text" name="username" class="form-control" 
+                                <input type="text" name="username" class="form-control"
                                        value="{{ user.username }}" minlength="3" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">E-Mail</label>
-                                <input type="email" name="email" class="form-control" 
+                                <input type="email" name="email" class="form-control"
                                        value="{{ user.email }}" placeholder="deine@email.de">
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="bi bi-check-lg me-1"></i> Speichern
                             </button>
@@ -124,24 +124,24 @@
                         <form method="post">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="change_password">
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Aktuelles Passwort</label>
                                 <input type="password" name="current_password" class="form-control" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Neues Passwort</label>
-                                <input type="password" name="new_password" class="form-control" 
+                                <input type="password" name="new_password" class="form-control"
                                        minlength="8" required>
                                 <small class="text-muted">Mindestens 8 Zeichen</small>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Passwort bestätigen</label>
                                 <input type="password" name="confirm_password" class="form-control" required>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-warning w-100">
                                 <i class="bi bi-key me-1"></i> Passwort ändern
                             </button>
@@ -196,7 +196,7 @@
             </form>
         </div>
     </div>
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
 
@@ -207,7 +207,7 @@
             const messagesContainer = document.querySelector('.messages-container');
             if (messagesContainer) {
                 messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
+
                 // Auto-dismiss nach 5 Sekunden
                 setTimeout(() => {
                     const alerts = messagesContainer.querySelectorAll('.alert');
@@ -217,7 +217,7 @@
                     });
                 }, 5000);
             }
-            
+
             // Clear Passwort-Felder nach erfolgreicher Änderung
             const successAlert = document.querySelector('.alert-success');
             if (successAlert && successAlert.textContent.includes('Passwort')) {

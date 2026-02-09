@@ -9,7 +9,7 @@ from .exercises import find_substitute_exercise
 from .notifications import send_push_notification
 
 __all__ = [
-    'send_welcome_email',
-    'find_substitute_exercise',
-    'send_push_notification',
+    "send_welcome_email",
+    "find_substitute_exercise",
+    "send_push_notification",
 ]

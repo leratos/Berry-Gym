@@ -12,7 +12,7 @@
     <div class="container">
       <div class="row justify-content-center align-items-center min-vh-100">
         <div class="col-12 col-md-6 col-lg-5">
-          
+
           <!-- Logo/Header -->
           <div class="text-center mb-4">
             <h1 class="display-4 fw-bold text-white">
@@ -28,7 +28,7 @@
 
               {% if form.errors %}
               <div class="alert alert-danger" role="alert">
-                <i class="bi bi-exclamation-triangle-fill"></i> 
+                <i class="bi bi-exclamation-triangle-fill"></i>
                 <strong>Fehler bei der Registrierung:</strong>
                 <ul class="mb-0 mt-2">
                   {% for field in form %}
@@ -45,19 +45,19 @@
 
               <form method="post" action="{% url 'register' %}">
                 {% csrf_token %}
-                
+
                 <div class="mb-3">
                   <label for="id_username" class="form-label">
                     <i class="bi bi-person-fill"></i> Benutzername
                   </label>
-                  <input 
-                    type="text" 
-                    name="username" 
-                    id="id_username" 
-                    class="form-control bg-dark text-white border-secondary" 
+                  <input
+                    type="text"
+                    name="username"
+                    id="id_username"
+                    class="form-control bg-dark text-white border-secondary"
                     placeholder="Benutzername"
                     value="{{ form.username.value|default:'' }}"
-                    required 
+                    required
                     autofocus
                   >
                   <small class="text-muted">
@@ -69,11 +69,11 @@
                   <label for="id_email" class="form-label">
                     <i class="bi bi-envelope-fill"></i> E-Mail (optional)
                   </label>
-                  <input 
-                    type="email" 
-                    name="email" 
-                    id="id_email" 
-                    class="form-control bg-dark text-white border-secondary" 
+                  <input
+                    type="email"
+                    name="email"
+                    id="id_email"
+                    class="form-control bg-dark text-white border-secondary"
                     placeholder="email@beispiel.de"
                     value="{{ form.email.value|default:'' }}"
                   >
@@ -83,11 +83,11 @@
                   <label for="id_password1" class="form-label">
                     <i class="bi bi-lock-fill"></i> Passwort
                   </label>
-                  <input 
-                    type="password" 
-                    name="password1" 
-                    id="id_password1" 
-                    class="form-control bg-dark text-white border-secondary" 
+                  <input
+                    type="password"
+                    name="password1"
+                    id="id_password1"
+                    class="form-control bg-dark text-white border-secondary"
                     placeholder="Passwort"
                     required
                   >
@@ -100,11 +100,11 @@
                   <label for="id_password2" class="form-label">
                     <i class="bi bi-lock-fill"></i> Passwort bestätigen
                   </label>
-                  <input 
-                    type="password" 
-                    name="password2" 
-                    id="id_password2" 
-                    class="form-control bg-dark text-white border-secondary" 
+                  <input
+                    type="password"
+                    name="password2"
+                    id="id_password2"
+                    class="form-control bg-dark text-white border-secondary"
                     placeholder="Passwort wiederholen"
                     required
                   >
@@ -116,7 +116,7 @@
 
                 <div class="text-center">
                   <small class="text-muted">
-                    Bereits registriert? 
+                    Bereits registriert?
                     <a href="{% url 'login' %}" class="text-primary text-decoration-none">
                       Jetzt anmelden
                     </a>

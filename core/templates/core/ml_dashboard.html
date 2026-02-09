@@ -5,15 +5,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ML Dashboard - HomeGym</title>
-    
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#0d6efd">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/manifest.json">
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    
+
     <script>
         // Theme laden vor Render
         (function() {
@@ -21,22 +21,22 @@
             document.documentElement.setAttribute('data-bs-theme', theme);
         })();
     </script>
-    
+
     <style>
         [data-bs-theme="dark"] body {
             background-color: #212529;
             color: #fff;
         }
-        
+
         [data-bs-theme="dark"] .card {
             background-color: #2b3035;
             border-color: #495057;
         }
-        
+
         [data-bs-theme="dark"] .table {
             color: #fff;
         }
-        
+
         [data-bs-theme="light"] body {
             background-color: #f8f9fa;
         }
@@ -52,7 +52,7 @@
     <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm mb-3">
         <i class="bi bi-arrow-left me-1"></i> Zurück zum Dashboard
     </a>
-    
+
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="mb-0">
@@ -70,7 +70,7 @@
                     <i class="bi bi-info-circle-fill me-2"></i>Was macht das ML-System?
                 </h5>
                 <p class="mb-2">
-                    Das ML-System analysiert deine bisherigen Trainingseinheiten und erstellt <strong>Gewichtsvorhersagen</strong> 
+                    Das ML-System analysiert deine bisherigen Trainingseinheiten und erstellt <strong>Gewichtsvorhersagen</strong>
                     für deine nächsten Sätze. Je mehr du trainierst, desto präziser werden die Vorhersagen.
                 </p>
                 <hr>
@@ -203,7 +203,7 @@
                                         </td>
                                         <td>{{ model.trained_at|date:"d.m.Y H:i" }}</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary" 
+                                            <button class="btn btn-sm btn-outline-primary"
                                                     onclick="trainModel({{ model.uebung.id }})">
                                                 <i class="bi bi-arrow-repeat"></i> Neu trainieren
                                             </button>
@@ -215,7 +215,7 @@
                         </div>
                     {% else %}
                         <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> Noch keine Modelle trainiert. 
+                            <i class="bi bi-info-circle"></i> Noch keine Modelle trainiert.
                             Klicke auf "Alle Modelle trainieren" um zu starten.
                         </div>
                     {% endif %}
@@ -230,11 +230,11 @@ function trainAllModels() {
     if (!confirm('Möchtest du alle ML-Modelle trainieren? Dies kann einige Minuten dauern.')) {
         return;
     }
-    
+
     const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Training läuft...';
-    
+
     fetch('/api/ml/train/', {
         method: 'POST',
         headers: {
@@ -264,11 +264,11 @@ function trainModel(uebungId) {
     if (!confirm('Modell für diese Übung neu trainieren?')) {
         return;
     }
-    
+
     const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Training...';
-    
+
     fetch('/api/ml/train/', {
         method: 'POST',
         headers: {

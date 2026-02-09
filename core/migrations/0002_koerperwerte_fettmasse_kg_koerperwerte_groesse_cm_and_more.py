@@ -6,34 +6,44 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='koerperwerte',
-            name='fettmasse_kg',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True, verbose_name='Fett (kg)'),
+            model_name="koerperwerte",
+            name="fettmasse_kg",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, max_digits=5, null=True, verbose_name="Fett (kg)"
+            ),
         ),
         migrations.AddField(
-            model_name='koerperwerte',
-            name='groesse_cm',
-            field=models.PositiveIntegerField(default=185, help_text='Benötigt für BMI/FFMI', verbose_name='Größe (cm)'),
+            model_name="koerperwerte",
+            name="groesse_cm",
+            field=models.PositiveIntegerField(
+                default=185, help_text="Benötigt für BMI/FFMI", verbose_name="Größe (cm)"
+            ),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='koerperwerte',
-            name='koerperwasser_kg',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True, verbose_name='Wasser (kg)'),
+            model_name="koerperwerte",
+            name="koerperwasser_kg",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, max_digits=5, null=True, verbose_name="Wasser (kg)"
+            ),
         ),
         migrations.AlterField(
-            model_name='koerperwerte',
-            name='knochenmasse_kg',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True, verbose_name='Knochen (kg)'),
+            model_name="koerperwerte",
+            name="knochenmasse_kg",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, max_digits=5, null=True, verbose_name="Knochen (kg)"
+            ),
         ),
         migrations.AlterField(
-            model_name='koerperwerte',
-            name='muskelmasse_kg',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True, verbose_name='Muskeln (kg)'),
+            model_name="koerperwerte",
+            name="muskelmasse_kg",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, max_digits=5, null=True, verbose_name="Muskeln (kg)"
+            ),
         ),
     ]

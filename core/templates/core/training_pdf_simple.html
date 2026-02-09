@@ -10,32 +10,32 @@
             font-size: 10px;
             line-height: 1.5;
         }
-        
+
         /* Deckblatt */
         .cover-page {
             text-align: center;
             padding-top: 60px;
         }
-        
+
         .cover-title {
             font-size: 36px;
             font-weight: bold;
             color: #0d6efd;
             margin-bottom: 8px;
         }
-        
+
         .cover-subtitle {
             font-size: 14px;
             color: #808080;
             margin-bottom: 30px;
         }
-        
+
         .cover-info {
             font-size: 12px;
             color: #555;
             line-height: 1.8;
         }
-        
+
         /* Überschriften */
         h1 {
             color: #0d6efd;
@@ -44,7 +44,7 @@
             font-size: 22px;
             margin: 25px 0 15px 0;
         }
-        
+
         h2 {
             color: #555;
             border-bottom: 2px solid #ddd;
@@ -53,20 +53,20 @@
             margin: 20px 0 12px 0;
             page-break-after: avoid;
         }
-        
+
         h3 {
             color: #666;
             font-size: 13px;
             margin: 15px 0 8px 0;
             page-break-after: avoid;
         }
-        
+
         /* Vermeide Seitenumbrüche innerhalb von Bildern */
         img {
             page-break-inside: avoid;
             page-break-before: auto;
         }
-        
+
         /* Tabellen */
         table {
             width: 100%;
@@ -74,7 +74,7 @@
             margin: 10px 0 15px 0;
             font-size: 9px;
         }
-        
+
         th {
             background-color: #0d6efd;
             color: white;
@@ -82,16 +82,16 @@
             text-align: left;
             font-weight: bold;
         }
-        
+
         td {
             padding: 6px;
             border-bottom: 1px solid #ddd;
         }
-        
+
         tr:nth-child(even) {
             background-color: #f8f9fa;
         }
-        
+
         /* Info Boxes */
         .info-box {
             padding: 12px;
@@ -99,22 +99,22 @@
             border-left: 4px solid #0d6efd;
             background-color: #f8f9fa;
         }
-        
+
         .info-box.success {
             background-color: #d1f2eb;
             border-left-color: #28a745;
         }
-        
+
         .info-box.warning {
             background-color: #fff3cd;
             border-left-color: #ffc107;
         }
-        
+
         .info-box.danger {
             background-color: #f8d7da;
             border-left-color: #dc3545;
         }
-        
+
         /* Badges */
         .badge {
             display: inline-block;
@@ -122,12 +122,12 @@
             font-size: 8px;
             font-weight: bold;
         }
-        
+
         .badge-success { background-color: #28a745; color: white; }
         .badge-warning { background-color: #ffc107; color: #333; }
         .badge-danger { background-color: #dc3545; color: white; }
         .badge-info { background-color: #17a2b8; color: white; }
-        
+
         /* Progress Bar */
         .progress-bar {
             width: 100%;
@@ -135,7 +135,7 @@
             background-color: #e9ecef;
             border: 1px solid #ddd;
         }
-        
+
         .progress-fill {
             height: 100%;
             background-color: #0d6efd;
@@ -145,7 +145,7 @@
             line-height: 20px;
             font-weight: bold;
         }
-        
+
         /* Footer */
         .page-footer {
             margin-top: 30px;
@@ -342,12 +342,12 @@
     <div class="cover-page">
         <div class="cover-title">Training Report</div>
         <div class="cover-subtitle">Professional Edition - Trainer Analysis</div>
-        
+
         {% if body_map_image %}
         <div style="text-align: center; margin: 20px 0;">
             <img src="data:image/png;base64,{{ body_map_image }}" style="width: auto; height: 500px; margin: 0 auto" alt="Body Map">
         </div>
-        
+
         <!-- Legende unter der Body-Map -->
         <div style="text-align: center; margin: 15px 0 30px 0;">
             <table style="margin: 0 auto; border: none; font-size: 16px;">
@@ -364,19 +364,19 @@
             </table>
         </div>
         {% endif %}
-        
+
         <div class="cover-info">
             <strong>Athlet:</strong> {{ user.get_full_name|default:user.username }}<br>
             <strong>Berichtszeitraum:</strong> {{ start_datum|date:"d.m.Y" }} - {{ end_datum|date:"d.m.Y" }}
         </div>
-        
+
         <div style="position: absolute; bottom: 80px; width: 100%; text-align: center; font-size: 12px; color: #555;">
             <strong>Erstellt am:</strong> {{ current_date|date:"d.m.Y H:i" }}
         </div>
     </div>
-    
+
     <pdf:nextpage />
-    
+
     <!-- INHALTSVERZEICHNIS -->
     <h1>📋 Inhaltsverzeichnis</h1>
     <table>
@@ -414,25 +414,25 @@
             <td>11. Trainer-Empfehlungen</td>
         </tr>
     </table>
-    
+
     <pdf:nextpage />
-    
+
     <!-- EXECUTIVE SUMMARY -->
     <h1>📊 Executive Summary</h1>
-    
+
     {% if total_einheiten < 8 %}
     <div class="info-box warning">
         <strong>⚠️ Hinweis zur Datenqualität:</strong><br>
         Dieser Bericht basiert auf {{ total_einheiten }} Trainingseinheiten. Für aussagekräftige Analysen und Empfehlungen werden mindestens 8-10 Trainings empfohlen. Aktuelle Bewertungen sollten mit Vorsicht interpretiert werden.
     </div>
     {% endif %}
-    
+
     <div class="info-box success">
         <strong>Trainingseinheiten:</strong> {{ total_einheiten }}<br>
         <strong>Gesamtsätze:</strong> {{ total_saetze }}<br>
         <strong>Trainingsvolumen:</strong> {{ total_volumen|floatformat:0 }} kg
     </div>
-    
+
     <!-- KÖRPERWERTE -->
     <h2>Körperentwicklung</h2>
     {% if koerperwerte %}
@@ -464,12 +464,12 @@
         Dieser Bericht fokussiert sich auf Trainingsdaten. Für eine umfassende Analyse empfehlen wir die regelmäßige Erfassung von Körperwerten (Gewicht, Umfänge). Dies ermöglicht präzisere Aussagen zur körperlichen Entwicklung.
     </div>
     {% endif %}
-    
+
     <pdf:nextpage />
-    
+
     <!-- MUSKELGRUPPEN-ANALYSE -->
     <h1>🎯 Muskelgruppen-Analyse (30 Tage)</h1>
-    
+
     <h2>Trainingsvolumen pro Muskelgruppe</h2>
     <table>
         <thead>
@@ -501,7 +501,7 @@
             {% endfor %}
         </tbody>
     </table>
-    
+
     <!-- BODY MAP - Matplotlib Heatmap -->
     {% if muscle_heatmap %}
     <div style="page-break-inside: avoid;">
@@ -515,7 +515,7 @@
     <p style="font-size: 9px; color: #666; margin-bottom: 10px;">
         Balken zeigen das Trainingsvolumen relativ zum optimalen Bereich. Grün = Optimal, Gelb = Untertrainiert, Rot = Übertrainiert.
     </p>
-    
+
     <table>
         <thead>
             <tr>
@@ -529,7 +529,7 @@
                 <td><strong>{{ gruppe.name }}</strong></td>
                 <td>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: {{ gruppe.prozent_von_optimal }}%; 
+                        <div class="progress-fill" style="width: {{ gruppe.prozent_von_optimal }}%;
                             {% if gruppe.status == 'optimal' %}background: #28a745;
                             {% elif gruppe.status == 'untertrainiert' %}background: #ffc107;
                             {% elif gruppe.status == 'uebertrainiert' %}background: #dc3545;
@@ -543,18 +543,18 @@
         </tbody>
     </table>
     {% endif %}
-    
+
     <pdf:nextpage />
-    
+
     <!-- PUSH/PULL BALANCE -->
     <h1>⚖️ Push/Pull Balance</h1>
-    
+
     {% if push_pull_chart %}
     <div style="text-align: center; margin: 20px 0;">
         <img src="data:image/png;base64,{{ push_pull_chart }}" style="max-width: 60%; height: auto;" alt="Push/Pull Balance Chart">
     </div>
     {% endif %}
-    
+
     {% if push_pull_bewertung %}
     <div class="info-box {% if push_pull_bewertung == 'Ausgewogen' %}success{% else %}warning{% endif %}">
         <strong>Push-Sätze:</strong> {{ push_saetze }}<br>
@@ -566,7 +566,7 @@
         {% endif %}
     </div>
     {% endif %}
-    
+
     <!-- VOLUMEN-ENTWICKLUNG -->
     {% if volume_chart %}
     <div style="page-break-inside: avoid;">
@@ -576,12 +576,12 @@
         </div>
     </div>
     {% endif %}
-    
+
     <pdf:nextpage />
-    
+
     <!-- TRAININGSFORTSCHRITT -->
     <h1>📈 Trainingsfortschritt</h1>
-    
+
     <h2>Kraftentwicklung Top 5</h2>
     {% if kraftentwicklung %}
     <table>
@@ -897,7 +897,7 @@
 
     <!-- TRAINER-EMPFEHLUNGEN -->
     <h1>🎓 Trainer-Empfehlungen</h1>
-    
+
     <h2>Deine Stärken</h2>
     {% if staerken %}
     <div class="info-box success">
@@ -910,7 +910,7 @@
     {% else %}
     <div class="info-box">Beginne mit regelmäßigem Training, um Stärken aufzubauen.</div>
     {% endif %}
-    
+
     <h2>Schwachstellen (Priorität)</h2>
     {% if schwachstellen %}
     <div class="info-box warning">
@@ -925,7 +925,7 @@
     {% else %}
     <div class="info-box success">Keine Schwachstellen identifiziert - ausgewogenes Training!</div>
     {% endif %}
-    
+
     <h2>Nächste Schritte</h2>
     <div class="info-box">
         <ol style="margin: 5px 0; padding-left: 20px;">
@@ -939,7 +939,7 @@
             <li style="margin: 4px 0;">Steigere Trainingsgewichte progressiv (2,5-5% pro Woche bei guter Form)</li>
         </ol>
     </div>
-    
+
     <!-- FOOTER -->
     <div class="page-footer">
         <p><strong>HomeGym Training Report - Professional Edition</strong></p>

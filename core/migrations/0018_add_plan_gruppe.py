@@ -6,18 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0017_add_feedback_model'),
+        ("core", "0017_add_feedback_model"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='plan',
-            name='gruppe_id',
-            field=models.UUIDField(blank=True, help_text='Pläne mit gleicher ID gehören zusammen (z.B. Split-Tage)', null=True, verbose_name='Gruppen-ID'),
+            model_name="plan",
+            name="gruppe_id",
+            field=models.UUIDField(
+                blank=True,
+                help_text="Pläne mit gleicher ID gehören zusammen (z.B. Split-Tage)",
+                null=True,
+                verbose_name="Gruppen-ID",
+            ),
         ),
         migrations.AddField(
-            model_name='plan',
-            name='gruppe_name',
-            field=models.CharField(blank=True, help_text="Name der Plangruppe (z.B. 'Push/Pull/Legs Split')", max_length=100, verbose_name='Gruppenname'),
+            model_name="plan",
+            name="gruppe_name",
+            field=models.CharField(
+                blank=True,
+                help_text="Name der Plangruppe (z.B. 'Push/Pull/Legs Split')",
+                max_length=100,
+                verbose_name="Gruppenname",
+            ),
         ),
     ]

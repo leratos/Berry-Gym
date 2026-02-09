@@ -33,51 +33,51 @@
                     <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio hinzufügen
                 </h4>
             </div>
-            
+
             <div class="card card-stat">
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
-                        
+
                         <!-- Datum -->
                         <div class="mb-3">
                             <label for="datum" class="form-label">Datum</label>
-                            <input type="date" class="form-control" id="datum" name="datum" 
+                            <input type="date" class="form-control" id="datum" name="datum"
                                    value="{{ heute }}" required>
                         </div>
-                        
+
                         <!-- Aktivität -->
                         <div class="mb-3">
                             <label for="aktivitaet" class="form-label">Aktivität</label>
                             <select class="form-select" id="aktivitaet" name="aktivitaet" required>
                                 <option value="">Bitte wählen...</option>
                                 {% for code, name in aktivitaeten %}
-                                    <option value="{{ code }}" 
+                                    <option value="{{ code }}"
                                             {% if code == 'SCHWIMMEN' %}data-icon="bi-water"{% endif %}>
                                         {{ name }}
                                     </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        
+
                         <!-- Dauer -->
                         <div class="mb-3">
                             <label for="dauer_minuten" class="form-label">Dauer (Minuten)</label>
                             <div class="input-group">
-                                <input type="number" class="form-control" id="dauer_minuten" 
+                                <input type="number" class="form-control" id="dauer_minuten"
                                        name="dauer_minuten" min="1" max="480" placeholder="60" required>
                                 <span class="input-group-text">Min</span>
                             </div>
                             <div class="form-text">Wie lange hast du trainiert?</div>
                         </div>
-                        
+
                         <!-- Intensität -->
                         <div class="mb-3">
                             <label class="form-label">Intensität</label>
                             <div class="d-flex gap-2 flex-wrap">
                                 {% for code, name in intensitaeten %}
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="intensitaet" 
+                                    <input class="form-check-input" type="radio" name="intensitaet"
                                            id="intensitaet_{{ code }}" value="{{ code }}"
                                            {% if code == 'MODERAT' %}checked{% endif %}>
                                     <label class="form-check-label" for="intensitaet_{{ code }}">
@@ -93,14 +93,14 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        
+
                         <!-- Notiz -->
                         <div class="mb-4">
                             <label for="notiz" class="form-label">Notiz (optional)</label>
-                            <input type="text" class="form-control" id="notiz" name="notiz" 
+                            <input type="text" class="form-control" id="notiz" name="notiz"
                                    maxlength="200" placeholder="z.B. Brustschwimmen, Intervalle, etc.">
                         </div>
-                        
+
                         <!-- Buttons -->
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-success">
@@ -113,7 +113,7 @@
                     </form>
                 </div>
             </div>
-            
+
             <!-- Ermüdungs-Info -->
             <div class="card card-stat mt-3">
                 <div class="card-body">

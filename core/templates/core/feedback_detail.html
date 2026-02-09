@@ -20,7 +20,7 @@
                     <h4 class="text-success mb-0"><i class="bi bi-house-heart-fill"></i> HomeGym</h4>
                 </a>
             </div>
-            
+
             <div class="d-flex justify-content-between align-items-start mb-4">
                 <div>
                     <h2 class="mb-1">
@@ -41,7 +41,7 @@
                     {{ feedback.get_status_display }}
                 </span>
             </div>
-            
+
             <!-- Feedback-Inhalt -->
             <div class="card bg-dark border-secondary mb-4">
                 <div class="card-header bg-secondary">
@@ -57,7 +57,7 @@
                     <div style="white-space: pre-wrap;">{{ feedback.description }}</div>
                 </div>
             </div>
-            
+
             <!-- Admin-Antwort -->
             {% if feedback.admin_response %}
             <div class="card bg-dark border-success mb-4">
@@ -79,7 +79,7 @@
                 <small>Wir prüfen dein Feedback und antworten dir hier, sobald wir es bearbeitet haben.</small>
             </div>
             {% endif %}
-            
+
             <!-- Status-Erklärung -->
             <div class="card bg-dark border-secondary mb-4">
                 <div class="card-body">
@@ -108,7 +108,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Zurück-Link -->
             <div class="d-flex justify-content-between">
                 <a href="{% url 'feedback_list' %}" class="btn btn-outline-secondary">
@@ -118,7 +118,7 @@
                     <i class="bi bi-plus-lg"></i> Weiteres Feedback
                 </a>
             </div>
-            
+
             <!-- Footer -->
             <div class="text-center mt-4">
                 <small class="text-muted">© 2026 HomeGym App</small>

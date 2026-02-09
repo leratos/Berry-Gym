@@ -5,65 +5,51 @@ from django.db import migrations
 
 def populate_standards(apps, schema_editor):
     """Setze 1RM Standards für bekannte Übungen."""
-    Uebung = apps.get_model('core', 'Uebung')
+    Uebung = apps.get_model("core", "Uebung")
 
     # Standards für 80kg Körpergewicht
     # Format: Keyword: (beginner, intermediate, advanced, elite)
     standards_mapping = {
         # Große Verbundübungen
-        'Bankdrücken': (55, 80, 105, 130),
-        'Bank': (55, 80, 105, 130),  # Varianten
-        'Bench': (55, 80, 105, 130),
-
-        'Kniebeuge': (70, 105, 140, 175),
-        'Squat': (70, 105, 140, 175),
-
-        'Kreuzheben': (95, 140, 185, 230),
-        'Deadlift': (95, 140, 185, 230),
-        'RDL': (95, 140, 185, 230),
-
-        'Schulterdrücken': (35, 55, 75, 95),
-        'Overhead Press': (35, 55, 75, 95),
-        'Military Press': (35, 55, 75, 95),
-
+        "Bankdrücken": (55, 80, 105, 130),
+        "Bank": (55, 80, 105, 130),  # Varianten
+        "Bench": (55, 80, 105, 130),
+        "Kniebeuge": (70, 105, 140, 175),
+        "Squat": (70, 105, 140, 175),
+        "Kreuzheben": (95, 140, 185, 230),
+        "Deadlift": (95, 140, 185, 230),
+        "RDL": (95, 140, 185, 230),
+        "Schulterdrücken": (35, 55, 75, 95),
+        "Overhead Press": (35, 55, 75, 95),
+        "Military Press": (35, 55, 75, 95),
         # Klimmzüge (Körpergewicht + Zusatz)
-        'Klimmzug': (0, 10, 25, 45),
-        'Pull-up': (0, 10, 25, 45),
-        'Chin-up': (0, 10, 25, 45),
-
+        "Klimmzug": (0, 10, 25, 45),
+        "Pull-up": (0, 10, 25, 45),
+        "Chin-up": (0, 10, 25, 45),
         # Isolationsübungen
-        'Bizeps Curl': (15, 25, 35, 45),
-        'Curl': (15, 25, 35, 45),
-
-        'Lateral Raise': (8, 12, 17, 22),
-        'Seitheben': (8, 12, 17, 22),
-
-        'Triceps': (20, 30, 40, 50),
-
-        'Face Pull': (25, 40, 55, 70),
-
-        'Dips': (0, 15, 30, 50),
-
+        "Bizeps Curl": (15, 25, 35, 45),
+        "Curl": (15, 25, 35, 45),
+        "Lateral Raise": (8, 12, 17, 22),
+        "Seitheben": (8, 12, 17, 22),
+        "Triceps": (20, 30, 40, 50),
+        "Face Pull": (25, 40, 55, 70),
+        "Dips": (0, 15, 30, 50),
         # Beinübungen
-        'Beinpresse': (140, 210, 280, 350),
-        'Leg Press': (140, 210, 280, 350),
-
-        'Bulgarian Split Squat': (40, 60, 80, 100),
-
-        'Wadenheben': (60, 90, 120, 150),
-        'Calf Raise': (60, 90, 120, 150),
+        "Beinpresse": (140, 210, 280, 350),
+        "Leg Press": (140, 210, 280, 350),
+        "Bulgarian Split Squat": (40, 60, 80, 100),
+        "Wadenheben": (60, 90, 120, 150),
+        "Calf Raise": (60, 90, 120, 150),
     }
 
     # Setze Standards für alle passenden Übungen
     updated_count = 0
     for keyword, (beg, inter, adv, elite) in standards_mapping.items():
-        count = Uebung.objects.filter(
-            bezeichnung__icontains=keyword
-        ).update(
+        count = Uebung.objects.filter(bezeichnung__icontains=keyword).update(
             standard_beginner=beg,
             standard_intermediate=inter,
             standard_advanced=adv,
-            standard_elite=elite
+            standard_elite=elite,
         )
         updated_count += count
 
@@ -72,19 +58,19 @@ def populate_standards(apps, schema_editor):
 
 def reverse_populate(apps, schema_editor):
     """Entferne alle Standards (für Rollback)."""
-    Uebung = apps.get_model('core', 'Uebung')
+    Uebung = apps.get_model("core", "Uebung")
     Uebung.objects.all().update(
         standard_beginner=None,
         standard_intermediate=None,
         standard_advanced=None,
-        standard_elite=None
+        standard_elite=None,
     )
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0052_add_1rm_standards'),
+        ("core", "0052_add_1rm_standards"),
     ]
 
     operations = [

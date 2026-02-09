@@ -8,23 +8,21 @@ Handles training session workflows including:
 - Finishing training sessions with summary statistics and AI suggestions
 """
 
-import re
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Count, Max, Sum, Avg, F, Q
-from django.http import JsonResponse, HttpResponse
-from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Avg, Count, F, Max, Q, Sum
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from ..models import (
-    Trainingseinheit, Uebung, Satz, Plan, PlanUebung, UserProfile
-)
+from ..models import Plan, PlanUebung, Satz, Trainingseinheit, Uebung, UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -35,17 +33,25 @@ def training_select_plan(request):
     from collections import OrderedDict
 
     # Filter-Parameter (eigene, public oder shared)
-    filter_type = request.GET.get('filter', 'eigene')
+    filter_type = request.GET.get("filter", "eigene")
 
-    if filter_type == 'public':
+    if filter_type == "public":
         # Öffentliche Pläne von allen Usern (außer eigene)
-        plaene = Plan.objects.filter(is_public=True).exclude(user=request.user).order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
-    elif filter_type == 'shared':
+        plaene = (
+            Plan.objects.filter(is_public=True)
+            .exclude(user=request.user)
+            .order_by("gruppe_name", "gruppe_reihenfolge", "name")
+        )
+    elif filter_type == "shared":
         # Mit mir geteilte Pläne (von Trainingspartnern)
-        plaene = request.user.shared_plans.all().order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
+        plaene = request.user.shared_plans.all().order_by(
+            "gruppe_name", "gruppe_reihenfolge", "name"
+        )
     else:
         # Eigene Pläne (Standard) - sortiert nach Reihenfolge innerhalb Gruppe
-        plaene = Plan.objects.filter(user=request.user).order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
+        plaene = Plan.objects.filter(user=request.user).order_by(
+            "gruppe_name", "gruppe_reihenfolge", "name"
+        )
 
     # Aktive Plan-Gruppe ermitteln
     active_group_id = None
@@ -59,7 +65,7 @@ def training_select_plan(request):
                 user=request.user, gruppe_id=profile.active_plan_group
             ).first()
             if active_group_plan:
-                active_group_name = active_group_plan.gruppe_name or 'Unbenannte Gruppe'
+                active_group_name = active_group_plan.gruppe_name or "Unbenannte Gruppe"
             else:
                 active_group_id = None
     except UserProfile.DoesNotExist:
@@ -77,11 +83,8 @@ def training_select_plan(request):
             # Entscheide ob aktiv oder normal
             target = active_plan_gruppen if gruppe_key == active_group_id else plan_gruppen
             if gruppe_key not in target:
-                target[gruppe_key] = {
-                    'name': plan.gruppe_name or 'Unbenannte Gruppe',
-                    'plaene': []
-                }
-            target[gruppe_key]['plaene'].append(plan)
+                target[gruppe_key] = {"name": plan.gruppe_name or "Unbenannte Gruppe", "plaene": []}
+            target[gruppe_key]["plaene"].append(plan)
         else:
             einzelne_plaene.append(plan)
 
@@ -89,50 +92,51 @@ def training_select_plan(request):
     shared_count = request.user.shared_plans.count()
 
     context = {
-        'plaene': plaene,  # Für Fallback
-        'active_plan_gruppen': active_plan_gruppen,  # Aktive Gruppe (priorisiert)
-        'active_group_name': active_group_name,
-        'plan_gruppen': plan_gruppen,  # Andere gruppierte Pläne
-        'einzelne_plaene': einzelne_plaene,  # Nicht gruppierte Pläne
-        'filter_type': filter_type,
-        'shared_count': shared_count
+        "plaene": plaene,  # Für Fallback
+        "active_plan_gruppen": active_plan_gruppen,  # Aktive Gruppe (priorisiert)
+        "active_group_name": active_group_name,
+        "plan_gruppen": plan_gruppen,  # Andere gruppierte Pläne
+        "einzelne_plaene": einzelne_plaene,  # Nicht gruppierte Pläne
+        "filter_type": filter_type,
+        "shared_count": shared_count,
     }
-    return render(request, 'core/training_select_plan.html', context)
+    return render(request, "core/training_select_plan.html", context)
 
 
 def plan_details(request, plan_id):
     """Zeigt Details eines Trainingsplans mit allen Übungen."""
     # Zugriff auf: eigene Pläne, öffentliche Pläne, oder mit mir geteilte Pläne
     plan = get_object_or_404(
-        Plan,
-        Q(user=request.user) | Q(is_public=True) | Q(shared_with=request.user),
-        id=plan_id
+        Plan, Q(user=request.user) | Q(is_public=True) | Q(shared_with=request.user), id=plan_id
     )
 
     # Prüfe ob User der Owner ist
     is_owner = plan.user == request.user
-    plan_uebungen = plan.uebungen.all().order_by('reihenfolge')
+    plan_uebungen = plan.uebungen.all().order_by("reihenfolge")
 
     # Für jede Übung das letzte verwendete Gewicht holen (für Vorschau)
     uebungen_mit_historie = []
     for plan_uebung in plan_uebungen:
-        letzter_satz = Satz.objects.filter(
-            uebung=plan_uebung.uebung,
-            ist_aufwaermsatz=False
-        ).order_by('-einheit__datum').first()
+        letzter_satz = (
+            Satz.objects.filter(uebung=plan_uebung.uebung, ist_aufwaermsatz=False)
+            .order_by("-einheit__datum")
+            .first()
+        )
 
-        uebungen_mit_historie.append({
-            'plan_uebung': plan_uebung,
-            'letztes_gewicht': letzter_satz.gewicht if letzter_satz else None,
-            'letzte_wdh': letzter_satz.wiederholungen if letzter_satz else None,
-        })
+        uebungen_mit_historie.append(
+            {
+                "plan_uebung": plan_uebung,
+                "letztes_gewicht": letzter_satz.gewicht if letzter_satz else None,
+                "letzte_wdh": letzter_satz.wiederholungen if letzter_satz else None,
+            }
+        )
 
     context = {
-        'plan': plan,
-        'uebungen_mit_historie': uebungen_mit_historie,
-        'is_owner': is_owner,
+        "plan": plan,
+        "uebungen_mit_historie": uebungen_mit_historie,
+        "is_owner": is_owner,
     }
-    return render(request, 'core/plan_details.html', context)
+    return render(request, "core/plan_details.html", context)
 
 
 def training_start(request, plan_id=None):
@@ -153,9 +157,11 @@ def training_start(request, plan_id=None):
         # Zyklus-Tracking: cycle_start_date setzen beim ersten Training mit aktiver Gruppe
         try:
             profile = request.user.profile
-            if (profile.active_plan_group
-                    and plan.gruppe_id
-                    and str(plan.gruppe_id) == str(profile.active_plan_group)):
+            if (
+                profile.active_plan_group
+                and plan.gruppe_id
+                and str(plan.gruppe_id) == str(profile.active_plan_group)
+            ):
                 if not profile.cycle_start_date:
                     profile.cycle_start_date = timezone.now().date()
                     profile.save()
@@ -167,11 +173,17 @@ def training_start(request, plan_id=None):
             pass
 
         # Wir gehen alle Übungen im Plan durch
-        for plan_uebung in plan.uebungen.all().order_by('reihenfolge'):
+        for plan_uebung in plan.uebungen.all().order_by("reihenfolge"):
             uebung = plan_uebung.uebung
 
             # SMART GHOSTING: Wir schauen, was du letztes Mal gemacht hast
-            letzter_satz = Satz.objects.filter(einheit__user=request.user, uebung=uebung, ist_aufwaermsatz=False).order_by('-einheit__datum', '-satz_nr').first()
+            letzter_satz = (
+                Satz.objects.filter(
+                    einheit__user=request.user, uebung=uebung, ist_aufwaermsatz=False
+                )
+                .order_by("-einheit__datum", "-satz_nr")
+                .first()
+            )
 
             # Gewicht: Historie gewinnt (Ghosting), da im Plan oft kein kg steht
             start_gewicht = letzter_satz.gewicht if letzter_satz else 0
@@ -182,7 +194,7 @@ def training_start(request, plan_id=None):
             # Versuch 1: Wir lesen die Zahl aus dem Plan (z.B. "12" oder "8-12")
             ziel_text = plan_uebung.wiederholungen_ziel
             # re.search sucht die erste Zahl im Text (bounded for safety)
-            match = re.search(r'\d{1,4}', str(ziel_text)) if ziel_text else None
+            match = re.search(r"\d{1,4}", str(ziel_text)) if ziel_text else None
 
             if match:
                 start_wdh = int(match.group())
@@ -212,15 +224,18 @@ def training_start(request, plan_id=None):
                     gewicht=start_gewicht,
                     wiederholungen=start_wdh,
                     ist_aufwaermsatz=False,
-                    superset_gruppe=superset_gruppe
+                    superset_gruppe=superset_gruppe,
                 )
 
         if is_deload:
             vol_pct = int((1 - deload_vol_factor) * 100)
             weight_pct = int((1 - deload_weight_factor) * 100)
-            messages.info(request, f'Deload-Woche: Volumen -{vol_pct}%, Gewicht -{weight_pct}% automatisch reduziert. Ziel-RPE: {deload_rpe_target}')
+            messages.info(
+                request,
+                f"Deload-Woche: Volumen -{vol_pct}%, Gewicht -{weight_pct}% automatisch reduziert. Ziel-RPE: {deload_rpe_target}",
+            )
 
-    return redirect('training_session', training_id=training.id)
+    return redirect("training_session", training_id=training.id)
 
 
 @login_required
@@ -228,9 +243,9 @@ def training_session(request, training_id):
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
     # Sortieren für Gruppierung: Erst Muskelgruppe, dann Übungsname
-    uebungen = Uebung.objects.filter(
-        Q(is_custom=False) | Q(created_by=request.user)
-    ).order_by('muskelgruppe', 'bezeichnung')
+    uebungen = Uebung.objects.filter(Q(is_custom=False) | Q(created_by=request.user)).order_by(
+        "muskelgruppe", "bezeichnung"
+    )
 
     # Sortierung nach Plan-Reihenfolge wenn Training aus Plan gestartet wurde
     if training.plan:
@@ -238,12 +253,11 @@ def training_session(request, training_id):
         plan_reihenfolge = {pu.uebung_id: pu.reihenfolge for pu in training.plan.uebungen.all()}
         # Hole alle Sätze und sortiere nach Plan-Reihenfolge, dann Satz-Nummer
         saetze = sorted(
-            training.saetze.all(),
-            key=lambda s: (plan_reihenfolge.get(s.uebung_id, 999), s.satz_nr)
+            training.saetze.all(), key=lambda s: (plan_reihenfolge.get(s.uebung_id, 999), s.satz_nr)
         )
     else:
         # Fallback: alphabetisch nach Übungsname
-        saetze = training.saetze.all().order_by('uebung__bezeichnung', 'satz_nr')
+        saetze = training.saetze.all().order_by("uebung__bezeichnung", "satz_nr")
 
     # Volumen berechnen (nur Arbeitssätze, keine Warmups)
     total_volume = 0
@@ -256,28 +270,33 @@ def training_session(request, training_id):
     if training.plan:
         for pu in training.plan.uebungen.all():
             plan_ziele[pu.uebung_id] = {
-                'saetze_ziel': pu.saetze_ziel,
-                'wiederholungen_ziel': pu.wiederholungen_ziel
+                "saetze_ziel": pu.saetze_ziel,
+                "wiederholungen_ziel": pu.wiederholungen_ziel,
             }
 
     # Gewichtsempfehlungen für alle Übungen berechnen (auch ohne Plan!)
     gewichts_empfehlungen = {}
 
     # Übungen im aktuellen Training sammeln (aus QuerySet, nicht aus sortierter Liste)
-    uebungen_im_training = set(training.saetze.values_list('uebung_id', flat=True).distinct())
+    uebungen_im_training = set(training.saetze.values_list("uebung_id", flat=True).distinct())
 
     # Wenn Plan vorhanden, auch Plan-Übungen einschließen
     if training.plan:
-        uebungen_im_training.update(training.plan.uebungen.values_list('uebung_id', flat=True))
+        uebungen_im_training.update(training.plan.uebungen.values_list("uebung_id", flat=True))
 
     for uebung_id in uebungen_im_training:
         # Letzten echten Satz dieser Übung finden (aus vorherigen Trainings)
-        letzter_satz = Satz.objects.filter(
-            einheit__user=request.user,
-            uebung_id=uebung_id,
-            ist_aufwaermsatz=False,
-            einheit__ist_deload=False,
-        ).exclude(einheit=training).order_by('-einheit__datum', '-satz_nr').first()
+        letzter_satz = (
+            Satz.objects.filter(
+                einheit__user=request.user,
+                uebung_id=uebung_id,
+                ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
+            )
+            .exclude(einheit=training)
+            .order_by("-einheit__datum", "-satz_nr")
+            .first()
+        )
 
         if letzter_satz:
             empfohlenes_gewicht = float(letzter_satz.gewicht)
@@ -290,13 +309,13 @@ def training_session(request, training_id):
                 pu = training.plan.uebungen.filter(uebung_id=uebung_id).first()
                 if pu and pu.wiederholungen_ziel:
                     ziel_wdh_str = pu.wiederholungen_ziel
-                if pu and hasattr(pu, 'pausenzeit') and pu.pausenzeit:
+                if pu and hasattr(pu, "pausenzeit") and pu.pausenzeit:
                     plan_pausenzeit = pu.pausenzeit
 
             try:
-                if '-' in ziel_wdh_str:
-                    ziel_wdh_max = int(ziel_wdh_str.split('-')[1])
-                    ziel_wdh_min = int(ziel_wdh_str.split('-')[0])
+                if "-" in ziel_wdh_str:
+                    ziel_wdh_max = int(ziel_wdh_str.split("-")[1])
+                    ziel_wdh_min = int(ziel_wdh_str.split("-")[0])
                 else:
                     ziel_wdh_max = int(ziel_wdh_str)
                     ziel_wdh_min = int(ziel_wdh_str)
@@ -325,21 +344,21 @@ def training_session(request, training_id):
             if plan_pausenzeit:
                 # Plan hat Pausenzeit definiert → nutze diese
                 empfohlene_pause = plan_pausenzeit
-            elif '+2.5kg' in hint:
+            elif "+2.5kg" in hint:
                 empfohlene_pause = 180  # 3 Min für Kraftsteigerung
-            elif 'mehr Wdh' in hint:
-                empfohlene_pause = 90   # 90s für Volumen/Ausdauer
+            elif "mehr Wdh" in hint:
+                empfohlene_pause = 90  # 90s für Volumen/Ausdauer
             else:
                 empfohlene_pause = 120  # 2 Min Standard
 
             gewichts_empfehlungen[uebung_id] = {
-                'gewicht': empfohlenes_gewicht,
-                'wdh': empfohlene_wdh,
-                'letztes_gewicht': float(letzter_satz.gewicht),
-                'letzte_wdh': letzter_satz.wiederholungen,
-                'hint': hint,
-                'pause': empfohlene_pause,
-                'pause_from_plan': bool(plan_pausenzeit),
+                "gewicht": empfohlenes_gewicht,
+                "wdh": empfohlene_wdh,
+                "letztes_gewicht": float(letzter_satz.gewicht),
+                "letzte_wdh": letzter_satz.wiederholungen,
+                "hint": hint,
+                "pause": empfohlene_pause,
+                "pause_from_plan": bool(plan_pausenzeit),
             }
 
     # Deload-Status: Checkbox-Default basierend auf Zyklus
@@ -352,35 +371,35 @@ def training_session(request, training_id):
         pass
 
     context = {
-        'training': training,
-        'uebungen': uebungen,
-        'saetze': saetze,
-        'total_volume': round(total_volume, 1),
-        'arbeitssaetze_count': arbeitssaetze.count(),
-        'plan_ziele': plan_ziele,
-        'gewichts_empfehlungen': gewichts_empfehlungen,
-        'is_deload_week': is_deload_week,
+        "training": training,
+        "uebungen": uebungen,
+        "saetze": saetze,
+        "total_volume": round(total_volume, 1),
+        "arbeitssaetze_count": arbeitssaetze.count(),
+        "plan_ziele": plan_ziele,
+        "gewichts_empfehlungen": gewichts_empfehlungen,
+        "is_deload_week": is_deload_week,
     }
-    return render(request, 'core/training_session.html', context)
+    return render(request, "core/training_session.html", context)
 
 
 @login_required
 def add_set(request, training_id):
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
-    if request.method == 'POST':
-        uebung_id = request.POST.get('uebung')
-        gewicht = request.POST.get('gewicht')
-        wdh = request.POST.get('wiederholungen')
-        rpe = request.POST.get('rpe')
-        is_warmup = request.POST.get('ist_aufwaermsatz') == 'on'
-        notiz = request.POST.get('notiz', '').strip()
-        superset_gruppe = request.POST.get('superset_gruppe', 0)
+    if request.method == "POST":
+        uebung_id = request.POST.get("uebung")
+        gewicht = request.POST.get("gewicht")
+        wdh = request.POST.get("wiederholungen")
+        rpe = request.POST.get("rpe")
+        is_warmup = request.POST.get("ist_aufwaermsatz") == "on"
+        notiz = request.POST.get("notiz", "").strip()
+        superset_gruppe = request.POST.get("superset_gruppe", 0)
 
         uebung = get_object_or_404(Uebung, id=uebung_id)
 
         # Automatische Satz-Nummerierung
-        max_satz = training.saetze.filter(uebung=uebung).aggregate(Max('satz_nr'))['satz_nr__max']
+        max_satz = training.saetze.filter(uebung=uebung).aggregate(Max("satz_nr"))["satz_nr__max"]
         neue_nr = (max_satz or 0) + 1
 
         # Neuen Satz erstellen
@@ -393,7 +412,7 @@ def add_set(request, training_id):
             ist_aufwaermsatz=is_warmup,
             rpe=rpe if rpe else None,
             notiz=notiz if notiz else None,
-            superset_gruppe=int(superset_gruppe)
+            superset_gruppe=int(superset_gruppe),
         )
 
         # PR-Check (nur für Arbeitssätze)
@@ -420,22 +439,24 @@ def add_set(request, training_id):
                 # Neuer PR?
                 if current_1rm > max_alter_satz:
                     verbesserung = round(current_1rm - max_alter_satz, 1)
-                    pr_message = f'🎉 NEUER REKORD! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM) - +{verbesserung} kg!'
+                    pr_message = f"🎉 NEUER REKORD! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM) - +{verbesserung} kg!"
                     messages.success(request, pr_message)
             else:
                 # Erster Satz für diese Übung = automatisch PR
-                pr_message = f'🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)'
+                pr_message = f"🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)"
                 messages.success(request, pr_message)
 
         # AJAX Request? Sende JSON
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'satz_id': neuer_satz.id,
-                'pr_message': pr_message  # Neu: PR-Message für Toast
-            })
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {
+                    "success": True,
+                    "satz_id": neuer_satz.id,
+                    "pr_message": pr_message,  # Neu: PR-Message für Toast
+                }
+            )
 
-        return redirect('training_session', training_id=training_id)
+        return redirect("training_session", training_id=training_id)
 
 
 @login_required
@@ -450,7 +471,7 @@ def delete_set(request, set_id):
 
     satz.delete()
 
-    return redirect('training_session', training_id=training_id)
+    return redirect("training_session", training_id=training_id)
 
 
 def update_set(request, set_id):
@@ -460,22 +481,24 @@ def update_set(request, set_id):
         satz = get_object_or_404(Satz, id=set_id)
         training_id = satz.einheit.id
 
-        if request.method == 'POST':
+        if request.method == "POST":
             logger.info(f"POST data: {request.POST.dict()}")
 
             # Parse und validiere Eingaben
             try:
-                gewicht_raw = request.POST.get('gewicht', '').strip()
-                wiederholungen_raw = request.POST.get('wiederholungen', '').strip()
-                rpe_raw = request.POST.get('rpe', '').strip()
+                gewicht_raw = request.POST.get("gewicht", "").strip()
+                wiederholungen_raw = request.POST.get("wiederholungen", "").strip()
+                rpe_raw = request.POST.get("rpe", "").strip()
 
-                logger.info(f"Raw values - gewicht: '{gewicht_raw}', wdh: '{wiederholungen_raw}', rpe: '{rpe_raw}'")
+                logger.info(
+                    f"Raw values - gewicht: '{gewicht_raw}', wdh: '{wiederholungen_raw}', rpe: '{rpe_raw}'"
+                )
 
                 # Gewicht validieren
                 gewicht = None
                 if gewicht_raw:
                     # Ersetze Komma durch Punkt (deutsche Eingabe)
-                    gewicht_raw = gewicht_raw.replace(',', '.')
+                    gewicht_raw = gewicht_raw.replace(",", ".")
                     gewicht = float(gewicht_raw)
                     if gewicht < 0 or gewicht > 1000:
                         raise ValueError("Gewicht außerhalb gültiger Bereich (0-1000)")
@@ -490,21 +513,23 @@ def update_set(request, set_id):
                 # RPE validieren
                 rpe = None
                 if rpe_raw:
-                    rpe_raw = rpe_raw.replace(',', '.')
+                    rpe_raw = rpe_raw.replace(",", ".")
                     rpe = float(rpe_raw)
                     if rpe < 0 or rpe > 10:
                         raise ValueError("RPE muss zwischen 0 und 10 sein")
 
-                logger.info(f"Validated values - gewicht: {gewicht}, wdh: {wiederholungen}, rpe: {rpe}")
+                logger.info(
+                    f"Validated values - gewicht: {gewicht}, wdh: {wiederholungen}, rpe: {rpe}"
+                )
 
                 # Speichere validierte Werte
                 satz.gewicht = gewicht
                 satz.wiederholungen = wiederholungen
                 satz.rpe = rpe
-                satz.ist_aufwaermsatz = request.POST.get('ist_aufwaermsatz') == 'on'
-                notiz = request.POST.get('notiz', '').strip()
+                satz.ist_aufwaermsatz = request.POST.get("ist_aufwaermsatz") == "on"
+                notiz = request.POST.get("notiz", "").strip()
                 satz.notiz = notiz if notiz else None
-                superset_gruppe = request.POST.get('superset_gruppe', '0').strip()
+                superset_gruppe = request.POST.get("superset_gruppe", "0").strip()
                 satz.superset_gruppe = int(superset_gruppe) if superset_gruppe else 0
 
                 logger.info(f"Saving satz {set_id}...")
@@ -512,31 +537,33 @@ def update_set(request, set_id):
                 logger.info(f"Satz {set_id} saved successfully")
 
                 # AJAX Request? Sende JSON
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': True})
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse({"success": True})
 
-                return redirect('training_session', training_id=training_id)
+                return redirect("training_session", training_id=training_id)
 
             except (ValueError, TypeError) as e:
                 logger.error(f"Validation error in update_set: {e}", exc_info=True)
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Ungültige Eingabe'
-                    }, status=400)
-                return redirect('training_session', training_id=training_id)
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {"success": False, "error": "Ungültige Eingabe"}, status=400
+                    )
+                return redirect("training_session", training_id=training_id)
 
         # GET Request - redirect to session
-        return redirect('training_session', training_id=training_id)
+        return redirect("training_session", training_id=training_id)
 
     except Exception as e:
         logger.exception(f"Unexpected error in update_set for set_id={set_id}: {e}")
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'error': 'Ein unerwarteter Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
-            }, status=500)
-        return redirect('dashboard')
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Ein unerwarteter Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
+                },
+                status=500,
+            )
+        return redirect("dashboard")
 
 
 @login_required
@@ -546,35 +573,35 @@ def toggle_deload(request, training_id):
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
     try:
         data = json.loads(request.body)
-        ist_deload_value = data.get('ist_deload', None)
+        ist_deload_value = data.get("ist_deload", None)
         if not isinstance(ist_deload_value, bool):
             return JsonResponse(
                 {
-                    'success': False,
-                    'error': 'Ungültiger Wert für "ist_deload". Es wird ein boolescher Wert erwartet.'
+                    "success": False,
+                    "error": 'Ungültiger Wert für "ist_deload". Es wird ein boolescher Wert erwartet.',
                 },
-                status=400
+                status=400,
             )
         training.ist_deload = ist_deload_value
-        training.save(update_fields=['ist_deload'])
-        return JsonResponse({'success': True, 'ist_deload': training.ist_deload})
+        training.save(update_fields=["ist_deload"])
+        return JsonResponse({"success": True, "ist_deload": training.ist_deload})
     except json.JSONDecodeError as e:
         logger.warning(f"toggle_deload JSON decode error: {e}")
         return JsonResponse(
             {
-                'success': False,
-                'error': 'Die Anfrage konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.'
+                "success": False,
+                "error": "Die Anfrage konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.",
             },
-            status=400
+            status=400,
         )
     except Exception:
         logger.exception(f"Unexpected error in toggle_deload for training_id={training_id}")
         return JsonResponse(
             {
-                'success': False,
-                'error': 'Ein unerwarteter Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+                "success": False,
+                "error": "Ein unerwarteter Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
             },
-            status=500
+            status=500,
         )
 
 
@@ -583,10 +610,10 @@ def finish_training(request, training_id):
     """Zeigt Zusammenfassung und ermöglicht Speichern von Dauer/Kommentar."""
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
-    if request.method == 'POST':
+    if request.method == "POST":
         # Dauer und Kommentar speichern
-        dauer_raw = request.POST.get('dauer_minuten')
-        kommentar = request.POST.get('kommentar')
+        dauer_raw = request.POST.get("dauer_minuten")
+        kommentar = request.POST.get("kommentar")
 
         has_error = False
 
@@ -599,7 +626,9 @@ def finish_training(request, training_id):
             else:
                 # Plausibilitätsprüfung: Dauer muss positiv und realistisch sein
                 if dauer <= 0 or dauer > 1440:
-                    messages.error(request, "Die Trainingsdauer muss zwischen 1 und 1440 Minuten liegen.")
+                    messages.error(
+                        request, "Die Trainingsdauer muss zwischen 1 und 1440 Minuten liegen."
+                    )
                     has_error = True
                 else:
                     training.dauer_minuten = dauer
@@ -609,7 +638,7 @@ def finish_training(request, training_id):
 
         if not has_error:
             training.save()
-            return redirect('dashboard')
+            return redirect("dashboard")
 
     # Statistiken für die Zusammenfassung berechnen
     arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
@@ -619,7 +648,7 @@ def finish_training(request, training_id):
     total_volume = sum(float(s.gewicht) * s.wiederholungen for s in arbeitssaetze)
 
     # Anzahl Übungen
-    uebungen_count = training.saetze.values('uebung').distinct().count()
+    uebungen_count = training.saetze.values("uebung").distinct().count()
 
     # Trainingsdauer schätzen (falls nicht manuell eingegeben)
     if training.datum:
@@ -636,7 +665,8 @@ def finish_training(request, training_id):
         # Liste von IDs verwenden statt Subquery (MariaDB LIMIT-Kompatibilität)
         recent_training_ids = list(
             Trainingseinheit.objects.filter(user=request.user, ist_deload=False)
-            .order_by('-datum').values_list('id', flat=True)[:3]
+            .order_by("-datum")
+            .values_list("id", flat=True)[:3]
         )
         recent_trainings = Trainingseinheit.objects.filter(id__in=recent_training_ids)
 
@@ -645,16 +675,17 @@ def finish_training(request, training_id):
             einheit_id__in=recent_training_ids,
             ist_aufwaermsatz=False,
             einheit__ist_deload=False,
-            rpe__isnull=False
+            rpe__isnull=False,
         )
 
         if recent_sets.exists():
-            avg_rpe = recent_sets.aggregate(Avg('rpe'))['rpe__avg']
+            avg_rpe = recent_sets.aggregate(Avg("rpe"))["rpe__avg"]
 
             # Volumen-Analyse der letzten 3 vs. vorherige 3 Trainings
             previous_training_ids = list(
                 Trainingseinheit.objects.filter(user=request.user, ist_deload=False)
-                .order_by('-datum').values_list('id', flat=True)[3:6]
+                .order_by("-datum")
+                .values_list("id", flat=True)[3:6]
             )
             previous_trainings = Trainingseinheit.objects.filter(id__in=previous_training_ids)
 
@@ -664,86 +695,98 @@ def finish_training(request, training_id):
                 for s in t.saetze.filter(ist_aufwaermsatz=False)
             )
 
-            previous_volume = sum(
-                float(s.gewicht or 0) * int(s.wiederholungen or 0)
-                for t in previous_trainings
-                for s in t.saetze.filter(ist_aufwaermsatz=False)
-            ) if previous_trainings.exists() else 0
+            previous_volume = (
+                sum(
+                    float(s.gewicht or 0) * int(s.wiederholungen or 0)
+                    for t in previous_trainings
+                    for s in t.saetze.filter(ist_aufwaermsatz=False)
+                )
+                if previous_trainings.exists()
+                else 0
+            )
 
             # Generiere intelligente Vorschläge basierend auf Daten
             suggestions = []
 
             # Vorschlag 1: Intensität anpassen
             if avg_rpe < 6.5:
-                suggestions.append({
-                    'type': 'intensity',
-                    'title': 'Intensität erhöhen',
-                    'message': f'Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10',
-                    'action': 'Steigere das Gewicht um 5-10% oder reduziere die Pausenzeit',
-                    'icon': 'bi-arrow-up-circle',
-                    'color': 'info'
-                })
+                suggestions.append(
+                    {
+                        "type": "intensity",
+                        "title": "Intensität erhöhen",
+                        "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
+                        "action": "Steigere das Gewicht um 5-10% oder reduziere die Pausenzeit",
+                        "icon": "bi-arrow-up-circle",
+                        "color": "info",
+                    }
+                )
             elif avg_rpe > 8.5:
-                suggestions.append({
-                    'type': 'intensity',
-                    'title': 'Regeneration priorisieren',
-                    'message': f'Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10',
-                    'action': 'Reduziere die Intensität oder plane einen Deload',
-                    'icon': 'bi-shield-check',
-                    'color': 'warning'
-                })
+                suggestions.append(
+                    {
+                        "type": "intensity",
+                        "title": "Regeneration priorisieren",
+                        "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
+                        "action": "Reduziere die Intensität oder plane einen Deload",
+                        "icon": "bi-shield-check",
+                        "color": "warning",
+                    }
+                )
 
             # Vorschlag 2: Volumen anpassen
             if previous_volume > 0:
                 volume_change = ((recent_volume - previous_volume) / previous_volume) * 100
 
                 if volume_change < -15:
-                    suggestions.append({
-                        'type': 'volume',
-                        'title': 'Volumen gesunken',
-                        'message': f'Dein Volumen ist um {abs(volume_change):.0f}% gefallen',
-                        'action': 'Füge 1-2 Sätze pro Übung hinzu oder trainiere häufiger',
-                        'icon': 'bi-graph-down',
-                        'color': 'danger'
-                    })
+                    suggestions.append(
+                        {
+                            "type": "volume",
+                            "title": "Volumen gesunken",
+                            "message": f"Dein Volumen ist um {abs(volume_change):.0f}% gefallen",
+                            "action": "Füge 1-2 Sätze pro Übung hinzu oder trainiere häufiger",
+                            "icon": "bi-graph-down",
+                            "color": "danger",
+                        }
+                    )
                 elif volume_change > 30:
-                    suggestions.append({
-                        'type': 'volume',
-                        'title': 'Volumen stark gestiegen',
-                        'message': f'Dein Volumen ist um {volume_change:.0f}% gestiegen',
-                        'action': 'Achte auf ausreichend Regeneration zwischen Trainings',
-                        'icon': 'bi-graph-up',
-                        'color': 'warning'
-                    })
+                    suggestions.append(
+                        {
+                            "type": "volume",
+                            "title": "Volumen stark gestiegen",
+                            "message": f"Dein Volumen ist um {volume_change:.0f}% gestiegen",
+                            "action": "Achte auf ausreichend Regeneration zwischen Trainings",
+                            "icon": "bi-graph-up",
+                            "color": "warning",
+                        }
+                    )
 
             # Vorschlag 3: Übungsvariation
-            trained_exercises = set(
-                recent_sets.values_list('uebung_id', flat=True).distinct()
-            )
+            trained_exercises = set(recent_sets.values_list("uebung_id", flat=True).distinct())
 
             if len(trained_exercises) < 5:
-                suggestions.append({
-                    'type': 'variety',
-                    'title': 'Mehr Übungsvielfalt',
-                    'message': f'Du hast nur {len(trained_exercises)} verschiedene Übungen gemacht',
-                    'action': 'Integriere neue Übungen für besseres Muskelwachstum',
-                    'icon': 'bi-shuffle',
-                    'color': 'info'
-                })
+                suggestions.append(
+                    {
+                        "type": "variety",
+                        "title": "Mehr Übungsvielfalt",
+                        "message": f"Du hast nur {len(trained_exercises)} verschiedene Übungen gemacht",
+                        "action": "Integriere neue Übungen für besseres Muskelwachstum",
+                        "icon": "bi-shuffle",
+                        "color": "info",
+                    }
+                )
 
             # Wähle den wichtigsten Vorschlag (höchste Priorität)
-            priority_order = {'danger': 0, 'warning': 1, 'info': 2}
+            priority_order = {"danger": 0, "warning": 1, "info": 2}
             if suggestions:
-                ai_suggestion = sorted(suggestions, key=lambda x: priority_order[x['color']])[0]
+                ai_suggestion = sorted(suggestions, key=lambda x: priority_order[x["color"]])[0]
 
     context = {
-        'training': training,
-        'arbeitssaetze_count': arbeitssaetze.count(),
-        'warmup_saetze_count': warmup_saetze.count(),
-        'total_volume': round(total_volume, 1),
-        'uebungen_count': uebungen_count,
-        'dauer_geschaetzt': dauer_geschaetzt,
-        'training_count': training_count,
-        'ai_suggestion': ai_suggestion,
+        "training": training,
+        "arbeitssaetze_count": arbeitssaetze.count(),
+        "warmup_saetze_count": warmup_saetze.count(),
+        "total_volume": round(total_volume, 1),
+        "uebungen_count": uebungen_count,
+        "dauer_geschaetzt": dauer_geschaetzt,
+        "training_count": training_count,
+        "ai_suggestion": ai_suggestion,
     }
-    return render(request, 'core/training_finish.html', context)
+    return render(request, "core/training_finish.html", context)

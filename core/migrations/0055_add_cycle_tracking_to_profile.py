@@ -6,18 +6,27 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0054_add_user_profile_active_plan_group'),
+        ("core", "0054_add_user_profile_active_plan_group"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userprofile',
-            name='cycle_length',
-            field=models.PositiveIntegerField(default=4, help_text='Anzahl Wochen pro Mesozyklus inkl. Deload (z.B. 4 = 3 normal + 1 Deload)', verbose_name='Zykluslänge (Wochen)'),
+            model_name="userprofile",
+            name="cycle_length",
+            field=models.PositiveIntegerField(
+                default=4,
+                help_text="Anzahl Wochen pro Mesozyklus inkl. Deload (z.B. 4 = 3 normal + 1 Deload)",
+                verbose_name="Zykluslänge (Wochen)",
+            ),
         ),
         migrations.AddField(
-            model_name='userprofile',
-            name='cycle_start_date',
-            field=models.DateField(blank=True, help_text='Wird automatisch beim ersten Training mit aktiver Gruppe gesetzt', null=True, verbose_name='Zyklusstart'),
+            model_name="userprofile",
+            name="cycle_start_date",
+            field=models.DateField(
+                blank=True,
+                help_text="Wird automatisch beim ersten Training mit aktiver Gruppe gesetzt",
+                null=True,
+                verbose_name="Zyklusstart",
+            ),
         ),
     ]

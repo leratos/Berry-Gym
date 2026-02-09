@@ -12,7 +12,7 @@
     <div class="container">
       <div class="row justify-content-center align-items-center min-vh-100">
         <div class="col-12 col-md-6 col-lg-4">
-          
+
           <!-- Logo/Header -->
           <div class="text-center mb-4">
             <h1 class="display-4 fw-bold text-white">
@@ -28,7 +28,7 @@
 
               {% if form.errors %}
               <div class="alert alert-danger" role="alert">
-                <i class="bi bi-exclamation-triangle-fill"></i> 
+                <i class="bi bi-exclamation-triangle-fill"></i>
                 Ungültiger Benutzername oder Passwort.
               </div>
               {% endif %}
@@ -43,18 +43,18 @@
 
               <form method="post" action="{% url 'login' %}">
                 {% csrf_token %}
-                
+
                 <div class="mb-3">
                   <label for="id_username" class="form-label">
                     <i class="bi bi-person-fill"></i> Benutzername
                   </label>
-                  <input 
-                    type="text" 
-                    name="username" 
-                    id="id_username" 
-                    class="form-control bg-dark text-white border-secondary" 
+                  <input
+                    type="text"
+                    name="username"
+                    id="id_username"
+                    class="form-control bg-dark text-white border-secondary"
                     placeholder="Benutzername"
-                    required 
+                    required
                     autofocus
                   >
                 </div>
@@ -63,11 +63,11 @@
                   <label for="id_password" class="form-label">
                     <i class="bi bi-lock-fill"></i> Passwort
                   </label>
-                  <input 
-                    type="password" 
-                    name="password" 
-                    id="id_password" 
-                    class="form-control bg-dark text-white border-secondary" 
+                  <input
+                    type="password"
+                    name="password"
+                    id="id_password"
+                    class="form-control bg-dark text-white border-secondary"
                     placeholder="Passwort"
                     required
                   >
@@ -88,7 +88,7 @@
                 <!-- Registrierung deaktiviert -->
                 <div class="text-center">
                   <small class="text-muted">
-                    Noch kein Account? 
+                    Noch kein Account?
                     <a href="{% url 'register' %}" class="text-primary text-decoration-none">
                       Jetzt registrieren
                     </a>
@@ -100,7 +100,7 @@
               <!-- Beta-Bewerbung -->
               <div class="text-center mt-3 pt-3 border-top border-secondary">
                 <small class="text-muted">
-                  Noch keinen Account? 
+                  Noch keinen Account?
                   <a href="{% url 'apply_beta' %}" class="text-primary text-decoration-none fw-bold">
                     <i class="bi bi-rocket-takeoff me-1"></i>Für Beta bewerben
                   </a>

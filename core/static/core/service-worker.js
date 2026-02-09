@@ -21,20 +21,20 @@ self.addEventListener('install', event => {
       .then(cache => {
         console.log('[Service Worker] Caching app shell and core pages');
         // Cache CDN assets und static files die immer funktionieren sollten
-        const staticAssets = urlsToCache.filter(url => 
+        const staticAssets = urlsToCache.filter(url =>
           url.startsWith('https://') || url.startsWith('/static/')
         );
-        
+
         // Cache HTML-Seiten mit Fehlerbehandlung (falls offline installiert)
-        const htmlPages = urlsToCache.filter(url => 
+        const htmlPages = urlsToCache.filter(url =>
           !url.startsWith('https://') && !url.startsWith('/static/')
         );
-        
+
         return Promise.all([
           cache.addAll(staticAssets).catch(err => {
             console.warn('[SW] Some static assets failed to cache:', err);
           }),
-          ...htmlPages.map(url => 
+          ...htmlPages.map(url =>
             fetch(url).then(response => {
               if (response.ok) return cache.put(url, response);
             }).catch(err => {
@@ -96,8 +96,8 @@ self.addEventListener('fetch', event => {
         .catch(() => {
           // Offline Fallback für API-Requests
           return new Response(
-            JSON.stringify({ 
-              success: false, 
+            JSON.stringify({
+              success: false,
               error: 'Offline - Daten werden lokal gespeichert',
               offline: true
             }),
@@ -128,7 +128,7 @@ self.addEventListener('fetch', event => {
             console.log('[SW] Serving from cache:', request.url);
             return cachedResponse;
           }
-          
+
           // Nicht gecached - versuche Dashboard als Fallback
           console.log('[SW] Page not cached, trying dashboard fallback');
           return caches.match('/dashboard/').then(dashboard => {
@@ -163,7 +163,7 @@ self.addEventListener('fetch', event => {
 
         // Clone the response
         const responseToCache = response.clone();
-        
+
         // Cache static resources
         if (url.pathname.startsWith('/static/')) {
           caches.open(CACHE_NAME).then(cache => {
@@ -192,33 +192,33 @@ self.addEventListener('sync', event => {
 
 async function syncTrainingData() {
   console.log('[Service Worker] Syncing training data...');
-  
+
   try {
     // Öffne IndexedDB
     const db = await openIndexedDB();
     const unsyncedData = await getUnsyncedData(db, 'trainingData');
-    
+
     if (unsyncedData.length === 0) {
       console.log('[Service Worker] No unsynced data');
       return;
     }
-    
+
     console.log(`[Service Worker] Found ${unsyncedData.length} unsynced items`);
-    
+
     // POST alle unsynced Items als Batch
     const response = await fetch('/api/sync-offline/', {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': await getCSRFToken()
       },
       body: JSON.stringify(unsyncedData)
     });
-    
+
     if (response.ok) {
       const result = await response.json();
       console.log('[Service Worker] Sync response:', result);
-      
+
       // Markiere erfolgreiche Syncs
       if (result.results) {
         for (const item of result.results) {
@@ -228,7 +228,7 @@ async function syncTrainingData() {
           }
         }
       }
-      
+
       // Notify clients
       const clients = await self.clients.matchAll();
       clients.forEach(client => {
@@ -253,7 +253,7 @@ async function getCSRFToken() {
       return clients[0].cookies;
     }
   });
-  
+
   // Fallback: Return empty (Backend hat @csrf_exempt)
   return '';
 }
@@ -270,10 +270,10 @@ function getUnsyncedData(db, storeName) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], 'readonly');
     const store = transaction.objectStore(storeName);
-    
+
     // Hole alle Daten und filtere nach synced = false
     const request = store.getAll();
-    
+
     request.onsuccess = () => {
       const allData = request.result || [];
       const unsyncedData = allData.filter(item => item.synced === false);
@@ -289,7 +289,7 @@ function markAsSynced(db, storeName, id) {
     const transaction = db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     const getRequest = store.get(id);
-    
+
     getRequest.onsuccess = () => {
       const data = getRequest.result;
       if (data) {

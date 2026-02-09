@@ -1,0 +1,33 @@
+[flake8]
+max-line-length = 100
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    migrations,
+    staticfiles,
+    media,
+    htmlcov,
+    build,
+    dist,
+    *.egg-info
+
+# Ignore specific errors
+ignore =
+    E203,
+    E266,
+    E501,
+    W503,
+    W504,
+    E402
+
+# Per-file ignores
+per-file-ignores =
+    __init__.py:F401,F403
+    settings.py:E501
+
+# Complexity
+max-complexity = 15
+
+# Docstring requirements (disabled for now)
+# docstring-convention = google

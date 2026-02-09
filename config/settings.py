@@ -18,63 +18,65 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables from .env file
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dk%lwdezcs^e(5axd0yz%fslofr&cuu7#xuign*p0ftromsf0a')
+SECRET_KEY = os.getenv(
+    "SECRET_KEY", "django-insecure-dk%lwdezcs^e(5axd0yz%fslofr&cuu7#xuign*p0ftromsf0a"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'core',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "core",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'config.urls'
+ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'core' / 'templates'],  # Unsere Templates haben Vorrang
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'core.context_processors.global_context',  # Custom: current_year
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "core" / "templates"],  # Unsere Templates haben Vorrang
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "core.context_processors.global_context",  # Custom: current_year
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = "config.wsgi.application"
 
 
 # Database
@@ -82,27 +84,27 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Development: SQLite (Default)
 # Production: MariaDB/MySQL (via .env)
-if os.getenv('DB_ENGINE'):
+if os.getenv("DB_ENGINE"):
     DATABASES = {
-        'default': {
-            'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
-            'NAME': os.getenv('DB_NAME', 'homegym_db'),
-            'USER': os.getenv('DB_USER', 'homegym_user'),
-            'PASSWORD': os.getenv('DB_PASSWORD', ''),
-            'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '3306'),
-            'OPTIONS': {
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-                'charset': 'utf8mb4',
+        "default": {
+            "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.mysql"),
+            "NAME": os.getenv("DB_NAME", "homegym_db"),
+            "USER": os.getenv("DB_USER", "homegym_user"),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "HOST": os.getenv("DB_HOST", "localhost"),
+            "PORT": os.getenv("DB_PORT", "3306"),
+            "OPTIONS": {
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                "charset": "utf8mb4",
             },
         }
     }
 else:
     # SQLite für Development
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
@@ -112,16 +114,16 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -129,9 +131,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -141,45 +143,47 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / 'staticfiles')
+STATIC_URL = "static/"
+STATIC_ROOT = os.getenv("STATIC_ROOT", BASE_DIR / "staticfiles")
 
 # Media files (User uploads)
-MEDIA_URL = 'media/'
-MEDIA_ROOT = os.getenv('MEDIA_ROOT', BASE_DIR / 'media')
+MEDIA_URL = "media/"
+MEDIA_ROOT = os.getenv("MEDIA_ROOT", BASE_DIR / "media")
 
 # Staticfiles Finders
 STATICFILES_DIRS = [
-    BASE_DIR / 'core' / 'static',
+    BASE_DIR / "core" / "static",
 ]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Login/Logout URLs
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 # E-Mail Konfiguration (für Beta-Einladungen & Passwort-Reset)
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')  # Development: console, Production: smtp
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'last-strawberry.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
-EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True') == 'True'  # Port 465 = SSL
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'  # Port 587 = TLS (nicht bei SSL)
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'noreply@last-strawberry.com')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'HomeGym <noreply@last-strawberry.com>')
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)  # Development: console, Production: smtp
+EMAIL_HOST = os.getenv("EMAIL_HOST", "last-strawberry.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "True") == "True"  # Port 465 = SSL
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False") == "True"  # Port 587 = TLS (nicht bei SSL)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "noreply@last-strawberry.com")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "HomeGym <noreply@last-strawberry.com>")
 
 # Site URL (für Einladungs-Emails & Passwort-Reset)
-SITE_URL = os.getenv('SITE_URL', 'https://gym.last-strawberry.com')
+SITE_URL = os.getenv("SITE_URL", "https://gym.last-strawberry.com")
 
 # Web Push Notifications
-VAPID_PRIVATE_KEY_FILE = os.getenv('VAPID_PRIVATE_KEY_FILE', 'vapid_private.pem')
-VAPID_PUBLIC_KEY_FILE = os.getenv('VAPID_PUBLIC_KEY_FILE', 'vapid_public.pem')
-VAPID_CLAIMS_EMAIL = os.getenv('VAPID_CLAIMS_EMAIL', 'mailto:noreply@last-strawberry.com')
+VAPID_PRIVATE_KEY_FILE = os.getenv("VAPID_PRIVATE_KEY_FILE", "vapid_private.pem")
+VAPID_PUBLIC_KEY_FILE = os.getenv("VAPID_PUBLIC_KEY_FILE", "vapid_public.pem")
+VAPID_CLAIMS_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "mailto:noreply@last-strawberry.com")
 
 # VAPID Keys laden (falls vorhanden)
 VAPID_PRIVATE_KEY = None
@@ -187,12 +191,161 @@ VAPID_PUBLIC_KEY = None
 try:
     vapid_private_path = os.path.join(BASE_DIR, VAPID_PRIVATE_KEY_FILE)
     vapid_public_path = os.path.join(BASE_DIR, VAPID_PUBLIC_KEY_FILE)
-    
+
     if os.path.exists(vapid_private_path) and os.path.exists(vapid_public_path):
-        with open(vapid_private_path, 'r') as f:
+        with open(vapid_private_path, "r") as f:
             VAPID_PRIVATE_KEY = f.read()
-        with open(vapid_public_path, 'r') as f:
+        with open(vapid_public_path, "r") as f:
             VAPID_PUBLIC_KEY = f.read()
 except Exception as e:
     print(f"⚠️  VAPID Keys nicht geladen: {e}")
     print("   Push Notifications werden deaktiviert")
+
+
+# ==================================
+# LOGGING CONFIGURATION
+# ==================================
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
+    "filters": {
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+        "file_error": {
+            "level": "ERROR",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": BASE_DIR / "logs" / "error.log",
+            "maxBytes": 1024 * 1024 * 10,  # 10 MB
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+        "file_general": {
+            "level": os.getenv("LOG_LEVEL", "INFO"),
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": BASE_DIR / "logs" / "django.log",
+            "maxBytes": 1024 * 1024 * 10,  # 10 MB
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+        "file_security": {
+            "level": "WARNING",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": BASE_DIR / "logs" / "security.log",
+            "maxBytes": 1024 * 1024 * 5,  # 5 MB
+            "backupCount": 10,  # Security logs: mehr Backups
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file_general"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["file_error", "console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "django.security": {
+            "handlers": ["file_security"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "core": {
+            "handlers": ["console", "file_general", "file_error"],
+            "level": os.getenv("LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "ai_coach": {
+            "handlers": ["console", "file_general", "file_error"],
+            "level": os.getenv("LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "ml_coach": {
+            "handlers": ["console", "file_general"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+# ==================================
+# SENTRY ERROR TRACKING (Production Only)
+# ==================================
+
+if not DEBUG:
+    # Sentry nur in Production aktivieren
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_dsn = os.getenv("SENTRY_DSN")
+
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[DjangoIntegration()],
+            # Performance Monitoring
+            traces_sample_rate=0.1,  # 10% der Requests tracken
+            # Profiling
+            profiles_sample_rate=0.1,
+            # Environment
+            environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
+            # DSGVO: Keine User-Daten senden
+            send_default_pii=False,
+            # Ignore common errors
+            ignore_errors=[
+                KeyboardInterrupt,
+                BrokenPipeError,
+            ],
+        )
+
+        print("✅ Sentry Error Tracking aktiviert")
+    else:
+        print("⚠️  SENTRY_DSN nicht gesetzt - Error Tracking deaktiviert")
+
+# ==================================
+# DJANGO-AXES: Brute Force Protection
+# ==================================
+
+INSTALLED_APPS += ["axes"]
+
+MIDDLEWARE += [
+    "axes.middleware.AxesMiddleware",
+]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",  # AxesStandaloneBackend should be first
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# Axes Configuration
+AXES_FAILURE_LIMIT = 5  # Nach 5 Fehlversuchen sperren
+AXES_COOLOFF_TIME = 1  # 1 Stunde Sperre
+AXES_RESET_ON_SUCCESS = True  # Counter zurücksetzen bei Erfolg
+AXES_LOCKOUT_TEMPLATE = None  # Nutze Standard-Error-Message
+AXES_LOCKOUT_PARAMETERS = ["username"]  # Sperre basierend auf Username
+AXES_ENABLE_ACCESS_FAILURE_LOG = True  # Fehlversuche loggen
+AXES_VERBOSE = True  # Detailliertes Logging

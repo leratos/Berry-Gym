@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0018_add_plan_gruppe'),
+        ("core", "0018_add_plan_gruppe"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='plan',
-            name='gruppe_reihenfolge',
-            field=models.PositiveIntegerField(default=0, help_text='Position des Plans innerhalb der Gruppe (0, 1, 2, ...)', verbose_name='Reihenfolge in Gruppe'),
+            model_name="plan",
+            name="gruppe_reihenfolge",
+            field=models.PositiveIntegerField(
+                default=0,
+                help_text="Position des Plans innerhalb der Gruppe (0, 1, 2, ...)",
+                verbose_name="Reihenfolge in Gruppe",
+            ),
         ),
     ]

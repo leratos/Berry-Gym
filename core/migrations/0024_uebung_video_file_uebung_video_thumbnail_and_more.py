@@ -6,23 +6,39 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0023_uebungtag_uebung_tags'),
+        ("core", "0023_uebungtag_uebung_tags"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='uebung',
-            name='video_file',
-            field=models.FileField(blank=True, help_text='Alternativ: MP4 hochladen', null=True, upload_to='uebungen_videos/', verbose_name='Video-Datei'),
+            model_name="uebung",
+            name="video_file",
+            field=models.FileField(
+                blank=True,
+                help_text="Alternativ: MP4 hochladen",
+                null=True,
+                upload_to="uebungen_videos/",
+                verbose_name="Video-Datei",
+            ),
         ),
         migrations.AddField(
-            model_name='uebung',
-            name='video_thumbnail',
-            field=models.ImageField(blank=True, null=True, upload_to='uebungen_thumbnails/', verbose_name='Video-Vorschaubild'),
+            model_name="uebung",
+            name="video_thumbnail",
+            field=models.ImageField(
+                blank=True,
+                null=True,
+                upload_to="uebungen_thumbnails/",
+                verbose_name="Video-Vorschaubild",
+            ),
         ),
         migrations.AlterField(
-            model_name='uebung',
-            name='video_link',
-            field=models.URLField(blank=True, help_text='z.B. https://www.youtube.com/watch?v=...', null=True, verbose_name='YouTube/Vimeo Link'),
+            model_name="uebung",
+            name="video_link",
+            field=models.URLField(
+                blank=True,
+                help_text="z.B. https://www.youtube.com/watch?v=...",
+                null=True,
+                verbose_name="YouTube/Vimeo Link",
+            ),
         ),
     ]

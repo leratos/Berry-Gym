@@ -17,16 +17,16 @@
         box-shadow: 0 6px 20px rgba(25, 135, 84, 0.5);
         animation: breathe 2s ease-in-out infinite;
     }
-    
+
     @keyframes breathe {
         0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(25, 135, 84, 0.5); }
         50% { transform: scale(1.05); box-shadow: 0 8px 25px rgba(25, 135, 84, 0.7); }
     }
-    
+
     .ai-coach-modal .modal-dialog {
         max-width: 600px;
     }
-    
+
     .chat-messages {
         max-height: 400px;
         overflow-y: auto;
@@ -35,7 +35,7 @@
         border-radius: 8px;
         margin-bottom: 1rem;
     }
-    
+
     .chat-message {
         margin-bottom: 1rem;
         padding: 0.75rem 1rem;
@@ -43,26 +43,26 @@
         max-width: 85%;
         word-wrap: break-word;
     }
-    
+
     .chat-message.user {
         background: #0d6efd;
         color: white;
         margin-left: auto;
         text-align: right;
     }
-    
+
     .chat-message.ai {
         background: #198754;
         color: white;
         margin-right: auto;
     }
-    
+
     .chat-message .timestamp {
         font-size: 0.75rem;
         opacity: 0.7;
         margin-top: 0.25rem;
     }
-    
+
     .context-info {
         background: #212529;
         border-left: 3px solid #198754;
@@ -71,7 +71,7 @@
         margin-bottom: 1rem;
         font-size: 0.875rem;
     }
-    
+
     .typing-indicator {
         display: none;
         padding: 0.75rem 1rem;
@@ -80,7 +80,7 @@
         max-width: 85px;
         margin-right: auto;
     }
-    
+
     .typing-indicator span {
         display: inline-block;
         width: 8px;
@@ -90,10 +90,10 @@
         margin: 0 2px;
         animation: typing 1.4s infinite;
     }
-    
+
     .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
     .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-    
+
     @keyframes typing {
         0%, 60%, 100% { transform: translateY(0); }
         30% { transform: translateY(-10px); }
@@ -126,7 +126,7 @@
                         <i class="bi bi-hourglass-split"></i> Lade Context...
                     </div>
                 </div>
-                
+
                 <!-- Chat Messages -->
                 <div class="chat-messages" id="chatMessages">
                     <div class="chat-message ai">
@@ -139,19 +139,19 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Typing Indicator -->
                 <div class="typing-indicator" id="typingIndicator">
                     <span></span>
                     <span></span>
                     <span></span>
                 </div>
-                
+
                 <!-- Input Form -->
                 <form id="aiCoachForm">
                     <div class="input-group">
-                        <input type="text" class="form-control bg-dark text-white border-secondary" 
-                               id="questionInput" placeholder="Frag den KI-Coach..." 
+                        <input type="text" class="form-control bg-dark text-white border-secondary"
+                               id="questionInput" placeholder="Frag den KI-Coach..."
                                autocomplete="off" required>
                         <button class="btn btn-success" type="submit" id="sendBtn">
                             <i class="bi bi-send"></i>
@@ -175,22 +175,22 @@
         const questionInput = document.getElementById('questionInput');
         const sendBtn = document.getElementById('sendBtn');
         const typingIndicator = document.getElementById('typingIndicator');
-        
+
         // Trainingseinheit ID (aus Template)
         const sessionId = {{ training.id }};
-        
+
         // Aktuelle Übung & Satz (optional - wird beim Modal-Öffnen gesetzt)
         let currentExerciseId = null;
         let currentSetNumber = null;
-        
+
         // 🆕 Chat-Historie für Konversationsgedächtnis
         let chatHistory = [];
-        
+
         // Context beim Modal-Öffnen aktualisieren
         document.getElementById('aiCoachModal').addEventListener('show.bs.modal', function() {
             updateContext();
         });
-        
+
         function updateContext() {
             // TODO: Dynamisch aus Seite auslesen welche Übung gerade aktiv ist
             // Für jetzt: Zeige Session-Info
@@ -199,36 +199,36 @@
                 sets: document.querySelectorAll('.card-body').length || '?',
                 plan: '{{ training.plan.name|default:"Freies Training" }}'
             };
-            
+
             contextDetails.innerHTML = `
                 <div><i class="bi bi-calendar-check"></i> <strong>Plan:</strong> ${stats.plan}</div>
                 <div class="mt-1"><i class="bi bi-clock"></i> <strong>Dauer:</strong> ${stats.duration}</div>
                 <div class="mt-1"><i class="bi bi-bar-chart"></i> <strong>Sätze:</strong> ${stats.sets}</div>
             `;
         }
-        
+
         // Form Submit
         aiCoachForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const question = questionInput.value.trim();
             if (!question) return;
-            
+
             // User Message anzeigen
             addMessage(question, 'user');
-            
+
             // 🆕 User-Frage zur Historie hinzufügen
             chatHistory.push({ role: 'user', content: question });
-            
+
             // Input leeren & deaktivieren
             questionInput.value = '';
             questionInput.disabled = true;
             sendBtn.disabled = true;
-            
+
             // Typing Indicator zeigen
             typingIndicator.style.display = 'block';
             chatMessages.scrollTop = chatMessages.scrollHeight;
-            
+
             try {
                 // API Call
                 const response = await fetch('{% url "live_guidance_api" %}', {
@@ -245,21 +245,21 @@
                         chat_history: chatHistory.slice(-10)  // 🆕 Letzte 10 Nachrichten für Kontext
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 // Typing Indicator verstecken
                 typingIndicator.style.display = 'none';
-                
+
                 if (data.error) {
                     addMessage('Fehler: ' + data.error, 'ai');
                 } else {
                     // AI Antwort anzeigen
                     addMessage(data.answer, 'ai');
-                    
+
                     // 🆕 AI-Antwort zur Historie hinzufügen
                     chatHistory.push({ role: 'assistant', content: data.answer });
-                    
+
                     // Kosten-Info (nur wenn > 0)
                     if (data.cost && data.cost > 0) {
                         console.log(`AI Coach | Model: ${data.model} | Kosten: ${data.cost.toFixed(4)}€`);
@@ -276,25 +276,25 @@
                 questionInput.focus();
             }
         });
-        
+
         function addMessage(text, sender) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-message ${sender}`;
-            
+
             const now = new Date();
             const timestamp = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            
+
             // Security: Use textContent to prevent XSS
             const textDiv = document.createElement('div');
             textDiv.textContent = text;
-            
+
             const timeDiv = document.createElement('div');
             timeDiv.className = 'timestamp';
             timeDiv.textContent = timestamp;
-            
+
             messageDiv.appendChild(textDiv);
             messageDiv.appendChild(timeDiv);
-            
+
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
