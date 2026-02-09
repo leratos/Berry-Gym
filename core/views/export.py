@@ -40,6 +40,13 @@ from core.chart_generator import (
     generate_muscle_heatmap, generate_volume_chart, generate_push_pull_pie,
     generate_body_map_with_data
 )
+from ..utils.advanced_stats import (
+    calculate_plateau_analysis,
+    calculate_consistency_metrics,
+    calculate_fatigue_index,
+    calculate_1rm_standards,
+    calculate_rpe_quality_analysis
+)
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +158,9 @@ def export_training_pdf(request):
     else:
         trainings_pro_woche = 0
 
+    # NEU: Konsistenz-Metriken
+    consistency_metrics = calculate_consistency_metrics(alle_trainings)
+
     # Top exercises with more details
     top_uebungen_raw = alle_saetze.values(
         'uebung__bezeichnung',
@@ -174,6 +184,9 @@ def export_training_pdf(request):
             uebung['uebung__muskelgruppe']
         )
         top_uebungen.append(uebung_dict)
+
+    # NEU: Plateau-Analyse
+    plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
 
     # Strength development: Top 5 exercises with measurable progression
     kraft_progression = []
@@ -347,6 +360,9 @@ def export_training_pdf(request):
         avg_rpe = 0
         rpe_verteilung = {'leicht': 0, 'mittel': 0, 'schwer': 0}
 
+    # NEU: RPE-Qualitäts-Analyse
+    rpe_quality = calculate_rpe_quality_analysis(alle_saetze)
+
     # Volume progression over last 12 weeks
     weekly_volume_pdf = defaultdict(float)
 
@@ -367,6 +383,13 @@ def export_training_pdf(request):
         for label in weekly_labels_pdf
     ]
 
+    # NEU: Ermüdungs-Index
+    fatigue_analysis = calculate_fatigue_index(
+        volumen_wochen,
+        rpe_saetze,
+        alle_trainings
+    )
+
     # Body measurements with trend
     koerperwerte_qs = KoerperWerte.objects.filter(
         user=request.user
@@ -374,6 +397,11 @@ def export_training_pdf(request):
 
     koerperwerte = list(koerperwerte_qs[:5])
     letzter_koerperwert = koerperwerte[0] if koerperwerte else None
+
+    # NEU: 1RM-Standards
+    # Hole Körpergewicht falls vorhanden
+    user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
+    rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)
 
     # Weight trend calculation
     gewichts_trend = None
@@ -449,6 +477,13 @@ def export_training_pdf(request):
         'koerperwerte': koerperwerte,
         'letzter_koerperwert': letzter_koerperwert,
         'gewichts_trend': gewichts_trend,
+
+        # NEU: Erweiterte Analysen
+        'plateau_analysis': plateau_analysis,
+        'consistency_metrics': consistency_metrics,
+        'fatigue_analysis': fatigue_analysis,
+        'rm_standards': rm_standards,
+        'rpe_quality': rpe_quality,
     }
 
     # Render HTML
