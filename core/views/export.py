@@ -131,7 +131,8 @@ def export_training_pdf(request):
 
     alle_saetze = Satz.objects.filter(
         einheit__user=request.user,
-        ist_aufwaermsatz=False
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
     )
     gesamt_saetze = alle_saetze.count()
     saetze_30_tage = alle_saetze.filter(einheit__datum__gte=letzte_30_tage).count()

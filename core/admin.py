@@ -122,7 +122,8 @@ class SatzInline(admin.TabularInline):
 
 @admin.register(Trainingseinheit)
 class TrainingseinheitAdmin(admin.ModelAdmin):
-    list_display = ('datum_formatiert', 'dauer_minuten', 'anzahl_saetze')
+    list_display = ('datum_formatiert', 'user', 'ist_deload', 'dauer_minuten', 'anzahl_saetze')
+    list_filter = ('ist_deload', 'user')
     inlines = [SatzInline]
     
     def datum_formatiert(self, obj):
