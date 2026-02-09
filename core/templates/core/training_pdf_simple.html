@@ -840,7 +840,7 @@
         <p style="font-size: 9px; margin: 0;"><strong>Was ist RPE?</strong>
         <strong>RPE</strong> (Rate of Perceived Exertion) beschreibt, wie anstrengend ein Satz für dich war, auf einer Skala von 1-10.
         RPE 7 = noch 3 Wiederholungen möglich, RPE 8 = noch 2, RPE 9 = noch 1, RPE 10 = Muskelversagen.
-        Der optimale Trainingsbereich liegt bei <strong>RPE 7-9</strong>. Sätze unter RPE 6 gelten als "Junk Volume" (zu leicht für echten Muskelreiz),
+        Der optimale Trainingsbereich liegt bei <strong>RPE 7-9</strong>. Sätze unter RPE 7 gelten als "Junk Volume" (zu leicht für echten Muskelreiz),
         während zu viel RPE 10 das Verletzungsrisiko erhöht und die Erholung verlängert.</p>
     </div>
 
@@ -851,7 +851,7 @@
             <span class="metric-value">{{ rpe_quality.optimal_intensity_rate }}%</span>
         </div>
         <div class="metric">
-            <span>"Junk Volume" (RPE &lt;6):</span>
+            <span>"Junk Volume" (RPE &lt;7):</span>
             <span class="metric-value">{{ rpe_quality.junk_volume_rate }}%</span>
         </div>
         <div class="metric">
@@ -881,9 +881,9 @@
         <ul>
             <li>Sehr leicht (RPE &lt;5): {{ rpe_quality.rpe_verteilung_prozent.sehr_leicht }}%</li>
             <li>Leicht (RPE 5-6): {{ rpe_quality.rpe_verteilung_prozent.leicht }}%</li>
-            <li>Moderat (RPE 6-7): {{ rpe_quality.rpe_verteilung_prozent.moderat }}%</li>
-            <li>Schwer (RPE 7-9): {{ rpe_quality.rpe_verteilung_prozent.schwer }}%</li>
-            <li>Sehr schwer (RPE 9-10): {{ rpe_quality.rpe_verteilung_prozent.sehr_schwer }}%</li>
+            <li>Moderat (RPE 7-8): {{ rpe_quality.rpe_verteilung_prozent.moderat }}%</li>
+            <li>Schwer (RPE 8-9): {{ rpe_quality.rpe_verteilung_prozent.schwer }}%</li>
+            <li>Sehr schwer (RPE 9+): {{ rpe_quality.rpe_verteilung_prozent.sehr_schwer }}%</li>
             <li>Versagen (RPE 10): {{ rpe_quality.rpe_verteilung_prozent.versagen }}%</li>
         </ul>
     </div>

@@ -530,18 +530,25 @@ def calculate_rpe_quality_analysis(alle_saetze):
     if gesamt == 0:
         return None
     
-    # Verteilung berechnen
+    # Verteilung berechnen (Detail-Kategorien für Aufschlüsselung)
     rpe_sehr_leicht = rpe_saetze.filter(rpe__lt=5).count()  # RPE <5
-    rpe_leicht = rpe_saetze.filter(rpe__gte=5, rpe__lt=6).count()  # RPE 5-6
-    rpe_moderat = rpe_saetze.filter(rpe__gte=6, rpe__lte=7).count()  # RPE 6-7
-    rpe_schwer = rpe_saetze.filter(rpe__gt=7, rpe__lt=9).count()  # RPE 7-9
-    rpe_sehr_schwer = rpe_saetze.filter(rpe__gte=9, rpe__lt=10).count()  # RPE 9-10
+    rpe_leicht = rpe_saetze.filter(rpe__gte=5, rpe__lt=7).count()  # RPE 5-6.9
+    rpe_moderat = rpe_saetze.filter(rpe__gte=7, rpe__lte=8).count()  # RPE 7-8
+    rpe_schwer = rpe_saetze.filter(rpe__gt=8, rpe__lte=9).count()  # RPE 8.1-9
+    rpe_sehr_schwer = rpe_saetze.filter(rpe__gt=9, rpe__lt=10).count()  # RPE 9.1-9.9
     rpe_versagen = rpe_saetze.filter(rpe=10).count()  # RPE 10
     
-    # Prozente
-    junk_volume_rate = round(((rpe_sehr_leicht + rpe_leicht) / gesamt) * 100, 1)
-    optimal_intensity_rate = round(((rpe_schwer + rpe_sehr_schwer) / gesamt) * 100, 1)
-    failure_rate = round((rpe_versagen / gesamt) * 100, 1)
+    # Top-3 Metriken: Lückenlos (Summe = 100%)
+    # Junk Volume: RPE < 7 (zu leicht für echten Muskelreiz)
+    junk_count = rpe_saetze.filter(rpe__lt=7).count()
+    # Optimal: RPE 7-9 (idealer Trainingsbereich)
+    optimal_count = rpe_saetze.filter(rpe__gte=7, rpe__lt=10).count()
+    # Versagen: RPE 10
+    failure_count = rpe_versagen
+    
+    junk_volume_rate = round((junk_count / gesamt) * 100, 1)
+    optimal_intensity_rate = round((optimal_count / gesamt) * 100, 1)
+    failure_rate = round((failure_count / gesamt) * 100, 1)
     
     rpe_verteilung_prozent = {
         'sehr_leicht': round((rpe_sehr_leicht / gesamt) * 100, 1),
