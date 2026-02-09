@@ -39,6 +39,7 @@ urlpatterns = [
     path('group/<str:gruppe_id>/share/', views.share_group, name='share_group'),
     path('group/<str:gruppe_id>/copy/', views.copy_group, name='copy_group'),
     path('group/<str:gruppe_id>/toggle-public/', views.toggle_group_public, name='toggle_group_public'),
+    path('set-active-plan/', views.set_active_plan_group, name='set_active_plan_group'),
     path('plan-library/', views.plan_library, name='plan_library'),
     path('plan-library/group/<str:gruppe_id>/', views.plan_library_group, name='plan_library_group'),
     path('uebungen/', views.uebungen_auswahl, name='uebungen_auswahl'),

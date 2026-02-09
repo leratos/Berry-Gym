@@ -28,7 +28,7 @@ import random
 
 from ..models import (
     Trainingseinheit, KoerperWerte, Uebung, Satz,
-    MUSKELGRUPPEN, CardioEinheit
+    MUSKELGRUPPEN, CardioEinheit, Plan, UserProfile
 )
 logger = logging.getLogger(__name__)
 
@@ -501,6 +501,57 @@ def dashboard(request):
         # AI Auto-Suggest
         'performance_warnings': performance_warnings,
     }
+
+    # Aktiver Plan-Gruppen-Info für Dashboard-Widget
+    try:
+        profile = request.user.profile
+        if profile.active_plan_group:
+            group_plans = list(
+                Plan.objects.filter(
+                    user=request.user, gruppe_id=profile.active_plan_group
+                ).order_by('gruppe_reihenfolge', 'name')
+            )
+            if group_plans:
+                context['active_plan_group_name'] = group_plans[0].gruppe_name or 'Unbenannte Gruppe'
+                context['active_plan_group_id'] = str(profile.active_plan_group)
+
+                # Nächsten Plan ermitteln (Rotation: 1->2->3->1)
+                last_training = Trainingseinheit.objects.filter(
+                    user=request.user,
+                    plan__in=group_plans
+                ).select_related('plan').order_by('-datum').first()
+
+                if last_training and last_training.plan:
+                    # Finde Index des zuletzt trainierten Plans
+                    plan_ids = [p.id for p in group_plans]
+                    try:
+                        last_idx = plan_ids.index(last_training.plan.id)
+                        next_idx = (last_idx + 1) % len(group_plans)
+                    except ValueError:
+                        next_idx = 0
+                else:
+                    next_idx = 0
+
+                next_plan = group_plans[next_idx]
+                context['next_plan'] = next_plan
+                context['next_plan_index'] = next_idx + 1
+                context['group_plan_count'] = len(group_plans)
+
+                # Zyklus-Woche berechnen
+                current_week = profile.get_current_cycle_week()
+                if current_week:
+                    context['cycle_week'] = current_week
+                    context['cycle_length'] = profile.cycle_length
+                    context['is_deload'] = profile.is_deload_week()
+                    context['deload_volume_pct'] = int((1 - profile.deload_volume_factor) * 100)
+                    context['deload_weight_pct'] = int((1 - profile.deload_weight_factor) * 100)
+                    context['deload_rpe_target'] = profile.deload_rpe_target
+            else:
+                # Gruppe existiert nicht mehr
+                context['active_plan_group_stale'] = True
+    except UserProfile.DoesNotExist:
+        pass
+
     return render(request, 'core/dashboard.html', context)
 
 
