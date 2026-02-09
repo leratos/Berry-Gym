@@ -444,11 +444,14 @@ def dashboard(request):
         )
 
         # Muskelgruppen die User Equipment hat aber nicht trainiert
-        user_exercises = Uebung.objects.filter(
-            Q(is_custom=False) | Q(created_by=request.user)
-        ).values_list('muskelgruppe', flat=True).distinct()
+        # set() statt .distinct() weil Meta ordering=['bezeichnung'] das DISTINCT verfälscht
+        user_muscle_groups = set(
+            Uebung.objects.filter(
+                Q(is_custom=False) | Q(created_by=request.user)
+            ).values_list('muskelgruppe', flat=True)
+        )
 
-        for mg in user_exercises:
+        for mg in user_muscle_groups:
             if mg not in trained_recently:
                 # Prüfe wann zuletzt trainiert
                 last_training = Satz.objects.filter(
