@@ -567,8 +567,8 @@ def toggle_deload(request, training_id):
             },
             status=400
         )
-    except Exception as e:
-        logger.exception(f"Unexpected error in toggle_deload for training_id={training_id}: {e}")
+    except Exception:
+        logger.exception(f"Unexpected error in toggle_deload for training_id={training_id}")
         return JsonResponse(
             {
                 'success': False,
