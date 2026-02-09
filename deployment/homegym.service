@@ -45,7 +45,7 @@ ExecStartPre=/bin/mkdir -p /path/to/your/project/logs
 ExecStart=/path/to/your/project/venv/bin/gunicorn \
     --workers 4 \
     --bind unix:/path/to/your/project/homegym.sock \
-    --timeout 60 \
+    --timeout 120 \
     --access-logfile /path/to/your/project/logs/gunicorn-access.log \
     --error-logfile /path/to/your/project/logs/gunicorn-error.log \
     --log-level info \

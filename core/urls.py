@@ -65,6 +65,7 @@ urlpatterns = [
     path('stats/', views.training_stats, name='training_stats'),
     path('training/<int:training_id>/delete/', views.delete_training, name='delete_training'),
     path('training/<int:training_id>/finish/', views.finish_training, name='finish_training'),
+    path('api/training/<int:training_id>/toggle-deload/', views.toggle_deload, name='toggle_deload'),
     path('api/last-set/<int:uebung_id>/', views.get_last_set, name='get_last_set'),
     path('stats/exercise/<int:uebung_id>/', views.exercise_stats, name='exercise_stats'),
     

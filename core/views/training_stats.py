@@ -72,14 +72,14 @@ def dashboard(request):
 
     # Favoriten-Übungen (Top 3 meist trainierte)
     favoriten = (Satz.objects
-                 .filter(einheit__user=request.user, ist_aufwaermsatz=False)
+                 .filter(einheit__user=request.user, ist_aufwaermsatz=False, einheit__ist_deload=False)
                  .values('uebung__bezeichnung', 'uebung__id')
                  .annotate(anzahl=Count('id'))
                  .order_by('-anzahl')[:3])
 
     # Gesamtstatistiken
     gesamt_trainings = Trainingseinheit.objects.filter(user=request.user).count()
-    gesamt_saetze = Satz.objects.filter(einheit__user=request.user, ist_aufwaermsatz=False).count()
+    gesamt_saetze = Satz.objects.filter(einheit__user=request.user, ist_aufwaermsatz=False, einheit__ist_deload=False).count()
 
     # Performance Form-Index berechnen (0-100 Score)
     form_index = 0
@@ -100,7 +100,9 @@ def dashboard(request):
         two_weeks_ago = heute - timedelta(days=14)
         recent_saetze = Satz.objects.filter(
             einheit__datum__gte=two_weeks_ago,
+            einheit__user=request.user,
             ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
             rpe__isnull=False
         )
 
@@ -129,10 +131,9 @@ def dashboard(request):
             week_volume = Satz.objects.filter(
                 einheit__datum__gte=week_start,
                 einheit__datum__lt=week_end,
-
                 ist_aufwaermsatz=False,
-                einheit__user=request.user
-
+                einheit__user=request.user,
+                einheit__ist_deload=False,
             ).aggregate(
                 total=Sum(F('gewicht') * F('wiederholungen'), output_field=DecimalField())
             )
@@ -184,7 +185,8 @@ def dashboard(request):
             einheit__user=request.user,
             einheit__datum__gte=week_start,
             einheit__datum__lt=week_end,
-            ist_aufwaermsatz=False
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
         )
 
         week_total = sum([
@@ -365,6 +367,7 @@ def dashboard(request):
                 einheit__user=request.user,
                 uebung_id=uebung_id,
                 ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
                 einheit__datum__gte=two_weeks_ago
             ).aggregate(max_gewicht=Max('gewicht'))
 
@@ -372,6 +375,7 @@ def dashboard(request):
                 einheit__user=request.user,
                 uebung_id=uebung_id,
                 ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
                 einheit__datum__gte=four_weeks_ago,
                 einheit__datum__lt=two_weeks_ago
             ).aggregate(max_gewicht=Max('gewicht'))
@@ -398,7 +402,8 @@ def dashboard(request):
         recent_exercises = Satz.objects.filter(
             einheit__user=request.user,
             einheit__datum__gte=two_weeks_ago,
-            ist_aufwaermsatz=False
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
         ).values('uebung__bezeichnung', 'uebung_id').annotate(
             avg_gewicht=Avg('gewicht')
         ).filter(avg_gewicht__isnull=False)
@@ -413,6 +418,7 @@ def dashboard(request):
                 einheit__user=request.user,
                 uebung_id=ex_id,
                 ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
                 einheit__datum__gte=heute - timedelta(days=28),
                 einheit__datum__lt=two_weeks_ago
             ).aggregate(Avg('gewicht'))
@@ -439,7 +445,8 @@ def dashboard(request):
             Satz.objects.filter(
                 einheit__user=request.user,
                 einheit__datum__gte=heute - timedelta(days=14),
-                ist_aufwaermsatz=False
+                ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
             ).values_list('uebung__muskelgruppe', flat=True)
         )
 
@@ -457,7 +464,8 @@ def dashboard(request):
                 last_training = Satz.objects.filter(
                     einheit__user=request.user,
                     uebung__muskelgruppe=mg,
-                    ist_aufwaermsatz=False
+                    ist_aufwaermsatz=False,
+                    einheit__ist_deload=False,
                 ).order_by('-einheit__datum').first()
 
                 if last_training:
@@ -608,7 +616,8 @@ def exercise_stats(request, uebung_id):
     saetze = Satz.objects.filter(
         einheit__user=request.user,
         uebung=uebung,
-        ist_aufwaermsatz=False
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
     ).select_related('einheit').order_by('einheit__datum')
 
     if not saetze.exists():
