@@ -60,6 +60,7 @@ from .plan_management import (
     toggle_group_public,
     plan_library,
     plan_library_group,
+    set_active_plan_group,
 )
 
 # Exercise library views
@@ -179,6 +180,7 @@ __all__ = [
     'create_plan', 'edit_plan', 'delete_plan', 'copy_plan', 'duplicate_plan',
     'share_plan', 'toggle_plan_public', 'duplicate_group', 'share_group',
     'copy_group', 'toggle_group_public', 'plan_library', 'plan_library_group',
+    'set_active_plan_group',
     # Exercise library
     'uebungen_auswahl', 'muscle_map', 'uebung_detail', 'exercise_detail',
     'toggle_favorite', 'toggle_favorit', 'get_alternative_exercises', 'suggest_alternative_exercises',

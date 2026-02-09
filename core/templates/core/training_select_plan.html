@@ -122,9 +122,12 @@
       </div>
       
       {% if filter_type == 'eigene' %}
-      <div class="mb-3">
-        <a href="{% url 'create_plan' %}" class="btn btn-success w-100">
-            <i class="bi bi-plus-circle me-2"></i>Neuen Trainingsplan erstellen
+      <div class="d-flex gap-2 mb-3">
+        <a href="{% url 'create_plan' %}" class="btn btn-success flex-grow-1">
+            <i class="bi bi-plus-circle me-2"></i>Neuen Plan erstellen
+        </a>
+        <a href="{% url 'set_active_plan_group' %}" class="btn btn-outline-primary" title="Aktiven Plan festlegen">
+            <i class="bi bi-bullseye"></i>
         </a>
       </div>
       
@@ -158,8 +161,116 @@
         </div>
       {% else %}
         <div class="d-grid gap-3">
-            
-            <!-- Gruppierte Pläne (Splits) -->
+
+            <!-- AKTIVE Plan-Gruppe (PRIORISIERT) -->
+            {% if active_plan_gruppen %}
+            {% for gruppe_key, gruppe in active_plan_gruppen.items %}
+            <div class="card border-primary shadow" data-gruppe-id="{{ gruppe_key }}">
+                <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3 bg-primary bg-opacity-10"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#active-gruppe-{{ forloop.counter }}"
+                     aria-expanded="true">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-bullseye text-primary me-2 fs-4"></i>
+                        <div>
+                            <h5 class="mb-0 gruppe-name-display" id="gruppe-name-{{ gruppe_key }}">{{ gruppe.name }}</h5>
+                            <small class="text-muted">{{ gruppe.plaene|length }} Trainingstage</small>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if filter_type == 'eigene' %}
+                        <button class="btn btn-sm btn-outline-light" onclick="event.stopPropagation(); renameGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')" title="Gruppe umbenennen">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        {% endif %}
+                        <span class="badge bg-primary plan-group-badge">Aktiver Plan</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </div>
+                </div>
+
+                <div class="collapse show" id="active-gruppe-{{ forloop.counter }}">
+                    <div class="card-body pt-2 pb-3">
+                        <div class="plan-group-content" data-gruppe-id="{{ gruppe_key }}">
+                            {% for plan in gruppe.plaene %}
+                            <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %} plan-row" data-plan-id="{{ plan.id }}">
+                                <div class="d-flex align-items-center flex-grow-1 me-2">
+                                    {% if filter_type == 'eigene' %}
+                                    <div class="btn-group-vertical me-2" style="margin-right: 8px;">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'up')" title="Nach oben" {% if forloop.first %}disabled{% endif %}>
+                                            <i class="bi bi-chevron-up"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'down')" title="Nach unten" {% if forloop.last %}disabled{% endif %}>
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <span class="fw-bold">{{ plan.name }}</span>
+                                        <span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} Übungen</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    {% if filter_type == 'eigene' %}
+                                        <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-play-fill"></i>
+                                        </a>
+                                        <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-info-circle"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')" title="Löschen">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    {% else %}
+                                        <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-info-circle"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        {% if filter_type == 'eigene' %}
+                        <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'duplicate_group' gruppe_key %}" class="btn btn-sm btn-outline-primary" title="Gruppe duplizieren">
+                                    <i class="bi bi-copy"></i>
+                                </a>
+                                <a href="{% url 'share_group' gruppe_key %}" class="btn btn-sm btn-outline-success" title="Gruppe teilen">
+                                    <i class="bi bi-share"></i>
+                                </a>
+                                <a href="{% url 'export_plan_group_pdf' gruppe_key %}" class="btn btn-sm btn-outline-secondary" title="Ganze Gruppe als PDF exportieren">
+                                    <i class="bi bi-file-pdf"></i>
+                                </a>
+                                <a href="{% url 'toggle_group_public' gruppe_key %}" class="btn btn-sm btn-outline-{% if gruppe.plaene.0.is_public %}warning{% else %}info{% endif %}" title="{% if gruppe.plaene.0.is_public %}Privat machen{% else %}Öffentlich machen{% endif %}">
+                                    {% if gruppe.plaene.0.is_public %}
+                                    <i class="bi bi-lock-fill"></i>
+                                    {% else %}
+                                    <i class="bi bi-globe"></i>
+                                    {% endif %}
+                                </a>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-warning" onclick="ungroupPlans('{{ gruppe_key }}')" title="Gruppierung aufheben">
+                                    <i class="bi bi-folder-minus"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')" title="Ganze Gruppe löschen">
+                                    <i class="bi bi-trash"></i> Alle löschen
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if plan_gruppen.items or einzelne_plaene %}
+            <h6 class="text-secondary ps-2 mb-0 mt-3">WEITERE PLÄNE</h6>
+            {% endif %}
+            {% endif %}
+
+            <!-- Andere gruppierte Pläne (Splits) -->
             {% for gruppe_key, gruppe in plan_gruppen.items %}
             <div class="card card-stat border-info shadow-sm" data-gruppe-id="{{ gruppe_key }}">
                 <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3" 

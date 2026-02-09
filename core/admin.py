@@ -2,9 +2,9 @@
 from django.utils.html import format_html
 from django import forms
 from .models import (
-    Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung, 
+    Uebung, Trainingseinheit, Satz, KoerperWerte, Plan, PlanUebung,
     ProgressPhoto, Equipment, InviteCode, WaitlistEntry, Feedback, MUSKELGRUPPEN,
-    UebungTag, MLPredictionModel
+    UebungTag, MLPredictionModel, UserProfile
 )
 
 # --- ÜBUNGEN ---
@@ -404,4 +404,12 @@ class MLPredictionModelAdmin(admin.ModelAdmin):
         
         self.message_user(request, f'{count} Modelle neu trainiert')
     retrain_models.short_description = ' Modelle neu trainieren'
+
+
+# --- USER PROFILE ---
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'active_plan_group')
+    search_fields = ('user__username',)
+    list_filter = ('active_plan_group',)
 
