@@ -354,38 +354,42 @@ def dashboard(request):
         # 1. PLATEAU-Erkennung: Keine Progression bei Top-Übungen (letzte 4 Wochen)
         four_weeks_ago = heute - timedelta(days=28)
 
+        two_weeks_ago = heute - timedelta(days=14)
+
         for fav in favoriten[:3]:  # Top 3 Übungen prüfen
             uebung_id = fav['uebung__id']
             uebung_name = fav['uebung__bezeichnung']
 
-            # Letzte 8 Sätze dieser Übung
-            recent_sets = Satz.objects.filter(
+            # Max-Gewicht der letzten 2 Wochen vs. Wochen 2-4
+            recent_max_qs = Satz.objects.filter(
                 einheit__user=request.user,
                 uebung_id=uebung_id,
                 ist_aufwaermsatz=False,
-                einheit__datum__gte=four_weeks_ago
-            ).order_by('-einheit__datum')[:8]
+                einheit__datum__gte=two_weeks_ago
+            ).aggregate(max_gewicht=Max('gewicht'))
 
-            if recent_sets.count() >= 4:
-                # Berechne max Gewicht der letzten 4 vs. vorherige 4 Sätze
-                latest_4 = list(recent_sets[:4])
-                previous_4 = list(recent_sets[4:8])
+            older_max_qs = Satz.objects.filter(
+                einheit__user=request.user,
+                uebung_id=uebung_id,
+                ist_aufwaermsatz=False,
+                einheit__datum__gte=four_weeks_ago,
+                einheit__datum__lt=two_weeks_ago
+            ).aggregate(max_gewicht=Max('gewicht'))
 
-                if len(previous_4) >= 2:
-                    latest_max = max([float(s.gewicht or 0) for s in latest_4])
-                    previous_max = max([float(s.gewicht or 0) for s in previous_4])
+            recent_max = float(recent_max_qs['max_gewicht'] or 0)
+            older_max = float(older_max_qs['max_gewicht'] or 0)
 
-                    # Plateau wenn kein Anstieg in 4 Wochen
-                    if latest_max <= previous_max and latest_max > 0:
-                        performance_warnings.append({
-                            'type': 'plateau',
-                            'severity': 'warning',
-                            'exercise': uebung_name,
-                            'message': f'Kein Progress seit 4 Wochen',
-                            'suggestion': 'Versuche Intensitätstechniken wie Drop-Sets oder erhöhe das Volumen um 10-15%',
-                            'icon': 'bi-graph-down',
-                            'color': 'warning'
-                        })
+            # Plateau nur wenn beide Zeiträume Daten haben und kein Anstieg
+            if older_max > 0 and recent_max > 0 and recent_max <= older_max:
+                performance_warnings.append({
+                    'type': 'plateau',
+                    'severity': 'warning',
+                    'exercise': uebung_name,
+                    'message': f'Kein Progress seit 4 Wochen',
+                    'suggestion': 'Versuche Intensitätstechniken wie Drop-Sets oder erhöhe das Volumen um 10-15%',
+                    'icon': 'bi-graph-down',
+                    'color': 'warning'
+                })
 
         # 2. RÜCKSCHRITT-Erkennung: Leistungsabfall bei Übungen
         two_weeks_ago = heute - timedelta(days=14)

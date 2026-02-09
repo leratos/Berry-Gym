@@ -745,7 +745,16 @@
 ## 🐛 Bekannte Bugs & Verbesserungen
 
 ### Bugs
-- [ ] --
+- [x] **Plateau-Erkennung Fehlalarm** ✅ (09.02.2026) - Zeigte fälschlich Plateau bei tatsächlichem Progress (Satz-basiert statt Session-basiert)
+
+### Bug-Fixes (09.02.2026)
+- [x] **Plateau-Erkennung Fehlalarm behoben** ✅
+  - Dashboard und AI Performance-Analyse zeigten fälschlich "Kein Progress seit 4 Wochen"
+  - Ursache: Vergleich basierte auf einzelnen Sätzen statt Trainingseinheiten
+  - Bei häufigem Training mit gleichem Gewicht (z.B. 2x/Woche 48,5kg) wurde das Gewicht in beiden Vergleichsgruppen gezählt
+  - **Fix Dashboard:** Vergleicht jetzt Max-Gewicht der letzten 2 Wochen vs. Wochen 2-4 via `aggregate(Max)`
+  - **Fix AI-Analyse:** Sammelt jetzt besten 1RM pro Session statt alle Einzelsatz-1RMs
+  - Betroffene Dateien: `core/views/training_stats.py`, `ai_coach/plan_adapter.py`
 
 ### Bug-Fixes (05.02.2026)
 - [x] **Gewichtsempfehlungen für freie Trainings** ✅
