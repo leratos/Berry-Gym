@@ -260,20 +260,24 @@
     <div class="container pb-5 mb-5">
       
         <!-- Deload-Toggle -->
-        <div class="alert {% if training.ist_deload or is_deload_week %}alert-info{% else %}alert-dark{% endif %} border-secondary d-flex justify-content-between align-items-center mb-2 py-2" id="deloadBanner">
+        <div class="alert {% if training.ist_deload %}alert-info{% else %}alert-dark{% endif %} border-secondary d-flex justify-content-between align-items-center mb-2 py-2" id="deloadBanner">
             <div class="form-check form-switch mb-0">
                 <input class="form-check-input" type="checkbox" id="deloadToggle" 
-                       {% if training.ist_deload or is_deload_week %}checked{% endif %}
+                       {% if training.ist_deload %}checked{% endif %}
                        onchange="toggleDeload(this.checked)">
                 <label class="form-check-label small" for="deloadToggle">
                     <i class="bi bi-arrow-down-circle"></i> Deload-Training
                 </label>
             </div>
             <small class="text-muted" id="deloadHint">
-                {% if training.ist_deload or is_deload_week %}
+                {% if training.ist_deload %}
                     <i class="bi bi-info-circle"></i> Wird nicht in Statistik gezählt
                 {% else %}
-                    Zählt für Statistik
+                    {% if is_deload_week %}
+                        <i class="bi bi-info-circle"></i> Empfohlene Deload-Woche – zählt aktuell zur Statistik
+                    {% else %}
+                        Zählt für Statistik
+                    {% endif %}
                 {% endif %}
             </small>
         </div>
