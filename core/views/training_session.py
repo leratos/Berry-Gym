@@ -23,7 +23,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 
 from ..models import (
-    Trainingseinheit, Uebung, Satz, Plan, PlanUebung
+    Trainingseinheit, Uebung, Satz, Plan, PlanUebung, UserProfile
 )
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def training_select_plan(request):
-    """Zeigt alle verfügbaren Pläne zur Auswahl an."""
+    """Zeigt alle verfügbaren Pläne zur Auswahl an. Priorisiert aktive Plan-Gruppe."""
     from collections import OrderedDict
 
     # Filter-Parameter (eigene, public oder shared)
@@ -47,22 +47,42 @@ def training_select_plan(request):
         # Eigene Pläne (Standard) - sortiert nach Reihenfolge innerhalb Gruppe
         plaene = Plan.objects.filter(user=request.user).order_by('gruppe_name', 'gruppe_reihenfolge', 'name')
 
+    # Aktive Plan-Gruppe ermitteln
+    active_group_id = None
+    active_group_name = None
+    try:
+        profile = request.user.profile
+        if profile.active_plan_group:
+            active_group_id = str(profile.active_plan_group)
+            # Prüfe ob Gruppe noch existiert
+            active_group_plan = Plan.objects.filter(
+                user=request.user, gruppe_id=profile.active_plan_group
+            ).first()
+            if active_group_plan:
+                active_group_name = active_group_plan.gruppe_name or 'Unbenannte Gruppe'
+            else:
+                active_group_id = None
+    except UserProfile.DoesNotExist:
+        pass
+
     # Gruppiere Pläne nach gruppe_id (echte Datenbankbeziehung)
+    # Aktive Gruppe zuerst, dann Rest
+    active_plan_gruppen = OrderedDict()
     plan_gruppen = OrderedDict()
     einzelne_plaene = []
 
     for plan in plaene:
         if plan.gruppe_id:
-            # Plan gehört zu einer Gruppe
             gruppe_key = str(plan.gruppe_id)
-            if gruppe_key not in plan_gruppen:
-                plan_gruppen[gruppe_key] = {
+            # Entscheide ob aktiv oder normal
+            target = active_plan_gruppen if gruppe_key == active_group_id else plan_gruppen
+            if gruppe_key not in target:
+                target[gruppe_key] = {
                     'name': plan.gruppe_name or 'Unbenannte Gruppe',
                     'plaene': []
                 }
-            plan_gruppen[gruppe_key]['plaene'].append(plan)
+            target[gruppe_key]['plaene'].append(plan)
         else:
-            # Einzelner Plan ohne Gruppe
             einzelne_plaene.append(plan)
 
     # Zähle geteilte Pläne für Badge
@@ -70,7 +90,9 @@ def training_select_plan(request):
 
     context = {
         'plaene': plaene,  # Für Fallback
-        'plan_gruppen': plan_gruppen,  # Gruppierte Pläne (dict mit 'name' und 'plaene')
+        'active_plan_gruppen': active_plan_gruppen,  # Aktive Gruppe (priorisiert)
+        'active_group_name': active_group_name,
+        'plan_gruppen': plan_gruppen,  # Andere gruppierte Pläne
         'einzelne_plaene': einzelne_plaene,  # Nicht gruppierte Pläne
         'filter_type': filter_type,
         'shared_count': shared_count
@@ -117,10 +139,33 @@ def training_start(request, plan_id=None):
     """Startet Training. Wenn plan_id da ist, werden Übungen vor-angelegt."""
     training = Trainingseinheit.objects.create(user=request.user)
 
+    # Deload-Erkennung mit konfigurierbaren Parametern
+    is_deload = False
+    deload_vol_factor = 0.8
+    deload_weight_factor = 0.9
+    deload_rpe_target = 7.0
+
     if plan_id:
         plan = get_object_or_404(Plan, id=plan_id, user=request.user)
         training.plan = plan
         training.save()
+
+        # Zyklus-Tracking: cycle_start_date setzen beim ersten Training mit aktiver Gruppe
+        try:
+            profile = request.user.profile
+            if (profile.active_plan_group
+                    and plan.gruppe_id
+                    and str(plan.gruppe_id) == str(profile.active_plan_group)):
+                if not profile.cycle_start_date:
+                    profile.cycle_start_date = timezone.now().date()
+                    profile.save()
+                is_deload = profile.is_deload_week()
+                deload_vol_factor = profile.deload_volume_factor
+                deload_weight_factor = profile.deload_weight_factor
+                deload_rpe_target = profile.deload_rpe_target
+        except UserProfile.DoesNotExist:
+            pass
+
         # Wir gehen alle Übungen im Plan durch
         for plan_uebung in plan.uebungen.all().order_by('reihenfolge'):
             uebung = plan_uebung.uebung
@@ -148,6 +193,13 @@ def training_start(request, plan_id=None):
             # Anzahl der Sätze aus dem Plan holen
             anzahl_saetze = plan_uebung.saetze_ziel
 
+            # DELOAD-ANPASSUNGEN: Volumen & Gewicht gemäß Profil-Einstellungen reduzieren
+            if is_deload:
+                # Sätze reduzieren (z.B. Faktor 0.8: 4 -> 3, mindestens 2)
+                anzahl_saetze = max(2, int(anzahl_saetze * deload_vol_factor))
+                # Gewicht reduzieren (z.B. Faktor 0.9 = -10%)
+                start_gewicht = round(float(start_gewicht) * deload_weight_factor, 1)
+
             # Superset-Gruppe aus dem Plan übernehmen
             superset_gruppe = plan_uebung.superset_gruppe
 
@@ -162,6 +214,11 @@ def training_start(request, plan_id=None):
                     ist_aufwaermsatz=False,
                     superset_gruppe=superset_gruppe
                 )
+
+        if is_deload:
+            vol_pct = int((1 - deload_vol_factor) * 100)
+            weight_pct = int((1 - deload_weight_factor) * 100)
+            messages.info(request, f'Deload-Woche: Volumen -{vol_pct}%, Gewicht -{weight_pct}% automatisch reduziert. Ziel-RPE: {deload_rpe_target}')
 
     return redirect('training_session', training_id=training.id)
 

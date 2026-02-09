@@ -27,7 +27,7 @@ import uuid
 from ..models import (
     Trainingseinheit, KoerperWerte, Uebung, Satz, Plan, PlanUebung,
     ProgressPhoto, Equipment, MUSKELGRUPPEN, BEWEGUNGS_TYP, GEWICHTS_TYP,
-    InviteCode, WaitlistEntry
+    InviteCode, WaitlistEntry, UserProfile
 )
 
 logger = logging.getLogger(__name__)
@@ -552,3 +552,96 @@ def toggle_group_public(request, gruppe_id):
     status = "öffentlich" if new_status else "privat"
     messages.success(request, f'Gruppe "{gruppe_name}" ist jetzt {status}.')
     return redirect('training_select_plan')
+
+
+@login_required
+def set_active_plan_group(request):
+    """
+    Ermöglicht User die Auswahl einer aktiven Plan-Gruppe.
+    GET: Zeigt Liste aller Plan-Gruppen
+    POST: Setzt die gewählte Gruppe als aktiv
+    """
+    # Sicherstellen, dass UserProfile existiert
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        gruppe_id = request.POST.get('gruppe_id', '').strip()
+        cycle_length = request.POST.get('cycle_length', '4').strip()
+
+        # Zykluslänge validieren und speichern
+        try:
+            cycle_length = max(2, min(12, int(cycle_length)))
+        except (ValueError, TypeError):
+            cycle_length = 4
+        profile.cycle_length = cycle_length
+
+        # Deload-Parameter validieren und speichern
+        try:
+            vol_factor = float(request.POST.get('deload_volume_factor', '0.8'))
+            profile.deload_volume_factor = max(0.5, min(1.0, vol_factor))
+        except (ValueError, TypeError):
+            pass
+        try:
+            weight_factor = float(request.POST.get('deload_weight_factor', '0.9'))
+            profile.deload_weight_factor = max(0.5, min(1.0, weight_factor))
+        except (ValueError, TypeError):
+            pass
+        try:
+            rpe_target = float(request.POST.get('deload_rpe_target', '7.0'))
+            profile.deload_rpe_target = max(5.0, min(9.0, rpe_target))
+        except (ValueError, TypeError):
+            pass
+
+        if gruppe_id:
+            # Validierung: Prüfe ob Plan-Gruppe existiert
+            plan_exists = Plan.objects.filter(
+                user=request.user,
+                gruppe_id=gruppe_id
+            ).exists()
+
+            if plan_exists:
+                # Zyklus neu starten wenn Gruppe gewechselt wird
+                if str(profile.active_plan_group) != gruppe_id:
+                    profile.cycle_start_date = None
+                profile.active_plan_group = gruppe_id
+                profile.save()
+                gruppe_name = Plan.objects.filter(
+                    user=request.user, gruppe_id=gruppe_id
+                ).first().gruppe_name or 'Unbenannte Gruppe'
+                messages.success(request, f'Aktiver Plan gesetzt: {gruppe_name} ({cycle_length} Wochen Zyklus)')
+            else:
+                messages.error(request, 'Plan-Gruppe nicht gefunden!')
+        else:
+            # Leer = kein aktiver Plan
+            profile.active_plan_group = None
+            profile.cycle_start_date = None
+            profile.save()
+            messages.success(request, 'Aktiver Plan entfernt.')
+
+        return redirect('dashboard')
+
+    # GET: Zeige alle Plan-Gruppen des Users
+    plan_gruppen = []
+    gruppen_qs = Plan.objects.filter(
+        user=request.user,
+        gruppe_id__isnull=False
+    ).values('gruppe_id', 'gruppe_name').distinct().order_by('gruppe_name')
+
+    for g in gruppen_qs:
+        plan_count = Plan.objects.filter(
+            user=request.user, gruppe_id=g['gruppe_id']
+        ).count()
+        plan_gruppen.append({
+            'gruppe_id': g['gruppe_id'],
+            'name': g['gruppe_name'] or 'Unbenannte Gruppe',
+            'plan_count': plan_count,
+        })
+
+    return render(request, 'core/set_active_plan.html', {
+        'plan_gruppen': plan_gruppen,
+        'current_active': str(profile.active_plan_group) if profile.active_plan_group else None,
+        'current_cycle_length': profile.cycle_length,
+        'deload_volume_factor': profile.deload_volume_factor,
+        'deload_weight_factor': profile.deload_weight_factor,
+        'deload_rpe_target': profile.deload_rpe_target,
+    })

@@ -23,10 +23,64 @@ from collections import defaultdict
 
 from ..models import (
     Trainingseinheit, Uebung, Satz, Plan, PlanUebung,
-    MUSKELGRUPPEN
+    MUSKELGRUPPEN, UserProfile
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _apply_mesocycle_from_plan(user, plan_data, plan_ids):
+    """
+    Setzt Mesozyklus-Tracking auf dem UserProfile basierend auf KI-Plan-Daten.
+    Wird nach dem Speichern eines KI-generierten Plans aufgerufen.
+    """
+    if not plan_ids:
+        return
+
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+
+    # Gruppe-ID aus dem ersten gespeicherten Plan holen
+    try:
+        first_plan = Plan.objects.get(id=plan_ids[0])
+        if first_plan.gruppe_id:
+            profile.active_plan_group = first_plan.gruppe_id
+    except Plan.DoesNotExist:
+        return
+
+    # Zykluslänge aus deload_weeks ableiten
+    deload_weeks = plan_data.get('deload_weeks') or []
+    if deload_weeks and len(deload_weeks) >= 1:
+        # Erste Deload-Woche = Zykluslänge (z.B. [4, 8, 12] → cycle_length = 4)
+        profile.cycle_length = max(2, min(12, deload_weeks[0]))
+
+    # Deload-Parameter aus Makrozyklus extrahieren
+    macrocycle = plan_data.get('macrocycle') or {}
+    weeks = macrocycle.get('weeks') or []
+    deload_week_data = [w for w in weeks if w.get('is_deload')]
+    if deload_week_data:
+        first_deload = deload_week_data[0]
+        volume_mult = first_deload.get('volume_multiplier')
+        rpe_target = first_deload.get('intensity_target_rpe')
+        if volume_mult and 0.5 <= volume_mult <= 1.0:
+            profile.deload_volume_factor = volume_mult
+        if rpe_target and 5.0 <= rpe_target <= 9.0:
+            profile.deload_rpe_target = rpe_target
+
+    # Gewichts-Faktor: Deload-Wochen haben typisch "Volumen -20%, Intensität -10%"
+    # Wenn volume_multiplier 0.8 → weight_factor ~0.9
+    if profile.deload_volume_factor < 1.0:
+        profile.deload_weight_factor = round(1.0 - (1.0 - profile.deload_volume_factor) * 0.5, 2)
+
+    # Zyklus-Start zurücksetzen (wird beim ersten Training neu gesetzt)
+    profile.cycle_start_date = None
+    profile.save()
+
+    logger.info(
+        f"Mesozyklus gesetzt für User {user.username}: "
+        f"Gruppe={profile.active_plan_group}, Zyklus={profile.cycle_length}W, "
+        f"Deload: Vol={profile.deload_volume_factor}, RPE={profile.deload_rpe_target}, "
+        f"Gewicht={profile.deload_weight_factor}"
+    )
 
 
 @login_required
@@ -289,6 +343,9 @@ def generate_plan_api(request):
             # Plan in DB speichern
             plan_ids = generator._save_plan_to_db(plan_data)
 
+            # Mesozyklus-Tracking aus KI-Plan-Daten setzen
+            _apply_mesocycle_from_plan(request.user, plan_data, plan_ids)
+
             return JsonResponse({
                 'success': True,
                 'plan_ids': plan_ids,
@@ -350,6 +407,14 @@ def generate_plan_api(request):
         else:
             # Generiere und speichere Plan
             result = generator.generate(save_to_db=True)
+
+            # Mesozyklus-Tracking aus KI-Plan-Daten setzen
+            if result.get('success') and result.get('plan_ids'):
+                _apply_mesocycle_from_plan(
+                    request.user,
+                    result.get('plan_data', {}),
+                    result.get('plan_ids', [])
+                )
 
             return JsonResponse({
                 'success': True,
