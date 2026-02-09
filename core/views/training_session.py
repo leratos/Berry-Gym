@@ -550,7 +550,13 @@ def toggle_deload(request, training_id):
         return JsonResponse({'success': True, 'ist_deload': training.ist_deload})
     except (json.JSONDecodeError, Exception) as e:
         logger.warning(f"toggle_deload error: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        return JsonResponse(
+            {
+                'success': False,
+                'error': 'Die Anfrage konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.'
+            },
+            status=400
+        )
 
 
 @login_required
