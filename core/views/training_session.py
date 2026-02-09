@@ -558,14 +558,23 @@ def toggle_deload(request, training_id):
         training.ist_deload = ist_deload_value
         training.save(update_fields=['ist_deload'])
         return JsonResponse({'success': True, 'ist_deload': training.ist_deload})
-    except (json.JSONDecodeError, Exception) as e:
-        logger.warning(f"toggle_deload error: {e}")
+    except json.JSONDecodeError as e:
+        logger.warning(f"toggle_deload JSON decode error: {e}")
         return JsonResponse(
             {
                 'success': False,
                 'error': 'Die Anfrage konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.'
             },
             status=400
+        )
+    except Exception as e:
+        logger.exception(f"Unexpected error in toggle_deload for training_id={training_id}: {e}")
+        return JsonResponse(
+            {
+                'success': False,
+                'error': 'Ein unerwarteter Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+            },
+            status=500
         )
 
 
