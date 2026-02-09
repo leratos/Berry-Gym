@@ -479,11 +479,17 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
         else:
             erreicht = [level_labels[lv] for lv in levels_order[:levels_order.index(standard_level)+1]]
 
+        # Differenz zum nächsten Level berechnen (nicht absolutes Gewicht)
+        if naechstes_level and naechstes_level in standards:
+            diff_bis_naechstes = round(standards[naechstes_level] - beste_1rm, 1)
+        else:
+            diff_bis_naechstes = 0
+
         standard_info = {
             'level': standard_level,
             'level_label': level_labels[standard_level],
             'naechstes_level': level_labels.get(naechstes_level, 'Elite'),
-            'naechstes_gewicht': standards.get(naechstes_level, 0) if naechstes_level in standards else standards.get('beginner', 0),
+            'naechstes_gewicht': diff_bis_naechstes,
             'prozent_bis_naechstes': prozent_bis_naechstes if naechstes_level else 100,
             'alle_levels': {
                 level_labels[k]: v

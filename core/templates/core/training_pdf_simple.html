@@ -615,6 +615,13 @@
     <!-- PLATEAU-ANALYSE -->
     <h1>🎯 Plateau-Analyse - Progression-Tracking</h1>
 
+    <div class="info-box">
+        <p style="font-size: 9px; margin: 0;"><strong>Was ist ein Plateau?</strong>
+        Ein Trainingsplateau liegt vor, wenn du über einen längeren Zeitraum keine neuen persönlichen Rekorde (PRs) mehr erzielst.
+        Diese Analyse überwacht für jede deiner Top-Übungen, wie lange der letzte PR zurückliegt und ob du aktiv Fortschritte machst.
+        Kürzere Plateaus (2-4 Wochen) sind normal, längere können auf fehlende Variation oder unzureichende Erholung hinweisen.</p>
+    </div>
+
     {% if plateau_analysis %}
     <table>
         <thead>
@@ -671,6 +678,13 @@
     <!-- KONSISTENZ-ANALYSE -->
     <h1>📅 Trainings-Konsistenz</h1>
 
+    <div class="info-box">
+        <p style="font-size: 9px; margin: 0;"><strong>Was bedeuten diese Werte?</strong>
+        <strong>Streak</strong> = Anzahl aufeinanderfolgender Wochen, in denen du mindestens einmal trainiert hast.
+        <strong>Training Adherence</strong> (Trainings-Treue) = Der Prozentsatz der Wochen, in denen du tatsächlich trainiert hast, gemessen an deiner gesamten aktiven Trainingszeit. Eine Adherence von 80%+ gilt als sehr gut und zeigt, dass du regelmäßig am Ball bleibst.
+        <strong>Ø Pause</strong> = Durchschnittliche Anzahl an Ruhetagen zwischen zwei Trainingseinheiten.</p>
+    </div>
+
     {% if consistency_metrics %}
     <div class="stats-grid">
         <div class="stats-row">
@@ -709,6 +723,13 @@
     <!-- ERMÜDUNGS-INDEX -->
     <h1>⚡ Ermüdungs-Index & Deload-Empfehlung</h1>
 
+    <div class="info-box">
+        <p style="font-size: 9px; margin: 0;"><strong>Was ist der Ermüdungs-Index?</strong>
+        Der Ermüdungs-Index (0-100) schätzt deine aktuelle Gesamtbelastung anhand von Trainingsvolumen, Intensität (RPE) und Frequenz.
+        Ein hoher Wert bedeutet, dass sich Ermüdung aufbaut und eine <strong>Deload-Woche</strong> sinnvoll sein könnte.
+        Beim Deload trainierst du mit reduziertem Gewicht (~50-60%) und weniger Sätzen, damit sich Muskeln, Gelenke und Nervensystem vollständig erholen können.</p>
+    </div>
+
     {% if fatigue_analysis %}
     <div class="fatigue-meter">
         <div class="meter-bar">
@@ -746,6 +767,13 @@
     <!-- 1RM-STANDARDS -->
     <h1>💪 1RM-Entwicklung & Kraftstandards</h1>
 
+    <div class="info-box">
+        <p style="font-size: 9px; margin: 0;"><strong>Was ist der 1RM?</strong>
+        Der <strong>1RM</strong> (One-Rep-Max) ist das maximale Gewicht, das du bei einer Übung für genau eine saubere Wiederholung bewegen kannst.
+        Er wird hier aus deinen tatsächlichen Sätzen geschätzt (Epley-Formel) und dient als universeller Vergleichswert für deine Kraft.
+        Die <strong>Kraftstandards</strong> (Anfänger bis Elite) basieren auf wissenschaftlichen Normdaten und ordnen dein Niveau im Vergleich zur Allgemeinbevölkerung ein, bezogen auf dein Körpergewicht.</p>
+    </div>
+
     {% if rm_standards %}
     {% for item in rm_standards %}
     <div class="exercise-1rm-card">
@@ -782,17 +810,17 @@
                 {% endfor %}
             </div>
 
-            <div style="margin-top: 10px;">
+            <p style="font-size: 9px; margin-top: 10px; margin-bottom: 3px;">
+                Noch <strong>{{ item.standard_info.naechstes_gewicht|floatformat:1 }} kg</strong> bis
+                <strong>{{ item.standard_info.naechstes_level }}</strong>
+            </p>
+            <div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: {{ item.standard_info.prozent_bis_naechstes }}%; background: #198754;">
                         {{ item.standard_info.prozent_bis_naechstes }}%
                     </div>
                 </div>
             </div>
-            <p style="font-size: 9px; margin-top: 5px;">
-                Noch {{ item.standard_info.naechstes_gewicht|floatformat:1 }} kg bis
-                <strong>{{ item.standard_info.naechstes_level }}</strong>
-            </p>
         </div>
         {% endif %}
     </div>
@@ -807,6 +835,14 @@
 
     <!-- RPE-QUALITÄT -->
     <h1>📈 Trainings-Qualität (RPE-Analyse)</h1>
+
+    <div class="info-box">
+        <p style="font-size: 9px; margin: 0;"><strong>Was ist RPE?</strong>
+        <strong>RPE</strong> (Rate of Perceived Exertion) beschreibt, wie anstrengend ein Satz für dich war, auf einer Skala von 1-10.
+        RPE 7 = noch 3 Wiederholungen möglich, RPE 8 = noch 2, RPE 9 = noch 1, RPE 10 = Muskelversagen.
+        Der optimale Trainingsbereich liegt bei <strong>RPE 7-9</strong>. Sätze unter RPE 6 gelten als "Junk Volume" (zu leicht für echten Muskelreiz),
+        während zu viel RPE 10 das Verletzungsrisiko erhöht und die Erholung verlängert.</p>
+    </div>
 
     {% if rpe_quality %}
     <div class="quality-metrics">
