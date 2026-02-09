@@ -545,7 +545,16 @@ def toggle_deload(request, training_id):
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
     try:
         data = json.loads(request.body)
-        training.ist_deload = bool(data.get('ist_deload', False))
+        ist_deload_value = data.get('ist_deload', None)
+        if not isinstance(ist_deload_value, bool):
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': 'Ungültiger Wert für "ist_deload". Es wird ein boolescher Wert erwartet.'
+                },
+                status=400
+            )
+        training.ist_deload = ist_deload_value
         training.save(update_fields=['ist_deload'])
         return JsonResponse({'success': True, 'ist_deload': training.ist_deload})
     except (json.JSONDecodeError, Exception) as e:
