@@ -214,7 +214,7 @@ class PlanAdapter:
                 plan=self.plan
             ).order_by('datum')
             
-            weekly_1rm = []
+            session_best_1rms = []
             for session in sessions:
                 # Beste 1RM dieser Session
                 saetze = Satz.objects.filter(
@@ -226,16 +226,20 @@ class PlanAdapter:
                     wiederholungen__gte=1,
                     wiederholungen__lte=12
                 ).exclude(gewicht=0)
-                
+
+                best_1rm = 0
                 for satz in saetze:
                     # Epley-Formel: 1RM = weight × (1 + reps/30)
                     estimated_1rm = float(satz.gewicht) * (1 + satz.wiederholungen / 30)
-                    weekly_1rm.append(estimated_1rm)
-            
+                    best_1rm = max(best_1rm, estimated_1rm)
+
+                if best_1rm > 0:
+                    session_best_1rms.append(best_1rm)
+
             # Stagnation: Keine Verbesserung über mehrere Wochen
-            if len(weekly_1rm) >= weeks:
-                max_early = max(weekly_1rm[:len(weekly_1rm)//2])
-                max_late = max(weekly_1rm[len(weekly_1rm)//2:])
+            if len(session_best_1rms) >= 2:
+                max_early = max(session_best_1rms[:len(session_best_1rms)//2])
+                max_late = max(session_best_1rms[len(session_best_1rms)//2:])
                 
                 # Weniger als 2.5% Fortschritt = Plateau
                 if max_late < max_early * 1.025:
