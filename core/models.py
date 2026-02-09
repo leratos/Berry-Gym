@@ -172,6 +172,40 @@ class Uebung(models.Model):
 
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
+    # 1RM Kraftstandards bei 80kg Körpergewicht
+    standard_beginner = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        verbose_name="1RM Anfänger (80kg KG)",
+        help_text="Anfänger-Standard in kg bei 80kg Körpergewicht"
+    )
+    standard_intermediate = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        verbose_name="1RM Fortgeschritten (80kg KG)",
+        help_text="Fortgeschritten-Standard in kg bei 80kg Körpergewicht"
+    )
+    standard_advanced = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        verbose_name="1RM Erfahren (80kg KG)",
+        help_text="Erfahren-Standard in kg bei 80kg Körpergewicht"
+    )
+    standard_elite = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        verbose_name="1RM Elite (80kg KG)",
+        help_text="Elite-Standard in kg bei 80kg Körpergewicht"
+    )
+
     def __str__(self):
         return self.bezeichnung
     
