@@ -155,6 +155,186 @@
             color: #666;
             font-size: 8px;
         }
+
+        /* Neue Styles für erweiterte Statistiken */
+        .section {
+            margin-top: 30px;
+            page-break-inside: avoid;
+        }
+
+        .stats-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .stats-row {
+            display: table-row;
+        }
+
+        .stat-card {
+            display: table-cell;
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #198754;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .bewertung-box {
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid;
+        }
+
+        .bewertung-box.success {
+            background: #d1e7dd;
+            border-color: #198754;
+        }
+
+        .bewertung-box.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+
+        .bewertung-box.danger {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+
+        .fatigue-meter {
+            margin: 20px 0;
+        }
+
+        .meter-bar {
+            width: 100%;
+            height: 40px;
+            background: #e9ecef;
+            border: 1px solid #ddd;
+        }
+
+        .meter-fill {
+            height: 100%;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            line-height: 40px;
+        }
+
+        .meter-fill.success { background: #198754; }
+        .meter-fill.warning { background: #ffc107; color: #333; }
+        .meter-fill.danger { background: #dc3545; }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .recommendation-box {
+            background: #d1e7dd;
+            border-left: 4px solid #198754;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .exercise-1rm-card {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .rm-value {
+            font-size: 16px;
+            margin: 10px 0;
+            color: #198754;
+        }
+
+        .rm-chart {
+            margin: 15px 0;
+            font-size: 9px;
+        }
+
+        .monat-data {
+            display: inline-block;
+            margin-right: 15px;
+        }
+
+        .standards-comparison {
+            margin-top: 20px;
+        }
+
+        .standards-list {
+            display: table;
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        .standards-row {
+            display: table-row;
+        }
+
+        .standard-item {
+            display: table-cell;
+            padding: 10px;
+            background: white;
+            border: 2px solid #e9ecef;
+            width: 50%;
+        }
+
+        .standard-item.erreicht {
+            border-color: #198754;
+            background: #d1e7dd;
+        }
+
+        .quality-metrics {
+            margin: 20px 0;
+        }
+
+        .metric {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #198754;
+            float: right;
+        }
+
+        .rpe-distribution {
+            margin-top: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+        }
+
+        .rpe-distribution ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .rpe-distribution li {
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .text-muted {
+            color: #6c757d;
+            font-size: 8px;
+        }
     </style>
 </head>
 <body>
@@ -216,7 +396,22 @@
             <td>5. Trainingsfortschritt</td>
         </tr>
         <tr>
-            <td>6. Trainer-Empfehlungen</td>
+            <td>6. Plateau-Analyse</td>
+        </tr>
+        <tr>
+            <td>7. Trainings-Konsistenz</td>
+        </tr>
+        <tr>
+            <td>8. Ermüdungs-Index & Deload</td>
+        </tr>
+        <tr>
+            <td>9. 1RM-Entwicklung & Standards</td>
+        </tr>
+        <tr>
+            <td>10. RPE-Qualitätsanalyse</td>
+        </tr>
+        <tr>
+            <td>11. Trainer-Empfehlungen</td>
         </tr>
     </table>
     
@@ -414,9 +609,256 @@
         Noch keine Kraftentwicklung messbar. Fortschritte werden nach mehreren Trainingseinheiten sichtbar.
     </div>
     {% endif %}
-    
+
     <pdf:nextpage />
-    
+
+    <!-- PLATEAU-ANALYSE -->
+    <h1>🎯 Plateau-Analyse - Progression-Tracking</h1>
+
+    {% if plateau_analysis %}
+    <table>
+        <thead>
+            <tr>
+                <th>Übung</th>
+                <th>Letzter PR</th>
+                <th>Datum</th>
+                <th>Tage her</th>
+                <th>Ø +kg/Monat</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in plateau_analysis %}
+            <tr>
+                <td><strong>{{ item.uebung }}</strong><br>
+                    <span class="text-muted">{{ item.muskelgruppe }}</span>
+                </td>
+                <td>{{ item.letzter_pr }} kg</td>
+                <td>{{ item.pr_datum }}</td>
+                <td>{{ item.tage_seit_pr }}</td>
+                <td>+{{ item.progression_pro_monat }} kg</td>
+                <td>
+                    {% if item.status_farbe == 'success' %}
+                    <span class="badge badge-success">{{ item.status_label }}</span>
+                    {% elif item.status_farbe == 'warning' %}
+                    <span class="badge badge-warning">{{ item.status_label }}</span>
+                    {% else %}
+                    <span class="badge badge-danger">{{ item.status_label }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="info-box">
+        <p><strong>Legende:</strong></p>
+        <ul style="margin: 5px 0; padding-left: 20px; font-size: 8px;">
+            <li>✅ Aktive Progression: PR innerhalb der letzten 2 Wochen</li>
+            <li>⚠️ Leichtes Plateau: 2-6 Wochen ohne PR</li>
+            <li>🔴 Plateau: >6 Wochen ohne Fortschritt</li>
+            <li>⚠️ Rückschritt: Leistung &lt;90% des letzten PR</li>
+        </ul>
+    </div>
+    {% else %}
+    <div class="info-box warning">
+        Noch nicht genügend Daten für Plateau-Analyse verfügbar.
+    </div>
+    {% endif %}
+
+    <pdf:nextpage />
+
+    <!-- KONSISTENZ-ANALYSE -->
+    <h1>📅 Trainings-Konsistenz</h1>
+
+    {% if consistency_metrics %}
+    <div class="stats-grid">
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value">{{ consistency_metrics.aktueller_streak }}</div>
+                <div class="stat-label">Aktueller Streak (Wochen)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ consistency_metrics.laengster_streak }}</div>
+                <div class="stat-label">Längster Streak</div>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value">{{ consistency_metrics.adherence_rate }}%</div>
+                <div class="stat-label">Training Adherence</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ consistency_metrics.avg_pause_tage }}</div>
+                <div class="stat-label">Ø Pause (Tage)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bewertung-box {{ consistency_metrics.bewertung_farbe }}">
+        <strong>Bewertung:</strong> {{ consistency_metrics.bewertung }}
+    </div>
+    {% else %}
+    <div class="info-box warning">
+        Noch nicht genügend Daten für Konsistenz-Analyse verfügbar.
+    </div>
+    {% endif %}
+
+    <pdf:nextpage />
+
+    <!-- ERMÜDUNGS-INDEX -->
+    <h1>⚡ Ermüdungs-Index & Deload-Empfehlung</h1>
+
+    {% if fatigue_analysis %}
+    <div class="fatigue-meter">
+        <div class="meter-bar">
+            <div class="meter-fill {{ fatigue_analysis.bewertung_farbe }}"
+                 style="width: {{ fatigue_analysis.fatigue_index }}%;">
+                {{ fatigue_analysis.fatigue_index }}/100
+            </div>
+        </div>
+        <p style="margin-top: 10px;"><strong>{{ fatigue_analysis.bewertung }}</strong></p>
+    </div>
+
+    {% if fatigue_analysis.warnungen %}
+    <div class="warning-box">
+        <h3 style="margin-top: 0;">⚠️ Warnungen:</h3>
+        <ul style="margin: 5px 0; padding-left: 20px; font-size: 9px;">
+        {% for warnung in fatigue_analysis.warnungen %}
+            <li>{{ warnung }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="recommendation-box">
+        <p><strong>Empfehlung:</strong> {{ fatigue_analysis.empfehlung }}</p>
+        <p><strong>Nächste geplante Deload-Woche:</strong> {{ fatigue_analysis.naechste_deload }}</p>
+    </div>
+    {% else %}
+    <div class="info-box warning">
+        Noch nicht genügend Daten für Ermüdungs-Analyse verfügbar.
+    </div>
+    {% endif %}
+
+    <pdf:nextpage />
+
+    <!-- 1RM-STANDARDS -->
+    <h1>💪 1RM-Entwicklung & Kraftstandards</h1>
+
+    {% if rm_standards %}
+    {% for item in rm_standards %}
+    <div class="exercise-1rm-card">
+        <h3 style="margin-top: 0;">{{ item.uebung }}</h3>
+        <div class="rm-value">Geschätzter 1RM: <strong>{{ item.geschaetzter_1rm }} kg</strong></div>
+
+        <!-- 6-Monats-Entwicklung -->
+        <div class="rm-chart">
+            <strong>Entwicklung (6 Monate):</strong><br>
+            {% for monat in item.1rm_entwicklung %}
+                <span class="monat-data">
+                    {{ monat.monat }}:
+                    {% if monat.1rm %}{{ monat.1rm }} kg{% else %}-{% endif %}
+                </span>
+            {% endfor %}
+        </div>
+
+        <!-- Kraftstandards (falls vorhanden) -->
+        {% if item.standard_info %}
+        <div class="standards-comparison">
+            <p><strong>Aktuelles Level:</strong>
+               <span class="badge badge-success">{{ item.standard_info.level_label }}</span>
+            </p>
+
+            <div class="standards-list">
+                {% for level, gewicht in item.standard_info.alle_levels.items %}
+                <div class="standards-row">
+                    <div class="standard-item {% if level in item.standard_info.erreicht %}erreicht{% endif %}">
+                        <span style="font-weight: bold;">{{ level }}</span>:
+                        <span>{{ gewicht }} kg</span>
+                        {% if level in item.standard_info.erreicht %} ✅{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="margin-top: 10px;">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ item.standard_info.prozent_bis_naechstes }}%; background: #198754;">
+                        {{ item.standard_info.prozent_bis_naechstes }}%
+                    </div>
+                </div>
+            </div>
+            <p style="font-size: 9px; margin-top: 5px;">
+                Noch {{ item.standard_info.naechstes_gewicht|floatformat:1 }} kg bis
+                <strong>{{ item.standard_info.naechstes_level }}</strong>
+            </p>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="info-box warning">
+        Noch nicht genügend Daten für 1RM-Analyse verfügbar.
+    </div>
+    {% endif %}
+
+    <pdf:nextpage />
+
+    <!-- RPE-QUALITÄT -->
+    <h1>📈 Trainings-Qualität (RPE-Analyse)</h1>
+
+    {% if rpe_quality %}
+    <div class="quality-metrics">
+        <div class="metric">
+            <span>Optimale Intensität (RPE 7-9):</span>
+            <span class="metric-value">{{ rpe_quality.optimal_intensity_rate }}%</span>
+        </div>
+        <div class="metric">
+            <span>"Junk Volume" (RPE &lt;6):</span>
+            <span class="metric-value">{{ rpe_quality.junk_volume_rate }}%</span>
+        </div>
+        <div class="metric">
+            <span>Bis zum Versagen (RPE 10):</span>
+            <span class="metric-value">{{ rpe_quality.failure_rate }}%</span>
+        </div>
+    </div>
+
+    <div class="bewertung-box {{ rpe_quality.bewertung_farbe }}">
+        <strong>Bewertung:</strong> {{ rpe_quality.bewertung }}
+    </div>
+
+    {% if rpe_quality.empfehlungen %}
+    <div class="recommendation-box">
+        <h3 style="margin-top: 0;">Empfehlungen:</h3>
+        <ul style="margin: 5px 0; padding-left: 20px; font-size: 9px;">
+        {% for emp in rpe_quality.empfehlungen %}
+            <li>{{ emp }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- RPE-Verteilung -->
+    <div class="rpe-distribution">
+        <h3 style="margin-top: 0;">RPE-Verteilung:</h3>
+        <ul>
+            <li>Sehr leicht (RPE &lt;5): {{ rpe_quality.rpe_verteilung_prozent.sehr_leicht }}%</li>
+            <li>Leicht (RPE 5-6): {{ rpe_quality.rpe_verteilung_prozent.leicht }}%</li>
+            <li>Moderat (RPE 6-7): {{ rpe_quality.rpe_verteilung_prozent.moderat }}%</li>
+            <li>Schwer (RPE 7-9): {{ rpe_quality.rpe_verteilung_prozent.schwer }}%</li>
+            <li>Sehr schwer (RPE 9-10): {{ rpe_quality.rpe_verteilung_prozent.sehr_schwer }}%</li>
+            <li>Versagen (RPE 10): {{ rpe_quality.rpe_verteilung_prozent.versagen }}%</li>
+        </ul>
+    </div>
+    {% else %}
+    <div class="info-box warning">
+        Noch nicht genügend RPE-Daten für Qualitäts-Analyse verfügbar.
+    </div>
+    {% endif %}
+
+    <pdf:nextpage />
+
     <!-- TRAINER-EMPFEHLUNGEN -->
     <h1>🎓 Trainer-Empfehlungen</h1>
     
