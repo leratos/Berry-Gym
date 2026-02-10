@@ -9,6 +9,9 @@
 ![Version](https://img.shields.io/badge/Version-0.9.0-brightgreen?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-Ready-purple?style=flat-square)
 
+![CI/CD](https://github.com/leratos/Berry-Gym/actions/workflows/ci.yml/badge.svg)
+[![codecov](https://codecov.io/gh/leratos/Berry-Gym/branch/NewStruc/graph/badge.svg)](https://codecov.io/gh/leratos/Berry-Gym)
+
 **Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach, 1RM Kraftstandards, Advanced Analytics & AI Performance-Analyse**
 
 🌐 **[Live Demo & Beta Testing](https://gym.last-strawberry.com)** 🌐
