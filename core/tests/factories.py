@@ -81,6 +81,22 @@ class PlanFactory(DjangoModelFactory):
     is_public = False
 
 
+class PlanUebungFactory(DjangoModelFactory):
+    """Factory für Plan-Übungen Zuordnungen."""
+
+    class Meta:
+        model = "core.PlanUebung"
+
+    plan = factory.SubFactory(PlanFactory)
+    uebung = factory.SubFactory(UebungFactory)
+    reihenfolge = factory.Sequence(lambda n: n + 1)
+    saetze_ziel = 3
+    wiederholungen_ziel = "10"
+    pausenzeit = 90
+    trainingstag = ""
+    superset_gruppe = 0
+
+
 class TrainingseinheitFactory(DjangoModelFactory):
     """Factory für Trainingseinheiten."""
 
