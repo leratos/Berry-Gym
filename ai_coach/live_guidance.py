@@ -5,7 +5,6 @@ Gibt kontextbasierte Tipps und beantwortet Fragen in Echtzeit
 
 import os
 import sys
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -46,8 +45,6 @@ class LiveGuidance:
         Returns:
             Context Dict mit allen relevanten Daten
         """
-        from django.contrib.auth.models import User
-
         from core.models import KoerperWerte, Satz, Trainingseinheit, Uebung
 
         # Trainingseinheit laden
@@ -202,7 +199,7 @@ FOKUS:
 
         # Aktuelle Session Info
         if session:
-            user_context_parts.append(f"AKTUELLE SESSION:")
+            user_context_parts.append("AKTUELLE SESSION:")
             user_context_parts.append(f"- Plan: {session.get('plan_name', 'Unbekannt')}")
             user_context_parts.append(
                 f"- Dauer: {session.get('stats', {}).get('duration_minutes', 0)} Minuten"
@@ -215,7 +212,7 @@ FOKUS:
 
         # Aktuelle Übung Info
         if current_ex:
-            user_context_parts.append(f"\nAKTUELLE ÜBUNG:")
+            user_context_parts.append("\nAKTUELLE ÜBUNG:")
             user_context_parts.append(f"- Name: {current_ex['name']}")
             user_context_parts.append(f"- Muskelgruppe: {current_ex['muskelgruppe']}")
             user_context_parts.append(f"- Absolvierte Sätze: {current_ex['completed_sets']}")
@@ -284,7 +281,7 @@ FOKUS:
         """
         from .llm_client import LLMClient
 
-        print(f"\n🤖 Live Guidance Request")
+        print("\n🤖 Live Guidance Request")
         print(f"   Session: {trainingseinheit_id}")
         print(f"   Übung: {current_uebung_id}")
         print(f"   Frage: {user_question}")

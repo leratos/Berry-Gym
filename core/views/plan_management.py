@@ -16,13 +16,7 @@ from django.db import models
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from ..models import (
-    MUSKELGRUPPEN,
-    Plan,
-    PlanUebung,
-    Uebung,
-    UserProfile,
-)
+from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Uebung, UserProfile
 
 logger = logging.getLogger(__name__)
 

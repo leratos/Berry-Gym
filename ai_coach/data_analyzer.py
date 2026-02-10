@@ -5,7 +5,7 @@ Analysiert letzte 30 Tage Training und bereitet Daten für LLM auf
 
 import json
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List
 
 from django.utils import timezone
@@ -73,7 +73,7 @@ class TrainingAnalyzer:
         Returns:
             Dict mit allen relevanten Metriken für LLM
         """
-        from core.models import Satz, Trainingseinheit, Uebung
+        from core.models import Trainingseinheit  # Satz, Uebung via ForeignKey Relations
 
         # Trainingseinheiten laden
         sessions = Trainingseinheit.objects.filter(
@@ -284,19 +284,19 @@ class TrainingAnalyzer:
         print("=" * 60)
 
         stats = analysis["training_stats"]
-        print(f"\n🏋️ Training:")
+        print("\n🏋️ Training:")
         print(f"   Sessions: {stats['total_sessions']}")
         print(f"   Durchschnitt: {stats['avg_duration_minutes']} min")
         print(f"   Frequenz: {stats['frequency_per_week']}x pro Woche")
 
-        print(f"\n💪 Muskelgruppen (Top 5 nach Volumen):")
+        print("\n💪 Muskelgruppen (Top 5 nach Volumen):")
         sorted_mg = sorted(
             analysis["muscle_groups"].items(), key=lambda x: x[1]["effective_reps"], reverse=True
         )[:5]
         for mg, data in sorted_mg:
             print(f"   {mg}: {round(data['effective_reps'])} eff. Wdh (Ø RPE {data['avg_rpe']})")
 
-        print(f"\n📈 Exercise Performance (Top 5 nach 1RM):")
+        print("\n📈 Exercise Performance (Top 5 nach 1RM):")
         sorted_ex = sorted(
             analysis["exercise_performance"].items(),
             key=lambda x: x[1].get("last_1rm", 0),
@@ -307,14 +307,14 @@ class TrainingAnalyzer:
             print(f"   {ex}: {data.get('last_1rm', 0)}kg 1RM ({trend})")
 
         balance = analysis["push_pull_balance"]
-        print(f"\n⚖️ Push/Pull Balance:")
+        print("\n⚖️ Push/Pull Balance:")
         print(f"   Push: {balance['push_volume']} | Pull: {balance['pull_volume']}")
         print(
             f"   Ratio: {balance['ratio']} {'✓ Balanced' if balance['balanced'] else '✗ Unbalanced'}"
         )
 
         if analysis["weaknesses"]:
-            print(f"\n⚠️ Schwachstellen:")
+            print("\n⚠️ Schwachstellen:")
             for weakness in analysis["weaknesses"][:5]:  # Top 5
                 print(f"   - {weakness}")
 

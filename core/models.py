@@ -1,11 +1,9 @@
-import uuid
-
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 # Import Disclaimer Model
-from .models_disclaimer import ScientificDisclaimer
+from .models_disclaimer import ScientificDisclaimer  # noqa: F401
 
 # --- KONSTANTEN & AUSWAHLMÖGLICHKEITEN ---
 

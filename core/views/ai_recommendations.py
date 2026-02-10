@@ -13,13 +13,13 @@ import json
 import logging
 import os
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, Max, Sum
+from django.db.models import Avg, Max
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
 from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung, UserProfile
@@ -162,7 +162,6 @@ def workout_recommendations(request):
 
     if push_effektiv > 0 and pull_effektiv > 0:
         ratio = push_effektiv / pull_effektiv if pull_effektiv > 0 else 999
-        saetze_ratio = push_saetze / pull_saetze if pull_saetze > 0 else 999
 
         if ratio > 1.5:  # Zu viel Push
             empfehlungen.append(
@@ -745,7 +744,7 @@ def live_guidance_api(request):
             return JsonResponse({"error": "session_id und question erforderlich"}, status=400)
 
         # Prüfe ob Session dem User gehört
-        session = get_object_or_404(Trainingseinheit, id=session_id, user=request.user)
+        _ = get_object_or_404(Trainingseinheit, id=session_id, user=request.user)
 
         # Live Guidance importieren (korrekter Package-Import)
         from ai_coach.live_guidance import LiveGuidance

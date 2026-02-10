@@ -5,7 +5,7 @@ Provides comprehensive analysis for training progression, consistency, and perfo
 
 from datetime import timedelta
 
-from django.db.models import Avg, Count, Max
+from django.db.models import Avg
 from django.utils import timezone
 
 
@@ -24,7 +24,6 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
     """
     heute = timezone.now()
     vier_wochen = heute - timedelta(days=28)
-    acht_wochen = heute - timedelta(days=56)
 
     plateau_analysis = []
 
@@ -371,7 +370,6 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
         return []
 
     heute = timezone.now()
-    sechs_monate = heute - timedelta(days=180)
 
     ergebnisse = []
 

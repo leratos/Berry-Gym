@@ -14,7 +14,6 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
-from ..helpers.notifications import send_push_notification
 from ..models import PushSubscription
 
 logger = logging.getLogger(__name__)

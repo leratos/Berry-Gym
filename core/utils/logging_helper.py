@@ -8,7 +8,7 @@ Nutzt strukturiertes Logging mit Context-Daten.
 import logging
 import time
 from functools import wraps
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 def get_logger(name: str) -> logging.Logger:

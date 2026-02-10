@@ -228,27 +228,6 @@ def uebung_detail(request, uebung_id):
         "GANZKOERPER": [],
     }
 
-    # Mapping: Text-Bezeichnung -> Muskelgruppen-Code
-    text_to_code = {
-        "Trizeps": "TRIZEPS",
-        "Bizeps": "BIZEPS",
-        "Brust": "BRUST",
-        "Schulter - Vordere": "SCHULTER_VORN",
-        "Schulter - Seitliche": "SCHULTER_SEIT",
-        "Schulter - Hintere": "SCHULTER_HINT",
-        "Bauch": "BAUCH",
-        "Po": "PO",
-        "Unterarme": "UNTERARME",
-        "Rücken - Nacken/Trapez": "RUECKEN_TRAPEZ",
-        "Rücken - Breiter Muskel": "RUECKEN_LAT",
-        "Rücken - Latissimus": "RUECKEN_LAT",
-        "Unterer Rücken": "RUECKEN_UNTEN",
-        "Beine - Quadrizeps": "BEINE_QUAD",
-        "Beine - Hamstrings": "BEINE_HAM",
-        "Waden": "WADEN",
-        "Adduktoren": "ADDUKTOREN",
-    }
-
     # SVG-IDs für Hauptmuskel (rot)
     main_muscle_ids = muscle_mapping.get(uebung.muskelgruppe, [])
 

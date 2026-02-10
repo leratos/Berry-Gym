@@ -5,7 +5,7 @@ Unterstützt lokales Llama 3.1 8B mit OpenRouter 70B Fallback
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import ollama
 
@@ -191,11 +191,11 @@ class LLMClient:
             total_duration = response.get("total_duration", 0) / 1e9
             eval_count = response.get("eval_count", 0)
 
-            print(f"✓ Ollama Response:")
+            print("✓ Ollama Response:")
             print(f"   Dauer: {total_duration:.1f}s")
             print(f"   Tokens: {eval_count}")
             print(f"   Länge: {len(content)} Zeichen")
-            print(f"   Kosten: 0€ (lokal)\n")
+            print("   Kosten: 0€ (lokal)\n")
 
             # JSON parsen und mit Metadaten zurückgeben
             return {
@@ -251,10 +251,10 @@ class LLMClient:
             cost_output = (completion_tokens / 1_000_000) * 0.80
             total_cost = cost_input + cost_output
 
-            print(f"✓ OpenRouter Response:")
+            print("✓ OpenRouter Response:")
             print(f"   Tokens: {tokens_used} (in: {prompt_tokens}, out: {completion_tokens})")
             print(f"   Länge: {len(content)} Zeichen")
-            print(f"   Kosten: {total_cost:.4f}€ (~{total_cost*100:.2f} Cent)\n")
+            print(f"   Kosten: {total_cost:.4f}€ (~{total_cost * 100:.2f} Cent)\n")
 
             # JSON parsen und mit Metadaten zurückgeben
             return {
@@ -345,7 +345,7 @@ class LLMClient:
                     print(f"   Position:     {' ' * (error_col - 1)}^")
 
             print(f"\n   Content Länge: {len(original_content)} Zeichen")
-            print(f"   Erste 300 Zeichen nach Extraktion:")
+            print("   Erste 300 Zeichen nach Extraktion:")
             print(content[:300])
 
             raise ValueError(f"Konnte JSON nicht parsen: {e}")
@@ -388,7 +388,7 @@ class LLMClient:
 
             for i, session in enumerate(plan_json["sessions"]):
                 if "exercises" not in session:
-                    errors.append(f"Session {i+1}: Keine Übungen definiert")
+                    errors.append(f"Session {i + 1}: Keine Übungen definiert")
                     continue
 
                 # Übungen dieser Session sammeln
@@ -401,7 +401,7 @@ class LLMClient:
                 if duplicates_in_session:
                     unique_dupes = list(set(duplicates_in_session))
                     errors.append(
-                        f"Session {i+1}: Doppelte Übungen gefunden: {', '.join(unique_dupes)}"
+                        f"Session {i + 1}: Doppelte Übungen gefunden: {', '.join(unique_dupes)}"
                     )
 
                 # Für Session-übergreifenden Check
@@ -415,7 +415,7 @@ class LLMClient:
                     # Übung existiert?
                     if ex_name not in available_exercises:
                         errors.append(
-                            f"Session {i+1}, Übung {j+1}: '{ex_name}' nicht verfügbar "
+                            f"Session {i + 1}, Übung {j + 1}: '{ex_name}' nicht verfügbar "
                             f"(Equipment fehlt oder Übung existiert nicht)"
                         )
 
@@ -424,7 +424,7 @@ class LLMClient:
                     for field in ex_required:
                         if field not in exercise:
                             errors.append(
-                                f"Session {i+1}, Übung {j+1} ('{ex_name}'): Fehlendes Feld '{field}'"
+                                f"Session {i + 1}, Übung {j + 1} ('{ex_name}'): Fehlendes Feld '{field}'"
                             )
 
             # Duplikat-Check ÜBER alle Sessions hinweg

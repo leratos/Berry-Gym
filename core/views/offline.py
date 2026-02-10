@@ -110,7 +110,7 @@ def sync_offline_data(request):
                 results.append(
                     {"id": item["id"], "success": False, "error": "Übung nicht gefunden"}
                 )
-            except Exception as e:
+            except Exception:
                 results.append(
                     {
                         "id": item["id"],

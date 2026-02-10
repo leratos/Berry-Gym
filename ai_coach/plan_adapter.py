@@ -18,7 +18,7 @@ import json
 import os
 import sys
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
 # Django Setup
@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     django.setup()
 
-from django.db.models import Avg, Count, F, Max, Q, Sum
+from django.db.models import Avg
 from django.utils import timezone
 
 from ai_coach.llm_client import LLMClient
@@ -174,8 +174,6 @@ class PlanAdapter:
 
     def _check_muscle_balance(self, days: int = 14) -> Dict[str, Optional[int]]:
         """Prüft wann Muskelgruppen zuletzt trainiert wurden"""
-        cutoff_date = timezone.now() - timedelta(days=days)
-
         # Alle Muskelgruppen im Plan
         plan_exercises = PlanUebung.objects.filter(plan=self.plan).select_related("uebung")
         muscle_groups = set()

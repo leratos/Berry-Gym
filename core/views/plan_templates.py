@@ -10,11 +10,9 @@ when required equipment is not available.
 import json
 import logging
 import os
-from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Max
 from django.http import JsonResponse
 
 from ..helpers.exercises import find_substitute_exercise

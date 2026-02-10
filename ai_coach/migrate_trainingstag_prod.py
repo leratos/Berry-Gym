@@ -19,7 +19,7 @@ def migrate_production():
     print("=" * 60)
 
     try:
-        with DatabaseClient() as db:
+        with DatabaseClient():
             print("\n📋 Führe Migration 0012 aus...")
             print("-" * 60)
 

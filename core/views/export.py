@@ -8,7 +8,6 @@ downloadable reports of training history, statistics, and plan documentation.
 
 import base64
 import csv
-import json
 import logging
 from collections import defaultdict
 from datetime import timedelta

@@ -6,8 +6,7 @@ Kombiniert: Data Analyzer → Prompt Builder → LLM → Django Plan Persistieru
 import argparse
 import json
 import sys
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from .data_analyzer import TrainingAnalyzer
 from .db_client import DatabaseClient
@@ -85,7 +84,7 @@ class PlanGenerator:
             else:
                 # CLI-Modus - braucht DatabaseClient mit SSH-Tunnel
                 print("\n💡 CLI-Modus - starte SSH-Tunnel")
-                with DatabaseClient() as db:
+                with DatabaseClient():
                     return self._generate_with_existing_django(save_to_db)
 
         except Exception as e:
@@ -155,7 +154,7 @@ class PlanGenerator:
 
         # Debug: Prüfe was wir bekommen haben
         if not plan_json:
-            print(f"\n❌ LLM hat leere Response geliefert!")
+            print("\n❌ LLM hat leere Response geliefert!")
             print(f"   llm_result Typ: {type(llm_result)}")
             if isinstance(llm_result, dict):
                 print(f"   llm_result Keys: {llm_result.keys()}")
@@ -457,7 +456,7 @@ Beispiel:
                 response_text = response
 
                 # Debug
-                print(f"   📝 LLM Response:")
+                print("   📝 LLM Response:")
                 print(f"   {response_text}")
 
                 # JSON parsen

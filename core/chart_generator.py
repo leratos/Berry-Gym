@@ -8,7 +8,6 @@ Optimierung (2026-01-11):
 
 import base64
 import io
-import os
 from pathlib import Path
 
 import matplotlib
@@ -19,7 +18,6 @@ from django.conf import settings
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap
 from PIL import Image, ImageDraw, ImageFont
 
 # -----------------------------
@@ -118,10 +116,6 @@ def _render_svg_muscle_map_png_base64(muskelgruppen_stats):
         raise ValueError(f"SVG ParseError: {e}") from e
 
     # Namespace ermitteln (typisch '{http://www.w3.org/2000/svg}')
-    ns = ""
-    if root.tag.startswith("{") and "}" in root.tag:
-        ns = root.tag.split("}")[0] + "}"
-
     def find_by_id(el_id: str):
         # ElementTree unterstützt XPath mit @id nur eingeschränkt; wir iterieren.
         for el in root.iter():
@@ -515,7 +509,7 @@ def generate_body_map_with_data(muskelgruppen_stats):
     # 1) Versuche SVG-Rendering (professionell) - nur wenn Cairo verfügbar
     try:
         # Test ob cairosvg importierbar ist (inkl. Cairo-C-Library)
-        import cairosvg
+        import cairosvg  # noqa: F401
 
         return _render_svg_muscle_map_png_base64(muskelgruppen_stats)
     except (ImportError, OSError, FileNotFoundError) as e:

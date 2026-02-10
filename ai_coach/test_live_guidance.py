@@ -5,7 +5,7 @@ Testet verschiedene Szenarien um Fallstricke zu finden
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 # Für lokale SQLite DB (statt Production MySQL)
@@ -292,12 +292,12 @@ class LiveGuidanceTester:
             )
 
         # TEST 12: Leere Frage (sollte Fehler geben)
-        print(f"\n🧪 TEST: Leere Frage (Error-Test)")
+        print("\n🧪 TEST: Leere Frage (Error-Test)")
         try:
-            result = self.guidance.get_guidance(
+            _ = self.guidance.get_guidance(
                 trainingseinheit_id=self.test_sessions["normal"].id, user_question=""
             )
-            print(f"   ⚠️ WARNUNG: Leere Frage wurde akzeptiert")
+            print("   ⚠️ WARNUNG: Leere Frage wurde akzeptiert")
         except Exception as e:
             print(f"   ✅ BESTANDEN: Leere Frage abgelehnt ({str(e)[:50]})")
 
@@ -375,7 +375,7 @@ if __name__ == "__main__":
     # Warnung bei OpenRouter
     if args.use_openrouter:
         print("\n⚠️  WARNUNG: OpenRouter kostet ~0.002€ pro Test!")
-        print(f"Geschätzte Kosten: ~0.024€ für 12 Tests")
+        print("Geschätzte Kosten: ~0.024€ für 12 Tests")
         response = input("Fortfahren? (y/n): ")
         if response.lower() != "y":
             print("Abgebrochen.")

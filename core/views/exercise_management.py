@@ -19,14 +19,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from ..models import (
-    BEWEGUNGS_TYP,
-    EQUIPMENT_CHOICES,
-    GEWICHTS_TYP,
-    MUSKELGRUPPEN,
-    Equipment,
-    Uebung,
-)
+from ..models import EQUIPMENT_CHOICES, Equipment, Uebung
 
 logger = logging.getLogger(__name__)
 
