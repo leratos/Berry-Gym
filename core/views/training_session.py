@@ -11,18 +11,16 @@ Handles training session workflows including:
 import json
 import logging
 import re
-from datetime import datetime, timedelta
-from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, F, Max, Q, Sum
-from django.http import HttpResponse, JsonResponse
+from django.db.models import Avg, Max, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from ..models import Plan, PlanUebung, Satz, Trainingseinheit, Uebung, UserProfile
+from ..models import Plan, Satz, Trainingseinheit, Uebung, UserProfile
 
 logger = logging.getLogger(__name__)
 

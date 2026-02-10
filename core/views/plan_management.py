@@ -6,40 +6,22 @@ public/private status management, plan duplication and copying, and the
 plan library for browsing public plans and plan groups.
 """
 
-import json
 import logging
-import os
-import random
-import re
 import uuid
 from collections import OrderedDict
-from datetime import datetime, timedelta
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models
-from django.db.models import Avg, Count, F, Max, Q, Sum
-from django.http import HttpResponse, JsonResponse
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
-from django.utils import timezone
 
 from ..models import (
-    BEWEGUNGS_TYP,
-    GEWICHTS_TYP,
     MUSKELGRUPPEN,
-    Equipment,
-    InviteCode,
-    KoerperWerte,
     Plan,
     PlanUebung,
-    ProgressPhoto,
-    Satz,
-    Trainingseinheit,
     Uebung,
     UserProfile,
-    WaitlistEntry,
 )
 
 logger = logging.getLogger(__name__)

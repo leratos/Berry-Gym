@@ -17,13 +17,11 @@ import logging
 import os
 import random
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, DecimalField, F, Max, Q, Sum
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -399,7 +397,7 @@ def dashboard(request):
                         "type": "plateau",
                         "severity": "warning",
                         "exercise": uebung_name,
-                        "message": f"Kein Progress seit 4 Wochen",
+                        "message": "Kein Progress seit 4 Wochen",
                         "suggestion": "Versuche Intensitätstechniken wie Drop-Sets oder erhöhe das Volumen um 10-15%",
                         "icon": "bi-graph-down",
                         "color": "warning",
@@ -663,7 +661,6 @@ def exercise_stats(request, uebung_id):
 
     personal_record = 0
     best_weight = 0
-    max_volume = 0
 
     for satz in saetze:
         # 1. Gewicht normalisieren (für Vergleichbarkeit)

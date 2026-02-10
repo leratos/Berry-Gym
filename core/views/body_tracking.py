@@ -53,11 +53,6 @@ def body_stats(request):
     if not werte.exists():
         return render(request, "core/body_stats.html", {"no_data": True})
 
-    # Aktueller Wert & Veränderung
-    aktueller_wert = werte.last()
-    erster_wert = werte.first()
-    aenderung = float(aktueller_wert.gewicht) - float(erster_wert.gewicht)
-
     # Daten für Charts vorbereiten
     labels = [w.datum.strftime("%d.%m.%y") for w in werte]
     gewicht_data = [float(w.gewicht) for w in werte]
@@ -72,22 +67,22 @@ def body_stats(request):
     # Muskelmasse
     muskel_data = [float(w.muskelmasse_kg) if w.muskelmasse_kg else None for w in werte]
 
+    # Berechne aktuelle Werte und Änderung
+    aktuelles_gewicht = werte.last().gewicht if werte else None
+    gewicht_aenderung = (
+        round(float(werte.last().gewicht - werte.first().gewicht), 1) if werte.count() > 1 else 0
+    )
+
     context = {
         "werte": werte,
-        "aktuelles_gewicht": aktueller_wert.gewicht,
-        "aenderung": aenderung,
+        "aktuelles_gewicht": aktuelles_gewicht,
+        "aenderung": gewicht_aenderung,
         "labels_json": json.dumps(labels),
         "gewicht_json": json.dumps(gewicht_data),
         "bmi_json": json.dumps(bmi_data),
         "ffmi_json": json.dumps(ffmi_data),
         "kfa_json": json.dumps(kfa_data),
         "muskel_json": json.dumps(muskel_data),
-        "aktuelles_gewicht": werte.last().gewicht if werte else None,
-        "aenderung": (
-            round(float(werte.last().gewicht - werte.first().gewicht), 1)
-            if werte.count() > 1
-            else 0
-        ),
     }
     return render(request, "core/body_stats.html", context)
 
@@ -151,7 +146,7 @@ def upload_progress_photo(request):
             return redirect("progress_photos")
 
         # Foto speichern
-        photo = ProgressPhoto.objects.create(
+        ProgressPhoto.objects.create(
             user=request.user,
             foto=foto,
             gewicht_kg=gewicht_kg if gewicht_kg else None,
