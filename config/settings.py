@@ -207,6 +207,10 @@ except Exception as e:
 # LOGGING CONFIGURATION
 # ==================================
 
+# Ensure logs directory exists
+LOGS_DIR = BASE_DIR / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
