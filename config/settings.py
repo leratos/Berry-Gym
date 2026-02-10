@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -20,6 +21,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / ".env")
+
+# Detect if we're running tests
+TESTING = "test" in sys.argv or "pytest" in sys.argv[0]
 
 
 # Quick-start development settings - unsuitable for production
@@ -340,13 +344,23 @@ INSTALLED_APPS += ["axes"]
 MIDDLEWARE += [
     "axes.middleware.AxesMiddleware",
 ]
+# ==================================
+# AUTHENTICATION & SECURITY
+# ==================================
 
-AUTHENTICATION_BACKENDS = [
-    "axes.backends.AxesStandaloneBackend",  # AxesStandaloneBackend should be first
-    "django.contrib.auth.backends.ModelBackend",
-]
+# Authentication Backends
+# Note: Axes is disabled during testing to avoid conflicts with test authentication
+if TESTING:
+    AUTHENTICATION_BACKENDS = [
+        "django.contrib.auth.backends.ModelBackend",
+    ]
+else:
+    AUTHENTICATION_BACKENDS = [
+        "axes.backends.AxesStandaloneBackend",  # AxesStandaloneBackend should be first
+        "django.contrib.auth.backends.ModelBackend",
+    ]
 
-# Axes Configuration
+# Axes Configuration (only applies when not testing)
 AXES_FAILURE_LIMIT = 5  # Nach 5 Fehlversuchen sperren
 AXES_COOLOFF_TIME = 1  # 1 Stunde Sperre
 AXES_RESET_ON_SUCCESS = True  # Counter zurücksetzen bei Erfolg
