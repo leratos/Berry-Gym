@@ -10,16 +10,12 @@ Tests für:
 - Permission Checks (User Isolation)
 """
 
-import pytest
 from django.urls import reverse
 
+import pytest
+
 from core.models import Plan, PlanUebung, Satz, Trainingseinheit
-from core.tests.factories import (
-    SatzFactory,
-    TrainingseinheitFactory,
-    UebungFactory,
-    UserFactory,
-)
+from core.tests.factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
 
 
 @pytest.mark.django_db
