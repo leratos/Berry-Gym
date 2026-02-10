@@ -168,6 +168,17 @@ class KoerperWerteFactory(DjangoModelFactory):
     )
 
 
+class EquipmentFactory(DjangoModelFactory):
+    """Factory für Equipment."""
+
+    class Meta:
+        model = "core.Equipment"
+        django_get_or_create = ("name",)
+
+    name = factory.Sequence(lambda n: f"EQUIPMENT_{n}")
+    beschreibung = factory.Faker("text", max_nb_chars=100, locale="de_DE")
+
+
 class CardioEinheitFactory(DjangoModelFactory):
     """Factory für Cardio-Einheiten."""
 
