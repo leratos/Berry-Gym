@@ -1,0 +1,21 @@
+[run]
+source = core, ai_coach
+omit =
+    */migrations/*
+    */tests/*
+    */management/commands/*
+    core/views_old.py
+    core/models_old_backup.py
+    ai_coach/test_*.py
+    ai_coach/raw_mysql_test.py
+    ai_coach/*_prod.py
+    ai_coach/setup_*.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    def __str__
+    raise NotImplementedError
+    if TYPE_CHECKING:
+    pass
