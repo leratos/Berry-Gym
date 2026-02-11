@@ -2,7 +2,7 @@
 
 **Projekt:** Complete Project Restructuring & Production Preparation  
 **Startdatum:** 09.02.2026  
-**Aktueller Status:** Week 2 - Phase 2.5 Complete (33% Coverage)  
+**Aktueller Status:** Week 2 - Phase 2.7 Complete (37% Coverage)  
 **Ziel:** Production-ready application for public launch
 
 ---
@@ -24,7 +24,7 @@
 | Phase | Duration | Focus | Coverage Goal | Status |
 |-------|----------|-------|---------------|--------|
 | **Week 1** | ✅ DONE | Foundation & Safety | 30.48% | ✅ COMPLETE |
-| **Week 2** | Feb 11-17 | Testing & Views | 40% | 🔄 Phase 2.5 DONE (33%) |
+| **Week 2** | Feb 11-17 | Testing & Views | 40% | 🔄 Phase 2.7 DONE (37%) |
 | **Week 3** | Feb 18-24 | Refactoring & Quality | 50% | ⏳ Planned |
 | **Week 4** | Feb 25-Mar 3 | Performance | 60% | ⏳ Planned |
 | **Week 5-6** | Mar 4-17 | Advanced & Polish | 75% | ⏳ Planned |
@@ -113,7 +113,7 @@
 
 **Duration:** Feb 11-17, 2026  
 **Coverage Goal:** 30.48% → 40%  
-**Status:** 🔄 **IN PROGRESS** (Phase 2.5 ✅ COMPLETE - 33%)
+**Status:** 🔄 **IN PROGRESS** (Phase 2.5 ✅ | Phase 2.6 ✅ | Phase 2.7 ✅ COMPLETE - 37%)
 
 ### 🎯 Week 2 Goals:
 - [ ] Coverage: 40%+ (Codecov project-wide)
@@ -166,13 +166,6 @@
 
 ---
 
-#### **Phase 2.6 - Exercise Library Tests** ⏳ TODO
-**Time Estimate:** 2 days  
-**Tests to Add:** ~12 tests  
-**Coverage Impact:** 34% → ~37%
-
----
-
 #### **Phase 2.6 - Exercise Library Tests** ✅ COMPLETE
 **Completed:** 2026-02-11
 **Tests Added:** 27 tests
@@ -201,18 +194,30 @@
 
 ---
 
-#### **Phase 2.7 - Exercise Management Tests** ⏳ TODO
-**Time Estimate:** 1-2 days  
-**Tests to Add:** ~10 tests  
-**Coverage Impact:** 37% → ~39%
+#### **Phase 2.7 - Exercise Management Tests** ✅ COMPLETE
+**Completed:** 2026-02-11
+**Tests Added:** 20 tests
+**Coverage Impact:** 35% → 37% (+2%)
+**Total Tests:** 217 passing, 4 skipped
 
-**Test File:**
-- `test_exercise_management.py`
-  - Exercise CRUD operations
-  - Equipment assignment
-  - Tag management
-  - Duplicate detection
-  - Validation rules
+**Test File:** `test_exercise_management.py`
+
+**Was getestet:**
+- `equipment_management`: Login-Schutz, Seite lädt, Context mit Equipment-Kategorien, Statistiken
+- `toggle_equipment`: Login-Schutz, Hinzufügen, Entfernen, AJAX-JSON-Response, Non-AJAX Redirect, 404 bei unbekanntem Equipment
+- `export_uebungen` (Staff-only): Nicht-Staff → 302, JSON-Export, JSON-Dateiname, CSV-Export, ungültiges Format → 400
+- `import_uebungen` (Staff-only): Nicht-Staff → 302, nur POST erlaubt, ohne Datei → Redirect, JSON-Import erstellt Übungen, ungültiges JSON → Redirect
+
+**Technische Details:**
+- Equipment.name ist ein Choices-Feld → direkt `Equipment.objects.get_or_create(name="LANGHANTEL")` statt Factory
+- Staff-Zugriff: `UserFactory(is_staff=True)`
+- AJAX-Detection via `HTTP_X_REQUESTED_WITH: "XMLHttpRequest"` Header
+- Import via `SimpleUploadedFile` mit JSON-Content
+
+**Lessons Learned:**
+- Factory-Sequence-Namen scheitern bei Choices-Feldern
+- AJAX-Header explizit in Tests setzen
+- File-Upload-Tests mit `SimpleUploadedFile` und `content_type="application/json"`
 
 ---
 
@@ -976,7 +981,7 @@ Week 1 [✅] Foundation & Safety
 Week 2 [🔄] Testing & Views
   ├─ Phase 2.5: Export & Auth ✅ (34%, 170 tests)
   ├─ Phase 2.6: Exercise Library ✅ (35%, 197 tests)
-  ├─ Phase 2.7: Exercise Management
+  ├─ Phase 2.7: Exercise Management ✅ (37%, 217 tests)
   └─ Phase 2.8: Config & Cardio
   Target: 40% coverage
 
@@ -1020,12 +1025,12 @@ Week 8 [🎯] PUBLIC LAUNCH
 **To:** Production-ready (public launch, 80%+ coverage, automated CI/CD)
 
 **Timeline:** 8 weeks (Feb 9 - Mar 25, 2026)  
-**Status:** Week 1 Complete ✅ - Week 2 In Progress 🔄 (Phase 2.5 ✅ DONE)
+**Status:** Week 1 Complete ✅ - Week 2 In Progress 🔄 (Phase 2.5 ✅ | Phase 2.6 ✅ | Phase 2.7 ✅ DONE)
 
 **Mission:** Build a professional, scalable, scientifically-sound fitness tracking application ready for public launch.
 
 ---
 
-**Last Updated:** February 11, 2026 (Phase 2.5 Complete)  
-**Version:** 2.1 (Phase 2.5 - Export & Auth Tests)  
-**Next Review:** Phase 2.7 Complete or Week 2 Complete (Feb 17, 2026)
+**Last Updated:** February 11, 2026 (Phase 2.7 Complete)  
+**Version:** 2.3 (Phase 2.7 - Exercise Management Tests Complete)  
+**Next Review:** Phase 2.8 Complete or Week 2 Complete (Feb 17, 2026)
