@@ -1,54 +1,134 @@
-# Core Django
-Django==5.1.15
+# ============================================
+# HomeGym - Production Requirements
+# ============================================
+# Last Updated: 2026-02-11
+# Python: 3.12.3
+#
+# IMPORTANT: These are ACTUAL installed versions
+# Verified with: pip freeze
+# ============================================
+
+# ============================================
+# Core Django Framework
+# ============================================
+Django==5.0.3
 gunicorn==22.0.0
 
+# ============================================
 # Database
+# ============================================
 mysqlclient==2.2.4
 
-# Image Processing (für PWA Icons)
+# ============================================
+# Image Processing
+# ============================================
 Pillow==12.1.0
 
-# Environment Variables
-python-dotenv==1.0.1
+# ============================================
+# Environment & Configuration
+# ============================================
+python-dotenv==1.2.1
 
-# PDF Export (Hybrid: WeasyPrint für Linux, xhtml2pdf als Fallback)
-WeasyPrint==68.0
-xhtml2pdf==0.2.17
+# ============================================
+# PDF Export & Document Generation
+# ============================================
+# WeasyPrint - Primary PDF engine (CSS-based, modern)
+WeasyPrint==62.3
+
+# xhtml2pdf - Fallback PDF engine (reportlab-based)
+xhtml2pdf==0.2.16
+reportlab==4.4.7  # Required by xhtml2pdf
+
+# PDF Manipulation & QR Codes
+pypdf==6.5.0
+qrcode[pil]==8.2
+
+# SVG Rendering (for Body Map)
+cairosvg==2.7.1
+
+# Chart Generation
 matplotlib==3.10.8
-cairosvg==2.7.1  # SVG zu PNG Rendering für Body-Map
-qrcode[pil]==8.0  # QR-Code Generation für Plan-PDF Export
 
+# ============================================
 # AI Coach - LLM Integration
-ollama==0.4.3
-openai==1.58.1
-keyring==25.5.0
+# ============================================
+ollama==0.6.1
+openai==2.15.0
+keyring==25.7.0
 
-# Optional: Redis für Caching & Sessions
-redis==5.0.1
-django-redis==5.4.0
+# ============================================
+# Optional: Redis for Caching & Sessions
+# ============================================
+# redis==5.0.1  # Commented out - install only if Redis available
+# django-redis==5.4.0
 
+# ============================================
 # Web Push Notifications
+# ============================================
 pywebpush==1.14.1
+py-vapid==1.9.4
 
-# ML Coach - Machine Learning (CPU-only, keine GPU)
+# ============================================
+# ML Coach - Machine Learning (CPU-only)
+# ============================================
 scikit-learn==1.6.1
 joblib==1.5.0
 
+# ============================================
 # Testing & Quality Assurance
-pytest==8.3.4
-pytest-django==4.9.0
-pytest-cov==6.0.0
-factory-boy==3.3.1
-faker==33.1.0
+# ============================================
+pytest==9.0.2
+pytest-django==4.11.1
+pytest-cov==7.0.0
+coverage==7.13.4
+factory-boy==3.3.3
+Faker==40.4.0
 
+# ============================================
 # Monitoring & Error Tracking
+# ============================================
 sentry-sdk==2.22.0
 django-axes==7.1.0  # Brute-force protection
 
+# ============================================
 # Code Quality & Formatting
+# ============================================
 black==25.1.0
 isort==5.13.2
 flake8==7.1.1
 mypy==1.14.1
 django-stubs==5.1.2
 pre-commit==4.0.1
+
+# ============================================
+# CRITICAL NOTES FOR PRODUCTION DEPLOYMENT
+# ============================================
+#
+# 1. Django Version:
+#    - Currently: 5.0.3
+#    - TODO: Update to 5.1.x after testing
+#    - Breaking changes: Check release notes
+#
+# 2. OpenAI SDK:
+#    - Version 2.15.0 (breaking changes from 1.x)
+#    - If upgrading: Update ai_coach/ code
+#
+# 3. WeasyPrint:
+#    - Requires system dependencies (cairo, pango, gdk-pixbuf)
+#    - Ubuntu: apt-get install python3-cffi python3-brotli libpango-1.0-0 libpangoft2-1.0-0
+#    - macOS: brew install cairo pango gdk-pixbuf libffi
+#
+# 4. MySQL:
+#    - mysqlclient requires MySQL development headers
+#    - Ubuntu: apt-get install python3-dev default-libmysqlclient-dev build-essential
+#    - macOS: brew install mysql
+#
+# 5. Redis (Optional):
+#    - Uncomment redis packages if using Redis for caching
+#    - Requires Redis server running
+#
+# 6. Environment Variables:
+#    - Copy .env.example to .env
+#    - Set all required variables (SENTRY_DSN, DATABASE credentials, etc.)
+#
+# ============================================
