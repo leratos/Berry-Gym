@@ -12,8 +12,9 @@ import csv
 import io
 from datetime import date
 
-import pytest
 from django.urls import reverse
+
+import pytest
 
 from core.tests.factories import (
     PlanFactory,
