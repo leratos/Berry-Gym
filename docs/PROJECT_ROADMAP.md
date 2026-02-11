@@ -166,26 +166,31 @@
 
 ---
 
-#### **Phase 2.6 - Exercise Library Tests** ⏳ TODO
-**Time Estimate:** 2 days  
-**Tests to Add:** ~12 tests  
-**Coverage Impact:** 34% → ~37%
+#### **Phase 2.6 - Exercise Library Tests** ✅ COMPLETE
+**Completed:** 2026-02-11
+**Tests Added:** 27 tests
+**Coverage Impact:** 34% → 35%
+**Total Tests:** 197 passing, 4 skipped
 
-**Test File:**
-- `test_exercise_library.py`
-  - Exercise search & filtering
-  - Muscle group filtering
-  - Equipment filtering
-  - Exercise detail views
-  - Favorite exercises
-  - Custom exercise creation
-  - Video/image handling
+**Test File:** `test_exercise_library.py`
 
-**Focus:**
-- Search functionality
-- Filter combinations
-- Favorite toggling
-- Custom exercise validation
+**Was getestet:**
+- `uebungen_auswahl`: Login-Schutz, Seite lädt, globale Übungen, eigene Custom-Übungen sichtbar, fremde Custom-Übungen NICHT sichtbar
+- `muscle_map`: Login-Schutz, Seite lädt
+- `uebung_detail` + `exercise_detail`: Login-Schutz, Laden, 404 bei unbekannter ID
+- `toggle_favorit` + `toggle_favorite`: Hinzufügen, Entfernen, JSON-Antwort, 404-Handling
+- `create_custom_uebung`: Erfolg, fehlende Bezeichnung/Muskelgruppe → 400, Duplikat-Schutz, User-Isolation, is_custom Flag
+- `get_alternative_exercises`: Login-Schutz, JSON-Response, 404
+
+**Bug gefunden & gefixt:**
+- `toggle_favorit` (exercise_library.py:398) hatte KEIN `@login_required` Decorator
+- AnonymousUser-Zugriff führte zu 500 Internal Server Error statt 302 Redirect
+- Fix: `@login_required` hinzugefügt
+
+**Lessons Learned:**
+- Tests finden echte Security-Bugs (fehlende @login_required)
+- Gleichnamige Views (toggle_favorit vs toggle_favorite) separat testen
+- Immer Login-Schutz aller Write-Endpoints testen
 
 ---
 
@@ -962,8 +967,8 @@ Week 1 [✅] Foundation & Safety
   Result: 30.48% coverage
 
 Week 2 [🔄] Testing & Views
-  ├─ Phase 2.5: Export & Auth
-  ├─ Phase 2.6: Exercise Library
+  ├─ Phase 2.5: Export & Auth ✅ (34%, 170 tests)
+  ├─ Phase 2.6: Exercise Library ✅ (35%, 197 tests)
   ├─ Phase 2.7: Exercise Management
   └─ Phase 2.8: Config & Cardio
   Target: 40% coverage
@@ -1016,4 +1021,4 @@ Week 8 [🎯] PUBLIC LAUNCH
 
 **Last Updated:** February 11, 2026 (Phase 2.5 Complete)  
 **Version:** 2.1 (Phase 2.5 - Export & Auth Tests)  
-**Next Review:** Phase 2.6 Complete or Week 2 Complete (Feb 17, 2026)
+**Next Review:** Phase 2.7 Complete or Week 2 Complete (Feb 17, 2026)
