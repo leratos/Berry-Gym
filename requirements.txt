@@ -11,7 +11,7 @@
 # ============================================
 # Core Django Framework
 # ============================================
-Django==5.0.3
+Django==5.1.15
 gunicorn==22.0.0
 
 # ============================================
@@ -33,14 +33,14 @@ python-dotenv==1.2.1
 # PDF Export & Document Generation
 # ============================================
 # WeasyPrint - Primary PDF engine (CSS-based, modern)
-WeasyPrint==62.3
+WeasyPrint==68.0
 
 # xhtml2pdf - Fallback PDF engine (reportlab-based)
-xhtml2pdf==0.2.16
+xhtml2pdf==0.2.17
 reportlab==4.4.7  # Required by xhtml2pdf
 
 # PDF Manipulation & QR Codes
-pypdf==6.5.0
+pypdf==6.6.2
 qrcode[pil]==8.2
 
 # SVG Rendering (for Body Map)
