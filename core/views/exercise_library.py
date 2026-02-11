@@ -395,6 +395,7 @@ def toggle_favorite(request, uebung_id):
     return JsonResponse({"is_favorite": is_favorite})
 
 
+@login_required
 def toggle_favorit(request, uebung_id):
     """
     Toggle Favorit-Status einer Übung für den aktuellen User.
