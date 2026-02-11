@@ -166,6 +166,13 @@
 
 ---
 
+#### **Phase 2.6 - Exercise Library Tests** ⏳ TODO
+**Time Estimate:** 2 days  
+**Tests to Add:** ~12 tests  
+**Coverage Impact:** 34% → ~37%
+
+---
+
 #### **Phase 2.6 - Exercise Library Tests** ✅ COMPLETE
 **Completed:** 2026-02-11
 **Tests Added:** 27 tests
