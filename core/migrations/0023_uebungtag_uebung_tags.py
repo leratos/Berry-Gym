@@ -6,28 +6,64 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0022_uebung_created_by_uebung_is_custom_and_more'),
+        ("core", "0022_uebung_created_by_uebung_is_custom_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='UebungTag',
+            name="UebungTag",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(choices=[('COMPOUND', 'Compound (Mehrgelenksübung)'), ('ISOLATION', 'Isolation (Eingelenkübung)'), ('BEGINNER', 'Anfängerfreundlich'), ('ADVANCED', 'Fortgeschritten'), ('FUNCTIONAL', 'Funktionell'), ('POWER', 'Explosiv / Power'), ('MOBILITY', 'Mobilität / Beweglichkeit'), ('CARDIO', 'Kardiovaskulär'), ('CORE', 'Core / Rumpfstabilität'), ('UNILATERAL', 'Unilateral (einseitig)'), ('INJURY_PRONE', 'Verletzungsanfällig'), ('LOW_IMPACT', 'Gelenkschonend')], max_length=50, unique=True, verbose_name='Tag')),
-                ('beschreibung', models.TextField(blank=True, verbose_name='Beschreibung')),
-                ('farbe', models.CharField(default='#6c757d', help_text='z.B. #007bff für blau', max_length=7, verbose_name='Badge-Farbe (Hex)')),
-                ('erstellt_am', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        choices=[
+                            ("COMPOUND", "Compound (Mehrgelenksübung)"),
+                            ("ISOLATION", "Isolation (Eingelenkübung)"),
+                            ("BEGINNER", "Anfängerfreundlich"),
+                            ("ADVANCED", "Fortgeschritten"),
+                            ("FUNCTIONAL", "Funktionell"),
+                            ("POWER", "Explosiv / Power"),
+                            ("MOBILITY", "Mobilität / Beweglichkeit"),
+                            ("CARDIO", "Kardiovaskulär"),
+                            ("CORE", "Core / Rumpfstabilität"),
+                            ("UNILATERAL", "Unilateral (einseitig)"),
+                            ("INJURY_PRONE", "Verletzungsanfällig"),
+                            ("LOW_IMPACT", "Gelenkschonend"),
+                        ],
+                        max_length=50,
+                        unique=True,
+                        verbose_name="Tag",
+                    ),
+                ),
+                ("beschreibung", models.TextField(blank=True, verbose_name="Beschreibung")),
+                (
+                    "farbe",
+                    models.CharField(
+                        default="#6c757d",
+                        help_text="z.B. #007bff für blau",
+                        max_length=7,
+                        verbose_name="Badge-Farbe (Hex)",
+                    ),
+                ),
+                ("erstellt_am", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'verbose_name': 'Übungs-Tag',
-                'verbose_name_plural': 'Übungs-Tags',
-                'ordering': ['name'],
+                "verbose_name": "Übungs-Tag",
+                "verbose_name_plural": "Übungs-Tags",
+                "ordering": ["name"],
             },
         ),
         migrations.AddField(
-            model_name='uebung',
-            name='tags',
-            field=models.ManyToManyField(blank=True, related_name='uebungen', to='core.uebungtag', verbose_name='Tags'),
+            model_name="uebung",
+            name="tags",
+            field=models.ManyToManyField(
+                blank=True, related_name="uebungen", to="core.uebungtag", verbose_name="Tags"
+            ),
         ),
     ]

@@ -7,14 +7,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0019_add_plan_gruppe_reihenfolge'),
+        ("core", "0019_add_plan_gruppe_reihenfolge"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='plan',
-            name='shared_with',
-            field=models.ManyToManyField(blank=True, help_text='User, die diesen Plan sehen können (ohne öffentlich zu sein)', related_name='shared_plans', to=settings.AUTH_USER_MODEL, verbose_name='Geteilt mit'),
+            model_name="plan",
+            name="shared_with",
+            field=models.ManyToManyField(
+                blank=True,
+                help_text="User, die diesen Plan sehen können (ohne öffentlich zu sein)",
+                related_name="shared_plans",
+                to=settings.AUTH_USER_MODEL,
+                verbose_name="Geteilt mit",
+            ),
         ),
     ]

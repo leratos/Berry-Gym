@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0015_invitecode_waitlistentry'),
+        ("core", "0015_invitecode_waitlistentry"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='planuebung',
-            name='pausenzeit',
-            field=models.PositiveIntegerField(default=120, help_text='Empfohlene Pause zwischen Sätzen (60-300s)', verbose_name='Pausenzeit (Sekunden)'),
+            model_name="planuebung",
+            name="pausenzeit",
+            field=models.PositiveIntegerField(
+                default=120,
+                help_text="Empfohlene Pause zwischen Sätzen (60-300s)",
+                verbose_name="Pausenzeit (Sekunden)",
+            ),
         ),
     ]

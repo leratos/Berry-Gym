@@ -6,9 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0026_mlpredictionmodel'),
-        ('core', '0050_fix_emoji_support'),
+        ("core", "0026_mlpredictionmodel"),
+        ("core", "0050_fix_emoji_support"),
     ]
 
-    operations = [
-    ]
+    operations = []

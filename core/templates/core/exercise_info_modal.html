@@ -15,23 +15,23 @@
                         <span class="visually-hidden">Lädt...</span>
                     </div>
                 </div>
-                
+
                 <div id="exerciseModalContent" style="display: none;">
                     <!-- Übungsbild -->
                     <div id="exerciseImageContainer" class="text-center mb-4" style="display: none;">
-                        <img id="exerciseImage" 
-                             src="" 
-                             alt="Übungsgrafik" 
+                        <img id="exerciseImage"
+                             src=""
+                             alt="Übungsgrafik"
                              class="img-fluid rounded shadow-sm"
                              style="max-height: 400px; object-fit: contain;">
                     </div>
-                    
+
                     <!-- Kein Bild Hinweis -->
                     <div id="exerciseNoImage" class="alert alert-light text-center mb-4" style="display: none;">
                         <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
                         <p class="mb-0 mt-2 text-muted">Keine Grafik verfügbar</p>
                     </div>
-                    
+
                     <!-- Muskelgruppe Badge -->
                     <div class="mb-3">
                         <span class="badge bg-primary" id="exerciseMuscleGroup">
@@ -43,7 +43,7 @@
                             <span id="exerciseMovementTypeText"></span>
                         </span>
                     </div>
-                    
+
                     <!-- Beschreibung -->
                     <div class="mb-3">
                         <h6 class="text-muted mb-2">
@@ -53,7 +53,7 @@
                             <p class="mb-0" id="exerciseDescriptionText"></p>
                         </div>
                     </div>
-                    
+
                     <!-- Equipment -->
                     <div id="exerciseEquipmentContainer" class="mb-3" style="display: none;">
                         <h6 class="text-muted mb-2">
@@ -63,7 +63,7 @@
                             <!-- Equipment Badges werden hier dynamisch eingefügt -->
                         </div>
                     </div>
-                    
+
                     <!-- Zusätzliche Infos -->
                     <div class="row g-3 mt-2">
                         <div class="col-md-6">
@@ -88,7 +88,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div id="exerciseModalError" class="alert alert-danger" style="display: none;">
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     <span id="exerciseModalErrorText">Fehler beim Laden der Übungsdetails</span>
@@ -107,15 +107,15 @@
 // Globale Funktion zum Öffnen des Exercise Info Modals
 function showExerciseInfo(exerciseId) {
     const modal = new bootstrap.Modal(document.getElementById('exerciseInfoModal'));
-    
+
     // Reset Modal State
     document.getElementById('exerciseModalLoading').style.display = 'block';
     document.getElementById('exerciseModalContent').style.display = 'none';
     document.getElementById('exerciseModalError').style.display = 'none';
-    
+
     // Modal öffnen
     modal.show();
-    
+
     // Fetch Exercise Details
     fetch(`/api/exercise/${exerciseId}/`)
         .then(response => {
@@ -128,10 +128,10 @@ function showExerciseInfo(exerciseId) {
             // Loading verstecken
             document.getElementById('exerciseModalLoading').style.display = 'none';
             document.getElementById('exerciseModalContent').style.display = 'block';
-            
+
             // Titel
             document.getElementById('exerciseModalTitle').textContent = data.bezeichnung;
-            
+
             // Bild
             if (data.bild) {
                 document.getElementById('exerciseImage').src = data.bild;
@@ -141,10 +141,10 @@ function showExerciseInfo(exerciseId) {
                 document.getElementById('exerciseImageContainer').style.display = 'none';
                 document.getElementById('exerciseNoImage').style.display = 'block';
             }
-            
+
             // Muskelgruppe
             document.getElementById('exerciseMuscleGroupText').textContent = data.muskelgruppe_display || '-';
-            
+
             // Bewegungstyp
             if (data.bewegungstyp_display) {
                 document.getElementById('exerciseMovementTypeText').textContent = data.bewegungstyp_display;
@@ -152,14 +152,14 @@ function showExerciseInfo(exerciseId) {
             } else {
                 document.getElementById('exerciseMovementType').style.display = 'none';
             }
-            
+
             // Beschreibung
             const descText = data.beschreibung || 'Keine Beschreibung verfügbar';
             document.getElementById('exerciseDescriptionText').innerHTML = descText.replace(/\n/g, '<br>');
-            
+
             // Equipment
             if (data.equipment && data.equipment.length > 0) {
-                const equipmentHtml = data.equipment.map(eq => 
+                const equipmentHtml = data.equipment.map(eq =>
                     `<span class="badge bg-info text-dark">
                         <i class="bi bi-wrench me-1"></i>${eq}
                     </span>`
@@ -169,10 +169,10 @@ function showExerciseInfo(exerciseId) {
             } else {
                 document.getElementById('exerciseEquipmentContainer').style.display = 'none';
             }
-            
+
             // Gewichtstyp
             document.getElementById('exerciseWeightType').textContent = data.gewichts_typ_display || '-';
-            
+
             // Hilfsmuskeln
             if (data.hilfsmuskeln_display && data.hilfsmuskeln_display.length > 0) {
                 document.getElementById('exerciseHilfsmuskeln').textContent = data.hilfsmuskeln_display.join(', ');

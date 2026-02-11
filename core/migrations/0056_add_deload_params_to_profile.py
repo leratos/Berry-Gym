@@ -6,23 +6,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0055_add_cycle_tracking_to_profile'),
+        ("core", "0055_add_cycle_tracking_to_profile"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userprofile',
-            name='deload_rpe_target',
-            field=models.FloatField(default=7.0, help_text='Ziel-RPE für Deload-Wochen (z.B. 6.5-7.0)', verbose_name='Deload Ziel-RPE'),
+            model_name="userprofile",
+            name="deload_rpe_target",
+            field=models.FloatField(
+                default=7.0,
+                help_text="Ziel-RPE für Deload-Wochen (z.B. 6.5-7.0)",
+                verbose_name="Deload Ziel-RPE",
+            ),
         ),
         migrations.AddField(
-            model_name='userprofile',
-            name='deload_volume_factor',
-            field=models.FloatField(default=0.8, help_text='Faktor für Satz-Reduktion in Deload-Wochen (0.8 = 80% Volumen)', verbose_name='Deload Volumen-Faktor'),
+            model_name="userprofile",
+            name="deload_volume_factor",
+            field=models.FloatField(
+                default=0.8,
+                help_text="Faktor für Satz-Reduktion in Deload-Wochen (0.8 = 80% Volumen)",
+                verbose_name="Deload Volumen-Faktor",
+            ),
         ),
         migrations.AddField(
-            model_name='userprofile',
-            name='deload_weight_factor',
-            field=models.FloatField(default=0.9, help_text='Faktor für Gewichts-Reduktion in Deload-Wochen (0.9 = -10%)', verbose_name='Deload Gewichts-Faktor'),
+            model_name="userprofile",
+            name="deload_weight_factor",
+            field=models.FloatField(
+                default=0.9,
+                help_text="Faktor für Gewichts-Reduktion in Deload-Wochen (0.9 = -10%)",
+                verbose_name="Deload Gewichts-Faktor",
+            ),
         ),
     ]

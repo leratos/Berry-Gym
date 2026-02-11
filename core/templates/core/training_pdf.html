@@ -140,42 +140,42 @@
 </head>
 <body>
     <h1>HomeGym Training Report - Trainer Edition</h1>
-    
+
     <div style="margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px;">
-        <strong>Athlet:</strong> {{ user.username }} | 
-        <strong>Erstellt:</strong> {{ datum|date:"d.m.Y H:i" }} Uhr | 
+        <strong>Athlet:</strong> {{ user.username }} |
+        <strong>Erstellt:</strong> {{ datum|date:"d.m.Y H:i" }} Uhr |
         <strong>Zeitraum:</strong> Letzte 30 Tage
     </div>
 
     <!-- Gesamtstatistiken -->
     <h2>Gesamtstatistiken</h2>
-    
+
     <div style="margin: 15px 0;">
         <div class="stat-box">
             <div class="stat-value">{{ gesamt_trainings }}</div>
             <div class="stat-label">Gesamt Trainings</div>
         </div>
-        
+
         <div class="stat-box">
             <div class="stat-value">{{ trainings_30_tage }}</div>
             <div class="stat-label">30 Tage</div>
         </div>
-        
+
         <div class="stat-box">
             <div class="stat-value">{{ trainings_pro_woche }}</div>
             <div class="stat-label">Ø/Woche</div>
         </div>
-        
+
         <div class="stat-box">
             <div class="stat-value">{{ saetze_30_tage }}</div>
             <div class="stat-label">Sätze (30T)</div>
         </div>
-        
+
         <div class="stat-box">
             <div class="stat-value">{{ volumen_30_tage|floatformat:0 }}</div>
             <div class="stat-label">Volumen kg (30T)</div>
         </div>
-        
+
         <div class="stat-box">
             <div class="stat-value">{{ avg_rpe|floatformat:1 }}</div>
             <div class="stat-label">Ø RPE</div>
@@ -185,7 +185,7 @@
     {% if letzter_koerperwert %}
     <!-- Körperwerte & Entwicklung -->
     <h2>Körperwerte & Entwicklung</h2>
-    
+
     <div class="two-column">
         <h3>Aktuelle Messung ({{ letzter_koerperwert.datum|date:"d.m.Y" }})</h3>
         <table>
@@ -217,7 +217,7 @@
             {% endif %}
         </table>
     </div>
-    
+
     <div class="two-column">
         <h3>Verlauf (letzte 5 Messungen)</h3>
         {% if gewichts_trend %}
@@ -239,12 +239,12 @@
         </table>
     </div>
     {% endif %}
-    
+
     <!-- Kraftentwicklung -->
     {% if kraft_progression %}
     <h2>Kraftentwicklung - Top 5 Übungen</h2>
     <div class="info-box">
-        <strong>Interpretation:</strong> Zeigt die Gewichtssteigerung vom Start bis zur aktuellen Leistung. 
+        <strong>Interpretation:</strong> Zeigt die Gewichtssteigerung vom Start bis zur aktuellen Leistung.
         Positiv = Kraftzuwachs, Negativ = Möglicher Übertraining oder Technikfokus.
     </div>
     <table>
@@ -284,12 +284,12 @@
         </tbody>
     </table>
     {% endif %}
-    
+
     <!-- Muskelgruppen-Balance -->
     {% if muskelgruppen_stats %}
     <h2>Muskelgruppen-Balance (30 Tage)</h2>
     <div class="info-box">
-        <strong>Trainer-Notiz:</strong> Ausgeglichenes Training aller Muskelgruppen ist wichtig für Verletzungsprävention. 
+        <strong>Trainer-Notiz:</strong> Ausgeglichenes Training aller Muskelgruppen ist wichtig für Verletzungsprävention.
         Push/Pull-Verhältnis sollte ausgeglichen sein. RPE zeigt Intensität (7-9 = optimal).
     </div>
     <table>
@@ -325,7 +325,7 @@
         </tbody>
     </table>
     {% endif %}
-    
+
     <!-- Intensitäts-Analyse -->
     <h2>Intensitäts-Analyse (RPE)</h2>
     <div class="two-column">
@@ -359,7 +359,7 @@
             </tr>
         </table>
     </div>
-    
+
     <div class="two-column">
         <h3>Empfehlung</h3>
         <div class="info-box">
@@ -379,12 +379,12 @@
             <strong>Ideal:</strong> 70-80% der Sätze bei RPE 7-9 für optimalen Muskelaufbau.
         </div>
     </div>
-    
+
     <!-- Volumen-Progression -->
     {% if volumen_wochen %}
     <h2>Volumen-Progression (letzte 8 Wochen)</h2>
     <div class="info-box">
-        <strong>Periodisierung:</strong> Gesundes Training zeigt progressive Überlastung mit gelegentlichen Deload-Wochen. 
+        <strong>Periodisierung:</strong> Gesundes Training zeigt progressive Überlastung mit gelegentlichen Deload-Wochen.
         Zu schneller Anstieg = Verletzungsrisiko, zu wenig Variation = Plateau.
     </div>
     <table>
@@ -474,10 +474,10 @@
             {% endfor %}
         </tbody>
     </table>
-    
+
     <!-- Trainer-Empfehlungen -->
     <h2>Trainer-Notizen & Empfehlungen</h2>
-    
+
     <div class="info-box" style="background-color: #fff3cd; border-left-color: #ffc107;">
         <h3 style="margin-top: 0;">Stärken</h3>
         <ul style="margin: 5px 0;">
@@ -496,7 +496,7 @@
             {% endif %}
         </ul>
     </div>
-    
+
     <div class="info-box" style="background-color: #f8d7da; border-left-color: #dc3545;">
         <h3 style="margin-top: 0;">Verbesserungspotenzial</h3>
         <ul style="margin: 5px 0;">
@@ -516,7 +516,7 @@
             {% endfor %}
         </ul>
     </div>
-    
+
     <div class="info-box" style="background-color: #d1ecf1; border-left-color: #17a2b8;">
         <h3 style="margin-top: 0;">Nächste Schritte</h3>
         <ul style="margin: 5px 0;">

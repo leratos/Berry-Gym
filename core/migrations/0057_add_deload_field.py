@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0056_add_deload_params_to_profile'),
+        ("core", "0056_add_deload_params_to_profile"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='trainingseinheit',
-            name='ist_deload',
-            field=models.BooleanField(default=False, help_text='Deload-Trainings werden nicht in Statistiken (1RM, Volumen-Trends, Plateaus) eingerechnet', verbose_name='Deload-Training'),
+            model_name="trainingseinheit",
+            name="ist_deload",
+            field=models.BooleanField(
+                default=False,
+                help_text="Deload-Trainings werden nicht in Statistiken (1RM, Volumen-Trends, Plateaus) eingerechnet",
+                verbose_name="Deload-Training",
+            ),
         ),
     ]

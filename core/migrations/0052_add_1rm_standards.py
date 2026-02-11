@@ -6,28 +6,56 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0051_merge_0026_mlpredictionmodel_0050_fix_emoji_support'),
+        ("core", "0051_merge_0026_mlpredictionmodel_0050_fix_emoji_support"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='uebung',
-            name='standard_advanced',
-            field=models.DecimalField(blank=True, decimal_places=1, help_text='Erfahren-Standard in kg bei 80kg Körpergewicht', max_digits=5, null=True, verbose_name='1RM Erfahren (80kg KG)'),
+            model_name="uebung",
+            name="standard_advanced",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=1,
+                help_text="Erfahren-Standard in kg bei 80kg Körpergewicht",
+                max_digits=5,
+                null=True,
+                verbose_name="1RM Erfahren (80kg KG)",
+            ),
         ),
         migrations.AddField(
-            model_name='uebung',
-            name='standard_beginner',
-            field=models.DecimalField(blank=True, decimal_places=1, help_text='Anfänger-Standard in kg bei 80kg Körpergewicht', max_digits=5, null=True, verbose_name='1RM Anfänger (80kg KG)'),
+            model_name="uebung",
+            name="standard_beginner",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=1,
+                help_text="Anfänger-Standard in kg bei 80kg Körpergewicht",
+                max_digits=5,
+                null=True,
+                verbose_name="1RM Anfänger (80kg KG)",
+            ),
         ),
         migrations.AddField(
-            model_name='uebung',
-            name='standard_elite',
-            field=models.DecimalField(blank=True, decimal_places=1, help_text='Elite-Standard in kg bei 80kg Körpergewicht', max_digits=5, null=True, verbose_name='1RM Elite (80kg KG)'),
+            model_name="uebung",
+            name="standard_elite",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=1,
+                help_text="Elite-Standard in kg bei 80kg Körpergewicht",
+                max_digits=5,
+                null=True,
+                verbose_name="1RM Elite (80kg KG)",
+            ),
         ),
         migrations.AddField(
-            model_name='uebung',
-            name='standard_intermediate',
-            field=models.DecimalField(blank=True, decimal_places=1, help_text='Fortgeschritten-Standard in kg bei 80kg Körpergewicht', max_digits=5, null=True, verbose_name='1RM Fortgeschritten (80kg KG)'),
+            model_name="uebung",
+            name="standard_intermediate",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=1,
+                help_text="Fortgeschritten-Standard in kg bei 80kg Körpergewicht",
+                max_digits=5,
+                null=True,
+                verbose_name="1RM Fortgeschritten (80kg KG)",
+            ),
         ),
     ]

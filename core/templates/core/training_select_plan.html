@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
     <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
-    
+
     <!-- Offline Manager CSS -->
     <link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
-    
+
     <style>
         /* Beschreibung kürzen - max 2 Zeilen */
         .plan-description {
@@ -43,7 +43,7 @@
         .toggle-description:hover {
             text-decoration: underline;
         }
-        
+
         /* Gruppierte Pläne */
         .plan-group-header {
             cursor: pointer;
@@ -67,7 +67,7 @@
             font-size: 0.7rem;
         }
     </style>
-    
+
       <script src="{% static 'core/js/theme-toggle.js' %}"></script>
 </head>
   <body>
@@ -87,7 +87,7 @@
     </nav>
 
     <div class="container pt-3">
-      
+
       <!-- Option 1: Freies Training -->
       <a href="{% url 'training_start_free' %}" class="card card-stat border-primary mb-4 text-decoration-none shadow">
         <div class="card-body d-flex align-items-center p-4">
@@ -102,7 +102,7 @@
       </a>
 
       <h6 class="text-secondary ps-2 mb-3 mt-5">TRAININGSPLÄNE</h6>
-      
+
       <!-- Filter-Buttons -->
       <div class="btn-group w-100 mb-3" role="group">
         <a href="?filter=eigene" class="btn btn-outline-secondary {% if filter_type == 'eigene' %}active{% endif %}">
@@ -120,7 +120,7 @@
             <i class="bi bi-globe me-1"></i>Öffentlich
         </a>
       </div>
-      
+
       {% if filter_type == 'eigene' %}
       <div class="d-flex gap-2 mb-3">
         <a href="{% url 'create_plan' %}" class="btn btn-success flex-grow-1">
@@ -130,7 +130,7 @@
             <i class="bi bi-bullseye"></i>
         </a>
       </div>
-      
+
       <!-- Gruppierungs-Toolbar (erscheint wenn Pläne ausgewählt) -->
       <div id="grouping-toolbar" class="alert alert-info d-none mb-3">
           <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -273,8 +273,8 @@
             <!-- Andere gruppierte Pläne (Splits) -->
             {% for gruppe_key, gruppe in plan_gruppen.items %}
             <div class="card card-stat border-info shadow-sm" data-gruppe-id="{{ gruppe_key }}">
-                <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3" 
-                     data-bs-toggle="collapse" 
+                <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3"
+                     data-bs-toggle="collapse"
                      data-bs-target="#gruppe-{{ forloop.counter }}"
                      aria-expanded="true">
                     <div class="d-flex align-items-center">
@@ -294,7 +294,7 @@
                         <i class="bi bi-chevron-down chevron"></i>
                     </div>
                 </div>
-                
+
                 <div class="collapse show" id="gruppe-{{ forloop.counter }}">
                     <div class="card-body pt-2 pb-3">
                         <div class="plan-group-content" data-gruppe-id="{{ gruppe_key }}">
@@ -336,7 +336,7 @@
                             </div>
                             {% endfor %}
                         </div>
-                        
+
                         {% if filter_type == 'eigene' %}
                         <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div class="d-flex gap-2">
@@ -371,7 +371,7 @@
                 </div>
             </div>
             {% endfor %}
-            
+
             <!-- Einzelne Pläne (nicht gruppiert) -->
             {% for plan in einzelne_plaene %}
             <div class="card card-stat border-secondary text-decoration-none shadow-sm plan-card" data-plan-id="{{ plan.id }}">
@@ -400,7 +400,7 @@
                             </p>
                         </div>
                     </div>
-                    
+
                     {% if plan.beschreibung %}
                     <div class="mb-2">
                         <pre class="plan-description text-muted small" id="desc-{{ plan.id }}">{{ plan.beschreibung }}</pre>
@@ -410,7 +410,7 @@
                         </span>
                     </div>
                     {% endif %}
-                    
+
                     <div class="d-flex gap-2 flex-wrap">
                         {% if filter_type == 'eigene' %}
                             <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-primary flex-grow-1">
@@ -447,7 +447,7 @@
       {% endif %}
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Toggle Description + Collapse Logic -->
     <script>
         // Check if description needs "show more" button
@@ -461,7 +461,7 @@
                     }
                 }
             });
-            
+
             // Collapse chevron rotation
             document.querySelectorAll('.plan-group-header').forEach(function(header) {
                 const target = document.querySelector(header.dataset.bsTarget);
@@ -475,13 +475,13 @@
                 }
             });
         });
-        
+
         function toggleDescription(planId) {
             const desc = document.getElementById('desc-' + planId);
             const toggle = desc.nextElementSibling;
             const showMore = toggle.querySelector('.show-more');
             const showLess = toggle.querySelector('.show-less');
-            
+
             if (desc.classList.contains('expanded')) {
                 desc.classList.remove('expanded');
                 showMore.classList.remove('d-none');
@@ -492,13 +492,13 @@
                 showLess.classList.remove('d-none');
             }
         }
-        
+
         // Plan-Gruppierung aufheben
         function ungroupPlans(gruppeId) {
             if (!confirm('Möchtest du diese Gruppe auflösen? Die Pläne werden einzeln angezeigt.')) {
                 return;
             }
-            
+
             fetch('{% url "api_ungroup_plans" %}', {
                 method: 'POST',
                 headers: {
@@ -520,13 +520,13 @@
                 toast.error('Ein Fehler ist aufgetreten.');
             });
         }
-        
+
         // Einzelnen Plan löschen
         function deletePlan(planId, planName) {
             if (!confirm(`Plan "${planName}" wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`)) {
                 return;
             }
-            
+
             fetch('{% url "api_delete_plan" %}', {
                 method: 'POST',
                 headers: {
@@ -548,18 +548,18 @@
                 toast.error('Ein Fehler ist aufgetreten.');
             });
         }
-        
+
         // Ganze Gruppe löschen
         function deleteGroup(gruppeId, gruppeName) {
             if (!confirm(`Alle Pläne der Gruppe "${gruppeName}" wirklich löschen?\n\n⚠️ ACHTUNG: Alle Pläne dieser Gruppe werden unwiderruflich gelöscht!`)) {
                 return;
             }
-            
+
             // Doppelte Bestätigung für Gruppen-Löschung
             if (!confirm('Bist du WIRKLICH sicher? Diese Aktion kann NICHT rückgängig gemacht werden.')) {
                 return;
             }
-            
+
             fetch('{% url "api_delete_group" %}', {
                 method: 'POST',
                 headers: {
@@ -581,15 +581,15 @@
                 toast.error('Ein Fehler ist aufgetreten.');
             });
         }
-        
+
         // ========== GRUPPIERUNG ==========
-        
+
         // Toolbar aktualisieren wenn Checkboxen geändert werden
         function updateGroupingToolbar() {
             const checkboxes = document.querySelectorAll('.plan-checkbox:checked');
             const toolbar = document.getElementById('grouping-toolbar');
             const countSpan = document.getElementById('selected-count');
-            
+
             if (checkboxes.length >= 2) {
                 toolbar.classList.remove('d-none');
                 countSpan.textContent = checkboxes.length;
@@ -597,33 +597,33 @@
                 toolbar.classList.add('d-none');
             }
         }
-        
+
         // Auswahl zurücksetzen
         function clearSelection() {
             document.querySelectorAll('.plan-checkbox:checked').forEach(cb => cb.checked = false);
             updateGroupingToolbar();
         }
-        
+
         // Ausgewählte Pläne gruppieren
         function groupSelectedPlans() {
             const checkboxes = document.querySelectorAll('.plan-checkbox:checked');
             const planIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
             const gruppeName = document.getElementById('gruppe-name-input').value.trim() || 'Neue Gruppe';
-            
+
             if (planIds.length < 2) {
                 toast.warning('Bitte mindestens 2 Pläne auswählen.');
                 return;
             }
-            
+
             fetch('{% url "api_group_plans" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     plan_ids: planIds,
-                    gruppe_name: gruppeName 
+                    gruppe_name: gruppeName
                 })
             })
             .then(response => response.json())
@@ -639,29 +639,29 @@
                 toast.error('Ein Fehler ist aufgetreten.');
             });
         }
-        
+
         // ========== GRUPPE UMBENENNEN ==========
-        
+
         function renameGroup(gruppeId, currentName) {
             const newName = prompt('Neuer Gruppenname:', currentName);
-            
+
             if (newName === null || newName.trim() === '') {
                 return; // Abgebrochen oder leer
             }
-            
+
             if (newName.trim() === currentName) {
                 return; // Keine Änderung
             }
-            
+
             fetch('{% url "api_rename_group" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     gruppe_id: gruppeId,
-                    new_name: newName.trim() 
+                    new_name: newName.trim()
                 })
             })
             .then(response => response.json())
@@ -682,9 +682,9 @@
                 toast.error('Ein Fehler ist aufgetreten.');
             });
         }
-        
+
         // ========== PLÄNE IN GRUPPE SORTIEREN ==========
-        
+
         function movePlanInGroup(gruppeId, planId, direction) {
             fetch('{% url "api_reorder_group" %}', {
                 method: 'POST',
@@ -692,7 +692,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     gruppe_id: gruppeId,
                     plan_id: planId,
                     direction: direction
@@ -712,10 +712,10 @@
             });
         }
     </script>
-    
+
     <!-- Toast Notifications -->
     <script src="{% static 'core/js/toast.js' %}"></script>
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
   </body>

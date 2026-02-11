@@ -18,12 +18,12 @@ class KeyboardShortcuts {
             // ENTER - Submit active modal form (if no textarea focused)
             if (e.key === 'Enter' && !e.shiftKey) {
                 const activeElement = document.activeElement;
-                
+
                 // Skip if typing in textarea
                 if (activeElement.tagName === 'TEXTAREA') {
                     return;
                 }
-                
+
                 // Check if we're in a modal
                 const activeModal = document.querySelector('.modal.show');
                 if (activeModal) {
@@ -35,7 +35,7 @@ class KeyboardShortcuts {
             // Shortcuts nur wenn kein Input/Textarea fokussiert ist
             const activeElement = document.activeElement;
             const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElement.tagName);
-            
+
             if (isTyping) return;
 
             // S - Add Satz (nur im Training)

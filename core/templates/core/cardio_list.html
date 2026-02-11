@@ -37,7 +37,7 @@
             <i class="bi bi-plus-circle me-1"></i>Hinzufügen
         </a>
     </div>
-    
+
     <!-- Statistik-Karten -->
     <div class="row g-3 mb-4">
         <div class="col-6">
@@ -57,7 +57,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Filter -->
     <div class="mb-3">
         {% if show_all %}
@@ -70,7 +70,7 @@
             </a>
         {% endif %}
     </div>
-    
+
     <!-- Cardio-Liste -->
     {% if cardio_einheiten %}
     <div class="list-group">
@@ -110,7 +110,7 @@
             <div class="d-flex align-items-center gap-2">
                 <!-- Dauer -->
                 <span class="badge bg-primary rounded-pill">{{ cardio.dauer_minuten }} Min</span>
-                
+
                 <!-- Intensität -->
                 {% if cardio.intensitaet == 'LEICHT' %}
                     <span class="badge bg-success">Leicht</span>
@@ -119,14 +119,14 @@
                 {% else %}
                     <span class="badge bg-danger">Intensiv</span>
                 {% endif %}
-                
+
                 <!-- Ermüdungspunkte -->
                 <span class="badge bg-secondary" title="Ermüdungspunkte">
                     <i class="bi bi-battery-half"></i> {{ cardio.ermuedungs_punkte }}
                 </span>
-                
+
                 <!-- Löschen -->
-                <form method="post" action="{% url 'cardio_delete' cardio.id %}" class="d-inline" 
+                <form method="post" action="{% url 'cardio_delete' cardio.id %}" class="d-inline"
                       onsubmit="return confirm('{{ cardio.get_aktivitaet_display }} wirklich löschen?')">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -147,14 +147,14 @@
         </a>
     </div>
     {% endif %}
-    
+
     <!-- Quick Info -->
     <div class="card card-stat mt-4">
         <div class="card-body">
             <h6 class="text-muted mb-2"><i class="bi bi-info-circle me-1"></i>Info</h6>
             <p class="mb-0 small text-muted">
-                Cardio-Einheiten werden im <strong>Ermüdungs-Index</strong> berücksichtigt und helfen dem 
-                <strong>KI-Coach</strong>, dein Krafttraining besser zu planen. Leichtes Cardio fördert 
+                Cardio-Einheiten werden im <strong>Ermüdungs-Index</strong> berücksichtigt und helfen dem
+                <strong>KI-Coach</strong>, dein Krafttraining besser zu planen. Leichtes Cardio fördert
                 die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht.
             </p>
         </div>

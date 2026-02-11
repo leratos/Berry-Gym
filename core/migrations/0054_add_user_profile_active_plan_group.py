@@ -8,21 +8,41 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0053_populate_1rm_standards'),
+        ("core", "0053_populate_1rm_standards"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='UserProfile',
+            name="UserProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('active_plan_group', models.UUIDField(blank=True, help_text='Die gruppe_id der aktuell aktiven Plangruppe', null=True, verbose_name='Aktive Plan-Gruppe')),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "active_plan_group",
+                    models.UUIDField(
+                        blank=True,
+                        help_text="Die gruppe_id der aktuell aktiven Plangruppe",
+                        null=True,
+                        verbose_name="Aktive Plan-Gruppe",
+                    ),
+                ),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="profile",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Benutzerprofil',
-                'verbose_name_plural': 'Benutzerprofile',
+                "verbose_name": "Benutzerprofil",
+                "verbose_name_plural": "Benutzerprofile",
             },
         ),
     ]

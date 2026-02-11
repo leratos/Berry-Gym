@@ -1,6 +1,6 @@
 # HomeGym Gunicorn Systemd Service
 # ==================================
-# 
+#
 # Installation:
 #   1. Pfade und Umgebungsvariablen anpassen (siehe unten)
 #   2. sudo cp deployment/homegym.service /etc/systemd/system/

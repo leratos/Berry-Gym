@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0007_uebung_favoriten'),
+        ("core", "0007_uebung_favoriten"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='satz',
-            name='notiz',
-            field=models.TextField(blank=True, max_length=500, null=True, verbose_name='Notiz'),
+            model_name="satz",
+            name="notiz",
+            field=models.TextField(blank=True, max_length=500, null=True, verbose_name="Notiz"),
         ),
     ]

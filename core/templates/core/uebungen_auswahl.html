@@ -149,10 +149,10 @@
                 <i class="bi bi-diagram-3 me-2"></i>{{ gruppe }}
                 <span class="badge bg-secondary ms-2">{{ uebungen|length }}</span>
             </h4>
-            
+
             <div class="row g-3">
                 {% for uebung in uebungen %}
-                <div class="col-lg-4 col-md-6 exercise-item" 
+                <div class="col-lg-4 col-md-6 exercise-item"
                      data-name="{{ uebung.bezeichnung|lower }}"
                      data-tags="{% for tag in uebung.tags.all %}{{ tag.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
                     <a href="{% url 'exercise_detail' uebung.id %}" class="text-decoration-none">
@@ -167,14 +167,14 @@
                                         </span>
                                         {% endif %}
                                     </h5>
-                                    <button 
-                                        class="btn btn-sm btn-outline-warning border-0 favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}" 
+                                    <button
+                                        class="btn btn-sm btn-outline-warning border-0 favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}"
                                         onclick="event.preventDefault(); event.stopPropagation(); toggleFavorit({{ uebung.id }}, this);"
                                         title="{% if user in uebung.favoriten.all %}Aus Favoriten entfernen{% else %}Zu Favoriten hinzufügen{% endif %}">
                                         <i class="bi {% if user in uebung.favoriten.all %}bi-star-fill{% else %}bi-star{% endif %} text-warning"></i>
                                     </button>
                                 </div>
-                            
+
                             <!-- Muskelgruppen Visualisierung -->
                             <div class="mb-3">
                                 <h6 class="text-muted small mb-2">
@@ -186,7 +186,7 @@
                                         <i class="bi bi-star-fill"></i> {{ uebung.muskelgruppe_label }}
                                     </span>
                                 </div>
-                                
+
                                 {% if uebung.hilfsmuskeln_labels %}
                                 <div class="muscle-visual">
                                     {% for hilfs in uebung.hilfsmuskeln_labels %}
@@ -261,7 +261,7 @@
 
                         <div class="mb-3">
                             <label for="exerciseName" class="form-label">Name der Übung *</label>
-                            <input type="text" class="form-control" id="exerciseName" name="bezeichnung" required 
+                            <input type="text" class="form-control" id="exerciseName" name="bezeichnung" required
                                    placeholder="z.B. Meine Variation für Bizeps">
                         </div>
 
@@ -286,7 +286,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="hilfsmuskeln" class="form-label">Hilfsmuskelgruppen</label>
-                                <input type="text" class="form-control" id="hilfsmuskeln" name="hilfsmuskeln" 
+                                <input type="text" class="form-control" id="hilfsmuskeln" name="hilfsmuskeln"
                                        placeholder="z.B. Trizeps, Schultern (kommagetrennt)">
                                 <small class="form-text text-muted">Optional, mehrere Gruppen mit Komma trennen</small>
                             </div>
@@ -326,7 +326,7 @@
 
                         <div class="mb-3">
                             <label for="beschreibung" class="form-label">Beschreibung</label>
-                            <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3" 
+                            <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3"
                                       placeholder="Optionale Notizen zur Ausführung..."></textarea>
                         </div>
 
@@ -416,20 +416,20 @@
         // Custom Exercise Form Submission
         document.getElementById('createCustomExerciseForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const form = e.target;
             const submitBtn = document.getElementById('createCustomExerciseBtn');
             const errorDiv = document.getElementById('customExerciseError');
             const successDiv = document.getElementById('customExerciseSuccess');
-            
+
             // Hide previous messages
             errorDiv.classList.add('d-none');
             successDiv.classList.add('d-none');
-            
+
             // Disable submit button
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Erstelle...';
-            
+
             // Get form data
             const formData = new FormData(form);
             const data = {
@@ -441,7 +441,7 @@
                 beschreibung: formData.get('beschreibung') || '',
                 equipment_ids: Array.from(document.getElementById('equipment').selectedOptions).map(opt => opt.value)
             };
-            
+
             try {
                 const response = await fetch('{% url "create_custom_uebung" %}', {
                     method: 'POST',
@@ -451,21 +451,21 @@
                     },
                     body: JSON.stringify(data)
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     successDiv.textContent = result.message || 'Übung erfolgreich erstellt!';
                     successDiv.classList.remove('d-none');
-                    
+
                     // Show toast
                     if (typeof showToast === 'function') {
                         showToast('Übung erstellt', result.message, 'success');
                     }
-                    
+
                     // Reset form
                     form.reset();
-                    
+
                     // Reload page after short delay to show new exercise
                     setTimeout(() => {
                         window.location.reload();
@@ -524,7 +524,7 @@
                 try {
                     const json = JSON.parse(event.target.result);
                     const count = Array.isArray(json) ? json.length : (json.exercises ? json.exercises.length : 0);
-                    
+
                     document.getElementById('importPreview').style.display = 'block';
                     document.getElementById('importPreviewContent').innerHTML = `
                         <p class="mb-2"><strong>${count}</strong> Übungen gefunden</p>
@@ -543,7 +543,7 @@
         });
         {% endif %}
     </script>
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
 </body>

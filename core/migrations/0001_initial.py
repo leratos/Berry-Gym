@@ -9,79 +9,219 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='KoerperWerte',
+            name="KoerperWerte",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('datum', models.DateField(auto_now_add=True, verbose_name='Messdatum')),
-                ('gewicht', models.DecimalField(decimal_places=2, max_digits=5, verbose_name='Gewicht (kg)')),
-                ('koerperfett_prozent', models.DecimalField(blank=True, decimal_places=1, max_digits=4, null=True, verbose_name='KFA (%)')),
-                ('muskelmasse_kg', models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True, verbose_name='Muskelmasse (kg)')),
-                ('knochenmasse_kg', models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True, verbose_name='Knochenmasse (kg)')),
-                ('notiz', models.CharField(blank=True, max_length=200, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("datum", models.DateField(auto_now_add=True, verbose_name="Messdatum")),
+                (
+                    "gewicht",
+                    models.DecimalField(
+                        decimal_places=2, max_digits=5, verbose_name="Gewicht (kg)"
+                    ),
+                ),
+                (
+                    "koerperfett_prozent",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=1,
+                        max_digits=4,
+                        null=True,
+                        verbose_name="KFA (%)",
+                    ),
+                ),
+                (
+                    "muskelmasse_kg",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        max_digits=5,
+                        null=True,
+                        verbose_name="Muskelmasse (kg)",
+                    ),
+                ),
+                (
+                    "knochenmasse_kg",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        max_digits=5,
+                        null=True,
+                        verbose_name="Knochenmasse (kg)",
+                    ),
+                ),
+                ("notiz", models.CharField(blank=True, max_length=200, null=True)),
             ],
             options={
-                'verbose_name': 'Körperwert',
-                'verbose_name_plural': 'Körperwerte',
-                'ordering': ['-datum'],
-                'get_latest_by': 'datum',
+                "verbose_name": "Körperwert",
+                "verbose_name_plural": "Körperwerte",
+                "ordering": ["-datum"],
+                "get_latest_by": "datum",
             },
         ),
         migrations.CreateModel(
-            name='Uebung',
+            name="Uebung",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('bezeichnung', models.CharField(max_length=100, unique=True, verbose_name='Name der Übung')),
-                ('muskelgruppe', models.CharField(choices=[('BRUST', 'Brust (Pectoralis major)'), ('SCHULTER_VORN', 'Schulter - Vordere (Deltoideus pars clavicularis)'), ('SCHULTER_SEIT', 'Schulter - Seitliche (Deltoideus pars acromialis)'), ('SCHULTER_HINT', 'Schulter - Hintere (Deltoideus pars spinalis)'), ('TRIZEPS', 'Trizeps (Triceps brachii)'), ('RUECKEN_LAT', 'Rücken - Breiter Muskel (Latissimus dorsi)'), ('RUECKEN_TRAPEZ', 'Rücken - Nacken/Trapez (Trapezius)'), ('RUECKEN_UNTEN', 'Unterer Rücken (Erector spinae)'), ('BIZEPS', 'Bizeps (Biceps brachii)'), ('UNTERARME', 'Unterarme (Brachioradialis/Flexoren)'), ('BEINE_QUAD', 'Oberschenkel Vorn (Quadrizeps)'), ('BEINE_HAM', 'Oberschenkel Hinten (Hamstrings/Ischiocrurale)'), ('PO', 'Gesäß (Gluteus maximus/medius)'), ('WADEN', 'Waden (Gastrocnemius/Soleus)'), ('ADDUKTOREN', 'Oberschenkel Innen (Adduktoren)'), ('ABDUKTOREN', 'Oberschenkel Außen (Abduktoren)'), ('BAUCH', 'Bauch (Abdominals)'), ('GANZKOERPER', 'Ganzkörper / Cardio')], max_length=50, verbose_name='Hauptmuskel')),
-                ('hilfsmuskeln', models.CharField(blank=True, max_length=200, verbose_name='Hilfsmuskeln')),
-                ('gewichts_typ', models.CharField(choices=[('GESAMT', 'Gesamtgewicht (z.B. Langhantel)'), ('PRO_SEITE', 'Pro Seite/Hand (z.B. Kurzhanteln)'), ('KOERPERGEWICHT', 'Körpergewicht (+/- Zusatz)')], default='GESAMT', max_length=20, verbose_name='Gewichtsart')),
-                ('beschreibung', models.TextField(blank=True, verbose_name='Anleitung / Notizen')),
-                ('bild', models.ImageField(blank=True, null=True, upload_to='uebungen_bilder/', verbose_name='Foto/Grafik')),
-                ('video_link', models.URLField(blank=True, null=True, verbose_name='YouTube Link')),
-                ('erstellt_am', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "bezeichnung",
+                    models.CharField(max_length=100, unique=True, verbose_name="Name der Übung"),
+                ),
+                (
+                    "muskelgruppe",
+                    models.CharField(
+                        choices=[
+                            ("BRUST", "Brust (Pectoralis major)"),
+                            ("SCHULTER_VORN", "Schulter - Vordere (Deltoideus pars clavicularis)"),
+                            ("SCHULTER_SEIT", "Schulter - Seitliche (Deltoideus pars acromialis)"),
+                            ("SCHULTER_HINT", "Schulter - Hintere (Deltoideus pars spinalis)"),
+                            ("TRIZEPS", "Trizeps (Triceps brachii)"),
+                            ("RUECKEN_LAT", "Rücken - Breiter Muskel (Latissimus dorsi)"),
+                            ("RUECKEN_TRAPEZ", "Rücken - Nacken/Trapez (Trapezius)"),
+                            ("RUECKEN_UNTEN", "Unterer Rücken (Erector spinae)"),
+                            ("BIZEPS", "Bizeps (Biceps brachii)"),
+                            ("UNTERARME", "Unterarme (Brachioradialis/Flexoren)"),
+                            ("BEINE_QUAD", "Oberschenkel Vorn (Quadrizeps)"),
+                            ("BEINE_HAM", "Oberschenkel Hinten (Hamstrings/Ischiocrurale)"),
+                            ("PO", "Gesäß (Gluteus maximus/medius)"),
+                            ("WADEN", "Waden (Gastrocnemius/Soleus)"),
+                            ("ADDUKTOREN", "Oberschenkel Innen (Adduktoren)"),
+                            ("ABDUKTOREN", "Oberschenkel Außen (Abduktoren)"),
+                            ("BAUCH", "Bauch (Abdominals)"),
+                            ("GANZKOERPER", "Ganzkörper / Cardio"),
+                        ],
+                        max_length=50,
+                        verbose_name="Hauptmuskel",
+                    ),
+                ),
+                (
+                    "hilfsmuskeln",
+                    models.CharField(blank=True, max_length=200, verbose_name="Hilfsmuskeln"),
+                ),
+                (
+                    "gewichts_typ",
+                    models.CharField(
+                        choices=[
+                            ("GESAMT", "Gesamtgewicht (z.B. Langhantel)"),
+                            ("PRO_SEITE", "Pro Seite/Hand (z.B. Kurzhanteln)"),
+                            ("KOERPERGEWICHT", "Körpergewicht (+/- Zusatz)"),
+                        ],
+                        default="GESAMT",
+                        max_length=20,
+                        verbose_name="Gewichtsart",
+                    ),
+                ),
+                ("beschreibung", models.TextField(blank=True, verbose_name="Anleitung / Notizen")),
+                (
+                    "bild",
+                    models.ImageField(
+                        blank=True,
+                        null=True,
+                        upload_to="uebungen_bilder/",
+                        verbose_name="Foto/Grafik",
+                    ),
+                ),
+                ("video_link", models.URLField(blank=True, null=True, verbose_name="YouTube Link")),
+                ("erstellt_am", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'verbose_name': 'Übung',
-                'verbose_name_plural': 'Übungen',
-                'ordering': ['bezeichnung'],
+                "verbose_name": "Übung",
+                "verbose_name_plural": "Übungen",
+                "ordering": ["bezeichnung"],
             },
         ),
         migrations.CreateModel(
-            name='Trainingseinheit',
+            name="Trainingseinheit",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('datum', models.DateTimeField(auto_now_add=True)),
-                ('dauer_minuten', models.PositiveIntegerField(blank=True, null=True, verbose_name='Dauer (Min)')),
-                ('kommentar', models.TextField(blank=True, null=True, verbose_name="Wie lief's?")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("datum", models.DateTimeField(auto_now_add=True)),
+                (
+                    "dauer_minuten",
+                    models.PositiveIntegerField(blank=True, null=True, verbose_name="Dauer (Min)"),
+                ),
+                ("kommentar", models.TextField(blank=True, null=True, verbose_name="Wie lief's?")),
             ],
             options={
-                'verbose_name': 'Trainingseinheit',
-                'verbose_name_plural': 'Trainingseinheiten',
-                'ordering': ['-datum'],
-                'indexes': [models.Index(fields=['datum'], name='core_traini_datum_7e5c3b_idx')],
+                "verbose_name": "Trainingseinheit",
+                "verbose_name_plural": "Trainingseinheiten",
+                "ordering": ["-datum"],
+                "indexes": [models.Index(fields=["datum"], name="core_traini_datum_7e5c3b_idx")],
             },
         ),
         migrations.CreateModel(
-            name='Satz',
+            name="Satz",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('satz_nr', models.PositiveIntegerField(default=1, verbose_name='Satz Nr.')),
-                ('gewicht', models.DecimalField(decimal_places=2, max_digits=6, verbose_name='Gewicht (kg)')),
-                ('wiederholungen', models.PositiveIntegerField(verbose_name='Wdh.')),
-                ('ist_aufwaermsatz', models.BooleanField(default=False, verbose_name='Warmup')),
-                ('rpe', models.DecimalField(blank=True, decimal_places=1, max_digits=3, null=True, validators=[django.core.validators.MinValueValidator(1.0), django.core.validators.MaxValueValidator(10.0)], verbose_name='RPE (1-10)')),
-                ('einheit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='saetze', to='core.trainingseinheit')),
-                ('uebung', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.uebung', verbose_name='Übung')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("satz_nr", models.PositiveIntegerField(default=1, verbose_name="Satz Nr.")),
+                (
+                    "gewicht",
+                    models.DecimalField(
+                        decimal_places=2, max_digits=6, verbose_name="Gewicht (kg)"
+                    ),
+                ),
+                ("wiederholungen", models.PositiveIntegerField(verbose_name="Wdh.")),
+                ("ist_aufwaermsatz", models.BooleanField(default=False, verbose_name="Warmup")),
+                (
+                    "rpe",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=1,
+                        max_digits=3,
+                        null=True,
+                        validators=[
+                            django.core.validators.MinValueValidator(1.0),
+                            django.core.validators.MaxValueValidator(10.0),
+                        ],
+                        verbose_name="RPE (1-10)",
+                    ),
+                ),
+                (
+                    "einheit",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="saetze",
+                        to="core.trainingseinheit",
+                    ),
+                ),
+                (
+                    "uebung",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="core.uebung",
+                        verbose_name="Übung",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Satz',
-                'verbose_name_plural': 'Sätze',
-                'ordering': ['einheit', 'satz_nr'],
-                'indexes': [models.Index(fields=['uebung', 'einheit'], name='core_satz_uebung__9ecc2f_idx')],
+                "verbose_name": "Satz",
+                "verbose_name_plural": "Sätze",
+                "ordering": ["einheit", "satz_nr"],
+                "indexes": [
+                    models.Index(fields=["uebung", "einheit"], name="core_satz_uebung__9ecc2f_idx")
+                ],
             },
         ),
     ]

@@ -56,7 +56,7 @@
     </nav>
 
     <div class="container pb-5">
-      
+
       <!-- Congrats Header -->
       <div class="text-center mb-4">
         <div class="congrats-icon">🎉</div>
@@ -66,7 +66,7 @@
 
       <!-- Stats Grid -->
       <div class="row g-3 mb-4">
-        
+
         <!-- Arbeitssätze -->
         <div class="col-6">
           <div class="stat-card rounded-3 p-3 text-center">
@@ -131,15 +131,15 @@
 
         <div class="card card-stat border-secondary mb-3">
           <div class="card-body">
-            
+
             <label class="form-label text-secondary small text-uppercase mb-2">
               <i class="bi bi-clock-history"></i> Trainingsdauer
             </label>
             <div class="input-group mb-3">
-              <input 
-                type="number" 
-                name="dauer_minuten" 
-                class="form-control bg-dark text-white border-secondary" 
+              <input
+                type="number"
+                name="dauer_minuten"
+                class="form-control bg-dark text-white border-secondary"
                 value="{{ dauer_geschaetzt }}"
                 min="1"
                 max="300"
@@ -151,9 +151,9 @@
             <label class="form-label text-secondary small text-uppercase mb-2">
               <i class="bi bi-chat-left-text"></i> Wie lief's? (optional)
             </label>
-            <textarea 
-              name="kommentar" 
-              class="form-control bg-dark text-white border-secondary" 
+            <textarea
+              name="kommentar"
+              class="form-control bg-dark text-white border-secondary"
               rows="3"
               placeholder="z.B. Gutes Pump-Gefühl, Schulter etwas müde..."
             >{{ training.kommentar|default:"" }}</textarea>
@@ -173,7 +173,7 @@
       </form>
 
     </div>
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
 

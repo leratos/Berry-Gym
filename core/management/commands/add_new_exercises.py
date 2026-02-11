@@ -1,9 +1,10 @@
 from django.core.management.base import BaseCommand
+
 from core.models import Uebung
 
 
 class Command(BaseCommand):
-    help = 'Fügt neue Übungen hinzu (nur Eigengewicht/Hanteln/Bank)'
+    help = "Fügt neue Übungen hinzu (nur Eigengewicht/Hanteln/Bank)"
 
     def handle(self, *args, **options):
         neue_uebungen = [
@@ -286,8 +287,7 @@ class Command(BaseCommand):
         count = 0
         for data in neue_uebungen:
             uebung, created = Uebung.objects.get_or_create(
-                bezeichnung=data["bezeichnung"],
-                defaults=data
+                bezeichnung=data["bezeichnung"], defaults=data
             )
             if created:
                 count += 1
@@ -295,5 +295,5 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f'  {data["bezeichnung"]} (bereits vorhanden)')
 
-        self.stdout.write(self.style.SUCCESS(f'\n{count} neue Übungen hinzugefügt!'))
-        self.stdout.write(f'Gesamt: {Uebung.objects.count()} Übungen')
+        self.stdout.write(self.style.SUCCESS(f"\n{count} neue Übungen hinzugefügt!"))
+        self.stdout.write(f"Gesamt: {Uebung.objects.count()} Übungen")

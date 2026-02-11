@@ -60,14 +60,14 @@
             <h2><i class="bi bi-book text-primary me-2"></i>Öffentliche Plan-Bibliothek</h2>
             <p class="text-muted">Entdecke Trainingspläne von anderen Nutzern und kopiere sie in deine Sammlung.</p>
         </div>
-        
+
         <!-- Suchleiste -->
         <form method="GET" class="mb-4">
             <div class="input-group">
                 <span class="input-group-text bg-dark border-secondary">
                     <i class="bi bi-search text-muted"></i>
                 </span>
-                <input type="text" class="form-control bg-dark border-secondary text-white" 
+                <input type="text" class="form-control bg-dark border-secondary text-white"
                        name="q" placeholder="Suche nach Plänen..." value="{{ search_query }}">
                 <button class="btn btn-primary" type="submit">Suchen</button>
                 {% if search_query %}
@@ -77,7 +77,7 @@
                 {% endif %}
             </div>
         </form>
-        
+
         <!-- Statistik -->
         <div class="alert alert-info d-flex align-items-center mb-4">
             <i class="bi bi-info-circle me-2 fs-4"></i>
@@ -88,7 +88,7 @@
                 {% endif %}
             </div>
         </div>
-        
+
         {% if not plan_gruppen and not einzelne_plaene %}
             <div class="alert alert-secondary text-center">
                 <i class="bi bi-emoji-neutral me-2 fs-4"></i>
@@ -99,12 +99,12 @@
             </div>
         {% else %}
             <div class="d-grid gap-3">
-                
+
                 <!-- Gruppierte Pläne (Splits) -->
                 {% for gruppe_key, gruppe in plan_gruppen.items %}
                 <div class="card card-stat border-info shadow-sm">
-                    <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3" 
-                         data-bs-toggle="collapse" 
+                    <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3"
+                         data-bs-toggle="collapse"
                          data-bs-target="#gruppe-{{ forloop.counter }}"
                          aria-expanded="true">
                         <div class="d-flex align-items-center">
@@ -119,7 +119,7 @@
                             <i class="bi bi-chevron-down chevron"></i>
                         </div>
                     </div>
-                    
+
                     <div class="collapse show" id="gruppe-{{ forloop.counter }}">
                         <div class="card-body pt-2 pb-3">
                             <div class="plan-group-content">
@@ -135,7 +135,7 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                            
+
                             <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <a href="{% url 'plan_library_group' gruppe_key %}" class="btn btn-outline-info btn-sm">
                                     <i class="bi bi-eye me-1"></i>Details
@@ -154,7 +154,7 @@
                     </div>
                 </div>
                 {% endfor %}
-                
+
                 <!-- Einzelne Pläne -->
                 {% for plan in einzelne_plaene %}
                 <div class="card card-stat border-secondary shadow-sm">
@@ -170,11 +170,11 @@
                                 </p>
                             </div>
                         </div>
-                        
+
                         {% if plan.beschreibung %}
                         <p class="plan-description text-muted small mb-3">{{ plan.beschreibung }}</p>
                         {% endif %}
-                        
+
                         <div class="d-flex gap-2">
                             <a href="{% url 'plan_details' plan.id %}" class="btn btn-primary flex-grow-1">
                                 <i class="bi bi-info-circle me-1"></i>Details
@@ -194,7 +194,7 @@
                 {% endfor %}
             </div>
         {% endif %}
-        
+
         <!-- Call to Action -->
         {% if user.is_authenticated %}
         <div class="card card-stat border-primary mt-4">
@@ -208,7 +208,7 @@
         </div>
         {% endif %}
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Collapse chevron rotation
@@ -224,7 +224,7 @@
             }
         });
     </script>
-    
+
     {% include 'core/includes/global_footer.html' %}
   </body>
 </html>

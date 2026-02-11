@@ -29,7 +29,7 @@
             background: rgba(255, 255, 255, 0.1);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
-        
+
         /* Light Theme */
         [data-bs-theme="light"] body {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -50,7 +50,7 @@
             background: #f8f9fa;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        
+
         .muscle-map-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -195,7 +195,7 @@
                 document.getElementById('svgWrapper').innerHTML = svgContent;
                 const svg = document.getElementById('svgWrapper').querySelector('svg');
                 svg.id = 'muscleSvg';
-                
+
                 initializeMuscleMap();
             });
 
@@ -203,7 +203,7 @@
             // Click-Events für alle Muskelgruppen
             Object.keys(muscleMapping).forEach(group => {
                 const svgIds = muscleMapping[group];
-                
+
                 svgIds.forEach(svgId => {
                     const element = document.getElementById(svgId);
                     if (element) {
@@ -214,7 +214,7 @@
                                 if (el) el.style.fill = '#0d6efd';
                             });
                         });
-                        
+
                         element.addEventListener('mouseleave', () => {
                             if (group !== selectedGroup) {
                                 svgIds.forEach(id => {
@@ -223,7 +223,7 @@
                                 });
                             }
                         });
-                        
+
                         // Click-Event
                         element.addEventListener('click', () => {
                             window.location.href = `?muskelgruppe=${group}`;
@@ -244,7 +244,7 @@
             }
         }
     </script>
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
 </body>

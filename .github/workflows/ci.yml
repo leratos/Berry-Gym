@@ -1,0 +1,146 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, NewStruc, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libcairo2-dev \
+          pkg-config \
+          python3-dev
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Create logs directory
+      run: |
+        mkdir -p logs
+
+    - name: Run migrations
+      run: |
+        python manage.py migrate --noinput
+      env:
+        DJANGO_SETTINGS_MODULE: config.settings
+        SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci-only-not-secure' }}
+        DEBUG: 'True'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+
+    - name: Run tests with coverage
+      run: |
+        pytest --cov=core --cov=ai_coach --cov-report=xml --cov-report=html --cov-report=term-missing --ignore=core/tests/test_refactoring.py
+      env:
+        DJANGO_SETTINGS_MODULE: config.settings
+        SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci-only-not-secure' }}
+        DEBUG: 'True'
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Archive coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-${{ matrix.python-version }}
+        path: htmlcov/
+        retention-days: 30
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black==25.1.0 isort==5.13.2 flake8==7.1.1
+
+    - name: Check code formatting with Black
+      run: |
+        black --check core/ config/ ai_coach/ --exclude migrations
+
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only core/ config/ ai_coach/ --skip migrations
+
+    - name: Lint with flake8
+      run: |
+        flake8 core/ config/ ai_coach/ --count --statistics --exit-zero
+      # exit-zero means it won't fail the build, just report issues
+
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+
+    - name: Check for security vulnerabilities in dependencies
+      run: |
+        safety check --json || true
+      continue-on-error: true
+
+    - name: Run Bandit security linter
+      run: |
+        bandit -r core/ config/ ai_coach/ -f json -o bandit-report.json || true
+      continue-on-error: true
+
+    - name: Upload Bandit report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bandit-security-report
+        path: bandit-report.json
+        retention-days: 30
