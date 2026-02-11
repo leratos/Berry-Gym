@@ -2,7 +2,7 @@
 
 **Projekt:** Complete Project Restructuring & Production Preparation  
 **Startdatum:** 09.02.2026  
-**Aktueller Status:** Week 2 - Phase 2.7 Complete (37% Coverage)  
+**Aktueller Status:** Week 2 - Phase 2.8 Complete (38% Coverage)  
 **Ziel:** Production-ready application for public launch
 
 ---
@@ -24,7 +24,7 @@
 | Phase | Duration | Focus | Coverage Goal | Status |
 |-------|----------|-------|---------------|--------|
 | **Week 1** | ✅ DONE | Foundation & Safety | 30.48% | ✅ COMPLETE |
-| **Week 2** | Feb 11-17 | Testing & Views | 40% | 🔄 Phase 2.7 DONE (37%) |
+| **Week 2** | Feb 11-17 | Testing & Views | 40% | 🔄 Phase 2.8 DONE (38%) |
 | **Week 3** | Feb 18-24 | Refactoring & Quality | 50% | ⏳ Planned |
 | **Week 4** | Feb 25-Mar 3 | Performance | 60% | ⏳ Planned |
 | **Week 5-6** | Mar 4-17 | Advanced & Polish | 75% | ⏳ Planned |
@@ -113,7 +113,7 @@
 
 **Duration:** Feb 11-17, 2026  
 **Coverage Goal:** 30.48% → 40%  
-**Status:** 🔄 **IN PROGRESS** (Phase 2.5 ✅ | Phase 2.6 ✅ | Phase 2.7 ✅ COMPLETE - 37%)
+**Status:** 🔄 **IN PROGRESS** (Phase 2.5 ✅ | Phase 2.6 ✅ | Phase 2.7 ✅ | Phase 2.8 ✅ COMPLETE - 38%)
 
 ### 🎯 Week 2 Goals:
 - [ ] Coverage: 40%+ (Codecov project-wide)
@@ -221,24 +221,57 @@
 
 ---
 
-#### **Phase 2.8 - Config & Cardio Tests** ⏳ TODO
-**Time Estimate:** 1-2 days  
-**Tests to Add:** ~14 tests  
-**Coverage Impact:** 39% → ~42%
+#### **Phase 2.8 - Config & Cardio Tests** ✅ COMPLETE
+**Completed:** 2026-02-11
+**Tests Added:** 30 tests
+**Coverage Impact:** 37% → 38% (+1%)
+**Total Tests:** 247 passing, 4 skipped
 
-**Test Files:**
-- `test_config.py` - User configuration
-  - Profile settings
-  - Equipment management
-  - Notification preferences
-  - Cycle tracking settings
-  - Deload configuration
+**Test File:** `test_config_cardio.py`
 
-- `test_cardio.py` - Cardio tracking
-  - Cardio session creation
-  - Activity type selection
-  - Duration/distance tracking
-  - Integration with dashboard
+**Was getestet:**
+
+`TestStaticPages` (4 Tests):
+- `impressum` & `datenschutz` ohne Login erreichbar
+- `metriken_help` Login-Schutz + Laden
+
+`TestPwaEndpoints` (5 Tests):
+- `service_worker`, `manifest`, `favicon` antworten korrekt
+- Content-Type-Validierung (JS, JSON, PNG)
+- Robuste Tests (200 oder 404 je nach Datei-Existenz)
+
+`TestGetLastSet` (5 Tests):
+- Login-Schutz
+- Kein Satz → `success: false`
+- Satz vorhanden → Progression-Hints in Response
+- Aufwärmsätze werden ignoriert
+- User-Isolation (fremde Sätze nicht sichtbar)
+
+`TestCardioList` (6 Tests):
+- Login-Schutz, Laden
+- User-Isolation (nur eigene Einheiten)
+- Statistiken im Context (total_minuten, total_einheiten)
+- 30-Tage-Filter greift korrekt
+- `?all=1` zeigt alle Einheiten
+
+`TestCardioAdd` (6 Tests):
+- Login-Schutz, GET zeigt Formular
+- POST erstellt Einheit → 302
+- POST ohne Aktivität → kein Objekt erstellt
+- POST mit ungültiger Dauer → kein Objekt erstellt
+- POST mit Dauer=0 → kein Objekt erstellt
+
+`TestCardioDelete` (4 Tests):
+- Login-Schutz (nicht eingeloggt → kein Delete)
+- POST löscht eigene Einheit
+- Fremde Einheit → 404 (User-Isolation!)
+- GET-Request → Redirect, kein Delete
+
+**Coverage-Highlights:**
+- `cardio.py`: **96%** Coverage
+- `config.py`: **74%** Coverage
+
+**Hinweis:** `Satz` unused import entfernt (war nicht nötig da SatzFactory direkt benutzt)
 
 ---
 
@@ -982,7 +1015,7 @@ Week 2 [🔄] Testing & Views
   ├─ Phase 2.5: Export & Auth ✅ (34%, 170 tests)
   ├─ Phase 2.6: Exercise Library ✅ (35%, 197 tests)
   ├─ Phase 2.7: Exercise Management ✅ (37%, 217 tests)
-  └─ Phase 2.8: Config & Cardio
+  └─ Phase 2.8: Config & Cardio ✅ (38%, 247 tests)
   Target: 40% coverage
 
 Week 3 [⏳] Refactoring & Quality
@@ -1025,12 +1058,12 @@ Week 8 [🎯] PUBLIC LAUNCH
 **To:** Production-ready (public launch, 80%+ coverage, automated CI/CD)
 
 **Timeline:** 8 weeks (Feb 9 - Mar 25, 2026)  
-**Status:** Week 1 Complete ✅ - Week 2 In Progress 🔄 (Phase 2.5 ✅ | Phase 2.6 ✅ | Phase 2.7 ✅ DONE)
+**Status:** Week 1 Complete ✅ - Week 2 In Progress 🔄 (Phase 2.5-2.8 ✅ DONE)
 
 **Mission:** Build a professional, scalable, scientifically-sound fitness tracking application ready for public launch.
 
 ---
 
-**Last Updated:** February 11, 2026 (Phase 2.7 Complete)  
-**Version:** 2.3 (Phase 2.7 - Exercise Management Tests Complete)  
-**Next Review:** Phase 2.8 Complete or Week 2 Complete (Feb 17, 2026)
+**Last Updated:** February 11, 2026 (Phase 2.8 Complete)  
+**Version:** 2.4 (Phase 2.8 - Config & Cardio Tests Complete)  
+**Next Review:** Phase 2.9 / Week 3 Kick-off (Feb 12+, 2026)
