@@ -8,31 +8,59 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0024_uebung_video_file_uebung_video_thumbnail_and_more'),
+        ("core", "0024_uebung_video_file_uebung_video_thumbnail_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='PushSubscription',
+            name="PushSubscription",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('endpoint', models.TextField(unique=True, verbose_name='Push Endpoint')),
-                ('p256dh', models.TextField(verbose_name='P256DH Key')),
-                ('auth', models.TextField(verbose_name='Auth Secret')),
-                ('user_agent', models.CharField(blank=True, max_length=500, verbose_name='Browser/Gerät')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('last_used', models.DateTimeField(auto_now=True)),
-                ('training_reminders', models.BooleanField(default=True, verbose_name='Trainings-Erinnerungen')),
-                ('rest_day_reminders', models.BooleanField(default=True, verbose_name='Ruhetag-Benachrichtigungen')),
-                ('achievement_notifications', models.BooleanField(default=True, verbose_name='Erfolgs-Benachrichtigungen')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='push_subscriptions', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("endpoint", models.TextField(unique=True, verbose_name="Push Endpoint")),
+                ("p256dh", models.TextField(verbose_name="P256DH Key")),
+                ("auth", models.TextField(verbose_name="Auth Secret")),
+                (
+                    "user_agent",
+                    models.CharField(blank=True, max_length=500, verbose_name="Browser/Gerät"),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("last_used", models.DateTimeField(auto_now=True)),
+                (
+                    "training_reminders",
+                    models.BooleanField(default=True, verbose_name="Trainings-Erinnerungen"),
+                ),
+                (
+                    "rest_day_reminders",
+                    models.BooleanField(default=True, verbose_name="Ruhetag-Benachrichtigungen"),
+                ),
+                (
+                    "achievement_notifications",
+                    models.BooleanField(default=True, verbose_name="Erfolgs-Benachrichtigungen"),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="push_subscriptions",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Push Subscription',
-                'verbose_name_plural': 'Push Subscriptions',
-                'ordering': ['-created_at'],
-                'indexes': [models.Index(fields=['user', 'created_at'], name='core_pushsu_user_id_3483dd_idx')],
+                "verbose_name": "Push Subscription",
+                "verbose_name_plural": "Push Subscriptions",
+                "ordering": ["-created_at"],
+                "indexes": [
+                    models.Index(
+                        fields=["user", "created_at"], name="core_pushsu_user_id_3483dd_idx"
+                    )
+                ],
             },
         ),
     ]

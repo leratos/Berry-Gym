@@ -6,50 +6,50 @@
         box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
         transition: all 0.3s;
     }
-    
+
     .ai-plan-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(25, 135, 84, 0.4);
     }
-    
+
     .plan-generator-modal .modal-dialog {
         max-width: 700px;
     }
-    
+
     .cost-badge {
         background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
         padding: 0.5rem 1rem;
         border-radius: 20px;
         font-weight: bold;
     }
-    
+
     .progress-container {
         display: none;
         margin-top: 1rem;
     }
-    
+
     .progress {
         height: 30px;
         background: #1a1d20;
     }
-    
+
     .progress-bar {
         background: linear-gradient(90deg, #198754 0%, #20c997 100%);
         font-weight: bold;
         transition: width 0.5s ease;
     }
-    
+
     .step-indicator {
         margin-top: 0.5rem;
         font-size: 0.875rem;
         color: #6c757d;
     }
-    
+
     .plan-preview-content {
         max-height: 500px;
         overflow-y: auto;
     }
-    
+
     .plan-preview-content pre {
         background: #1a1d20;
         padding: 1rem;
@@ -74,7 +74,7 @@
                     <i class="bi bi-info-circle me-2"></i>
                     <small>Die KI analysiert deine letzten Trainings und erstellt einen personalisierten Plan</small>
                 </div>
-                
+
                 <!-- Form -->
                 <form id="aiPlanForm">
                     <!-- Plan-Typ -->
@@ -91,13 +91,13 @@
                         </select>
                         <div class="form-text">Wie oft trainierst du pro Woche?</div>
                     </div>
-                    
+
                     <!-- Sätze pro Session -->
                     <div class="mb-3">
                         <label for="setsPerSession" class="form-label">
                             <i class="bi bi-bar-chart"></i> Sätze pro Trainingstag: <strong id="setsValue">18</strong>
                         </label>
-                        <input type="range" class="form-range" id="setsPerSession" name="sets_per_session" 
+                        <input type="range" class="form-range" id="setsPerSession" name="sets_per_session"
                                min="12" max="24" value="18" step="2" oninput="updateSetsValue(this.value)">
                         <div class="d-flex justify-content-between">
                             <small class="text-muted">12 (Kurz)</small>
@@ -105,7 +105,7 @@
                             <small class="text-muted">24 (Lang)</small>
                         </div>
                     </div>
-                    
+
                     <!-- Analyse-Zeitraum -->
                     <div class="mb-3">
                         <label for="analysisDays" class="form-label">
@@ -117,7 +117,7 @@
                             <option value="60">Letzte 2 Monate</option>
                         </select>
                     </div>
-                    
+
                     <!-- Periodisierung -->
                     <div class="mb-3">
                         <label for="periodization" class="form-label">
@@ -130,7 +130,7 @@
                         </select>
                         <div class="form-text">12 Wochen mit Deload in Woche 4/8/12</div>
                     </div>
-                    
+
                     <!-- Zielprofil -->
                     <div class="mb-3">
                         <label for="targetProfile" class="form-label">
@@ -143,10 +143,10 @@
                         </select>
                         <div class="form-text">Bestimmt RPE- und Wiederholungs-Zonen</div>
                     </div>
-                    
+
                     <!-- Submit Button - Text je nach Modus -->
                     <button type="submit" class="btn btn-success w-100 fw-bold" id="generateBtn">
-                        <i class="bi bi-stars"></i> 
+                        <i class="bi bi-stars"></i>
                         {% if use_openrouter %}
                             Vorschau erstellen
                         {% else %}
@@ -159,7 +159,7 @@
                     </small>
                     {% endif %}
                 </form>
-                
+
                 <!-- Plan Preview Container (initially hidden) -->
                 <div id="planPreviewContainer" style="display: none;">
                     <hr class="my-4 border-secondary">
@@ -176,11 +176,11 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Progress Container (initially hidden) -->
                 <div class="progress-container" id="progressContainer">
                     <div class="progress">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
                              role="progressbar" id="progressBar" style="width: 0%">
                             0%
                         </div>
@@ -189,13 +189,13 @@
                         <i class="bi bi-hourglass-split"></i> Starte Generierung...
                     </div>
                 </div>
-                
+
                 <!-- Success Message (initially hidden) -->
                 <div class="alert alert-success border-success mt-3" id="successMessage" style="display: none;">
                     <i class="bi bi-check-circle"></i> <strong>Erfolg!</strong>
                     <p class="mb-0 mt-2" id="successText"></p>
                 </div>
-                
+
                 <!-- Error Message (initially hidden) -->
                 <div class="alert alert-danger border-danger mt-3" id="errorMessage" style="display: none;">
                     <i class="bi bi-exclamation-triangle"></i> <strong>Fehler!</strong>
@@ -226,18 +226,18 @@
         const planPreviewContent = document.getElementById('planPreviewContent');
         const confirmSaveBtn = document.getElementById('confirmSaveBtn');
         const cancelPreviewBtn = document.getElementById('cancelPreviewBtn');
-        
+
         // Bei lokalem Ollama: keine Vorschau (zu langsam für doppelte Generierung)
         const useOpenRouter = {{ use_openrouter|yesno:"true,false" }};
         const skipPreview = !useOpenRouter;  // Lokal = keine Vorschau
-        
+
         let currentPlanData = null;
-        
+
         // Update Sätze Value
         window.updateSetsValue = function(value) {
             document.getElementById('setsValue').textContent = value;
         };
-        
+
         // Cancel Preview
         cancelPreviewBtn.addEventListener('click', function() {
             planPreviewContainer.style.display = 'none';
@@ -245,23 +245,23 @@
             generateBtn.disabled = false;
             currentPlanData = null;
         });
-        
+
         // Confirm Save
         confirmSaveBtn.addEventListener('click', async function() {
             if (!currentPlanData) return;
-            
+
             confirmSaveBtn.disabled = true;
             cancelPreviewBtn.disabled = true;
             progressContainer.style.display = 'block';
             progressBar.style.width = '0%';
             progressBar.classList.add('progress-bar-animated');
             stepIndicator.innerHTML = '<i class="bi bi-hourglass-split"></i> Speichere Plan...';
-            
+
             try {
                 // Simuliere Progress
                 progressBar.style.width = '50%';
                 progressBar.textContent = '50%';
-                
+
                 // Save plan to database
                 const response = await fetch('{% url "generate_plan_api" %}', {
                     method: 'POST',
@@ -271,14 +271,14 @@
                     },
                     body: JSON.stringify(currentPlanData)
                 });
-                
+
                 const data = await response.json();
-                
+
                 progressBar.style.width = '100%';
                 progressBar.textContent = '100%';
                 progressBar.classList.remove('progress-bar-animated');
                 stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Gespeichert!';
-                
+
                 if (data.success) {
                     setTimeout(() => {
                         progressContainer.style.display = 'none';
@@ -288,7 +288,7 @@
                             <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt
                         `;
                         planPreviewContainer.style.display = 'none';
-                        
+
                         // Redirect nach 2 Sekunden
                         setTimeout(() => {
                             if (data.plan_ids && data.plan_ids.length > 0) {
@@ -313,18 +313,18 @@
                 cancelPreviewBtn.disabled = false;
             }
         });
-        
+
         // Form Submit - Generate Preview
         aiPlanForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             // Reset UI
             successMessage.style.display = 'none';
             errorMessage.style.display = 'none';
             planPreviewContainer.style.display = 'none';
             progressContainer.style.display = 'block';
             generateBtn.disabled = true;
-            
+
             // Form Data - Bei lokalem Ollama direkt speichern (keine Vorschau)
             const formData = {
                 plan_type: document.getElementById('planType').value,
@@ -334,7 +334,7 @@
                 target_profile: document.getElementById('targetProfile').value,
                 previewOnly: !skipPreview  // false bei Ollama = direkt speichern
             };
-            
+
             try {
                 // Simulated Progress Steps
                 const steps = [
@@ -343,7 +343,7 @@
                     { progress: 75, text: '✅ Validiere Übungen...' },
                     { progress: 95, text: '👁️ Bereite Vorschau vor...' }
                 ];
-                
+
                 let currentStep = 0;
                 const progressInterval = setInterval(() => {
                     if (currentStep < steps.length) {
@@ -354,7 +354,7 @@
                         currentStep++;
                     }
                 }, 1500);
-                
+
                 // API Call
                 const response = await fetch('{% url "generate_plan_api" %}', {
                     method: 'POST',
@@ -364,29 +364,29 @@
                     },
                     body: JSON.stringify(formData)
                 });
-                
+
                 clearInterval(progressInterval);
-                
+
                 const data = await response.json();
-                
+
                 if (data.success && data.preview) {
                     // Show Preview (nur bei OpenRouter)
                     progressBar.style.width = '100%';
                     progressBar.textContent = '100%';
                     progressBar.classList.remove('progress-bar-animated');
                     stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Vorschau bereit!';
-                    
+
                     setTimeout(() => {
                         progressContainer.style.display = 'none';
                         aiPlanForm.style.display = 'none';
                         planPreviewContainer.style.display = 'block';
-                        
+
                         // Cache den generierten Plan für späteres Speichern
                         currentPlanData = {
                             plan_data: data.plan_data,  // Der generierte Plan
                             saveCachedPlan: true        // Signal an API: speichere diesen Plan
                         };
-                        
+
                         renderPreview(data.plan_data);
                     }, 500);
                 } else if (data.success && skipPreview) {
@@ -395,7 +395,7 @@
                     progressBar.textContent = '100%';
                     progressBar.classList.remove('progress-bar-animated');
                     stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Gespeichert!';
-                    
+
                     setTimeout(() => {
                         progressContainer.style.display = 'none';
                         successMessage.style.display = 'block';
@@ -403,7 +403,7 @@
                             ${data.message || 'Plan erfolgreich erstellt!'}<br>
                             <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt
                         `;
-                        
+
                         // Redirect nach 2 Sekunden
                         setTimeout(() => {
                             if (data.plan_ids && data.plan_ids.length > 0) {
@@ -428,18 +428,18 @@
                 generateBtn.disabled = false;
             }
         });
-        
+
         // Render Preview
         function renderPreview(planData) {
             if (!planData || !planData.sessions) {
                 planPreviewContent.innerHTML = '<p class="text-muted">Keine Daten verfügbar</p>';
                 return;
             }
-            
+
             let html = `<div class="alert alert-info mb-3">
                 <strong>${planData.plan_name || 'Trainingsplan'}</strong>
             </div>`;
-            
+
             // Beschreibung mit Periodisierung
             if (planData.beschreibung) {
                 html += `<div class="card bg-dark border-secondary mb-3">
@@ -449,7 +449,7 @@
                     </div>
                 </div>`;
             }
-            
+
             // Sessions
             planData.sessions.forEach((session, idx) => {
                 html += `<div class="card bg-dark border-secondary mb-3">
@@ -458,24 +458,24 @@
                     </div>
                     <div class="card-body">
                         <ul class="list-unstyled mb-0">`;
-                
+
                 session.exercises.forEach(ex => {
                     const restInfo = ex.rest_seconds ? `<span class="badge bg-warning text-dark ms-2"><i class="bi bi-stopwatch"></i> ${ex.rest_seconds}s</span>` : '';
                     html += `<li class="mb-2">
                         <i class="bi bi-check-circle text-success"></i>
-                        <strong>${ex.exercise_name}</strong> - 
-                        ${ex.sets} Sätze × ${ex.reps} Wdh 
+                        <strong>${ex.exercise_name}</strong> -
+                        ${ex.sets} Sätze × ${ex.reps} Wdh
                         ${ex.rpe_target ? `@ RPE ${ex.rpe_target}` : ''}
                         ${restInfo}
                         ${ex.notes ? `<br><small class="text-muted ms-4">${ex.notes}</small>` : ''}
                     </li>`;
                 });
-                
+
                 html += `</ul>
                     </div>
                 </div>`;
             });
-            
+
             planPreviewContent.innerHTML = html;
         }
     })();

@@ -21,12 +21,12 @@ function getCookie(name) {
 function toggleFavorit(uebungId, buttonElement) {
     const csrftoken = getCookie('csrftoken');
     const icon = buttonElement.querySelector('i');
-    
+
     // Optimistic UI: Icon sofort aktualisieren
     const wasFavorit = icon.classList.contains('bi-star-fill');
     icon.classList.toggle('bi-star-fill');
     icon.classList.toggle('bi-star');
-    
+
     fetch(`/uebung/${uebungId}/toggle-favorit/`, {
         method: 'POST',
         headers: {
@@ -45,7 +45,7 @@ function toggleFavorit(uebungId, buttonElement) {
                 toast.info(data.message);
             }
         }
-        
+
         // Sicherstellen dass Icon mit Server-Status synchron ist
         if (data.is_favorit) {
             icon.classList.remove('bi-star');
@@ -56,9 +56,9 @@ function toggleFavorit(uebungId, buttonElement) {
             icon.classList.add('bi-star');
             buttonElement.classList.remove('active');
         }
-        
+
         // Event für Filter-Update (falls Favoriten-Filter aktiv)
-        const filterEvent = new CustomEvent('favoritChanged', { 
+        const filterEvent = new CustomEvent('favoritChanged', {
             detail: { uebungId, isFavorit: data.is_favorit }
         });
         document.dispatchEvent(filterEvent);
@@ -68,7 +68,7 @@ function toggleFavorit(uebungId, buttonElement) {
         // Bei Fehler Icon zurücksetzen
         icon.classList.toggle('bi-star-fill');
         icon.classList.toggle('bi-star');
-        
+
         if (typeof toast !== 'undefined') {
             toast.error('Fehler beim Aktualisieren der Favoriten');
         }
@@ -79,24 +79,24 @@ function toggleFavorit(uebungId, buttonElement) {
 function setupFavoritenFilter() {
     const filterCheckbox = document.getElementById('favoritenFilter');
     if (!filterCheckbox) return;
-    
+
     filterCheckbox.addEventListener('change', function() {
         const showOnlyFavorites = this.checked;
         const exerciseCards = document.querySelectorAll('.exercise-item');
-        
+
         exerciseCards.forEach(card => {
             const favButton = card.querySelector('.favorit-btn');
             if (!favButton) return;
-            
+
             const isFavorit = favButton.querySelector('i').classList.contains('bi-star-fill');
-            
+
             if (showOnlyFavorites && !isFavorit) {
                 card.style.display = 'none';
             } else {
                 card.style.display = '';
             }
         });
-        
+
         // Muskelgruppen-Sektionen ohne sichtbare Übungen ausblenden
         document.querySelectorAll('.muscle-group-section').forEach(section => {
             const visibleCards = section.querySelectorAll('.exercise-item:not([style*="display: none"])');

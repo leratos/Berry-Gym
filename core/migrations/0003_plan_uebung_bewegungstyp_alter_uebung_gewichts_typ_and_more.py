@@ -7,47 +7,100 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0002_koerperwerte_fettmasse_kg_koerperwerte_groesse_cm_and_more'),
+        ("core", "0002_koerperwerte_fettmasse_kg_koerperwerte_groesse_cm_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Plan',
+            name="Plan",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, verbose_name='Name des Plans')),
-                ('beschreibung', models.TextField(blank=True, verbose_name='Beschreibung')),
-                ('erstellt_am', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, verbose_name="Name des Plans")),
+                ("beschreibung", models.TextField(blank=True, verbose_name="Beschreibung")),
+                ("erstellt_am", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'verbose_name': 'Trainingsplan',
-                'verbose_name_plural': 'Trainingspläne',
+                "verbose_name": "Trainingsplan",
+                "verbose_name_plural": "Trainingspläne",
             },
         ),
         migrations.AddField(
-            model_name='uebung',
-            name='bewegungstyp',
-            field=models.CharField(choices=[('DRUECKEN', 'Drücken (Push)'), ('ZIEHEN', 'Ziehen (Pull)'), ('BEUGEN', 'Beugen (Squat-Pattern)'), ('HEBEN', 'Heben (Hinge-Pattern)'), ('ISOLATION', 'Isolation / Sonstiges')], default='ISOLATION', max_length=20, verbose_name='Bewegungsmuster'),
+            model_name="uebung",
+            name="bewegungstyp",
+            field=models.CharField(
+                choices=[
+                    ("DRUECKEN", "Drücken (Push)"),
+                    ("ZIEHEN", "Ziehen (Pull)"),
+                    ("BEUGEN", "Beugen (Squat-Pattern)"),
+                    ("HEBEN", "Heben (Hinge-Pattern)"),
+                    ("ISOLATION", "Isolation / Sonstiges"),
+                ],
+                default="ISOLATION",
+                max_length=20,
+                verbose_name="Bewegungsmuster",
+            ),
         ),
         migrations.AlterField(
-            model_name='uebung',
-            name='gewichts_typ',
-            field=models.CharField(choices=[('GESAMT', 'Gesamtgewicht (z.B. Langhantel)'), ('PRO_SEITE', 'Pro Seite/Hand (z.B. Kurzhanteln)'), ('KOERPERGEWICHT', 'Körpergewicht (+/- Zusatz)'), ('ZEIT', 'Zeit / Dauer (Sekunden)')], default='GESAMT', max_length=20, verbose_name='Gewichtsart'),
+            model_name="uebung",
+            name="gewichts_typ",
+            field=models.CharField(
+                choices=[
+                    ("GESAMT", "Gesamtgewicht (z.B. Langhantel)"),
+                    ("PRO_SEITE", "Pro Seite/Hand (z.B. Kurzhanteln)"),
+                    ("KOERPERGEWICHT", "Körpergewicht (+/- Zusatz)"),
+                    ("ZEIT", "Zeit / Dauer (Sekunden)"),
+                ],
+                default="GESAMT",
+                max_length=20,
+                verbose_name="Gewichtsart",
+            ),
         ),
         migrations.CreateModel(
-            name='PlanUebung',
+            name="PlanUebung",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('reihenfolge', models.PositiveIntegerField(default=1, verbose_name='Reihenfolge')),
-                ('saetze_ziel', models.PositiveIntegerField(default=3, verbose_name='Geplante Sätze')),
-                ('wiederholungen_ziel', models.CharField(blank=True, max_length=50, verbose_name='Ziel-Wdh (z.B. 8-12)')),
-                ('plan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='uebungen', to='core.plan')),
-                ('uebung', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.uebung', verbose_name='Übung')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("reihenfolge", models.PositiveIntegerField(default=1, verbose_name="Reihenfolge")),
+                (
+                    "saetze_ziel",
+                    models.PositiveIntegerField(default=3, verbose_name="Geplante Sätze"),
+                ),
+                (
+                    "wiederholungen_ziel",
+                    models.CharField(
+                        blank=True, max_length=50, verbose_name="Ziel-Wdh (z.B. 8-12)"
+                    ),
+                ),
+                (
+                    "plan",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="uebungen",
+                        to="core.plan",
+                    ),
+                ),
+                (
+                    "uebung",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="core.uebung",
+                        verbose_name="Übung",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Plan-Übung',
-                'verbose_name_plural': 'Plan-Übungen',
-                'ordering': ['reihenfolge'],
+                "verbose_name": "Plan-Übung",
+                "verbose_name_plural": "Plan-Übungen",
+                "ordering": ["reihenfolge"],
             },
         ),
     ]

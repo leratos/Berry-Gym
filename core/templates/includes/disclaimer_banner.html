@@ -1,0 +1,151 @@
+{% comment %}
+Scientific Disclaimer Banner Component.
+
+Displays active disclaimers based on:
+- Current URL path (via context processor)
+- Disclaimer category (1RM_STANDARDS, FATIGUE_INDEX, etc.)
+- Severity level (INFO, WARNING, CRITICAL)
+
+Usage:
+    {% include 'includes/disclaimer_banner.html' %}
+
+Requires: core.context_processors.disclaimers in settings.py
+{% endcomment %}
+
+{% if active_disclaimers %}
+<div class="disclaimer-container">
+    {% for disclaimer in active_disclaimers %}
+    <div class="disclaimer disclaimer-{{ disclaimer.severity|lower }}"
+         data-category="{{ disclaimer.category }}">
+        <div class="disclaimer-header">
+            <span class="disclaimer-icon">
+                {% if disclaimer.severity == 'CRITICAL' %}⚠️
+                {% elif disclaimer.severity == 'WARNING' %}⚠️
+                {% else %}ℹ️{% endif %}
+            </span>
+            <h4 class="disclaimer-title">{{ disclaimer.title }}</h4>
+        </div>
+
+        <div class="disclaimer-body">
+            {{ disclaimer.message|safe }}
+        </div>
+
+        {% if disclaimer.severity == 'CRITICAL' %}
+        <div class="disclaimer-actions">
+            <button class="btn btn-sm btn-primary disclaimer-acknowledge"
+                    data-disclaimer-id="{{ disclaimer.id }}">
+                Verstanden
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+.disclaimer-container {
+    margin: 1rem 0;
+}
+
+.disclaimer {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid;
+}
+
+.disclaimer-info {
+    background-color: #e3f2fd;
+    border-left-color: #2196F3;
+    color: #1565c0;
+}
+
+.disclaimer-warning {
+    background-color: #fff3e0;
+    border-left-color: #ff9800;
+    color: #e65100;
+}
+
+.disclaimer-critical {
+    background-color: #ffebee;
+    border-left-color: #f44336;
+    color: #c62828;
+}
+
+/* Dark Mode Support (Bootstrap Dark Mode) */
+[data-bs-theme="dark"] .disclaimer-info {
+    background-color: #1a2a3a;
+    border-left-color: #42a5f5;
+    color: #90caf9;
+}
+
+[data-bs-theme="dark"] .disclaimer-warning {
+    background-color: #2d2416;
+    border-left-color: #ffa726;
+    color: #ffcc80;
+}
+
+[data-bs-theme="dark"] .disclaimer-critical {
+    background-color: #3d1a1a;
+    border-left-color: #ef5350;
+    color: #ef9a9a;
+}
+
+.disclaimer-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.disclaimer-icon {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+}
+
+.disclaimer-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: inherit;
+}
+
+.disclaimer-body {
+    line-height: 1.6;
+    color: inherit;
+}
+
+.disclaimer-body p {
+    margin-bottom: 0.5rem;
+}
+
+.disclaimer-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Acknowledge critical disclaimers
+    document.querySelectorAll('.disclaimer-acknowledge').forEach(button => {
+        button.addEventListener('click', function() {
+            const disclaimerId = this.dataset.disclaimerId;
+            const disclaimer = this.closest('.disclaimer');
+
+            localStorage.setItem(`disclaimer_${disclaimerId}_acknowledged`, 'true');
+            disclaimer.style.display = 'none';
+        });
+    });
+
+    // Hide already acknowledged disclaimers
+    document.querySelectorAll('.disclaimer').forEach(disclaimer => {
+        const disclaimerId = disclaimer.querySelector('.disclaimer-acknowledge')?.dataset.disclaimerId;
+
+        if (disclaimerId && localStorage.getItem(`disclaimer_${disclaimerId}_acknowledged`) === 'true') {
+            disclaimer.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endif %}

@@ -8,33 +8,104 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0025_pushsubscription'),
+        ("core", "0025_pushsubscription"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='MLPredictionModel',
+            name="MLPredictionModel",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('model_type', models.CharField(choices=[('STRENGTH', 'Kraftvorhersage'), ('VOLUME', 'Volumenempfehlung'), ('FREQUENCY', 'Trainingsfrequenz')], default='STRENGTH', max_length=20)),
-                ('status', models.CharField(choices=[('TRAINING', 'In Training'), ('READY', 'Einsatzbereit'), ('OUTDATED', 'Veraltet'), ('ERROR', 'Fehler')], default='TRAINING', max_length=20)),
-                ('model_path', models.CharField(max_length=500, verbose_name='Model File Path')),
-                ('trained_at', models.DateTimeField(auto_now=True, verbose_name='Letztes Training')),
-                ('training_samples', models.IntegerField(default=0, verbose_name='Anzahl Trainingsdaten')),
-                ('accuracy_score', models.FloatField(blank=True, null=True, verbose_name='R² Score')),
-                ('mean_absolute_error', models.FloatField(blank=True, null=True, verbose_name='MAE')),
-                ('hyperparameters', models.JSONField(blank=True, default=dict, verbose_name='ML Hyperparameter')),
-                ('feature_stats', models.JSONField(blank=True, default=dict, verbose_name='Feature-Statistiken')),
-                ('uebung', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='ml_models', to='core.uebung', verbose_name='Übung (für Kraftvorhersage)')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ml_models', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "model_type",
+                    models.CharField(
+                        choices=[
+                            ("STRENGTH", "Kraftvorhersage"),
+                            ("VOLUME", "Volumenempfehlung"),
+                            ("FREQUENCY", "Trainingsfrequenz"),
+                        ],
+                        default="STRENGTH",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("TRAINING", "In Training"),
+                            ("READY", "Einsatzbereit"),
+                            ("OUTDATED", "Veraltet"),
+                            ("ERROR", "Fehler"),
+                        ],
+                        default="TRAINING",
+                        max_length=20,
+                    ),
+                ),
+                ("model_path", models.CharField(max_length=500, verbose_name="Model File Path")),
+                (
+                    "trained_at",
+                    models.DateTimeField(auto_now=True, verbose_name="Letztes Training"),
+                ),
+                (
+                    "training_samples",
+                    models.IntegerField(default=0, verbose_name="Anzahl Trainingsdaten"),
+                ),
+                (
+                    "accuracy_score",
+                    models.FloatField(blank=True, null=True, verbose_name="R² Score"),
+                ),
+                (
+                    "mean_absolute_error",
+                    models.FloatField(blank=True, null=True, verbose_name="MAE"),
+                ),
+                (
+                    "hyperparameters",
+                    models.JSONField(blank=True, default=dict, verbose_name="ML Hyperparameter"),
+                ),
+                (
+                    "feature_stats",
+                    models.JSONField(blank=True, default=dict, verbose_name="Feature-Statistiken"),
+                ),
+                (
+                    "uebung",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ml_models",
+                        to="core.uebung",
+                        verbose_name="Übung (für Kraftvorhersage)",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ml_models",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'ML Prediction Model',
-                'verbose_name_plural': 'ML Prediction Models',
-                'ordering': ['-trained_at'],
-                'indexes': [models.Index(fields=['user', 'model_type', 'status'], name='core_mlpred_user_id_9ba2be_idx'), models.Index(fields=['user', 'uebung', 'status'], name='core_mlpred_user_id_68525e_idx')],
-                'unique_together': {('user', 'model_type', 'uebung')},
+                "verbose_name": "ML Prediction Model",
+                "verbose_name_plural": "ML Prediction Models",
+                "ordering": ["-trained_at"],
+                "indexes": [
+                    models.Index(
+                        fields=["user", "model_type", "status"],
+                        name="core_mlpred_user_id_9ba2be_idx",
+                    ),
+                    models.Index(
+                        fields=["user", "uebung", "status"], name="core_mlpred_user_id_68525e_idx"
+                    ),
+                ],
+                "unique_together": {("user", "model_type", "uebung")},
             },
         ),
     ]

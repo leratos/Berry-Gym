@@ -92,7 +92,7 @@
                         <h5 class="card-title">
                             <i class="bi bi-list-check me-2"></i>Übungen auswählen
                         </h5>
-                        
+
                         <!-- Filter -->
                         <div class="mb-3">
                             <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
@@ -107,7 +107,7 @@
                             <div class="row g-2">
                                 {% for uebung in uebungen %}
                                 <div class="col-md-6 exercise-item" data-name="{{ uebung.bezeichnung|lower }}">
-                                    <div class="card exercise-card bg-black border-secondary h-100 {% if uebung.in_plan %}selected{% endif %}" 
+                                    <div class="card exercise-card bg-black border-secondary h-100 {% if uebung.in_plan %}selected{% endif %}"
                                          data-id="{{ uebung.id }}"
                                          data-name="{{ uebung.bezeichnung }}"
                                          data-muscle="{{ uebung.muskelgruppe_label }}"
@@ -163,26 +163,26 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="card card-stat border-secondary mb-3">
                         <div class="card-body">
                             <h5 class="card-title">
                                 <i class="bi bi-pencil-square me-2"></i>Plan bearbeiten
                             </h5>
-                            
+
                             <form method="post" id="planForm">
                                 {% csrf_token %}
-                                
+
                                 <div class="mb-3">
                                     <label class="form-label">Name des Plans *</label>
                                     <input type="text" name="name" class="form-control" value="{{ plan.name }}" required>
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label class="form-label">Beschreibung</label>
                                     <textarea name="beschreibung" class="form-control" rows="2">{{ plan.beschreibung }}</textarea>
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" name="is_public" id="isPublicCheck" {% if plan.is_public %}checked{% endif %}>
@@ -198,9 +198,9 @@
                                 <h6 class="text-secondary mb-3">
                                     Ausgewählte Übungen (<span id="selectedCount">0</span>)
                                 </h6>
-                                
+
                                 <div id="recommendationWarnings"></div>
-                                
+
                                 <div id="selectedExercises" class="exercise-order"></div>
 
                                 <button type="submit" class="btn btn-success w-100 mb-2" id="submitBtn">
@@ -270,29 +270,29 @@
         function analyzeBalance() {
             const muscleGroups = {};
             const warnings = [];
-            
+
             selectedExercises.forEach(ex => {
                 const card = document.querySelector(`.exercise-card[data-id="${ex.id}"]`);
                 const muscle = card.dataset.muscle;
                 const pattern = card.dataset.pattern;
-                
+
                 if (!muscleGroups[muscle]) {
                     muscleGroups[muscle] = new Set();
                 }
                 muscleGroups[muscle].add(pattern);
             });
-            
+
             Object.keys(muscleGroups).forEach(muscle => {
                 const patterns = muscleGroups[muscle];
                 const muscleKey = Object.keys(muscleRecommendations).find(key => {
                     const rec = muscleRecommendations[key];
                     return rec.name === muscle;
                 });
-                
+
                 if (muscleKey && muscleRecommendations[muscleKey]) {
                     const rec = muscleRecommendations[muscleKey];
                     const hasAllPatterns = rec.patterns.every(p => patterns.has(p));
-                    
+
                     if (!hasAllPatterns) {
                         warnings.push({
                             muscle: rec.name,
@@ -301,27 +301,27 @@
                     }
                 }
             });
-            
+
             displayWarnings(warnings);
         }
 
         function displayWarnings(warnings) {
             const container = document.getElementById('recommendationWarnings');
             if (!container) return;
-            
+
             if (warnings.length === 0) {
                 container.innerHTML = '';
                 container.style.display = 'none';
                 return;
             }
-            
+
             container.style.display = 'block';
             let html = '<div class="alert alert-info border-info mb-3"><h6 class="mb-2"><i class="bi bi-lightbulb me-2"></i>Empfehlungen</h6>';
-            
+
             warnings.forEach(w => {
                 html += `<div class="small mb-2"><strong>${w.muscle}:</strong> ${w.message}</div>`;
             });
-            
+
             html += '</div>';
             container.innerHTML = html;
         }
@@ -338,15 +338,15 @@
                 const saetze = card.dataset.saetze || 3;
                 const wdh = card.dataset.wdh || '8-12';
                 const supersetGroup = parseInt(card.dataset.superset) || 0;
-                
+
                 planExercises.push({
                     id, name, muscle, reihenfolge, saetze, wdh, supersetGroup
                 });
             });
-            
+
             // Sortiere nach Reihenfolge
             planExercises.sort((a, b) => a.reihenfolge - b.reihenfolge);
-            
+
             // Füge zu selectedExercises hinzu
             selectedExercises = planExercises.map(ex => ({
                 id: ex.id,
@@ -356,7 +356,7 @@
                 wdh: ex.wdh,
                 supersetGroup: ex.supersetGroup
             }));
-            
+
             updateSelectedList();
             analyzeBalance();
         });
@@ -410,7 +410,7 @@
                 updateSelectedList();
             }
         }
-        
+
         function setSupersetGroup(id, group) {
             const exercise = selectedExercises.find(e => e.id == id);
             if (exercise) {
@@ -418,7 +418,7 @@
                 updateSelectedList();
             }
         }
-        
+
         function updateExerciseData(id, field, value) {
             const exercise = selectedExercises.find(e => e.id == id);
             if (exercise) {
@@ -448,7 +448,7 @@
             selectedExercises.forEach((ex, idx) => {
                 const supersetClass = ex.supersetGroup > 0 ? `superset-group-${ex.supersetGroup}` : '';
                 const supersetBadge = ex.supersetGroup > 0 ? `<span class="badge bg-warning text-dark superset-badge ms-1">S${ex.supersetGroup}</span>` : '';
-                
+
                 html += `
                     <div class="card bg-black border-secondary mb-2 ${supersetClass}">
                         <div class="card-body p-2">
@@ -462,12 +462,12 @@
                                     <input type="hidden" name="superset_gruppe_${ex.id}" value="${ex.supersetGroup}">
                                     <div class="row g-2 mt-1">
                                         <div class="col-6">
-                                            <input type="number" name="saetze_${ex.id}" class="form-control form-control-sm" 
+                                            <input type="number" name="saetze_${ex.id}" class="form-control form-control-sm"
                                                    placeholder="Sätze" value="${ex.saetze || 3}" min="1" max="10"
                                                    onchange="updateExerciseData(${ex.id}, 'saetze', this.value)">
                                         </div>
                                         <div class="col-6">
-                                            <input type="text" name="wdh_${ex.id}" class="form-control form-control-sm" 
+                                            <input type="text" name="wdh_${ex.id}" class="form-control form-control-sm"
                                                    placeholder="Wdh." value="${ex.wdh || '8-12'}"
                                                    onchange="updateExerciseData(${ex.id}, 'wdh', this.value)">
                                         </div>
@@ -475,27 +475,27 @@
                                     <div class="mt-2">
                                         <label class="text-muted small">Superset:</label>
                                         <div class="btn-group btn-group-sm w-100" role="group">
-                                            <button type="button" class="btn ${ex.supersetGroup === 0 ? 'btn-secondary' : 'btn-outline-secondary'}" 
+                                            <button type="button" class="btn ${ex.supersetGroup === 0 ? 'btn-secondary' : 'btn-outline-secondary'}"
                                                     onclick="setSupersetGroup(${ex.id}, 0)">Keine</button>
-                                            <button type="button" class="btn ${ex.supersetGroup === 1 ? 'btn-warning' : 'btn-outline-warning'}" 
+                                            <button type="button" class="btn ${ex.supersetGroup === 1 ? 'btn-warning' : 'btn-outline-warning'}"
                                                     onclick="setSupersetGroup(${ex.id}, 1)">S1</button>
-                                            <button type="button" class="btn ${ex.supersetGroup === 2 ? 'btn-info' : 'btn-outline-info'}" 
+                                            <button type="button" class="btn ${ex.supersetGroup === 2 ? 'btn-info' : 'btn-outline-info'}"
                                                     onclick="setSupersetGroup(${ex.id}, 2)">S2</button>
-                                            <button type="button" class="btn ${ex.supersetGroup === 3 ? 'btn-danger' : 'btn-outline-danger'}" 
+                                            <button type="button" class="btn ${ex.supersetGroup === 3 ? 'btn-danger' : 'btn-outline-danger'}"
                                                     onclick="setSupersetGroup(${ex.id}, 3)">S3</button>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="btn-group-vertical ms-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
                                             onclick="moveUp('${ex.id}')" ${idx === 0 ? 'disabled' : ''}>
                                         <i class="bi bi-arrow-up"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
                                             onclick="moveDown('${ex.id}')" ${idx === selectedExercises.length - 1 ? 'disabled' : ''}>
                                         <i class="bi bi-arrow-down"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
                                             onclick="removeExercise('${ex.id}')">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
@@ -516,15 +516,15 @@
                 item.style.display = name.includes(search) ? 'block' : 'none';
             });
         });
-        
+
         // Performance-Analyse beim Laden
         loadPerformanceWarnings();
-        
+
         function loadPerformanceWarnings() {
             const planId = {{ plan.id }};
             const card = document.getElementById('performanceWarningsCard');
             const requestId = loadingManager.startOverlay(card);
-            
+
             fetch(`/api/analyze-plan/?plan_id=${planId}&days=30`)
                 .then(res => res.json())
                 .then(data => {
@@ -536,10 +536,10 @@
                 .catch(err => console.error('Fehler beim Laden der Warnungen:', err))
                 .finally(() => loadingManager.stopOverlay(card, requestId));
         }
-        
+
         function displayWarnings(warnings) {
             const container = document.getElementById('performanceWarnings');
-            
+
             // Nur top 3 kritischste Warnungen anzeigen
             const topWarnings = warnings
                 .sort((a, b) => {
@@ -547,28 +547,28 @@
                     return (severityOrder[a.severity] || 99) - (severityOrder[b.severity] || 99);
                 })
                 .slice(0, 3);
-            
+
             let html = '<ul class="mb-0 ps-3">';
             topWarnings.forEach(w => {
                 const icon = w.severity === 'warning' ? 'exclamation-circle' : 'info-circle';
                 html += `<li class="mb-1"><i class="bi bi-${icon} me-1"></i>${w.message}</li>`;
             });
             html += '</ul>';
-            
+
             if (warnings.length > 3) {
                 html += `<p class="text-muted small mb-0 mt-2">+ ${warnings.length - 3} weitere Hinweise</p>`;
             }
-            
+
             container.innerHTML = html;
         }
-        
+
         function startOptimization() {
             const planId = {{ plan.id }};
             const btn = event.target;
-            
+
             // Loading State mit LoadingManager
             const requestId = loadingManager.startButtonWithText(btn, 'KI analysiert...');
-            
+
             fetch('/api/optimize-plan/', {
                 method: 'POST',
                 headers: {
@@ -595,14 +595,14 @@
             })
             .finally(() => loadingManager.stopButton(btn, requestId));
         }
-        
+
         function showOptimizationModal(optimizations, cost, model) {
             // Modal-Funktion ist jetzt in plan_optimization_modal.html definiert
             currentOptimizations = optimizations;
             selectedOptimizations.clear();
-            
+
             document.getElementById('optimizationModel').textContent = `Model: ${model}`;
-            
+
             if (optimizations.length === 0) {
                 document.getElementById('optimizationsList').style.display = 'none';
                 document.getElementById('noOptimizations').style.display = 'block';
@@ -611,17 +611,16 @@
                 document.getElementById('noOptimizations').style.display = 'none';
                 renderOptimizations(optimizations);
             }
-            
+
             const modal = new bootstrap.Modal(document.getElementById('optimizationModal'));
             modal.show();
         }
     </script>
-    
+
     <!-- Plan Optimization Modal -->
     {% include 'core/plan_optimization_modal.html' %}
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
 </body>
 </html>
-

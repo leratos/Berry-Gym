@@ -14,7 +14,7 @@ class LoadingManager {
      */
     injectCSS() {
         if (document.getElementById('loading-manager-styles')) return;
-        
+
         const style = document.createElement('style');
         style.id = 'loading-manager-styles';
         style.textContent = `
@@ -27,23 +27,23 @@ class LoadingManager {
                 border-top-color: #fff;
                 animation: spin 1s ease-in-out infinite;
             }
-            
+
             .loading-spinner-sm {
                 width: 16px;
                 height: 16px;
                 border-width: 2px;
             }
-            
+
             .loading-spinner-lg {
                 width: 32px;
                 height: 32px;
                 border-width: 4px;
             }
-            
+
             @keyframes spin {
                 to { transform: rotate(360deg); }
             }
-            
+
             .loading-overlay {
                 position: absolute;
                 top: 0;
@@ -57,7 +57,7 @@ class LoadingManager {
                 border-radius: inherit;
                 z-index: 1000;
             }
-            
+
             .loading-overlay-spinner {
                 width: 40px;
                 height: 40px;
@@ -66,17 +66,17 @@ class LoadingManager {
                 border-top-color: #0dcaf0;
                 animation: spin 1s ease-in-out infinite;
             }
-            
+
             .btn-loading {
                 position: relative;
                 pointer-events: none;
                 opacity: 0.7;
             }
-            
+
             .btn-loading .btn-text {
                 visibility: hidden;
             }
-            
+
             .btn-loading::after {
                 content: "";
                 position: absolute;
@@ -102,16 +102,16 @@ class LoadingManager {
      */
     startButton(button, requestId = Date.now().toString()) {
         if (!button) return;
-        
+
         this.activeRequests.add(requestId);
         button.disabled = true;
         button.classList.add('btn-loading');
-        
+
         // Original-Text speichern
         if (!button.dataset.originalText) {
             button.dataset.originalText = button.innerHTML;
         }
-        
+
         return requestId;
     }
 
@@ -122,11 +122,11 @@ class LoadingManager {
      */
     stopButton(button, requestId) {
         if (!button) return;
-        
+
         this.activeRequests.delete(requestId);
         button.disabled = false;
         button.classList.remove('btn-loading');
-        
+
         // Original-Text wiederherstellen
         if (button.dataset.originalText) {
             button.innerHTML = button.dataset.originalText;
@@ -141,23 +141,23 @@ class LoadingManager {
      */
     startOverlay(element, requestId = Date.now().toString()) {
         if (!element) return requestId;
-        
+
         this.activeRequests.add(requestId);
-        
+
         // Relative Positionierung für Overlay
         const originalPosition = window.getComputedStyle(element).position;
         if (originalPosition === 'static') {
             element.style.position = 'relative';
             element.dataset.originalPosition = 'static';
         }
-        
+
         // Overlay erstellen
         const overlay = document.createElement('div');
         overlay.className = 'loading-overlay';
         overlay.dataset.requestId = requestId;
         overlay.innerHTML = '<div class="loading-overlay-spinner"></div>';
         element.appendChild(overlay);
-        
+
         return requestId;
     }
 
@@ -168,14 +168,14 @@ class LoadingManager {
      */
     stopOverlay(element, requestId) {
         if (!element) return;
-        
+
         this.activeRequests.delete(requestId);
-        
+
         const overlay = element.querySelector(`[data-request-id="${requestId}"]`);
         if (overlay) {
             overlay.remove();
         }
-        
+
         // Original Position wiederherstellen
         if (element.dataset.originalPosition === 'static') {
             element.style.position = 'static';
@@ -192,20 +192,20 @@ class LoadingManager {
      */
     startButtonWithText(button, loadingText = 'Laden...', requestId = Date.now().toString()) {
         if (!button) return requestId;
-        
+
         this.activeRequests.add(requestId);
         button.disabled = true;
-        
+
         // Original-Text speichern
         if (!button.dataset.originalText) {
             button.dataset.originalText = button.innerHTML;
         }
-        
+
         button.innerHTML = `
             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
             ${loadingText}
         `;
-        
+
         return requestId;
     }
 
@@ -219,7 +219,7 @@ class LoadingManager {
      */
     async fetch(url, options = {}, button = null, loadingText = null) {
         const requestId = Date.now().toString();
-        
+
         try {
             // Button Loading State
             if (button) {
@@ -229,14 +229,14 @@ class LoadingManager {
                     this.startButton(button, requestId);
                 }
             }
-            
+
             const response = await fetch(url, options);
-            
+
             // Button zurücksetzen
             if (button) {
                 this.stopButton(button, requestId);
             }
-            
+
             return response;
         } catch (error) {
             // Button zurücksetzen bei Fehler
@@ -261,7 +261,7 @@ class LoadingManager {
     resetAll() {
         // Alle Overlays entfernen
         document.querySelectorAll('.loading-overlay').forEach(overlay => overlay.remove());
-        
+
         // Alle Buttons zurücksetzen
         document.querySelectorAll('.btn-loading').forEach(button => {
             button.disabled = false;
@@ -270,7 +270,7 @@ class LoadingManager {
                 button.innerHTML = button.dataset.originalText;
             }
         });
-        
+
         this.activeRequests.clear();
     }
 }

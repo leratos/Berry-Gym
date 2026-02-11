@@ -8,29 +8,80 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0016_add_pausenzeit_to_planuebung'),
+        ("core", "0016_add_pausenzeit_to_planuebung"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Feedback',
+            name="Feedback",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('feedback_type', models.CharField(choices=[('BUG', '🐛 Bugreport'), ('FEATURE', '💡 Verbesserungsvorschlag'), ('QUESTION', '❓ Frage')], default='FEATURE', max_length=20)),
-                ('title', models.CharField(max_length=200, verbose_name='Kurzbeschreibung')),
-                ('description', models.TextField(verbose_name='Detaillierte Beschreibung')),
-                ('status', models.CharField(choices=[('NEW', '🆕 Neu'), ('ACCEPTED', '✅ Angenommen'), ('REJECTED', '❌ Abgelehnt'), ('IN_PROGRESS', '🔄 In Bearbeitung'), ('DONE', '🎉 Umgesetzt')], default='NEW', max_length=20)),
-                ('priority', models.CharField(blank=True, choices=[('LOW', '🟢 Niedrig'), ('MEDIUM', '🟡 Mittel'), ('HIGH', '🔴 Hoch')], default='MEDIUM', max_length=20)),
-                ('admin_response', models.TextField(blank=True, null=True, verbose_name='Admin-Antwort')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='feedbacks', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "feedback_type",
+                    models.CharField(
+                        choices=[
+                            ("BUG", "🐛 Bugreport"),
+                            ("FEATURE", "💡 Verbesserungsvorschlag"),
+                            ("QUESTION", "❓ Frage"),
+                        ],
+                        default="FEATURE",
+                        max_length=20,
+                    ),
+                ),
+                ("title", models.CharField(max_length=200, verbose_name="Kurzbeschreibung")),
+                ("description", models.TextField(verbose_name="Detaillierte Beschreibung")),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("NEW", "🆕 Neu"),
+                            ("ACCEPTED", "✅ Angenommen"),
+                            ("REJECTED", "❌ Abgelehnt"),
+                            ("IN_PROGRESS", "🔄 In Bearbeitung"),
+                            ("DONE", "🎉 Umgesetzt"),
+                        ],
+                        default="NEW",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "priority",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("LOW", "🟢 Niedrig"),
+                            ("MEDIUM", "🟡 Mittel"),
+                            ("HIGH", "🔴 Hoch"),
+                        ],
+                        default="MEDIUM",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "admin_response",
+                    models.TextField(blank=True, null=True, verbose_name="Admin-Antwort"),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="feedbacks",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Feedback',
-                'verbose_name_plural': 'Feedbacks',
-                'ordering': ['-created_at'],
+                "verbose_name": "Feedback",
+                "verbose_name_plural": "Feedbacks",
+                "ordering": ["-created_at"],
             },
         ),
     ]

@@ -54,7 +54,7 @@ class PushNotificationsManager {
         try {
             // Request notification permission
             const permission = await Notification.requestPermission();
-            
+
             if (permission !== 'granted') {
                 console.log('[Push] Permission denied');
                 return { success: false, message: 'Benachrichtigungen wurden abgelehnt' };
@@ -101,7 +101,7 @@ class PushNotificationsManager {
     async unsubscribe() {
         try {
             const subscription = await this.swRegistration.pushManager.getSubscription();
-            
+
             if (!subscription) {
                 return { success: true, message: 'Keine aktive Subscription' };
             }
@@ -140,7 +140,7 @@ class PushNotificationsManager {
      */
     async isSubscribed() {
         if (!this.swRegistration) return false;
-        
+
         const subscription = await this.swRegistration.pushManager.getSubscription();
         return subscription !== null;
     }

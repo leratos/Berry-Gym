@@ -46,7 +46,7 @@
                     </ul>
                 </div>
             </div>
-            
+
             {% if messages %}
             {% for message in messages %}
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -55,7 +55,7 @@
             </div>
             {% endfor %}
             {% endif %}
-            
+
             <!-- Status-Legende -->
             <div class="card bg-dark border-secondary mb-4">
                 <div class="card-body py-2">
@@ -68,7 +68,7 @@
                     </small>
                 </div>
             </div>
-            
+
             <!-- Feedback-Liste -->
             {% if feedbacks %}
             <div class="list-group">
@@ -112,14 +112,14 @@
                 </a>
             </div>
             {% endif %}
-            
+
             <!-- Zurück-Link -->
             <div class="mt-4">
                 <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Zurück zum Dashboard
                 </a>
             </div>
-            
+
             <!-- Footer -->
             <div class="text-center mt-4">
                 <small class="text-muted">© 2026 HomeGym App</small>

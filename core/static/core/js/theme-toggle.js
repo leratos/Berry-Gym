@@ -12,7 +12,7 @@ function toggleTheme() {
     const html = document.documentElement;
     const currentTheme = html.getAttribute('data-bs-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    
+
     html.setAttribute('data-bs-theme', newTheme);
     localStorage.setItem('theme', newTheme);
     updateThemeIcon(newTheme);
@@ -22,7 +22,7 @@ function toggleTheme() {
 function updateThemeIcon(theme) {
     const icon = document.getElementById('themeIcon');
     if (!icon) return; // Kein Icon vorhanden
-    
+
     if (theme === 'dark') {
         icon.className = 'bi bi-moon-fill';
     } else {

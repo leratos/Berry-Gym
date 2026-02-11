@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 def convert_hilfsmuskeln_to_json(apps, schema_editor):
     """Konvertiere alte CharField-Daten zu JSON-Liste"""
-    Uebung = apps.get_model('core', 'Uebung')
+    Uebung = apps.get_model("core", "Uebung")
     for uebung in Uebung.objects.all():
         if uebung.hilfsmuskeln:
             # Wenn es ein String ist, konvertiere zu leerer Liste
@@ -21,7 +21,7 @@ def convert_hilfsmuskeln_to_json(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0003_plan_uebung_bewegungstyp_alter_uebung_gewichts_typ_and_more'),
+        ("core", "0003_plan_uebung_bewegungstyp_alter_uebung_gewichts_typ_and_more"),
     ]
 
     operations = [
@@ -29,8 +29,8 @@ class Migration(migrations.Migration):
         migrations.RunPython(convert_hilfsmuskeln_to_json, migrations.RunPython.noop),
         # Dann das Feld ändern
         migrations.AlterField(
-            model_name='uebung',
-            name='hilfsmuskeln',
-            field=models.JSONField(blank=True, default=list, verbose_name='Hilfsmuskelgruppen'),
+            model_name="uebung",
+            name="hilfsmuskeln",
+            field=models.JSONField(blank=True, default=list, verbose_name="Hilfsmuskelgruppen"),
         ),
     ]

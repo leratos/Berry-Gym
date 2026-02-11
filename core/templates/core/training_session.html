@@ -9,13 +9,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
-    
+
     <!-- Offline Manager CSS -->
     <link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
-    
+
     <!-- Toast Notification System -->
     <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
-    
+
         <script src="{% static 'core/js/theme-toggle.js' %}"></script>
 <style>
         /* Superset-Gruppierung */
@@ -24,7 +24,7 @@
         .superset-group-3 { border-left: 4px solid #d63384 !important; }
         .superset-group-4 { border-left: 4px solid #6610f2 !important; }
         .superset-group-5 { border-left: 4px solid #20c997 !important; }
-        
+
         .rest-timer {
             position: fixed;
             bottom: 90px;
@@ -59,35 +59,35 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.08); }
         }
-        
+
         /* Theme-aware Training Navbar */
         .navbar-training {
             background-color: var(--bs-body-bg);
             border-bottom-color: var(--bs-border-color) !important;
         }
-        
+
         [data-bs-theme="dark"] .navbar-training {
             background-color: #1a1d21;
             border-bottom-color: #30363d !important;
         }
-        
+
         [data-bs-theme="light"] .navbar-training {
             background-color: #f8f9fa;
             border-bottom-color: #dee2e6 !important;
         }
-        
+
         .training-title {
             color: var(--bs-body-color);
         }
-        
+
         [data-bs-theme="dark"] .training-title {
             color: #e9ecef;
         }
-        
+
         [data-bs-theme="light"] .training-title {
             color: #212529;
         }
-        
+
         /* Undo Toast Styling */
         .toast-undo {
             background: linear-gradient(135deg, #343a40 0%, #495057 100%);
@@ -98,13 +98,13 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             animation: slideInRight 0.3s ease-out;
         }
-        
+
         [data-bs-theme="light"] .toast-undo {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             color: #212529;
             border: 1px solid #dee2e6;
         }
-        
+
         @keyframes slideInRight {
             from {
                 transform: translateX(100%);
@@ -115,51 +115,51 @@
                 opacity: 1;
             }
         }
-        
+
         @keyframes countdown {
             from { width: 100%; }
             to { width: 0%; }
         }
-        
+
         .dropdown-menu-theme {
             background-color: var(--bs-body-bg);
             border-color: var(--bs-border-color);
         }
-        
+
         [data-bs-theme="dark"] .dropdown-menu-theme {
             background-color: #1a1d21;
             border-color: #30363d;
         }
-        
+
         [data-bs-theme="light"] .dropdown-menu-theme {
             background-color: #ffffff;
             border-color: #dee2e6;
         }
-        
+
         .dropdown-menu-theme .dropdown-item {
             color: var(--bs-body-color);
         }
-        
+
         .dropdown-menu-theme .dropdown-item:hover {
             background-color: var(--bs-secondary-bg);
         }
-        
+
         [data-bs-theme="dark"] .dropdown-menu-theme .dropdown-item:hover {
             background-color: #30363d;
         }
-        
+
         [data-bs-theme="light"] .dropdown-menu-theme .dropdown-item:hover {
             background-color: #e9ecef;
         }
-        
+
         .dropdown-menu-theme .dropdown-divider {
             border-color: var(--bs-border-color);
         }
-        
+
         .dropdown-menu-theme .dropdown-header {
             color: var(--bs-secondary-color);
         }
-        
+
         /* Mobile-optimierte Navbar */
         @media (max-width: 576px) {
             .training-navbar {
@@ -258,11 +258,11 @@
     </nav>
 
     <div class="container pb-5 mb-5">
-      
+
         <!-- Deload-Toggle -->
         <div class="alert {% if training.ist_deload %}alert-info{% else %}alert-dark{% endif %} border-secondary d-flex justify-content-between align-items-center mb-2 py-2" id="deloadBanner">
             <div class="form-check form-switch mb-0">
-                <input class="form-check-input" type="checkbox" id="deloadToggle" 
+                <input class="form-check-input" type="checkbox" id="deloadToggle"
                        {% if training.ist_deload %}checked{% endif %}
                        onchange="toggleDeload(this.checked)">
                 <label class="form-check-label small" for="deloadToggle">
@@ -294,14 +294,14 @@
             </div>
         </div>
         {% endif %}
-      
+
         {% if not saetze %}
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-dumbbell display-1 opacity-25"></i>
                 <p class="mt-3">Drück auf +, um loszulegen!</p>
             </div>
         {% else %}
-            
+
             {% regroup saetze by uebung as uebungs_liste %}
 
             {% for uebung_group in uebungs_liste %}
@@ -309,8 +309,8 @@
                 <div class="card-header border-secondary d-flex justify-content-between align-items-center bg-secondary bg-opacity-10">
                     <div class="d-flex align-items-center">
                         <h5 class="mb-0 text-primary fw-bold me-2">
-                            <a href="#" class="text-decoration-none text-primary exercise-link" 
-                               data-exercise-id="{{ uebung_group.grouper.id }}" 
+                            <a href="#" class="text-decoration-none text-primary exercise-link"
+                               data-exercise-id="{{ uebung_group.grouper.id }}"
                                title="Übungsdetails anzeigen">
                                 {{ uebung_group.grouper }}
                                 <i class="bi bi-info-circle-fill"></i>
@@ -342,8 +342,8 @@
                             <small class="text-info">
                                 <i class="bi bi-cpu-fill me-1"></i>
                                 <strong>ML-Empfehlung:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
-                                <button class="btn btn-sm {% if empf.pause_from_plan %}btn-warning{% else %}btn-outline-warning{% endif %} py-0 px-2 ms-2" 
-                                        onclick="setTimerDuration({{ empf.pause }}); startRestTimer();" 
+                                <button class="btn btn-sm {% if empf.pause_from_plan %}btn-warning{% else %}btn-outline-warning{% endif %} py-0 px-2 ms-2"
+                                        onclick="setTimerDuration({{ empf.pause }}); startRestTimer();"
                                         title="{% if empf.pause_from_plan %}Pause aus KI-Plan{% else %}Berechnete Pause{% endif %} - Klick zum Starten">
                                     <i class="bi bi-stopwatch"></i> {{ empf.pause }}s
                                     {% if empf.pause_from_plan %}<i class="bi bi-robot ms-1" style="font-size: 0.7rem;"></i>{% endif %}
@@ -400,19 +400,19 @@
                                 </td>
                                 <td class="text-end pe-3 text-nowrap">
                                     <!-- TIMER BUTTON -->
-                                    <button class="btn btn-link text-warning opacity-75 text-decoration-none px-1" 
+                                    <button class="btn btn-link text-warning opacity-75 text-decoration-none px-1"
                                             onclick="startRestTimer()" title="Pausenuhr starten">
                                         <i class="bi bi-stopwatch"></i>
                                     </button>
-                                    
+
                                     <!-- EDIT BUTTON -->
-                                    <button class="btn btn-link text-info opacity-75 text-decoration-none px-2" 
+                                    <button class="btn btn-link text-info opacity-75 text-decoration-none px-2"
                                             onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}', '{{ satz.notiz|default_if_none:''|escapejs }}', '{{ satz.superset_gruppe }}')">>
                                         <i class="bi bi-pencil-fill"></i>
                                     </button>
-                                    
+
                                     <!-- DELETE BUTTON -->
-                                    <button class="btn btn-link text-danger opacity-50 text-decoration-none px-2" 
+                                    <button class="btn btn-link text-danger opacity-50 text-decoration-none px-2"
                                             onclick="confirmDelete('{{ satz.id }}', '{{ satz.uebung.bezeichnung }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}')">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
@@ -421,10 +421,10 @@
                             {% endfor %}
                         </tbody>
                     </table>
-                    
+
                     <div class="d-grid p-2 border-top border-secondary">
                         {% with last_satz=uebung_group.list|last %}
-                        <button class="btn btn-sm btn-outline-secondary border-0 text-start ps-3" 
+                        <button class="btn btn-sm btn-outline-secondary border-0 text-start ps-3"
                                 data-exercise-id="{{ uebung_group.grouper.id }}"
                                 data-last-superset="{{ last_satz.superset_gruppe|default:0 }}"
                                 onclick="openModalWithExercise('{{ uebung_group.grouper.id }}', this.dataset.lastSuperset)">
@@ -479,12 +479,12 @@
           <form method="post" id="setForm" action="">
             {% csrf_token %}
             <div class="modal-body">
-                
+
                 <div class="mb-3">
                     <label class="form-label text-secondary small text-uppercase">Übung suchen</label>
                     <input type="text" id="exerciseSearchInput" class="form-control border-secondary mb-3" placeholder="Bankdrücken, Kniebeugen, ...">
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="form-label text-secondary small text-uppercase">1. Muskelgruppe</label>
                     <select id="muscleFilter" class="form-select border-secondary mb-2">
@@ -531,7 +531,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="row g-2 mt-2">
                     <div class="col-12">
                         <div class="form-check form-switch">
@@ -548,7 +548,7 @@
                     <label class="form-label text-secondary">
                         <i class="bi bi-pencil-square me-1"></i>Notiz (optional)
                     </label>
-                    
+
                     <!-- Quick Tags -->
                     <div class="btn-group btn-group-sm mb-2 flex-wrap" role="group" aria-label="Quick Tags">
                         <button type="button" class="btn btn-outline-success" onclick="insertTag('⭐ Perfekt')">⭐ Perfekt</button>
@@ -557,9 +557,9 @@
                         <button type="button" class="btn btn-outline-danger" onclick="insertTag('🤕 Mit Hilfe')">🤕 Mit Hilfe</button>
                         <button type="button" class="btn btn-outline-secondary" onclick="insertTag('😓 Schmerz')">😓 Schmerz</button>
                     </div>
-                    
-                    <textarea name="notiz" id="notizInput" class="form-control border-secondary" rows="3" 
-                              placeholder="z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', 'Neue Schuhe'..." 
+
+                    <textarea name="notiz" id="notizInput" class="form-control border-secondary" rows="3"
+                              placeholder="z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', 'Neue Schuhe'..."
                               maxlength="500" oninput="updateCharCount()"></textarea>
                     <div class="d-flex justify-content-between align-items-center mt-1">
                         <small class="text-muted" id="charCount">0 / 500 Zeichen</small>
@@ -617,11 +617,11 @@
     <script src="{% static 'core/js/loading-manager.js' %}"></script>
     <script src="{% static 'core/js/keyboard-shortcuts.js' %}"></script>
     <script src="{% static 'core/js/exercise-autocomplete.js' %}"></script>
-    
+
     <script>
         // Training Context für Keyboard Shortcuts
         document.body.dataset.context = 'training';
-        
+
         // Daten für Filter
         // FIX: |escapejs verhindert Abstürze bei Namen wie "Farmer's Walk"
         const allExercises = [
@@ -638,10 +638,10 @@
         const myModal = new bootstrap.Modal(myModalEl);
         const deleteModalEl = document.getElementById('deleteModal');
         const deleteModal = new bootstrap.Modal(deleteModalEl);
-        
+
         const setForm = document.getElementById('setForm');
         const modalTitle = document.getElementById('modalTitle');
-        
+
         const muscleFilter = document.getElementById('muscleFilter');
         const uebungSelect = document.getElementById('uebungSelect');
         const gewichtInput = document.getElementById('gewichtInput');
@@ -656,7 +656,7 @@
 
         // URL Basis für POST
         const addUrl = "{% url 'add_set' training.id %}";
-        
+
         // Autocomplete initialisieren
         if (exerciseSearchInput) {
             const autocomplete = new ExerciseAutocomplete(exerciseSearchInput, allExercises, {
@@ -667,19 +667,19 @@
                     muscleFilter.value = exercise.muscleKey;
                     updateExerciseDropdown(exercise.muscleKey, exercise.id);
                     uebungSelect.value = exercise.id;
-                    
+
                     // Ghosting laden
                     loadGhosting(exercise.id);
-                    
+
                     // Suchfeld leeren
                     exerciseSearchInput.value = '';
-                    
+
                     // Focus auf Gewicht
                     setTimeout(() => gewichtInput.focus(), 100);
                 }
             });
         }
-        
+
         // Filter Logic
         muscleFilter.addEventListener('change', function() {
             updateExerciseDropdown(this.value);
@@ -697,11 +697,11 @@
                 uebungSelect.appendChild(opt);
             });
             uebungSelect.disabled = false;
-            
+
             if (preselectId) {
                 uebungSelect.value = preselectId;
                 // Nur Ghosting bei NEUEN Sätzen (addUrl) triggern
-                if(setForm.action === addUrl) fetchGhostData(preselectId); 
+                if(setForm.action === addUrl) fetchGhostData(preselectId);
             }
         }
 
@@ -714,15 +714,15 @@
         function openModalWithExercise(uebungId, lastSuperset = '0') {
             modalTitle.innerText = "Satz hinzufügen";
             setForm.action = addUrl;
-            
+
             // Felder freischalten
             muscleFilter.disabled = false;
-            
+
             // Reset
             gewichtInput.value = ""; wdhInput.value = ""; rpeInput.value = ""; warmupCheck.checked = false; notizInput.value = "";
             supersetInput.value = lastSuperset || '0'; // Letzte Superset-Gruppe oder 0
             progressionHint.style.display = 'none';
-            
+
             if (uebungId) {
                 const exData = allExercises.find(ex => ex.id === uebungId);
                 if (exData) {
@@ -762,23 +762,23 @@
             let finalNotiz = notiz;
             let finalWarmup = isWarmup;
             let finalSuperset = supersetGroup;
-            
+
             try {
                 const offlineData = await offlineManager.getUnsyncedData('trainingData');
                 console.log('[Edit Modal] Checking offline data for set ID:', setId, 'Total unsynced:', offlineData.length);
-                
+
                 // Suche nach ALLEN Updates für diesen Satz und nimm den NEUESTEN
                 const matchingUpdates = offlineData.filter(item => {
                     return item.is_update && item.action && item.action.includes(`/set/${setId}/update/`);
                 });
-                
+
                 console.log('[Edit Modal] Matching updates for this set:', matchingUpdates.length);
-                
+
                 if (matchingUpdates.length > 0) {
                     // Sortiere nach ID (Date.now() - höhere ID = neuerer Eintrag)
                     matchingUpdates.sort((a, b) => b.id - a.id);
                     const offlineUpdate = matchingUpdates[0];
-                    
+
                     console.log('[Edit Modal] Using latest offline update:', offlineUpdate);
                     finalGewicht = offlineUpdate.gewicht || gewicht;
                     finalWdh = offlineUpdate.wiederholungen || wdh;
@@ -786,7 +786,7 @@
                     finalNotiz = offlineUpdate.notiz || notiz;
                     finalWarmup = offlineUpdate.is_warmup ? 'true' : 'false';
                     finalSuperset = offlineUpdate.superset_gruppe || supersetGroup;
-                    
+
                     // Zeige Hinweis
                     const hint = document.createElement('div');
                     hint.className = 'alert alert-warning alert-sm mb-2';
@@ -805,7 +805,7 @@
             notizInput.value = finalNotiz || '';
             warmupCheck.checked = (finalWarmup === 'true');
             supersetInput.value = finalSuperset || '0';
-            
+
             // Kein Progression Hint beim Bearbeiten
             progressionHint.style.display = 'none';
 
@@ -822,23 +822,23 @@
                 if (planZiele && planZiele[id] && planZiele[id].wiederholungen_ziel) {
                     zielParam = `?ziel=${planZiele[id].wiederholungen_ziel}`;
                 }
-                
+
                 const res = await fetch(`/api/last-set/${id}/${zielParam}`);
                 const data = await res.json();
                 if (data.success) {
                     gewichtInput.value = data.gewicht;
                     wdhInput.value = data.wiederholungen;
                     if(data.rpe) rpeInput.value = data.rpe;
-                    
+
                     // Progressive Overload Hinweis anzeigen
                     if (data.progression_hint) {
                         progressionText.innerText = data.progression_hint;
-                        
+
                         // Vergleich mit letztem Mal anzeigen
                         if (data.letztes_gewicht !== data.gewicht || data.letzte_wdh !== data.wiederholungen) {
                             progressionText.innerText += ` (Letztes Mal: ${data.letztes_gewicht}kg × ${data.letzte_wdh})`;
                         }
-                        
+
                         progressionHint.style.display = 'block';
                     }
                 }
@@ -847,11 +847,11 @@
 
         // ========== UNDO DELETE SYSTEM ==========
         let deletedSets = []; // Array für gelöschte Sätze mit Timeout
-        
+
         // Delete Confirmation mit Undo
         function confirmDelete(setId, exerciseName, weight, reps) {
             const deleteUrl = `/set/${setId}/delete/`;
-            
+
             // Satz-Daten für Undo speichern
             const setData = {
                 setId: setId,
@@ -861,25 +861,25 @@
                 deleteUrl: deleteUrl,
                 timeout: null
             };
-            
+
             // Sofort aus UI entfernen (optimistic delete)
             const setCard = document.querySelector(`[data-set-id="${setId}"]`);
             if (setCard) {
                 setCard.style.opacity = '0.5';
                 setCard.style.pointerEvents = 'none';
             }
-            
+
             // Toast mit Undo-Button anzeigen
             showUndoToast(setData);
-            
+
             // Nach 5 Sekunden endgültig löschen
             setData.timeout = setTimeout(() => {
                 executeDelete(setData);
             }, 5000);
-            
+
             deletedSets.push(setData);
         }
-        
+
         function showUndoToast(setData) {
             // Toast mit Undo-Button erstellen
             const toastHtml = `
@@ -899,7 +899,7 @@
                     </div>
                 </div>
             `;
-            
+
             // Toast-Container (falls noch nicht vorhanden)
             let toastContainer = document.getElementById('undoToastContainer');
             if (!toastContainer) {
@@ -908,11 +908,11 @@
                 toastContainer.style.cssText = 'position: fixed; bottom: 80px; right: 20px; z-index: 9999; max-width: 400px;';
                 document.body.appendChild(toastContainer);
             }
-            
+
             const toastDiv = document.createElement('div');
             toastDiv.innerHTML = toastHtml;
             toastContainer.appendChild(toastDiv.firstElementChild);
-            
+
             // Auto-remove nach 5 Sekunden
             setTimeout(() => {
                 const toastEl = toastContainer.querySelector(`[data-set-id="${setData.setId}"]`);
@@ -923,39 +923,39 @@
                 }
             }, 5000);
         }
-        
+
         function undoDelete(setId) {
             // Finde gelöschten Satz
             const index = deletedSets.findIndex(s => s.setId === setId);
             if (index === -1) return;
-            
+
             const setData = deletedSets[index];
-            
+
             // Timeout abbrechen
             clearTimeout(setData.timeout);
-            
+
             // Aus Array entfernen
             deletedSets.splice(index, 1);
-            
+
             // UI wiederherstellen
             const setCard = document.querySelector(`[data-set-id="${setId}"]`);
             if (setCard) {
                 setCard.style.opacity = '1';
                 setCard.style.pointerEvents = 'auto';
             }
-            
+
             // Toast entfernen
             const toastEl = document.querySelector(`.toast-undo[data-set-id="${setId}"]`);
             if (toastEl) {
                 toastEl.remove();
             }
-            
+
             // Bestätigungs-Toast
             if (typeof toast !== 'undefined') {
                 toast.info('Satz wiederhergestellt');
             }
         }
-        
+
         function executeDelete(setData) {
             // Endgültiges Löschen via POST
             fetch(setData.deleteUrl, {
@@ -988,7 +988,7 @@
                     toast.error('Netzwerkfehler beim Löschen');
                 }
             });
-            
+
             // Aus Array entfernen
             const index = deletedSets.findIndex(s => s.setId === setData.setId);
             if (index !== -1) {
@@ -1012,14 +1012,14 @@
                 timerDuration = parseInt(savedDuration);
                 updateDropdownActive(timerDuration);
             }
-            
+
             // Laufenden Timer wiederherstellen
             const savedTimer = localStorage.getItem('restTimer');
             if (savedTimer) {
                 const data = JSON.parse(savedTimer);
                 const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
                 const remaining = data.duration - elapsed;
-                
+
                 if (remaining > 0) {
                     startRestTimer(remaining);
                 }
@@ -1047,7 +1047,7 @@
         function toggleDeload(isDeload) {
             const banner = document.getElementById('deloadBanner');
             const hint = document.getElementById('deloadHint');
-            
+
             if (isDeload) {
                 banner.className = banner.className.replace('alert-dark', 'alert-info');
                 hint.innerHTML = '<i class="bi bi-info-circle"></i> Wird nicht in Statistik gezählt';
@@ -1104,30 +1104,30 @@
         // Sound für Timer-Ende (Web Audio API)
         function playTimerSound() {
             if (!soundEnabled) return; // Sound deaktiviert
-            
+
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
+
                 // Drei Beeps: hoch-mittel-hoch
                 const beeps = [
                     { freq: 800, start: 0, duration: 0.15 },
                     { freq: 600, start: 0.2, duration: 0.15 },
                     { freq: 800, start: 0.4, duration: 0.3 }
                 ];
-                
+
                 beeps.forEach(beep => {
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
-                    
+
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
-                    
+
                     oscillator.frequency.value = beep.freq;
                     oscillator.type = 'sine';
-                    
+
                     gainNode.gain.setValueAtTime(soundVolume, audioContext.currentTime + beep.start);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + beep.start + beep.duration);
-                    
+
                     oscillator.start(audioContext.currentTime + beep.start);
                     oscillator.stop(audioContext.currentTime + beep.start + beep.duration);
                 });
@@ -1142,23 +1142,23 @@
             timerSecondsEl.innerText = timerSeconds;
             restTimerEl.style.display = 'block';
             timerDisplayEl.classList.add('timer-running');
-            
+
             // Timer-State in localStorage speichern
             localStorage.setItem('restTimer', JSON.stringify({
                 startTime: Date.now(),
                 duration: timerSeconds
             }));
-            
+
             timerInterval = setInterval(() => {
                 timerSeconds--;
                 timerSecondsEl.innerText = timerSeconds;
-                
+
                 // Farbwechsel bei wenig Zeit
                 if (timerSeconds <= 10) {
                     timerDisplayEl.classList.remove('bg-warning');
                     timerDisplayEl.classList.add('bg-danger', 'text-white');
                 }
-                
+
                 // Countdown-Beeps bei letzten 3 Sekunden
                 if (soundEnabled && timerSeconds > 0 && timerSeconds <= 3) {
                     try {
@@ -1175,25 +1175,25 @@
                         oscillator.stop(audioContext.currentTime + 0.1);
                     } catch (e) {}
                 }
-                
+
                 // Timer abgelaufen
                 if (timerSeconds <= 0) {
                     stopTimer();
-                    
+
                     // Sound abspielen
                     playTimerSound();
-                    
+
                     // Vibration (wenn verfügbar)
                     if (navigator.vibrate) {
                         navigator.vibrate([200, 100, 200, 100, 200]);
                     }
-                    
+
                     // Notification zeigen (ohne alert - nicht-blockierend)
                     const notification = document.createElement('div');
                     notification.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #198754; color: white; padding: 2rem; border-radius: 1rem; font-size: 1.5rem; z-index: 10000; box-shadow: 0 0 20px rgba(0,0,0,0.5); text-align: center;';
                     notification.innerHTML = '⏰<br><strong>Pause vorbei!</strong><br><small>Bereit für den nächsten Satz?</small>';
                     document.body.appendChild(notification);
-                    
+
                     // Auto-remove nach 3 Sekunden
                     setTimeout(() => {
                         notification.style.opacity = '0';
@@ -1231,31 +1231,31 @@
         // AJAX Form Submit (verhindert Page Reload & behält Stoppuhr)
         setForm.addEventListener('submit', async function(e) {
             e.preventDefault(); // Verhindere normalen Form Submit
-            
+
             // Emoji-Filter: Entferne 4-Byte-Emojis (temporär bis utf8mb4-Migration deployed ist)
             const notizField = document.getElementById('notizInput');
             if (notizField && notizField.value) {
                 const originalValue = notizField.value;
                 // Entferne alle 4-Byte UTF-8 Zeichen (Emojis)
                 const cleanedValue = originalValue.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
-                
+
                 if (originalValue !== cleanedValue) {
                     notizField.value = cleanedValue;
                     showToast('ℹ️ Emojis wurden entfernt (noch nicht unterstützt)', 'warning', 3000);
                 }
             }
-            
+
             const formData = new FormData(setForm);
             const submitBtn = setForm.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Speichern...';
-            
+
             // Versuche ZUERST Online-Submit
             try {
                 // Timeout mit AbortController (Browser-kompatibel)
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000);
-                
+
                 const response = await fetch(setForm.action, {
                     method: 'POST',
                     body: formData,
@@ -1265,14 +1265,14 @@
                     },
                     signal: controller.signal
                 });
-                
+
                 clearTimeout(timeoutId); // Wichtig: Timer clearen bei Erfolg
-                
+
                 // Prüfe Response Status BEVOR du parsest
                 if (!response.ok) {
                     // Server-Fehler (4xx, 5xx) - NICHT offline!
                     let errorMsg = 'Serverfehler beim Speichern';
-                    
+
                     try {
                         const contentType = response.headers.get('content-type');
                         if (contentType && contentType.includes('application/json')) {
@@ -1284,31 +1284,31 @@
                         console.error('[Server Error] Status:', response.status, response.statusText);
                         errorMsg = `Serverfehler (${response.status}). Bitte versuche es erneut oder kontaktiere Support.`;
                     }
-                    
+
                     showToast(errorMsg, 'error', 5000);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = 'Speichern';
                     return; // Wichtig: NICHT in den Offline-Modus gehen!
                 }
-                
+
                 // Response OK - parse JSON
                 const data = await response.json();
-                
+
                 // Prüfe ob Service Worker Offline-Response zurückgegeben hat
                 if (data.offline) {
                     console.log('[Offline] Service Worker returned offline response, saving locally...');
                     // Behandle wie im catch-Block (speichere in IndexedDB)
                     throw new Error('Offline mode - saving locally');
                 }
-                
+
                 if (data.success) {
                     // PR-Toast anzeigen falls vorhanden
                     if (data.pr_message) {
                         showPRToast(data.pr_message);
                     }
-                    
+
                     myModal.hide();
-                    
+
                     // Seite neu laden um Sätze anzuzeigen (aber ohne die Stoppuhr zu stoppen)
                     location.reload();
                 } else {
@@ -1318,13 +1318,13 @@
                 }
             } catch (error) {
                 // Prüfe ob es ein ECHTER Netzwerkfehler ist (offline) oder ein Parse/Timeout-Fehler
-                const isNetworkError = error.name === 'TypeError' || 
+                const isNetworkError = error.name === 'TypeError' ||
                                       error.message.includes('Failed to fetch') ||
                                       error.message.includes('NetworkError') ||
                                       error.message.includes('Offline mode');
-                
+
                 const isTimeout = error.name === 'TimeoutError' || error.name === 'AbortError';
-                
+
                 if (!isNetworkError && !isTimeout) {
                     // Unerwarteter Fehler (z.B. Parse-Error) - zeige Fehler, gehe NICHT offline
                     console.error('[Submit Error]', error);
@@ -1333,21 +1333,21 @@
                     submitBtn.innerHTML = 'Speichern';
                     return;
                 }
-                
+
                 // Echter Offline-Modus oder Timeout → Speichere lokal
                 console.log('[Offline] Server nicht erreichbar, speichere lokal:', error.message);
-                
+
                 try {
                     // Offline: Speichere in IndexedDB
                     // WICHTIG: Bei Update ist das Select disabled → Wert direkt aus Select holen
                     const uebungId = formData.get('uebung') || uebungSelect.value;
                     const uebungName = allExercises.find(ex => ex.id == uebungId)?.name || 'Übung';
-                    
+
                     console.log('[Offline] uebungId:', uebungId, 'uebungName:', uebungName);
-                    
+
                     // Prüfe ob es ein Update ist (URL enthält /set/X/update/)
                     const isUpdate = setForm.action.includes('/set/') && setForm.action.includes('/update/');
-                    
+
                     const setData = {
                         id: Date.now(),
                         training_id: {{ training.id }},
@@ -1364,65 +1364,65 @@
                         action: setForm.action,
                         is_update: isUpdate
                     };
-                    
+
                     console.log('[Offline] Saving setData:', setData);
                     await offlineManager.saveOfflineData('trainingData', setData);
                     console.log('[Offline] Save successful');
-                    
+
                     // Toast anzeigen
                     const toast = document.createElement('div');
                     toast.className = 'connection-toast offline';
-                    toast.innerHTML = isUpdate ? 
-                        '💾 Änderung offline gespeichert - wird synchronisiert' : 
+                    toast.innerHTML = isUpdate ?
+                        '💾 Änderung offline gespeichert - wird synchronisiert' :
                         '💾 Satz offline gespeichert - wird synchronisiert';
                     document.body.appendChild(toast);
                     setTimeout(() => toast.remove(), 3000);
-                    
+
                     myModal.hide();
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = 'Speichern';
-                    
+
                     // Bei Update: Satz in UI aktualisieren + gelben Badge hinzufügen
                     // Bei Add: Satz sofort in UI anzeigen (addOfflineSetToUI ruft updateOfflineBanner auf)
                     if (isUpdate) {
                         console.log('[Offline] Update saved offline');
-                        
+
                         // Extrahiere Set-ID aus URL (z.B. /set/359/update/)
                         const setIdMatch = setForm.action.match(/\/set\/(\d+)\/update\//);
                         if (setIdMatch) {
                             const setId = setIdMatch[1];
                             console.log('[Offline] Updating set in UI, ID:', setId);
-                            
+
                             // Finde den Edit-Button mit dieser Set-ID
                             const editBtn = document.querySelector(`button[onclick*="openEditModal('${setId}'"]`);
                             console.log('[Offline] Edit button found:', !!editBtn);
-                            
+
                             if (editBtn) {
                                 const row = editBtn.closest('tr');
                                 console.log('[Offline] Row found:', !!row);
-                                
+
                                 if (row && row.cells && row.cells.length >= 3) {
                                     // Aktualisiere Gewicht (Zelle 1 - nach der #-Spalte)
                                     const gewichtCell = row.cells[1];
                                     const gewichtSpan = gewichtCell.querySelector('.fw-bold');
                                     console.log('[Offline] Gewicht span found:', !!gewichtSpan);
-                                    
+
                                     if (gewichtSpan) {
                                         gewichtSpan.textContent = setData.gewicht;
                                     }
-                                    
+
                                     // Aktualisiere Wiederholungen (Zelle 2)
                                     const wdhCell = row.cells[2];
                                     const wdhSpan = wdhCell.querySelector('.fw-bold');
                                     console.log('[Offline] Wdh span found:', !!wdhSpan);
-                                    
+
                                     if (wdhSpan) {
                                         wdhSpan.textContent = setData.wiederholungen;
                                     }
-                                    
+
                                     // Füge gelben Hintergrund hinzu
                                     row.classList.add('bg-warning', 'bg-opacity-10');
-                                    
+
                                     // Füge Offline-Badge hinzu
                                     if (!row.querySelector('.badge.bg-warning')) {
                                         const badge = document.createElement('span');
@@ -1430,7 +1430,7 @@
                                         badge.innerHTML = '<i class="bi bi-cloud-upload me-1"></i>Offline';
                                         gewichtCell.appendChild(badge);
                                     }
-                                    
+
                                     console.log('[Offline] UI updated successfully');
                                 } else {
                                     console.warn('[Offline] Row or cells not found');
@@ -1441,7 +1441,7 @@
                         } else {
                             console.warn('[Offline] Could not extract set ID from URL:', setForm.action);
                         }
-                        
+
                         // Zeige zusätzlichen Hinweis
                         const infoToast = document.createElement('div');
                         infoToast.className = 'connection-toast offline';
@@ -1453,7 +1453,7 @@
                         console.log('[Offline] Adding to UI...');
                         addOfflineSetToUI(setData);
                     }
-                    
+
                     // Registriere Background Sync
                     if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
                         navigator.serviceWorker.ready.then(registration => {
@@ -1470,19 +1470,19 @@
             }
         });
     </script>
-    
+
     <!-- Include Exercise Info Modal -->
     {% include 'core/exercise_info_modal.html' %}
-    
+
     <!-- Include AI Coach Chat -->
     {% include 'core/ai_coach_chat.html' %}
-    
+
     <!-- Toast Notification System -->
     <script src="{% static 'core/js/toast.js' %}"></script>
-    
+
     <!-- Keyboard Shortcuts -->
     <script src="{% static 'core/js/keyboard-shortcuts.js' %}"></script>
-    
+
     <script>
 
     // Funktion um offline Satz in UI hinzuzufügen
@@ -1491,16 +1491,16 @@
             // Finde oder erstelle Übungs-Container
             const uebungName = setData.uebung_name || 'Übung';
             const mainContent = document.querySelector('.container > .row');
-            
+
             if (!mainContent) {
                 console.error('[Offline] Could not find main content area');
                 return;
             }
-            
+
             // Suche existierende Übungskarte
             let exerciseCard = null;
             const allCards = mainContent.querySelectorAll('.card');
-            
+
             for (const card of allCards) {
                 const cardTitle = card.querySelector('.card-title, h5');
                 if (cardTitle && cardTitle.textContent.includes(uebungName)) {
@@ -1508,7 +1508,7 @@
                     break;
                 }
             }
-            
+
             // Wenn Übung noch nicht existiert, erstelle neue Karte
             if (!exerciseCard) {
                 const col = document.createElement('div');
@@ -1529,7 +1529,7 @@
                 mainContent.insertBefore(col, mainContent.firstChild);
                 exerciseCard = col.querySelector('.card');
             }
-            
+
             // Füge Satz zur Liste hinzu
             const setList = exerciseCard.querySelector('.set-list');
             const setDiv = document.createElement('div');
@@ -1548,33 +1548,33 @@
                 </div>
             `;
             setList.appendChild(setDiv);
-            
+
             // Update oder erstelle Banner
             updateOfflineBanner();
         }
-        
+
         // Funktion um Offline-Banner zu aktualisieren
         function updateOfflineBanner() {
             offlineManager.getAllData('trainingData').then(allData => {
                 const trainingId = {{ training.id }};
-                const offlineSets = allData.filter(item => 
+                const offlineSets = allData.filter(item =>
                     item.training_id === trainingId && !item.synced
                 );
-                
+
                 let banner = document.getElementById('offline-banner');
-                
+
                 if (offlineSets.length > 0) {
                     if (!banner) {
                         banner = document.createElement('div');
                         banner.id = 'offline-banner';
                         banner.className = 'alert alert-warning d-flex align-items-center mb-3';
-                        
+
                         const container = document.querySelector('.container');
                         if (container) {
                             container.insertBefore(banner, container.firstChild);
                         }
                     }
-                    
+
                     banner.innerHTML = `
                         <i class="bi bi-cloud-upload me-2"></i>
                         <div>
@@ -1587,7 +1587,7 @@
                 }
             });
         }
-        
+
         // Offline Sätze beim Laden anzeigen
         async function loadOfflineSets() {
             try {
@@ -1596,34 +1596,34 @@
                 console.error('[Offline] Error loading offline sets:', error);
             }
         }
-        
+
         // Quick Tags für Notizen
         function insertTag(tag) {
             const notizInput = document.getElementById('notizInput');
             const currentValue = notizInput.value.trim();
-            
+
             if (currentValue) {
                 notizInput.value = currentValue + ' | ' + tag;
             } else {
                 notizInput.value = tag;
             }
-            
+
             updateCharCount();
             notizInput.focus();
         }
-        
+
         function clearNotiz() {
             document.getElementById('notizInput').value = '';
             updateCharCount();
         }
-        
+
         function updateCharCount() {
             const notizInput = document.getElementById('notizInput');
             const charCount = document.getElementById('charCount');
             const length = notizInput.value.length;
-            
+
             charCount.textContent = `${length} / 500 Zeichen`;
-            
+
             if (length > 450) {
                 charCount.classList.add('text-warning');
                 charCount.classList.remove('text-muted');
@@ -1635,7 +1635,7 @@
                 charCount.classList.remove('text-warning', 'text-danger');
             }
         }
-        
+
         // Nach DOMContentLoaded laden
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
@@ -1647,7 +1647,7 @@
             updateCharCount();
         }
     </script>
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
   </body>

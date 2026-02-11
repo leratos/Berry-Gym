@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>HomeGym Dashboard</title>
-    
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#0d6efd">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,13 +13,13 @@
     <meta name="apple-mobile-web-app-title" content="HomeGym">
     <link rel="apple-touch-icon" href="{% static 'core/images/icon-192x192.png' %}">
     <link rel="manifest" href="/manifest.json">
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    
+
     <!-- Offline Manager CSS -->
     <link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
-    
+
     <script>
         // Theme laden vor Render
         (function() {
@@ -27,7 +27,7 @@
             document.documentElement.setAttribute('data-bs-theme', theme);
         })();
     </script>
-    
+
     <style>
         .btn-action {
             height: 80px;
@@ -36,13 +36,13 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         /* Card Stats - Theme-aware */
         .card-stat {
             border: none;
             height: 100%;
         }
-        
+
         /* Dark Theme */
         [data-bs-theme="dark"] .card-stat {
             background-color: #2b3035;
@@ -51,7 +51,7 @@
         [data-bs-theme="dark"] .stat-label {
             color: #adb5bd;
         }
-        
+
         /* Light Theme */
         [data-bs-theme="light"] .card-stat {
             background-color: #ffffff;
@@ -64,7 +64,7 @@
         [data-bs-theme="light"] .card-stat.text-white {
             color: #212529 !important;
         }
-        
+
         .stat-label {
             font-size: 0.8rem;
             text-transform: uppercase;
@@ -74,7 +74,7 @@
             font-size: 1.5rem;
             font-weight: bold;
         }
-        
+
         /* List Group Items - Theme-aware */
         [data-bs-theme="dark"] .list-group-item.bg-transparent {
             color: #fff;
@@ -85,7 +85,7 @@
         [data-bs-theme="light"] .list-group-item.border-secondary {
             border-color: #dee2e6 !important;
         }
-        
+
         /* Heatmap Styles */
         #training-heatmap {
             display: flex;
@@ -94,7 +94,7 @@
             padding: 10px 0;
             scrollbar-width: thin;
         }
-        
+
         /* Dark Theme Heatmap */
         [data-bs-theme="dark"] #training-heatmap::-webkit-scrollbar-track {
             background: #161b22;
@@ -110,7 +110,7 @@
         [data-bs-theme="dark"] .heatmap-legend-box[data-level="0"] {
             background-color: #161b22;
         }
-        
+
         /* Light Theme Heatmap */
         [data-bs-theme="light"] #training-heatmap::-webkit-scrollbar-track {
             background: #e9ecef;
@@ -129,7 +129,7 @@
         [data-bs-theme="light"] .heatmap-day {
             border: 1px solid rgba(0,0,0,0.05);
         }
-        
+
         #training-heatmap::-webkit-scrollbar {
             height: 6px;
         }
@@ -185,7 +185,7 @@
         .heatmap-legend-box[data-level="4"] {
             background-color: #39d353;
         }
-        
+
         @media (max-width: 768px) {
             .heatmap-day {
                 width: 12px;
@@ -210,7 +210,7 @@
     {% include 'core/includes/global_header.html' %}
 
     <div class="container pb-5 pt-3">
-      
+
       <!-- Sektion 1: Training -->
       <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="text-secondary ps-1 mb-0">TRAINING</h6>
@@ -336,15 +336,15 @@
                     {{ form_rating }}
                 </span>
             </div>
-            
+
             <div class="progress mb-3" style="height: 30px;">
-                <div class="progress-bar bg-{{ form_color }}" role="progressbar" 
-                     style="width: {{ form_index }}%;" aria-valuenow="{{ form_index }}" 
+                <div class="progress-bar bg-{{ form_color }}" role="progressbar"
+                     style="width: {{ form_index }}%;" aria-valuenow="{{ form_index }}"
                      aria-valuemin="0" aria-valuemax="100">
                     <strong>{{ form_index }}/100</strong>
                 </div>
             </div>
-            
+
             <div class="row g-2 small">
                 {% for factor, score in form_factors %}
                 <div class="col-6">
@@ -355,7 +355,7 @@
                 </div>
                 {% endfor %}
             </div>
-            
+
             <div class="mt-3 pt-3 border-top border-secondary">
                 <small class="text-muted">
                     <i class="bi bi-info-circle me-1"></i>
@@ -376,12 +376,12 @@
                 </h6>
                 <span class="badge bg-warning text-dark">{{ performance_warnings|length }}</span>
             </div>
-            
+
             <p class="text-muted small mb-3">
                 <i class="bi bi-info-circle me-1"></i>
                 Automatische Erkennung von Plateau, Rückschritt und Stagnation
             </p>
-            
+
             <div class="list-group list-group-flush bg-transparent">
                 {% for warning in performance_warnings %}
                 <div class="list-group-item bg-transparent border-{{ warning.color }} border-start border-3 ps-3 mb-2">
@@ -407,7 +407,7 @@
                 </div>
                 {% endfor %}
             </div>
-            
+
             <div class="mt-3 pt-3 border-top border-secondary">
                 <small class="text-muted">
                     <i class="bi bi-cpu me-1"></i>
@@ -474,10 +474,10 @@
                     <small class="text-muted">Gesamt</small>
                 </div>
             </div>
-            
+
             <!-- Heatmap Container -->
             <div id="training-heatmap" class="mb-2"></div>
-            
+
             <!-- Legende -->
             <div class="d-flex justify-content-end align-items-center gap-2 mt-2">
                 <small class="text-muted">Weniger</small>
@@ -493,12 +493,12 @@
 
       <!-- Sektion 2: Körper-Analyse -->
       <h6 class="text-secondary mb-3 ps-1">KÖRPER & VITALWERTE</h6>
-      
+
       <!-- Link zu den Graphen -->
       {% if letzter_koerperwert %}
       <a href="{% url 'body_stats' %}" class="text-decoration-none">
       {% endif %}
-      
+
       <!-- Hauptwert Gewicht -->
       <div class="card card-stat mb-3 shadow-sm">
         <div class="card-body text-center py-4">
@@ -582,19 +582,19 @@
                     {{ fatigue_rating }}
                 </span>
             </div>
-            
+
             <div class="progress mb-3" style="height: 25px;">
-                <div class="progress-bar bg-{{ fatigue_color }}" role="progressbar" 
-                     style="width: {{ fatigue_index }}%;" aria-valuenow="{{ fatigue_index }}" 
+                <div class="progress-bar bg-{{ fatigue_color }}" role="progressbar"
+                     style="width: {{ fatigue_index }}%;" aria-valuenow="{{ fatigue_index }}"
                      aria-valuemin="0" aria-valuemax="100">
                     <strong>{{ fatigue_index }}/100</strong>
                 </div>
             </div>
-            
+
             <p class="text-{{ fatigue_color }} mb-2">
                 <i class="bi bi-info-circle me-1"></i>{{ fatigue_message }}
             </p>
-            
+
             {% if fatigue_warnings %}
             <div class="mt-2 pt-2 border-top border-secondary">
                 <small class="text-muted d-block mb-1">Faktoren:</small>
@@ -620,7 +620,7 @@
       {% if letzter_koerperwert %}
       <!-- Detail-Kacheln für BMI, FFMI, Fett, Muskeln -->
       <div class="row g-3 mb-4">
-          
+
           <!-- BMI & FFMI -->
           <div class="col-6">
             <div class="card card-stat p-3 text-center">
@@ -665,7 +665,7 @@
             </div>
           </div>
           {% endif %}
-          
+
       </div>
       {% endif %}
 
@@ -674,30 +674,30 @@
         <a href="{% url 'training_select_plan' %}" class="btn btn-success btn-action fw-bold rounded-4 shadow">
             <i class="bi bi-play-circle-fill me-2"></i> Training starten
         </a>
-        
+
         <a href="{% url 'cardio_add' %}" class="btn btn-outline-danger btn-action fw-bold rounded-4">
             <i class="bi bi-heart-pulse-fill me-2"></i> Cardio hinzufügen
             {% if cardio_diese_woche > 0 %}
             <span class="badge bg-danger ms-2">{{ cardio_diese_woche }}×</span>
             {% endif %}
         </a>
-        
+
         <button type="button" class="btn btn-warning btn-action fw-bold rounded-4 shadow" data-bs-toggle="modal" data-bs-target="#aiPlanGeneratorModal">
             <i class="bi bi-stars me-2"></i> KI-Plan erstellen
         </button>
-        
+
         <a href="{% url 'workout_recommendations' %}" class="btn btn-outline-success btn-action fw-bold rounded-4 shadow">
             <i class="bi bi-robot me-2"></i> Trainingsempfehlungen (AI)
         </a>
-        
+
         <a href="{% url 'ml_dashboard' %}" class="btn btn-info btn-action fw-bold rounded-4 shadow">
             <i class="bi bi-cpu me-2"></i> ML Vorhersage-Modelle
         </a>
-        
+
         <a href="{% url 'muscle_map' %}" class="btn btn-primary btn-action fw-bold rounded-4 shadow">
             <i class="bi bi-person-arms-up me-2"></i> Muskelgruppen & Übungen
         </a>
-        
+
         <a href="{% url 'add_koerperwert' %}" class="btn btn-outline-secondary btn-action fw-bold rounded-4">
             <i class="bi bi-smartwatch me-2"></i> Werte eintragen
         </a>
@@ -712,7 +712,7 @@
             const html = document.documentElement;
             const currentTheme = html.getAttribute('data-bs-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
+
             html.setAttribute('data-bs-theme', newTheme);
             localStorage.setItem('theme', newTheme);
             updateThemeIcon(newTheme);
@@ -733,31 +733,31 @@
         window.addEventListener('DOMContentLoaded', function() {
             const currentTheme = localStorage.getItem('theme') || 'dark';
             updateThemeIcon(currentTheme);
-            
+
             // Push Notifications Status prüfen
             updatePushIcon();
         });
-        
+
         // Push Notifications Toggle
         async function togglePushNotifications() {
             const btn = document.getElementById('pushToggleBtn');
             const icon = document.getElementById('pushIcon');
-            
+
             try {
                 // Prüfe ob pushManager verfügbar ist
                 if (typeof pushManager === 'undefined') {
                     alert('Push Notifications werden geladen...\nBitte versuche es in wenigen Sekunden erneut.');
                     return;
                 }
-                
+
                 // Initialisiere pushManager falls nötig
                 if (!pushManager.swRegistration) {
                     await pushManager.init();
                 }
-                
+
                 // Status prüfen
                 const isSubscribed = await pushManager.isSubscribed();
-                
+
                 if (isSubscribed) {
                     // Unsubscribe
                     if (confirm('Push-Benachrichtigungen deaktivieren?')) {
@@ -783,7 +783,7 @@
                     }
                     btn.disabled = false;
                 }
-                
+
                 updatePushIcon();
             } catch (error) {
                 console.error('Push Toggle Error:', error);
@@ -791,17 +791,17 @@
                 btn.disabled = false;
             }
         }
-        
+
         // Push Icon Status aktualisieren
         async function updatePushIcon() {
             if (typeof pushManager === 'undefined') return;
-            
+
             try {
                 await pushManager.init();
                 const isSubscribed = await pushManager.isSubscribed();
                 const icon = document.getElementById('pushIcon');
                 const btn = document.getElementById('pushToggleBtn');
-                
+
                 if (isSubscribed) {
                     icon.className = 'bi bi-bell-fill';
                     btn.classList.add('text-primary');
@@ -823,7 +823,7 @@
                     .then(function(registration) {
                         console.log('✅ Service Worker registriert:', registration.scope);
                         console.log('✅ SW Scope:', registration.scope);
-                        
+
                         // Check for updates
                         registration.addEventListener('updatefound', () => {
                             console.log('🔄 Service Worker Update gefunden');
@@ -841,7 +841,7 @@
             // Verhindere automatisches Anzeigen
             e.preventDefault();
             deferredPrompt = e;
-            
+
             // Zeige Install-Button (optional - kann später hinzugefügt werden)
             console.log('💾 PWA kann installiert werden!');
         });
@@ -851,42 +851,42 @@
             console.log('✅ PWA erfolgreich installiert!');
             deferredPrompt = null;
         });
-        
+
         // Trainings-Heatmap generieren
         function generateHeatmap() {
             const heatmapData = {{ training_heatmap_json|safe }};
             const container = document.getElementById('training-heatmap');
-            
+
             if (!container) return;
-            
+
             // Leere Container
             container.innerHTML = '';
-            
+
             // Start: vor 52 Wochen (364 Tage)
             const today = new Date();
             const startDate = new Date(today);
             startDate.setDate(today.getDate() - 364);
-            
+
             // Gehe zum nächsten Sonntag (Wochenstart)
             const dayOfWeek = startDate.getDay();
             if (dayOfWeek !== 0) {
                 startDate.setDate(startDate.getDate() + (7 - dayOfWeek));
             }
-            
+
             let currentDate = new Date(startDate);
             let currentMonth = null;
             let currentMonthContainer = null;
-            
+
             while (currentDate <= today) {
                 // Neuer Monat? (nur anzeigen wenn es der erste Sonntag im Monat ist)
                 const month = currentDate.getMonth();
                 const isFirstWeekOfMonth = currentDate.getDate() <= 7;
-                
+
                 if (month !== currentMonth && isFirstWeekOfMonth) {
                     // Monatsspalte hinzufügen
                     const monthCol = document.createElement('div');
                     monthCol.className = 'heatmap-month';
-                    
+
                     // Monatsname
                     const monthLabel = document.createElement('small');
                     monthLabel.className = 'text-muted mb-2';
@@ -894,65 +894,65 @@
                     monthLabel.style.fontWeight = '600';
                     monthLabel.textContent = currentDate.toLocaleDateString('de-DE', { month: 'short' });
                     monthCol.appendChild(monthLabel);
-                    
+
                     container.appendChild(monthCol);
                     currentMonth = month;
                     currentMonthContainer = monthCol;
                 }
-                
+
                 // Wochenspalte erstellen
                 const weekCol = document.createElement('div');
                 weekCol.className = 'heatmap-week';
-                
+
                 // 7 Tage (Sonntag bis Samstag)
                 for (let d = 0; d < 7; d++) {
                     const dayDate = new Date(currentDate);
                     dayDate.setDate(currentDate.getDate() + d);
-                    
+
                     // Stoppe wenn über heute hinaus
                     if (dayDate > today) break;
-                    
+
                     const dateStr = dayDate.toISOString().split('T')[0];
                     const count = heatmapData[dateStr] || 0;
-                    
+
                     // Level bestimmen (0-4)
                     let level = 0;
                     if (count >= 3) level = 4;
                     else if (count === 2) level = 3;
                     else if (count === 1) level = 2;
                     else level = 0;
-                    
+
                     const dayBox = document.createElement('div');
                     dayBox.className = 'heatmap-day';
                     dayBox.setAttribute('data-level', level);
                     dayBox.setAttribute('data-date', dateStr);
                     dayBox.setAttribute('data-count', count);
-                    dayBox.title = `${dayDate.toLocaleDateString('de-DE', { 
-                        weekday: 'short', 
-                        day: 'numeric', 
-                        month: 'short' 
+                    dayBox.title = `${dayDate.toLocaleDateString('de-DE', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short'
                     })}: ${count} Training${count !== 1 ? 's' : ''}`;
-                    
+
                     weekCol.appendChild(dayBox);
                 }
-                
+
                 // Füge Woche zum aktuellen Monatscontainer hinzu
                 if (currentMonthContainer) {
                     currentMonthContainer.appendChild(weekCol);
                 }
-                
+
                 // Nächste Woche
                 currentDate.setDate(currentDate.getDate() + 7);
             }
         }
-        
+
         // Heatmap beim Laden generieren
         window.addEventListener('DOMContentLoaded', generateHeatmap);
     </script>
-    
+
     <!-- AI Plan Generator Modal -->
     {% include 'core/ai_plan_generator.html' %}
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
   </body>

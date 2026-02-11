@@ -127,7 +127,12 @@ vapid_public.pem
 vapid_private.pem
 
 .claude/
-core/tests/
 nul
 core/views_old.py
 
+# Test outputs (but keep test files!)
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.tox/

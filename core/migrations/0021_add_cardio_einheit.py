@@ -8,28 +8,71 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0020_add_plan_shared_with'),
+        ("core", "0020_add_plan_shared_with"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CardioEinheit',
+            name="CardioEinheit",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('datum', models.DateField(verbose_name='Datum')),
-                ('aktivitaet', models.CharField(choices=[('SCHWIMMEN', 'Schwimmen'), ('LAUFEN', 'Laufen'), ('RADFAHREN', 'Radfahren'), ('RUDERN', 'Rudern'), ('GEHEN', 'Gehen / Walking'), ('HIIT', 'HIIT / Intervall'), ('STEPPER', 'Stepper / Crosstrainer'), ('SEILSPRINGEN', 'Seilspringen'), ('SONSTIGES', 'Sonstiges')], max_length=20, verbose_name='Aktivität')),
-                ('dauer_minuten', models.PositiveIntegerField(verbose_name='Dauer (Minuten)')),
-                ('intensitaet', models.CharField(choices=[('LEICHT', 'Leicht (Zone 2 - kann sich unterhalten)'), ('MODERAT', 'Moderat (Zone 3 - anstrengend aber machbar)'), ('INTENSIV', 'Intensiv (Zone 4-5 - sehr anstrengend)')], default='MODERAT', max_length=20, verbose_name='Intensität')),
-                ('notiz', models.CharField(blank=True, max_length=200, verbose_name='Notiz')),
-                ('erstellt_am', models.DateTimeField(auto_now_add=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cardio_einheiten', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("datum", models.DateField(verbose_name="Datum")),
+                (
+                    "aktivitaet",
+                    models.CharField(
+                        choices=[
+                            ("SCHWIMMEN", "Schwimmen"),
+                            ("LAUFEN", "Laufen"),
+                            ("RADFAHREN", "Radfahren"),
+                            ("RUDERN", "Rudern"),
+                            ("GEHEN", "Gehen / Walking"),
+                            ("HIIT", "HIIT / Intervall"),
+                            ("STEPPER", "Stepper / Crosstrainer"),
+                            ("SEILSPRINGEN", "Seilspringen"),
+                            ("SONSTIGES", "Sonstiges"),
+                        ],
+                        max_length=20,
+                        verbose_name="Aktivität",
+                    ),
+                ),
+                ("dauer_minuten", models.PositiveIntegerField(verbose_name="Dauer (Minuten)")),
+                (
+                    "intensitaet",
+                    models.CharField(
+                        choices=[
+                            ("LEICHT", "Leicht (Zone 2 - kann sich unterhalten)"),
+                            ("MODERAT", "Moderat (Zone 3 - anstrengend aber machbar)"),
+                            ("INTENSIV", "Intensiv (Zone 4-5 - sehr anstrengend)"),
+                        ],
+                        default="MODERAT",
+                        max_length=20,
+                        verbose_name="Intensität",
+                    ),
+                ),
+                ("notiz", models.CharField(blank=True, max_length=200, verbose_name="Notiz")),
+                ("erstellt_am", models.DateTimeField(auto_now_add=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cardio_einheiten",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Cardio-Einheit',
-                'verbose_name_plural': 'Cardio-Einheiten',
-                'ordering': ['-datum', '-erstellt_am'],
-                'indexes': [models.Index(fields=['user', 'datum'], name='core_cardio_user_id_f8c126_idx')],
+                "verbose_name": "Cardio-Einheit",
+                "verbose_name_plural": "Cardio-Einheiten",
+                "ordering": ["-datum", "-erstellt_am"],
+                "indexes": [
+                    models.Index(fields=["user", "datum"], name="core_cardio_user_id_f8c126_idx")
+                ],
             },
         ),
     ]

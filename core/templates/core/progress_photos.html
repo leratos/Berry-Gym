@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
     <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
-    
+
     <!-- Offline Manager CSS -->
     <link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
-    
+
         <script src="{% static 'core/js/theme-toggle.js' %}"></script>
 <style>
         .photo-card {
@@ -89,7 +89,7 @@
               <div class="modal-body">
                 <form method="post" action="{% url 'upload_progress_photo' %}" enctype="multipart/form-data" id="uploadForm">
                   {% csrf_token %}
-                  
+
                   <div class="mb-3">
                     <label class="form-label">Foto auswählen *</label>
                     <input type="file" name="foto" accept="image/*" class="form-control bg-dark text-white border-secondary" required>
@@ -191,7 +191,7 @@
                                     </button>
                                 </form>
                             </div>
-                            
+
                             {% if photo.notiz %}
                             <p class="card-text mb-0">
                                 <small class="text-white">{{ photo.notiz }}</small>
@@ -236,7 +236,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         // File input preview
         document.querySelector('input[type="file"]')?.addEventListener('change', function(e) {
@@ -247,10 +247,10 @@
             }
         });
     </script>
-    
+
     <!-- Toast Notifications -->
     <script src="{% static 'core/js/toast.js' %}"></script>
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
   </body>

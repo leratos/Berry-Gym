@@ -34,7 +34,7 @@
                     <i class="bi bi-collection-fill text-info fs-2 me-2"></i>
                     <h3 class="mb-0">{{ gruppe_name }}</h3>
                 </div>
-                
+
                 <div class="d-flex justify-content-center mb-3 gap-2">
                     <span class="badge bg-info">{{ plans|length }} Trainingstage</span>
                     {% with first_plan=plans.first %}
@@ -45,7 +45,7 @@
                     {% endif %}
                     {% endwith %}
                 </div>
-                
+
                 <!-- Liste der Pläne in der Gruppe -->
                 <div class="text-start">
                     {% for plan in plans %}
@@ -55,7 +55,7 @@
                     </div>
                     {% endfor %}
                 </div>
-                
+
                 {% if is_owner %}
                 {% with first_plan=plans.first %}
                 {% if not first_plan.is_public %}
@@ -71,12 +71,12 @@
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- QR-Code -->
         <div class="card card-stat mb-4">
             <div class="card-body text-center">
                 <h5 class="mb-3"><i class="bi bi-qr-code me-2"></i>QR-Code</h5>
-                
+
                 {% if qr_base64 %}
                 <div class="bg-white d-inline-block p-3 rounded mb-3">
                     <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR-Code" class="img-fluid" style="max-width: 200px;">
@@ -90,44 +90,44 @@
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- Direkter Link -->
         <div class="card card-stat mb-4">
             <div class="card-body">
                 <h5 class="mb-3"><i class="bi bi-link-45deg me-2"></i>Direkter Link</h5>
-                
+
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" id="share-url" value="{{ share_url }}" readonly>
                     <button class="btn btn-primary" onclick="copyToClipboard()" title="Link kopieren">
                         <i class="bi bi-clipboard"></i> Kopieren
                     </button>
                 </div>
-                
+
                 <div id="copy-success" class="alert alert-success d-none">
                     <i class="bi bi-check-circle me-2"></i>Link wurde in die Zwischenablage kopiert!
                 </div>
             </div>
         </div>
-        
+
         {% if is_owner %}
         <!-- Trainingspartner einladen -->
         <div class="card card-stat border-primary mb-4">
             <div class="card-body">
                 <h5 class="mb-3"><i class="bi bi-people-fill me-2 text-primary"></i>Mit Trainingspartner teilen</h5>
                 <p class="text-muted small mb-3">Teile diese Gruppe privat mit deinem Trainingspartner (alle {{ plans.count }} Pläne werden geteilt).</p>
-                
+
                 <!-- Suche -->
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="partner-search" 
+                    <input type="text" class="form-control" id="partner-search"
                            placeholder="Username eingeben..." autocomplete="off">
                     <button class="btn btn-primary" onclick="searchAndSharePartner()" id="share-btn">
                         <i class="bi bi-person-plus"></i> Einladen
                     </button>
                 </div>
-                
+
                 <!-- Suchergebnisse -->
                 <div id="search-results" class="list-group mb-3 d-none"></div>
-                
+
                 <!-- Aktuell geteilt mit -->
                 <div id="shared-with-container">
                     <h6 class="text-muted mb-2"><i class="bi bi-check2-circle me-1"></i>Bereits geteilt mit:</h6>
@@ -138,29 +138,29 @@
             </div>
         </div>
         {% endif %}
-        
+
         <!-- Teilen-Optionen -->
         <div class="card card-stat mb-4">
             <div class="card-body">
                 <h5 class="mb-3"><i class="bi bi-share me-2"></i>Teilen via</h5>
-                
+
                 <div class="d-grid gap-2">
-                    <a href="https://api.whatsapp.com/send?text=Check%20dir%20meinen%20Trainingsplan%3A%20{{ share_url|urlencode }}" 
+                    <a href="https://api.whatsapp.com/send?text=Check%20dir%20meinen%20Trainingsplan%3A%20{{ share_url|urlencode }}"
                        target="_blank" class="btn btn-success">
                         <i class="bi bi-whatsapp me-2"></i>WhatsApp
                     </a>
-                    <a href="https://t.me/share/url?url={{ share_url|urlencode }}&text=Check%20dir%20meinen%20Trainingsplan!" 
+                    <a href="https://t.me/share/url?url={{ share_url|urlencode }}&text=Check%20dir%20meinen%20Trainingsplan!"
                        target="_blank" class="btn btn-info">
                         <i class="bi bi-telegram me-2"></i>Telegram
                     </a>
-                    <a href="mailto:?subject=Mein%20Trainingsplan&body=Hey!%0A%0ACheck%20dir%20meinen%20Trainingsplan%3A%0A{{ share_url|urlencode }}" 
+                    <a href="mailto:?subject=Mein%20Trainingsplan&body=Hey!%0A%0ACheck%20dir%20meinen%20Trainingsplan%3A%0A{{ share_url|urlencode }}"
                        class="btn btn-secondary">
                         <i class="bi bi-envelope me-2"></i>E-Mail
                     </a>
                 </div>
             </div>
         </div>
-        
+
         {% if is_owner %}
         <div class="d-grid gap-2 mb-4">
             <a href="{% url 'duplicate_group' gruppe_id %}" class="btn btn-outline-primary">
@@ -178,27 +178,27 @@
         </div>
         {% endif %}
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const gruppeId = "{{ gruppe_id }}";
         let searchTimeout = null;
-        
+
         function copyToClipboard() {
             const urlInput = document.getElementById('share-url');
             urlInput.select();
             urlInput.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(urlInput.value);
-            
+
             const successAlert = document.getElementById('copy-success');
             successAlert.classList.remove('d-none');
             setTimeout(() => {
                 successAlert.classList.add('d-none');
             }, 3000);
         }
-        
+
         // ========== TRAININGSPARTNER FUNKTIONEN ==========
-        
+
         // Aktuelle Shares laden
         function loadSharedWith() {
             fetch(`{% url 'api_get_group_shares' gruppe_id %}`)
@@ -209,7 +209,7 @@
                         container.innerHTML = data.shared_with.map(user => `
                             <span class="badge bg-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-person"></i> ${user.username}
-                                <button class="btn-close btn-close-white ms-1" style="font-size: 0.6rem;" 
+                                <button class="btn-close btn-close-white ms-1" style="font-size: 0.6rem;"
                                         onclick="removeShare(${user.id}, '${user.username}')" title="Entfernen"></button>
                             </span>
                         `).join('');
@@ -222,25 +222,25 @@
                     document.getElementById('shared-with-list').innerHTML = '<span class="text-danger small">Fehler beim Laden</span>';
                 });
         }
-        
+
         // User-Suche mit Autocomplete
         document.getElementById('partner-search')?.addEventListener('input', function() {
             clearTimeout(searchTimeout);
             const query = this.value.trim();
             const resultsDiv = document.getElementById('search-results');
-            
+
             if (query.length < 2) {
                 resultsDiv.classList.add('d-none');
                 return;
             }
-            
+
             searchTimeout = setTimeout(() => {
                 fetch(`{% url 'api_search_users' %}?q=${encodeURIComponent(query)}`)
                     .then(r => r.json())
                     .then(data => {
                         if (data.users && data.users.length > 0) {
                             resultsDiv.innerHTML = data.users.map(user => `
-                                <button type="button" class="list-group-item list-group-item-action" 
+                                <button type="button" class="list-group-item list-group-item-action"
                                         onclick="shareWithUser('${user.username}')">
                                     <i class="bi bi-person me-2"></i>${user.username}
                                 </button>
@@ -253,14 +253,14 @@
                     });
             }, 300);
         });
-        
+
         // Direkt aus Suchergebnis einladen
         function shareWithUser(username) {
             document.getElementById('partner-search').value = username;
             document.getElementById('search-results').classList.add('d-none');
             searchAndSharePartner();
         }
-        
+
         // Mit User teilen
         function searchAndSharePartner() {
             const username = document.getElementById('partner-search').value.trim();
@@ -268,7 +268,7 @@
                 toast.warning('Bitte einen Username eingeben');
                 return;
             }
-            
+
             fetch('{% url "api_share_group_with_user" %}', {
                 method: 'POST',
                 headers: {
@@ -293,11 +293,11 @@
                 toast.error('Ein Fehler ist aufgetreten');
             });
         }
-        
+
         // Freigabe entfernen
         function removeShare(userId, username) {
             if (!confirm(`Freigabe für "${username}" entfernen?`)) return;
-            
+
             fetch('{% url "api_unshare_group_with_user" %}', {
                 method: 'POST',
                 headers: {
@@ -316,16 +316,16 @@
                 }
             });
         }
-        
+
         // Initial laden
         {% if is_owner %}
         document.addEventListener('DOMContentLoaded', loadSharedWith);
         {% endif %}
     </script>
-    
+
     <!-- Toast Notifications -->
     <script src="{% static 'core/js/toast.js' %}"></script>
-    
+
     {% include 'core/includes/global_footer.html' %}
   </body>
 </html>

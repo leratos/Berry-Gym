@@ -2,14 +2,14 @@
 Prompt Builder - Erstellt strukturierte Prompts für LLM
 """
 
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 
 class PromptBuilder:
-    
+
     def __init__(self):
         self.system_prompt = self._build_system_prompt()
-    
+
     def _build_system_prompt(self) -> str:
         return """Du bist ein professioneller Trainingsplan-Generator.
 
@@ -107,15 +107,15 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 - Antworte NUR mit dem JSON-Objekt, kein zusätzlicher Text!
 - Berücksichtige die Schwachstellen und Trainingsziele
 - Achte auf realistische Satz/Wdh-Vorgaben basierend auf Historie"""
-    
+
     def build_user_prompt(
-        self, 
+        self,
         analysis_data: Dict[str, Any],
         available_exercises: List[str],
         plan_type: str = "3er-split",
         sets_per_session: int = 18,
         target_profile: str = "hypertrophie",
-        periodization: str = "linear"
+        periodization: str = "linear",
     ) -> str:
         # Plan-Type spezifische Anweisungen (Frontend-kompatible Keys)
         plan_instructions = {
@@ -124,13 +124,13 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             "4er-split": "Erstelle einen 4er-Split (z.B. Brust+Trizeps, Rücken+Bizeps, Schultern+Bauch, Beine)",
             "ppl": "Erstelle einen Push/Pull/Legs Split (6x pro Woche möglich)",
             "push-pull-legs": "Erstelle einen Push/Pull/Legs Split (6x pro Woche möglich)",
-            "ganzkörper": "Erstelle einen Ganzkörper-Plan (2-3x pro Woche, alle Muskelgruppen pro Session)"
+            "ganzkörper": "Erstelle einen Ganzkörper-Plan (2-3x pro Woche, alle Muskelgruppen pro Session)",
         }
-        
+
         instruction = plan_instructions.get(plan_type, plan_instructions["3er-split"])
-        
+
         # Trainingsfrequenz
-        freq = analysis_data['training_stats']['frequency_per_week']
+        freq = analysis_data["training_stats"]["frequency_per_week"]
         freq_note = ""
         if freq < 2:
             freq_note = "User trainiert sehr selten! Plan sollte effizient sein (Compound Movements priorisieren)."
@@ -140,51 +140,59 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             freq_note = "User trainiert 3-4x pro Woche - 3er oder 4er Split empfohlen."
         else:
             freq_note = "User trainiert häufig - 5er Split oder PPL möglich."
-        
+
         # Push/Pull Balance
-        balance = analysis_data['push_pull_balance']
-        balance_note = "Balanced" if balance['balanced'] else f"Unbalanced (Ratio: {balance['ratio']})"
-        
+        balance = analysis_data["push_pull_balance"]
+        balance_note = (
+            "Balanced" if balance["balanced"] else f"Unbalanced (Ratio: {balance['ratio']})"
+        )
+
         # Top 5 Muskelgruppen nach Volumen
         mg_sorted = sorted(
-            analysis_data['muscle_groups'].items(),
-            key=lambda x: x[1]['effective_reps'],
-            reverse=True
+            analysis_data["muscle_groups"].items(),
+            key=lambda x: x[1]["effective_reps"],
+            reverse=True,
         )[:5]
-        top_muscles = ", ".join([f"{mg} ({int(data['effective_reps'])} eff.Wdh)" for mg, data in mg_sorted])
-        
+        top_muscles = ", ".join(
+            [f"{mg} ({int(data['effective_reps'])} eff.Wdh)" for mg, data in mg_sorted]
+        )
+
         # Schwachstellen
-        weaknesses_str = "\n".join([f"  - {w}" for w in analysis_data['weaknesses'][:5]])
-        
+        weaknesses_str = "\n".join([f"  - {w}" for w in analysis_data["weaknesses"][:5]])
+
         # Few-shot examples mit EXAKTEN Namen aus der Liste
-        example_exercises = [ex for ex in available_exercises if any(kw in ex for kw in ['Bankdrücken', 'Kniebeuge', 'Kreuzheben'])][:3]
+        example_exercises = [
+            ex
+            for ex in available_exercises
+            if any(kw in ex for kw in ["Bankdrücken", "Kniebeuge", "Kreuzheben"])
+        ][:3]
         examples_str = "\n".join([f'  "{ex}"' for ex in example_exercises])
-        
+
         # Satzbudget als Range (Flexibilität für LLM)
         min_sets = max(10, sets_per_session - 4)
         max_sets = sets_per_session
-        
+
         # Coach-Sicherheitsregeln
         coach_rules = """**🏥 COACH-SICHERHEITSREGELN (MUST):**
 - Wenn Bankdrücken ODER Schulterdrücken im Push-Tag: KEINE Front Raises (Überlastung vordere Schulter)
 - Kreuzheben (conventional): max. 3 Sätze ODER max. 15 Gesamtwiederholungen pro Woche
 - Pro Woche 2-4 Sätze hintere Schulter / Scapula-Hygiene (Face Pulls, Reverse Flys, etc.)
 - Kein Lower-Back-Overkill: Vermeide Kreuzheben + RDL + schwere Squats am selben Tag"""
-        
+
         # Build prompt
         exercises_list = "\n".join([f"  - {ex}" for ex in sorted(available_exercises)])
-        
+
         profile_guides = {
-            'kraft': '3-6 Wdh, RPE 7.5-9, lange Pausen, Compounds priorisieren',
-            'hypertrophie': '6-12 Wdh, RPE 7-8.5, moderates Volumen, 5-6 Übungen/Tag',
-            'definition': '10-15 Wdh, RPE 6.5-8, kürzere Pausen, metabolische Arbeit inkl. Core/Cardio'
+            "kraft": "3-6 Wdh, RPE 7.5-9, lange Pausen, Compounds priorisieren",
+            "hypertrophie": "6-12 Wdh, RPE 7-8.5, moderates Volumen, 5-6 Übungen/Tag",
+            "definition": "10-15 Wdh, RPE 6.5-8, kürzere Pausen, metabolische Arbeit inkl. Core/Cardio",
         }
 
         periodization_note = {
-            'linear': 'Linear steigende Intensität pro Block, Deload in Woche 4/8/12 (Volumen 80%, Intensität 90%)',
-            'wellenfoermig': 'Wellenförmig: Heavy/Medium/Light innerhalb jedes 4-Wochen-Blocks + Deload in Woche 4/8/12',
-            'block': 'Blockperiodisierung: Block 1 Volumen, Block 2 Kraft, Block 3 Peaking/Definition mit Deload in Woche 4/8/12'
-        }.get(periodization, 'Linear mit Deload 4/8/12')
+            "linear": "Linear steigende Intensität pro Block, Deload in Woche 4/8/12 (Volumen 80%, Intensität 90%)",
+            "wellenfoermig": "Wellenförmig: Heavy/Medium/Light innerhalb jedes 4-Wochen-Blocks + Deload in Woche 4/8/12",
+            "block": "Blockperiodisierung: Block 1 Volumen, Block 2 Kraft, Block 3 Peaking/Definition mit Deload in Woche 4/8/12",
+        }.get(periodization, "Linear mit Deload 4/8/12")
 
         prompt = f"""**TRAININGSANALYSE**
 
@@ -270,9 +278,9 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 11. ** KOPIERE DIE EXERCISE_NAME WERTE EXAKT AUS DER LISTE - KEINE VARIATIONEN!**
 
 Erstelle jetzt den optimalen Trainingsplan (NUR JSON, kein anderer Text):"""
-        
+
         return prompt
-    
+
     def build_messages(
         self,
         analysis_data: Dict[str, Any],
@@ -280,63 +288,76 @@ Erstelle jetzt den optimalen Trainingsplan (NUR JSON, kein anderer Text):"""
         plan_type: str = "3er-split",
         sets_per_session: int = 18,
         target_profile: str = "hypertrophie",
-        periodization: str = "linear"
+        periodization: str = "linear",
     ) -> List[Dict[str, str]]:
         return [
             {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": self.build_user_prompt(analysis_data, available_exercises, plan_type, sets_per_session, target_profile, periodization)}
+            {
+                "role": "user",
+                "content": self.build_user_prompt(
+                    analysis_data,
+                    available_exercises,
+                    plan_type,
+                    sets_per_session,
+                    target_profile,
+                    periodization,
+                ),
+            },
         ]
-    
+
     def get_available_exercises_for_user(self, user_id: int) -> List[str]:
-        from core.models import Uebung
         from django.contrib.auth.models import User
-        
+
+        from core.models import Uebung
+
         user = User.objects.get(id=user_id)
-        user_equipment_ids = set(user.verfuegbares_equipment.values_list('id', flat=True))
-        
+        user_equipment_ids = set(user.verfuegbares_equipment.values_list("id", flat=True))
+
         available_exercises = []
-        
-        for uebung in Uebung.objects.prefetch_related('equipment'):
-            required_eq_ids = set(uebung.equipment.values_list('id', flat=True))
-            
+
+        for uebung in Uebung.objects.prefetch_related("equipment"):
+            required_eq_ids = set(uebung.equipment.values_list("id", flat=True))
+
             if not required_eq_ids or required_eq_ids.issubset(user_equipment_ids):
                 available_exercises.append(uebung.bezeichnung)
-        
+
         return sorted(available_exercises)
 
 
 if __name__ == "__main__":
     print("Prompt Builder Test")
-    
+
     try:
-        import sys
         import os
+        import sys
+
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        
-        from db_client import DatabaseClient
+
         from data_analyzer import TrainingAnalyzer
-        
+        from db_client import DatabaseClient
+
         with DatabaseClient() as db:
             analyzer = TrainingAnalyzer(user_id=2, days=30)
             analysis_data = analyzer.analyze()
-            
+
             builder = PromptBuilder()
             available_exercises = builder.get_available_exercises_for_user(2)
-            
+
             print(f"\n{len(available_exercises)} verfügbare Übungen")
-            
+
             messages = builder.build_messages(
                 analysis_data=analysis_data,
                 available_exercises=available_exercises,
                 plan_type="3er-split",
-                sets_per_session=18
+                sets_per_session=18,
             )
-            
+
             print("Messages Array fertig für Ollama!")
             print(f"   - System Prompt: {len(messages[0]['content'])} Zeichen")
             print(f"   - User Prompt: {len(messages[1]['content'])} Zeichen")
-    
+
     except Exception as e:
         print(f"\nFehler: {e}")
         import traceback
+
         traceback.print_exc()

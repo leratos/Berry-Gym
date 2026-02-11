@@ -31,7 +31,7 @@ class Toast {
         // Create toast element
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        
+
         // Icon based on type
         const icons = {
             success: 'bi-check-circle-fill',
@@ -39,9 +39,9 @@ class Toast {
             warning: 'bi-exclamation-triangle-fill',
             info: 'bi-info-circle-fill'
         };
-        
+
         const icon = icons[type] || icons.info;
-        
+
         toast.innerHTML = `
             <i class="bi ${icon} toast-icon"></i>
             <span class="toast-message">${message}</span>
@@ -69,7 +69,7 @@ class Toast {
     dismiss(toast) {
         toast.classList.remove('show');
         toast.classList.add('hiding');
-        
+
         setTimeout(() => {
             if (toast.parentNode) {
                 toast.parentNode.removeChild(toast);

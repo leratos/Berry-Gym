@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0009_progressphoto'),
+        ("core", "0009_progressphoto"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='satz',
-            name='superset_gruppe',
-            field=models.PositiveIntegerField(default=0, help_text='0 = keine Gruppe, 1-9 = Gruppennummer für Supersätze', verbose_name='Superset-Gruppe'),
+            model_name="satz",
+            name="superset_gruppe",
+            field=models.PositiveIntegerField(
+                default=0,
+                help_text="0 = keine Gruppe, 1-9 = Gruppennummer für Supersätze",
+                verbose_name="Superset-Gruppe",
+            ),
         ),
     ]

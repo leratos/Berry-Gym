@@ -7,13 +7,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0005_koerperwerte_user_plan_user_trainingseinheit_user'),
+        ("core", "0005_koerperwerte_user_plan_user_trainingseinheit_user"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='trainingseinheit',
-            name='plan',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='trainings', to='core.plan', verbose_name='Trainingsplan'),
+            model_name="trainingseinheit",
+            name="plan",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="trainings",
+                to="core.plan",
+                verbose_name="Trainingsplan",
+            ),
         ),
     ]

@@ -81,8 +81,8 @@
         <div class="text-center mb-4">
             <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
                 <h1 class="display-4 text-white mb-0">{{ uebung.bezeichnung }}</h1>
-                <button class="btn btn-outline-warning btn-lg border-0 favorite-btn" 
-                        onclick="toggleFavorite({{ uebung.id }})" 
+                <button class="btn btn-outline-warning btn-lg border-0 favorite-btn"
+                        onclick="toggleFavorite({{ uebung.id }})"
                         id="favoriteBtn"
                         title="Zu Favoriten hinzufügen">
                     <i class="bi bi-star{% if request.user in uebung.favoriten.all %}-fill text-warning{% endif %}" id="favoriteIcon"></i>
@@ -100,7 +100,7 @@
             <div class="col-lg-7">
                 <div class="svg-container">
                     <h5 class="mb-3 text-center">Anatomische Darstellung</h5>
-                    
+
                     <!-- Legend -->
                     <div class="text-center mb-4">
                         <div class="legend-item">
@@ -116,7 +116,7 @@
                             <span class="text-white">Inaktiv</span>
                         </div>
                     </div>
-                    
+
                     <div id="svgWrapper"></div>
                 </div>
 
@@ -152,19 +152,19 @@
                     <div class="card-body">
                         {% if uebung.bild %}
                         <div class="mb-3 text-center">
-                            <img src="{{ uebung.bild.url }}" 
-                                 alt="{{ uebung.bezeichnung }}" 
+                            <img src="{{ uebung.bild.url }}"
+                                 alt="{{ uebung.bezeichnung }}"
                                  class="img-fluid rounded"
                                  style="max-height: 300px; object-fit: contain;">
                         </div>
                         {% endif %}
-                        
+
                         {% if uebung.beschreibung %}
                         <p class="text-light">{{ uebung.beschreibung }}</p>
                         {% else %}
                         <p class="text-muted fst-italic">Keine Beschreibung verfügbar</p>
                         {% endif %}
-                        
+
                         {% if uebung.video_link %}
                         <div class="mb-3">
                             <a href="{{ uebung.video_link }}" target="_blank" class="btn btn-outline-danger btn-sm">
@@ -172,9 +172,9 @@
                             </a>
                         </div>
                         {% endif %}
-                        
+
                         <hr class="border-secondary">
-                        
+
                         <h6 class="mb-3">Details</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
@@ -228,7 +228,7 @@
                 document.getElementById('svgWrapper').innerHTML = svgContent;
                 const svg = document.getElementById('svgWrapper').querySelector('svg');
                 svg.id = 'muscleSvg';
-                
+
                 highlightMuscles();
             });
 
@@ -284,7 +284,7 @@
             .catch(error => console.error('Fehler:', error));
         }
     </script>
-    
+
     <!-- Footer -->
     {% include 'core/includes/global_footer.html' %}
 </body>

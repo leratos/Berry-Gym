@@ -8,24 +8,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0021_add_cardio_einheit'),
+        ("core", "0021_add_cardio_einheit"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='uebung',
-            name='created_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='custom_uebungen', to=settings.AUTH_USER_MODEL, verbose_name='Erstellt von'),
+            model_name="uebung",
+            name="created_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="custom_uebungen",
+                to=settings.AUTH_USER_MODEL,
+                verbose_name="Erstellt von",
+            ),
         ),
         migrations.AddField(
-            model_name='uebung',
-            name='is_custom',
-            field=models.BooleanField(default=False, verbose_name='Benutzerdefinierte Übung'),
+            model_name="uebung",
+            name="is_custom",
+            field=models.BooleanField(default=False, verbose_name="Benutzerdefinierte Übung"),
         ),
         migrations.AlterField(
-            model_name='uebung',
-            name='bezeichnung',
-            field=models.CharField(max_length=100, verbose_name='Name der Übung'),
+            model_name="uebung",
+            name="bezeichnung",
+            field=models.CharField(max_length=100, verbose_name="Name der Übung"),
         ),
     ]

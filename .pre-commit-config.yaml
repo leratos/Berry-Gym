@@ -1,0 +1,44 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+        exclude: '\.md$'
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: mixed-line-ending
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3.12
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args: ['--config=.flake8']
+        # Allow failures for legacy code
+        verbose: true
+
+# mypy disabled for legacy code - will be enabled incrementally
+# Too many errors (423) without type hints
+#  - repo: https://github.com/pre-commit/mirrors-mypy
+#    rev: v1.14.1
+#    hooks:
+#      - id: mypy
+#        additional_dependencies: [django-stubs==5.1.2]
+#        args: ['--config-file=pyproject.toml']
+#        exclude: '^(migrations/|tests/|.*_test\.py)'
