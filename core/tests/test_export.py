@@ -10,12 +10,10 @@ Testet:
 
 import csv
 import io
-from datetime import date, timedelta
-
-from django.contrib.auth.models import User
-from django.urls import reverse
+from datetime import date
 
 import pytest
+from django.urls import reverse
 
 from core.tests.factories import (
     PlanFactory,
@@ -57,15 +55,15 @@ class TestTrainingCSVExport:
         training = TrainingseinheitFactory(user=user, datum=date.today())
         uebung = UebungFactory(bezeichnung="Bankdrücken")
 
-        # Sätze mit korrektem Parameter 'einheit'
-        satz1 = SatzFactory(
+        # Sätze direkt über training erstellen (einheit= ist der richtige Parameter!)
+        SatzFactory(
             einheit=training,
             uebung=uebung,
             gewicht=80.0,
             wiederholungen=10,
             rpe=8,
         )
-        satz2 = SatzFactory(
+        SatzFactory(
             einheit=training,
             uebung=uebung,
             gewicht=85.0,
@@ -168,8 +166,7 @@ class TestPlanPDFExport:
 
         plan = PlanFactory(user=user, name="Mein Trainingsplan")
         uebung = UebungFactory(bezeichnung="Bankdrücken")
-
-        # Korrekte PlanUebung Factory Parameter
+        # Richtige Factory-Parameter: saetze_ziel, wiederholungen_ziel
         PlanUebungFactory(plan=plan, uebung=uebung, saetze_ziel=4, wiederholungen_ziel="8")
 
         response = client.get(reverse("export_plan_pdf", args=[plan.id]))
