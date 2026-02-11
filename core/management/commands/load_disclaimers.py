@@ -49,7 +49,7 @@ Die Berechnung basiert auf empirischen Annahmen, nicht auf wissenschaftlichen St
             },
             {
                 "category": "GENERAL",
-                "title": "HomeGym: Fitness-Tracker, nicht medizinische Software",
+                "title": "🔬 HomeGym: Fitness-Tracker, nicht medizinische Software",
                 "message": """**HomeGym ist ein Trainings-Tracker für Kraftsportler**, kein medizinisches oder wissenschaftliches Tool.
 
 **Wichtig:**
