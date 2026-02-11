@@ -1,8 +1,16 @@
 name: CI/CD Pipeline
 
+# Workflow-level permissions (restrictive by default)
+permissions:
+  contents: read
+
 on:
   push:
-    branches: [ main, NewStruc, develop ]
+    branches:
+      - main
+      - develop
+      - 'phase-*'      # Alle Phase-Branches (phase-2.5, phase-3.1, etc.)
+      - 'feature-*'    # Alle Feature-Branches
   pull_request:
     branches: [ main, develop ]
 
@@ -10,6 +18,11 @@ jobs:
   test:
     name: Tests & Coverage
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read        # Checkout code
+      checks: write         # Upload test results
+      pull-requests: write  # Comment on PRs
 
     strategy:
       matrix:
@@ -80,6 +93,9 @@ jobs:
     name: Code Quality
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read  # Checkout code
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -111,6 +127,10 @@ jobs:
   security:
     name: Security Checks
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read        # Checkout code
+      security-events: write # Upload security results (if using CodeQL)
 
     steps:
     - name: Checkout code

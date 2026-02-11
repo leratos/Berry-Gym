@@ -1,5 +1,9 @@
 name: Deploy to Production
 
+# Workflow-level permissions (restrictive by default)
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:  # Manual trigger only
     inputs:
@@ -17,6 +21,10 @@ jobs:
     name: Deploy to ${{ github.event.inputs.environment }}
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
+
+    permissions:
+      contents: read       # Checkout code
+      deployments: write   # Create deployments
 
     steps:
     - name: Checkout code
