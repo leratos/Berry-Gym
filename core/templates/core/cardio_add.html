@@ -1,66 +1,54 @@
+{% extends 'base.html' %}
 {% load static %}
-<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Cardio hinzufügen - HomeGym</title>
-    <meta name="theme-color" content="#198754">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="icon" href="{% static 'core/images/icon-192x192.png' %}" type="image/png">
-    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-bs-theme', theme);
-        })();
-    </script>
-    <style>
-        .card-stat { border-radius: 1rem; }
-    </style>
-</head>
-<body>
-<div class="container py-4">
+
+{% block title %}Cardio hinzufügen - HomeGym{% endblock %}
+
+{% block extra_head %}
+<style>
+    .card-stat { border-radius: 1rem; }
+</style>
+{% endblock %}
+
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom mb-4">
+    <div class="container-fluid">
+        <a href="{% url 'cardio_list' %}" class="btn btn-outline-secondary border-0">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <span class="navbar-text page-title fw-bold">
+            <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio hinzufügen
+        </span>
+        <span></span>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container py-2 pb-5">
     <div class="row justify-content-center">
         <div class="col-lg-6">
-            <!-- Header -->
-            <div class="d-flex align-items-center gap-3 mb-4">
-                <a href="{% url 'cardio_list' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <h4 class="mb-0">
-                    <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio hinzufügen
-                </h4>
-            </div>
 
             <div class="card card-stat">
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
 
-                        <!-- Datum -->
                         <div class="mb-3">
                             <label for="datum" class="form-label">Datum</label>
                             <input type="date" class="form-control" id="datum" name="datum"
                                    value="{{ heute }}" required>
                         </div>
 
-                        <!-- Aktivität -->
                         <div class="mb-3">
                             <label for="aktivitaet" class="form-label">Aktivität</label>
                             <select class="form-select" id="aktivitaet" name="aktivitaet" required>
                                 <option value="">Bitte wählen...</option>
                                 {% for code, name in aktivitaeten %}
-                                    <option value="{{ code }}"
-                                            {% if code == 'SCHWIMMEN' %}data-icon="bi-water"{% endif %}>
-                                        {{ name }}
-                                    </option>
+                                    <option value="{{ code }}">{{ name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
 
-                        <!-- Dauer -->
                         <div class="mb-3">
                             <label for="dauer_minuten" class="form-label">Dauer (Minuten)</label>
                             <div class="input-group">
@@ -71,7 +59,6 @@
                             <div class="form-text">Wie lange hast du trainiert?</div>
                         </div>
 
-                        <!-- Intensität -->
                         <div class="mb-3">
                             <label class="form-label">Intensität</label>
                             <div class="d-flex gap-2 flex-wrap">
@@ -94,14 +81,12 @@
                             </div>
                         </div>
 
-                        <!-- Notiz -->
                         <div class="mb-4">
                             <label for="notiz" class="form-label">Notiz (optional)</label>
                             <input type="text" class="form-control" id="notiz" name="notiz"
                                    maxlength="200" placeholder="z.B. Brustschwimmen, Intervalle, etc.">
                         </div>
 
-                        <!-- Buttons -->
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-success">
                                 <i class="bi bi-check-circle me-1"></i>Speichern
@@ -134,11 +119,8 @@
                     </table>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-{% include 'core/includes/global_footer.html' %}
-</body>
-</html>
+{% endblock %}
