@@ -2,7 +2,7 @@
 
 **Projekt:** Complete Project Restructuring & Production Preparation  
 **Startdatum:** 09.02.2026  
-**Aktueller Status:** Week 2 - Phase 2.8 Complete (38% Coverage)  
+**Aktueller Status:** Week 3 - Phase 3.1 Complete (38% Coverage, models refactored)  
 **Ziel:** Production-ready application for public launch
 
 ---
@@ -25,7 +25,7 @@
 |-------|----------|-------|---------------|--------|
 | **Week 1** | ✅ DONE | Foundation & Safety | 30.48% | ✅ COMPLETE |
 | **Week 2** | Feb 11-17 | Testing & Views | 40% | 🔄 Phase 2.8 DONE (38%) |
-| **Week 3** | Feb 18-24 | Refactoring & Quality | 50% | ⏳ Planned |
+| **Week 3** | Feb 18-24 | Refactoring & Quality | 50% | 🔄 Phase 3.1 DONE (38%) |
 | **Week 4** | Feb 25-Mar 3 | Performance | 60% | ⏳ Planned |
 | **Week 5-6** | Mar 4-17 | Advanced & Polish | 75% | ⏳ Planned |
 | **Week 7** | Mar 18-24 | Pre-Launch Prep | 80%+ | ⏳ Planned |
@@ -286,13 +286,13 @@
 
 ## 🛠️ **WEEK 3 - CODE QUALITY & REFACTORING (50% TARGET)**
 
-**Duration:** Feb 18-24, 2026  
+**Duration:** Feb 18-24, 2026 (started Feb 11)  
 **Coverage Goal:** 40% → 50%  
 **Focus:** Code structure, maintainability, technical debt
 
 ### 🎯 Week 3 Goals:
 - [ ] Coverage: 50%+
-- [ ] models.py refactored into multiple files
+- [x] ✅ models.py refactored into multiple files (Phase 3.1 DONE)
 - [ ] base.html template created
 - [ ] Type hints: 80%+ of functions
 - [ ] Cyclomatic complexity: <10 for all functions
@@ -300,9 +300,34 @@
 
 ### 📋 Phase 3 Sub-Phases:
 
-#### **Phase 3.1 - Model Refactoring** 🔥 CRITICAL
-**Time Estimate:** 1-2 days  
+#### **Phase 3.1 - Model Refactoring** ✅ COMPLETE
+**Abgeschlossen:** 2026-02-11  
+**Time Estimate:** 1-2 days → **1 day**  
 **Impact:** Massive maintainability improvement
+
+**Ergebnis:**
+- `core/models.py` (1.079 Zeilen) → `core/models/` Package mit 11 Modulen
+- **0 Import-Änderungen** in views/tests/admin nötig (`__init__.py` re-exportiert alles)
+- **247/247 Tests grün** nach Refactoring (Safety-Net hielt)
+- Black/isort Hooks automatisch angewendet
+- Commit: 1a2cdaf
+
+**Neue Struktur:**
+```
+core/models/
+  __init__.py       ← Re-exportiert alle Models (Interface nach außen)
+  constants.py      ← Alle Choice-Listen (MUSKELGRUPPEN, GEWICHTS_TYP, etc.)
+  exercise.py       ← UebungTag, Equipment, Uebung
+  training.py       ← Trainingseinheit, Satz
+  plan.py           ← Plan, PlanUebung
+  body_tracking.py  ← KoerperWerte, ProgressPhoto
+  cardio.py         ← CardioEinheit
+  social.py         ← InviteCode, WaitlistEntry
+  feedback.py       ← Feedback, PushSubscription
+  ml.py             ← MLPredictionModel
+  user_profile.py   ← UserProfile
+  disclaimer.py     ← ScientificDisclaimer (Re-export)
+```
 
 **Current Problem:**
 - `core/models.py`: **1,100+ lines** (unmaintainable)
@@ -1018,11 +1043,11 @@ Week 2 [🔄] Testing & Views
   └─ Phase 2.8: Config & Cardio ✅ (38%, 247 tests)
   Target: 40% coverage
 
-Week 3 [⏳] Refactoring & Quality
-  ├─ models.py split
-  ├─ base.html template
-  ├─ Type hints
-  └─ Complexity reduction
+Week 3 [🔄] Refactoring & Quality
+  ├─ Phase 3.1: Model Refactoring ✅ (247 tests grün, 11 Module)
+  ├─ Phase 3.2: base.html Template ⏳
+  ├─ Phase 3.3: Type Hints ⏳
+  └─ Phase 3.4/3.5: Complexity / Tests ⏳
   Target: 50% coverage
 
 Week 4 [⏳] Performance
@@ -1064,6 +1089,6 @@ Week 8 [🎯] PUBLIC LAUNCH
 
 ---
 
-**Last Updated:** February 11, 2026 (Phase 2.8 Complete)  
-**Version:** 2.4 (Phase 2.8 - Config & Cardio Tests Complete)  
-**Next Review:** Phase 2.9 / Week 3 Kick-off (Feb 12+, 2026)
+**Last Updated:** February 11, 2026 (Phase 3.1 Complete - Model Refactoring)  
+**Version:** 2.5 (Phase 3.1 - models.py → Package mit 11 Modulen)  
+**Next Review:** Phase 3.2 - base.html Template Refactoring
