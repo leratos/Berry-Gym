@@ -1876,6 +1876,25 @@
         "Trainingsmatte"
       ],
       "beschreibung": "Auf der Seite abstützen, entweder auf dem Unterarm oder der Hand. Körper bildet eine gerade Linie von Kopf bis Fuß – Hüfte nicht absacken oder hochschieben. Obliques und Gesäß aktiv spannen. Zeit = Sekunden halten. Schwieriger: Oberbein anheben oder auf Hand stützen."
+    },
+    {
+      "id": 116,
+      "bezeichnung": "Brustpresse (Maschine)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "SCHULTER_VORN",
+        "TRIZEPS"
+      ],
+      "bewegungstyp": "DRUECKEN",
+      "gewichts_typ": "GESAMT",
+      "equipment": [
+        "Brustpresse Maschine"
+      ],
+      "beschreibung": "Sitz einstellen: Griffe auf Brusthöhe, Rücken flach an der Lehne. Schulterblätter leicht zusammenziehen. Drücken bis die Arme fast gestreckt sind (kein vollständiges Durchstrecken), kontrolliert zurück bis zur Dehnung ohne die Schultern hochzuziehen. Vorteil gegenüber Langhantel: fixierte Bahn schont Gelenke, ideal zum Lernen des Bewegungsmusters.",
+      "standard_beginner": 30,
+      "standard_intermediate": 55,
+      "standard_advanced": 80,
+      "standard_elite": 110
     }
   ]
 }
