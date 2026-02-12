@@ -1802,6 +1802,80 @@
       "standard_intermediate": 37.5,
       "standard_advanced": 50,
       "standard_elite": 62.5
+    },
+    {
+      "id": 112,
+      "bezeichnung": "Brustpresse (Kabelzug)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "SCHULTER_VORN",
+        "TRIZEPS"
+      ],
+      "bewegungstyp": "DRUECKEN",
+      "gewichts_typ": "PRO_SEITE",
+      "equipment": [
+        "Kabelzug / Latzug"
+      ],
+      "beschreibung": "Kabel auf Schulterhöhe, einen Schritt nach vorne treten. Arm gestreckt nach vorne drücken, Ellbogen leicht gebeugt. Schulterblätter fix, keine Körperbewegung. Durch den ganzen Bewegungsraum führen, Kabel zieht Muskel auf Dehnung – großer Vorteil gegenüber Kurzhantel.",
+      "standard_beginner": 10,
+      "standard_intermediate": 17.5,
+      "standard_advanced": 25,
+      "standard_elite": 35
+    },
+    {
+      "id": 113,
+      "bezeichnung": "Pull-Through (Kabelzug)",
+      "muskelgruppe": "PO",
+      "hilfsmuskeln": [
+        "BEINE_HAM",
+        "RUECKEN_UNTEN"
+      ],
+      "bewegungstyp": "HEBEN",
+      "gewichts_typ": "GESAMT",
+      "equipment": [
+        "Kabelzug / Latzug"
+      ],
+      "beschreibung": "Kabel tief einstellen, mit dem Rücken zur Maschine stehen, Seil zwischen den Beinen greifen. Oberkörper nach vorne neigen (Hüfte beugen, Rücken gerade), dann Hüfte explosiv nach vorne strecken. Gluteus maximal anspannen oben. Kein Rücken – reine Hüftstreckung.",
+      "standard_beginner": 20,
+      "standard_intermediate": 40,
+      "standard_advanced": 60,
+      "standard_elite": 80
+    },
+    {
+      "id": 114,
+      "bezeichnung": "Farmers Carry",
+      "muskelgruppe": "GANZKOERPER",
+      "hilfsmuskeln": [
+        "UNTERARME",
+        "RUECKEN_TRAPEZ",
+        "BAUCH"
+      ],
+      "bewegungstyp": "ISOLATION",
+      "gewichts_typ": "PRO_SEITE",
+      "equipment": [
+        "Kurzhanteln",
+        "Kettlebell"
+      ],
+      "beschreibung": "Schwere Gewichte in beiden Händen, aufrechte Körperhaltung, Schulterblätter nach unten/hinten. Kleine, kontrollierte Schritte. Kernspannung halten, nicht seitlich kippen. Wdh = Meter (oder Zeit). Griffkraft, Trapez und Rumpfstabilität werden stark belastet.",
+      "standard_beginner": 20,
+      "standard_intermediate": 35,
+      "standard_advanced": 50,
+      "standard_elite": 70
+    },
+    {
+      "id": 115,
+      "bezeichnung": "Seitstütz (Side Plank)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [
+        "ABDUKTOREN",
+        "SCHULTER_SEIT"
+      ],
+      "bewegungstyp": "ISOLATION",
+      "gewichts_typ": "ZEIT",
+      "equipment": [
+        "Trainingsmatte"
+      ],
+      "beschreibung": "Auf der Seite abstützen, entweder auf dem Unterarm oder der Hand. Körper bildet eine gerade Linie von Kopf bis Fuß – Hüfte nicht absacken oder hochschieben. Obliques und Gesäß aktiv spannen. Zeit = Sekunden halten. Schwieriger: Oberbein anheben oder auf Hand stützen."
     }
   ]
 }
