@@ -58,6 +58,7 @@ class Command(BaseCommand):
                 "wandsitz",
                 "ausfallschritt",
             ],
+            "BRUSTPRESSE_MASCHINE": ["brustpresse (maschine)"],
         }
 
         # Spezielle Equipment-Kombinationen

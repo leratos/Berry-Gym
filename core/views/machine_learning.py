@@ -10,7 +10,7 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @login_required
 @require_http_methods(["POST"])
-def ml_train_model(request):
+def ml_train_model(request: HttpRequest) -> JsonResponse:
     """
     Trainiert ML-Modell für Gewichtsvorhersagen
     POST /api/ml/train/ mit {"uebung_id": 123} oder ohne (alle Übungen)
@@ -91,7 +91,7 @@ def ml_train_model(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def ml_predict_weight(request, uebung_id):  # noqa: C901
+def ml_predict_weight(request: HttpRequest, uebung_id: int) -> JsonResponse:  # noqa: C901
     """
     Vorhersage des nächsten Gewichts für eine Übung
     GET/POST /api/ml/predict/<uebung_id>/
@@ -168,7 +168,7 @@ def ml_predict_weight(request, uebung_id):  # noqa: C901
 
 @login_required
 @require_http_methods(["GET"])
-def ml_model_info(request, uebung_id):
+def ml_model_info(request: HttpRequest, uebung_id: int) -> JsonResponse:
     """
     Info über trainiertes ML-Modell für eine Übung
     GET /api/ml/model-info/<uebung_id>/
@@ -199,7 +199,7 @@ def ml_model_info(request, uebung_id):
 
 @login_required
 @require_http_methods(["GET"])
-def ml_dashboard(request):
+def ml_dashboard(request: HttpRequest) -> HttpResponse:
     """
     Dashboard mit Übersicht aller trainierten ML-Modelle
     GET /ml/dashboard/

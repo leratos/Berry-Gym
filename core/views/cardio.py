@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -16,7 +17,7 @@ from ..models import CARDIO_AKTIVITAETEN, CARDIO_INTENSITAET, CardioEinheit
 
 
 @login_required
-def cardio_list(request):
+def cardio_list(request: HttpRequest) -> HttpResponse:
     """Zeigt alle Cardio-Einheiten des Users (letzte 30 Tage)."""
     # Filter: letzte 30 Tage oder alle
     show_all = request.GET.get("all", False)
@@ -43,7 +44,7 @@ def cardio_list(request):
 
 
 @login_required
-def cardio_add(request):
+def cardio_add(request: HttpRequest) -> HttpResponse:
     """Fügt eine neue Cardio-Einheit hinzu."""
     if request.method == "POST":
         aktivitaet = request.POST.get("aktivitaet")
@@ -100,7 +101,7 @@ def cardio_add(request):
 
 
 @login_required
-def cardio_delete(request, cardio_id):
+def cardio_delete(request: HttpRequest, cardio_id: int) -> HttpResponse:
     """Löscht eine Cardio-Einheit."""
     cardio = get_object_or_404(CardioEinheit, id=cardio_id, user=request.user)
 

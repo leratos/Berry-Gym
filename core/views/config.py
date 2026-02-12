@@ -11,7 +11,7 @@ import os
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import FileResponse, HttpResponse, JsonResponse
+from django.http import FileResponse, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.cache import cache_control
 
@@ -20,18 +20,18 @@ from ..models import Satz
 logger = logging.getLogger(__name__)
 
 
-def impressum(request):
+def impressum(request: HttpRequest) -> HttpResponse:
     """Impressum-Seite"""
     return render(request, "core/impressum.html")
 
 
-def datenschutz(request):
+def datenschutz(request: HttpRequest) -> HttpResponse:
     """Datenschutzerklärung-Seite"""
     return render(request, "core/datenschutz.html")
 
 
 @login_required
-def metriken_help(request):
+def metriken_help(request: HttpRequest) -> HttpResponse:
     """
     Hilfsseite mit Erklärungen zu allen Metriken und Kennzahlen
     """
@@ -39,7 +39,7 @@ def metriken_help(request):
 
 
 @cache_control(max_age=0, no_cache=True, no_store=True, must_revalidate=True)
-def service_worker(request):
+def service_worker(request: HttpRequest) -> HttpResponse:
     """Serve the service worker from root path."""
     sw_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "service-worker.js")
 
@@ -51,7 +51,7 @@ def service_worker(request):
         return HttpResponse("Service Worker not found", status=404)
 
 
-def favicon(request):
+def favicon(request: HttpRequest) -> HttpResponse:
     """Serve favicon.ico from static files."""
     favicon_path = os.path.join(
         settings.BASE_DIR, "core", "static", "core", "images", "icon-192x192.png"
@@ -64,7 +64,7 @@ def favicon(request):
 
 
 @cache_control(max_age=0, no_cache=True, no_store=True, must_revalidate=True)
-def manifest(request):
+def manifest(request: HttpRequest) -> HttpResponse:
     """Serve the manifest from root path."""
     manifest_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "manifest.json")
 
@@ -77,7 +77,7 @@ def manifest(request):
 
 
 @login_required
-def get_last_set(request, uebung_id):
+def get_last_set(request: HttpRequest, uebung_id: int) -> HttpResponse:
     """API: Liefert die Werte des letzten 'echten' Satzes einer Übung zurück."""
     # Optionales Wiederholungsziel aus Query-Parameter (z.B. ?ziel=8-10)
     ziel_wdh_str = request.GET.get("ziel", "8-12")

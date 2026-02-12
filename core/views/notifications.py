@@ -11,7 +11,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_http_methods
 
 from ..models import PushSubscription
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @login_required
 @require_http_methods(["POST"])
-def subscribe_push(request):
+def subscribe_push(request: HttpRequest) -> JsonResponse:
     """Registriert eine neue Push-Subscription für den User"""
     try:
         data = json.loads(request.body)
@@ -65,7 +65,7 @@ def subscribe_push(request):
 
 @login_required
 @require_http_methods(["POST"])
-def unsubscribe_push(request):
+def unsubscribe_push(request: HttpRequest) -> JsonResponse:
     """Deaktiviert Push-Notifications für ein Gerät"""
     try:
         data = json.loads(request.body)
@@ -93,7 +93,7 @@ def unsubscribe_push(request):
 
 
 @login_required
-def get_vapid_public_key(request):
+def get_vapid_public_key(request: HttpRequest) -> JsonResponse:
     """Gibt den VAPID Public Key für die Frontend-Subscription zurück"""
     if not settings.VAPID_PUBLIC_KEY:
         return JsonResponse({"error": "VAPID keys not configured"}, status=503)

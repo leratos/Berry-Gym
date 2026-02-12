@@ -14,11 +14,13 @@ import logging
 import os
 from collections import defaultdict
 from datetime import timedelta
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.db.models import Avg, Max
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
@@ -27,7 +29,7 @@ from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Ue
 logger = logging.getLogger(__name__)
 
 
-def _apply_mesocycle_from_plan(user, plan_data, plan_ids):
+def _apply_mesocycle_from_plan(user: User, plan_data: dict[str, Any], plan_ids: list[int]) -> None:
     """
     Setzt Mesozyklus-Tracking auf dem UserProfile basierend auf KI-Plan-Daten.
     Wird nach dem Speichern eines KI-generierten Plans aufgerufen.
@@ -82,7 +84,7 @@ def _apply_mesocycle_from_plan(user, plan_data, plan_ids):
 
 
 @login_required
-def workout_recommendations(request):
+def workout_recommendations(request: HttpRequest) -> HttpResponse:
     """Intelligente Trainingsempfehlungen basierend auf Datenanalyse."""
     heute = timezone.now()
     letzte_30_tage = heute - timedelta(days=30)
@@ -334,7 +336,7 @@ def workout_recommendations(request):
 
 
 @login_required
-def generate_plan_api(request):
+def generate_plan_api(request: HttpRequest) -> JsonResponse:
     """
     API Endpoint für KI-Plan-Generierung über Web-Interface
     POST: { plan_type, sets_per_session, analysis_days? }
@@ -468,7 +470,7 @@ def generate_plan_api(request):
 
 
 @login_required
-def analyze_plan_api(request):
+def analyze_plan_api(request: HttpRequest) -> JsonResponse:
     """
     Regelbasierte Plan-Analyse (kostenlos)
     GET /api/analyze-plan/<plan_id>/
@@ -512,7 +514,7 @@ def analyze_plan_api(request):
 
 
 @login_required
-def optimize_plan_api(request):
+def optimize_plan_api(request: HttpRequest) -> JsonResponse:
     """
     KI-gestützte Plan-Optimierung (~0.003€)
     POST /api/optimize-plan/
@@ -563,7 +565,7 @@ def optimize_plan_api(request):
 
 
 @login_required
-def apply_optimizations_api(request):
+def apply_optimizations_api(request: HttpRequest) -> JsonResponse:
     """
     Wendet ausgewählte Optimierungen auf den Plan an
     POST /api/apply-optimizations/
@@ -722,7 +724,7 @@ def apply_optimizations_api(request):
 
 
 @login_required
-def live_guidance_api(request):
+def live_guidance_api(request: HttpRequest) -> JsonResponse:
     """
     API Endpoint für Live-Guidance während Training
     POST: { session_id, question, exercise_id?, set_number? }
