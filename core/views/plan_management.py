@@ -14,6 +14,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.db.models import Q
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Uebung, UserProfile
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-def create_plan(request):
+def create_plan(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         name = request.POST.get("name")
         beschreibung = request.POST.get("beschreibung", "")
@@ -88,7 +89,7 @@ def create_plan(request):
 
 
 @login_required
-def edit_plan(request, plan_id):
+def edit_plan(request: HttpRequest, plan_id: int) -> HttpResponse:
     plan = get_object_or_404(Plan, id=plan_id, user=request.user)
 
     if request.method == "POST":
@@ -176,7 +177,7 @@ def edit_plan(request, plan_id):
 
 
 @login_required
-def delete_plan(request, plan_id):
+def delete_plan(request: HttpRequest, plan_id: int) -> HttpResponse:
     plan = get_object_or_404(Plan, id=plan_id, user=request.user)
 
     if request.method == "POST":
@@ -189,7 +190,7 @@ def delete_plan(request, plan_id):
 
 
 @login_required
-def copy_plan(request, plan_id):
+def copy_plan(request: HttpRequest, plan_id: int) -> HttpResponse:
     """Kopiert einen öffentlichen Plan in die eigenen Pläne."""
 
     # Plan muss öffentlich sein oder dem User gehören
@@ -220,7 +221,7 @@ def copy_plan(request, plan_id):
 
 
 @login_required
-def duplicate_plan(request, plan_id):
+def duplicate_plan(request: HttpRequest, plan_id: int) -> HttpResponse:
     """Dupliziert einen eigenen Plan."""
     original_plan = get_object_or_404(Plan, id=plan_id, user=request.user)
 
@@ -250,7 +251,7 @@ def duplicate_plan(request, plan_id):
 
 
 @login_required
-def duplicate_group(request, gruppe_id):
+def duplicate_group(request: HttpRequest, gruppe_id: int) -> HttpResponse:
     """Dupliziert eine komplette Plan-Gruppe."""
 
     # Alle Pläne dieser Gruppe finden
@@ -301,7 +302,7 @@ def duplicate_group(request, gruppe_id):
     return redirect("training_select_plan")
 
 
-def share_plan(request, plan_id):
+def share_plan(request: HttpRequest, plan_id: int) -> HttpResponse:
     """Zeigt Sharing-Seite mit QR-Code für einen Plan."""
 
     plan = get_object_or_404(Plan, Q(is_public=True) | Q(user=request.user), id=plan_id)
@@ -340,7 +341,7 @@ def share_plan(request, plan_id):
     return render(request, "core/share_plan.html", context)
 
 
-def share_group(request, gruppe_id):
+def share_group(request: HttpRequest, gruppe_id: int) -> HttpResponse:
     """Zeigt Sharing-Seite mit QR-Code für eine Plan-Gruppe."""
 
     # Finde alle Pläne dieser Gruppe (öffentlich oder eigene)
@@ -395,7 +396,7 @@ def share_group(request, gruppe_id):
     return render(request, "core/share_group.html", context)
 
 
-def plan_library(request):
+def plan_library(request: HttpRequest) -> HttpResponse:
     """Öffentliche Plan-Bibliothek - zeigt alle öffentlichen Pläne und Gruppen."""
 
     # Suchfilter
@@ -439,7 +440,7 @@ def plan_library(request):
     return render(request, "core/plan_library.html", context)
 
 
-def plan_library_group(request, gruppe_id):
+def plan_library_group(request: HttpRequest, gruppe_id: int) -> HttpResponse:
     """Detail-Ansicht einer Plan-Gruppe in der Bibliothek."""
     # Finde alle öffentlichen Pläne dieser Gruppe
     plans = Plan.objects.filter(is_public=True, gruppe_id=gruppe_id).order_by(
@@ -463,7 +464,7 @@ def plan_library_group(request, gruppe_id):
 
 
 @login_required
-def copy_group(request, gruppe_id):
+def copy_group(request: HttpRequest, gruppe_id: int) -> HttpResponse:
     """Kopiert eine öffentliche Gruppe in die eigenen Pläne."""
 
     # Alle öffentlichen Pläne dieser Gruppe finden
@@ -514,7 +515,7 @@ def copy_group(request, gruppe_id):
 
 
 @login_required
-def toggle_plan_public(request, plan_id):
+def toggle_plan_public(request: HttpRequest, plan_id: int) -> HttpResponse:
     """Toggle public/private Status eines Plans."""
     plan = get_object_or_404(Plan, id=plan_id, user=request.user)
     plan.is_public = not plan.is_public
@@ -526,7 +527,7 @@ def toggle_plan_public(request, plan_id):
 
 
 @login_required
-def toggle_group_public(request, gruppe_id):
+def toggle_group_public(request: HttpRequest, gruppe_id: int) -> HttpResponse:
     """Toggle public/private Status aller Pläne einer Gruppe."""
     plans = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id)
 
@@ -547,7 +548,7 @@ def toggle_group_public(request, gruppe_id):
 
 
 @login_required
-def set_active_plan_group(request):
+def set_active_plan_group(request: HttpRequest) -> HttpResponse:
     """
     Ermöglicht User die Auswahl einer aktiven Plan-Gruppe.
     GET: Zeigt Liste aller Plan-Gruppen

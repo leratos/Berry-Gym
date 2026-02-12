@@ -13,7 +13,7 @@ import os
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 
 from ..helpers.exercises import find_substitute_exercise
 from ..models import Equipment, Plan, PlanUebung, Uebung
@@ -21,7 +21,7 @@ from ..models import Equipment, Plan, PlanUebung, Uebung
 logger = logging.getLogger(__name__)
 
 
-def get_plan_templates(request):
+def get_plan_templates(request: HttpRequest) -> JsonResponse:
     """API Endpoint: Liefert alle verfügbaren Plan-Templates."""
     try:
         templates_path = os.path.join(
@@ -52,7 +52,7 @@ def get_plan_templates(request):
 
 
 @login_required
-def get_template_detail(request, template_key):
+def get_template_detail(request: HttpRequest, template_key: str) -> JsonResponse:
     """API Endpoint: Liefert alle Details eines Templates inkl. Übungen."""
 
     try:
@@ -162,7 +162,7 @@ def get_template_detail(request, template_key):
 
 
 @login_required
-def create_plan_from_template(request, template_key):
+def create_plan_from_template(request: HttpRequest, template_key: str) -> JsonResponse:
     """Erstellt einen neuen Plan basierend auf einem Template."""
     if request.method != "POST":
         return JsonResponse({"error": "Nur POST erlaubt"}, status=405)

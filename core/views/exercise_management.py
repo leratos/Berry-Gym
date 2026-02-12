@@ -16,7 +16,7 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..models import EQUIPMENT_CHOICES, Equipment, Uebung
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-def equipment_management(request):
+def equipment_management(request: HttpRequest) -> HttpResponse:
     """
     Equipment/Ausrüstungs-Verwaltung
     User kann seine verfügbare Ausrüstung auswählen
@@ -109,7 +109,7 @@ def equipment_management(request):
 
 
 @login_required
-def toggle_equipment(request, equipment_id):
+def toggle_equipment(request: HttpRequest, equipment_id: int) -> HttpResponse:
     """
     Toggle Equipment für User (An/Aus)
     """
@@ -129,7 +129,7 @@ def toggle_equipment(request, equipment_id):
 
 
 @staff_member_required
-def export_uebungen(request):
+def export_uebungen(request: HttpRequest) -> HttpResponse:
     """
     Exportiert alle Übungen als JSON-Datei
     Nur für Admin-User (staff_member_required)
@@ -207,7 +207,7 @@ def export_uebungen(request):
 
 
 @staff_member_required
-def import_uebungen(request):
+def import_uebungen(request: HttpRequest) -> HttpResponse:
     """
     Importiert Übungen aus JSON-Datei
     Nur für Admin-User (staff_member_required)
@@ -353,7 +353,7 @@ def import_uebungen(request):
 
 
 @login_required
-def create_custom_uebung(request):
+def create_custom_uebung(request: HttpRequest) -> JsonResponse:
     """
     Erstellt eine benutzerdefinierte Übung.
     Returns: JSON mit {'success': bool, 'uebung_id': int, 'message': str}

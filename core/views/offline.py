@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Max
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 @require_http_methods(["POST"])
 @login_required
-def sync_offline_data(request):
+def sync_offline_data(request: HttpRequest) -> JsonResponse:
     """Synced offline gespeicherte Sätze zum Server."""
     try:
         data = json.loads(request.body)

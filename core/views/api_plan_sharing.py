@@ -11,7 +11,7 @@ import uuid
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 @login_required
 @require_http_methods(["POST"])
-def api_ungroup_plans(request):
+def api_ungroup_plans(request: HttpRequest) -> JsonResponse:
     """Löst die Gruppierung von Plänen auf (entfernt gruppe_id)."""
     try:
         data = json_module.loads(request.body)
@@ -55,7 +55,7 @@ def api_ungroup_plans(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_group_plans(request):
+def api_group_plans(request: HttpRequest) -> JsonResponse:
     """Gruppiert mehrere Pläne unter einer neuen Gruppe."""
     try:
         data = json_module.loads(request.body)
@@ -96,7 +96,7 @@ def api_group_plans(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_delete_plan(request):
+def api_delete_plan(request: HttpRequest) -> JsonResponse:
     """Löscht einen einzelnen Plan."""
     try:
         data = json_module.loads(request.body)
@@ -128,7 +128,7 @@ def api_delete_plan(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_delete_group(request):
+def api_delete_group(request: HttpRequest) -> JsonResponse:
     """Löscht alle Pläne einer Gruppe."""
     try:
         data = json_module.loads(request.body)
@@ -160,7 +160,7 @@ def api_delete_group(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_rename_group(request):
+def api_rename_group(request: HttpRequest) -> JsonResponse:
     """Benennt eine Plan-Gruppe um."""
     try:
         data = json_module.loads(request.body)
@@ -194,7 +194,7 @@ def api_rename_group(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_reorder_group(request):
+def api_reorder_group(request: HttpRequest) -> JsonResponse:
     """Ändert die Reihenfolge der Pläne innerhalb einer Gruppe."""
     try:
         data = json_module.loads(request.body)
@@ -257,7 +257,7 @@ def api_reorder_group(request):
 
 @login_required
 @require_http_methods(["GET"])
-def api_search_users(request):
+def api_search_users(request: HttpRequest) -> JsonResponse:
     """Sucht User per Username für Trainingspartner-Einladung."""
     query = request.GET.get("q", "").strip()
 
@@ -276,7 +276,7 @@ def api_search_users(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_share_plan_with_user(request):
+def api_share_plan_with_user(request: HttpRequest) -> JsonResponse:
     """Teilt einen Plan mit einem Trainingspartner."""
     try:
         data = json_module.loads(request.body)
@@ -330,7 +330,7 @@ def api_share_plan_with_user(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_unshare_plan_with_user(request):
+def api_unshare_plan_with_user(request: HttpRequest) -> JsonResponse:
     """Entfernt Trainingspartner-Freigabe."""
     try:
         data = json_module.loads(request.body)
@@ -367,7 +367,7 @@ def api_unshare_plan_with_user(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_share_group_with_user(request):
+def api_share_group_with_user(request: HttpRequest) -> JsonResponse:
     """Teilt eine komplette Plan-Gruppe mit einem Trainingspartner."""
     try:
         data = json_module.loads(request.body)
@@ -421,7 +421,7 @@ def api_share_group_with_user(request):
 
 @login_required
 @require_http_methods(["POST"])
-def api_unshare_group_with_user(request):
+def api_unshare_group_with_user(request: HttpRequest) -> JsonResponse:
     """Entfernt Trainingspartner-Freigabe für eine komplette Gruppe."""
     try:
         data = json_module.loads(request.body)
@@ -463,7 +463,7 @@ def api_unshare_group_with_user(request):
 
 
 @login_required
-def api_get_plan_shares(request, plan_id):
+def api_get_plan_shares(request: HttpRequest, plan_id: int) -> JsonResponse:
     """Gibt Liste der User zurück, mit denen ein Plan geteilt ist."""
     plan = get_object_or_404(Plan, id=plan_id, user=request.user)
 
@@ -473,7 +473,7 @@ def api_get_plan_shares(request, plan_id):
 
 
 @login_required
-def api_get_group_shares(request, gruppe_id):
+def api_get_group_shares(request: HttpRequest, gruppe_id: int) -> JsonResponse:
     """Gibt Liste der User zurück, mit denen eine Gruppe geteilt ist."""
     # Erster Plan der Gruppe
     plan = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).first()
