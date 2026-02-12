@@ -2,7 +2,7 @@
 
 **Projekt:** Complete Project Restructuring & Production Preparation  
 **Startdatum:** 09.02.2026  
-**Aktueller Status:** Week 3 - Phase 3.1 Complete (38% Coverage, models refactored)  
+**Aktueller Status:** Week 3 - Phase 3.2 In Progress (38% Coverage, 392 Tests grün, 3 Templates migriert)  
 **Ziel:** Production-ready application for public launch
 
 ---
@@ -301,6 +301,40 @@
 ### 📋 Phase 3 Sub-Phases:
 
 #### **Phase 3.1 - Model Refactoring** ✅ COMPLETE
+
+---
+
+#### **Phase 3.1b - Training Stats Test Suite** ✅ COMPLETE
+**Abgeschlossen:** 2026-02-11
+**Tests Added:** 27 Tests
+**Total Tests:** 383 passing, 9 pre-existing errors in test_context_helpers.py (not caused here)
+
+**Test File:** `test_training_stats_extended.py`
+
+**Was getestet:**
+- `TestDashboard` (9 Tests): Login-Schutz, Laden, Context-Keys, Wochenzählung, User-Isolation, Gesamtzählung, Aufwärmsatz-Filter, Favoriten Top-3, Streak=0
+- `TestTrainingList` (4 Tests): Login-Schutz, Laden, User-Isolation (context key `trainings_data`), leere Liste
+- `TestDeleteTraining` (4 Tests): Login-Schutz, Owner-Delete, Fremde-404, GET-löscht-nicht
+- `TestTrainingStats` (4 Tests): Login-Schutz, Laden ohne/mit Daten, User-Isolation
+- `TestExerciseStats` (6 Tests): Login-Schutz, Laden, 404 bei unbekannter ID, mit Satz-Daten, User-Isolation, Context-Uebung-Objekt
+
+**🔴 Bug gefunden & gefixt:**
+- `delete_training` View hatte KEINEN `request.method == "POST"` Check
+- GET-Request auf `/training/<id>/delete/` löschte die Trainingseinheit sofort
+- Fix: `if request.method == "POST":` Guard hinzugefügt
+- **Sicherheitsrelevant:** Link-Prefetching durch Browser oder "Open in new tab" hätte Daten gelöscht
+
+**Technische Details:**
+- Context-Key der training_list View ist `trainings_data` (Liste von Dicts, nicht QuerySet)
+- `gesamt_saetze` im Dashboard ignoriert Aufwärmsätze korrekt
+- `favoriten` sind Top-3 nach Häufigkeit (Aufwärmsätze & Deload-Trainings ausgeschlossen)
+
+**Lessons Learned:**
+- Tests finden echte Sicherheits-Bugs (GET löscht Daten)
+- Context-Key-Namen immer im View prüfen, nicht raten
+- Antworten in Chunks schreiben (≤150 Zeilen) vermeidet Token-Abbrüche
+
+---
 **Abgeschlossen:** 2026-02-11  
 **Time Estimate:** 1-2 days → **1 day**  
 **Impact:** Massive maintainability improvement
@@ -1045,7 +1079,11 @@ Week 2 [🔄] Testing & Views
 
 Week 3 [🔄] Refactoring & Quality
   ├─ Phase 3.1: Model Refactoring ✅ (247 tests grün, 11 Module)
-  ├─ Phase 3.2: base.html Template ⏳
+  ├─ Phase 3.1b: Training Stats Tests ✅ (383→392 tests, Bug in delete_training gefixt)
+  ├─ Phase 3.1c: test_context_helpers.py gefixt ✅ (392/396 grün, 0 Fehler)
+  ├─ Phase 3.2: base.html Template Migration 🔄 (3/~30 Templates migriert)
+  │    ✅ training_list.html  ✅ training_stats.html  ✅ stats_exercise.html
+  │    + Delete-Modal: GET→POST Fix (verhindert Datenverlust durch Prefetching)
   ├─ Phase 3.3: Type Hints ⏳
   └─ Phase 3.4/3.5: Complexity / Tests ⏳
   Target: 50% coverage
@@ -1089,6 +1127,6 @@ Week 8 [🎯] PUBLIC LAUNCH
 
 ---
 
-**Last Updated:** February 11, 2026 (Phase 3.1 Complete - Model Refactoring)  
-**Version:** 2.5 (Phase 3.1 - models.py → Package mit 11 Modulen)  
-**Next Review:** Phase 3.2 - base.html Template Refactoring
+**Last Updated:** February 12, 2026 (Phase 3.2 gestartet - 3 Templates auf base.html migriert + Delete-Modal GET→POST Fix)
+**Version:** 2.8 (training_list, training_stats, stats_exercise auf base.html umgestellt)
+**Next Review:** Phase 3.2 weitermachen - restliche Templates migrieren
