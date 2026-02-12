@@ -15,7 +15,9 @@ import re
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Max, Q
-from django.http import JsonResponse
+from typing import Optional
+
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-def training_select_plan(request):
+def training_select_plan(request: HttpRequest) -> HttpResponse:
     """Zeigt alle verfügbaren Pläne zur Auswahl an. Priorisiert aktive Plan-Gruppe."""
     from collections import OrderedDict
 
@@ -101,7 +103,7 @@ def training_select_plan(request):
     return render(request, "core/training_select_plan.html", context)
 
 
-def plan_details(request, plan_id):
+def plan_details(request: HttpRequest, plan_id: int) -> HttpResponse:
     """Zeigt Details eines Trainingsplans mit allen Übungen."""
     # Zugriff auf: eigene Pläne, öffentliche Pläne, oder mit mir geteilte Pläne
     plan = get_object_or_404(
@@ -137,7 +139,7 @@ def plan_details(request, plan_id):
     return render(request, "core/plan_details.html", context)
 
 
-def training_start(request, plan_id=None):
+def training_start(request: HttpRequest, plan_id: Optional[int] = None) -> HttpResponse:
     """Startet Training. Wenn plan_id da ist, werden Übungen vor-angelegt."""
     training = Trainingseinheit.objects.create(user=request.user)
 
@@ -237,7 +239,7 @@ def training_start(request, plan_id=None):
 
 
 @login_required
-def training_session(request, training_id):
+def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
     # Sortieren für Gruppierung: Erst Muskelgruppe, dann Übungsname
@@ -382,7 +384,7 @@ def training_session(request, training_id):
 
 
 @login_required
-def add_set(request, training_id):
+def add_set(request: HttpRequest, training_id: int) -> HttpResponse:
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
     if request.method == "POST":
@@ -459,7 +461,7 @@ def add_set(request, training_id):
 
 @login_required
 @require_http_methods(["POST"])
-def delete_set(request, set_id):
+def delete_set(request: HttpRequest, set_id: int) -> HttpResponse:
     """Löscht einen Satz und kehrt zur Liste zurück"""
     # Wir holen den Satz des eingeloggten Nutzers. Wenn er nicht existiert oder nicht dem Nutzer gehört, gibt's einen 404 Fehler.
     satz = get_object_or_404(Satz, id=set_id, einheit__user=request.user)
@@ -472,7 +474,7 @@ def delete_set(request, set_id):
     return redirect("training_session", training_id=training_id)
 
 
-def update_set(request, set_id):
+def update_set(request: HttpRequest, set_id: int) -> HttpResponse:
     """Speichert Änderungen an einem existierenden Satz."""
     try:
         logger.info(f"update_set called for set_id={set_id}, method={request.method}")
@@ -566,7 +568,7 @@ def update_set(request, set_id):
 
 @login_required
 @require_http_methods(["POST"])
-def toggle_deload(request, training_id):
+def toggle_deload(request: HttpRequest, training_id: int) -> JsonResponse:
     """Setzt oder entfernt den Deload-Status eines Trainings via AJAX."""
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
     try:
@@ -604,7 +606,7 @@ def toggle_deload(request, training_id):
 
 
 @login_required
-def finish_training(request, training_id):
+def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
     """Zeigt Zusammenfassung und ermöglicht Speichern von Dauer/Kommentar."""
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
