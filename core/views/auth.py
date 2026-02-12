@@ -14,8 +14,10 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.db.models import F
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..models import InviteCode, WaitlistEntry
@@ -23,7 +25,7 @@ from ..models import InviteCode, WaitlistEntry
 logger = logging.getLogger(__name__)
 
 
-def send_welcome_email(user):
+def send_welcome_email(user: User) -> None:
     """Sendet Willkommens-E-Mail nach erfolgreicher Registrierung"""
     subject = "🏋️ Willkommen bei HomeGym!"
 
@@ -72,7 +74,7 @@ Kontakt: marcus.kohtz@signz-vision.com
         logger.error(f"Failed to send welcome email to {user.email}: {e}")
 
 
-def apply_beta(request):
+def apply_beta(request: HttpRequest) -> HttpResponse:
     """Bewerbungsseite für Beta-Zugang"""
     if request.method == "POST":
         email = request.POST.get("email", "").strip().lower()
@@ -109,7 +111,7 @@ def apply_beta(request):
     return render(request, "registration/apply_beta.html")
 
 
-def register(request):
+def register(request: HttpRequest) -> HttpResponse:
     """Registrierung mit Einladungscode"""
     if request.user.is_authenticated:
         return redirect("dashboard")
@@ -171,7 +173,7 @@ def register(request):
 
 
 @login_required
-def feedback_list(request):
+def feedback_list(request: HttpRequest) -> HttpResponse:
     """Liste aller eigenen Feedbacks"""
     from ..models import Feedback
 
@@ -180,7 +182,7 @@ def feedback_list(request):
 
 
 @login_required
-def feedback_create(request):
+def feedback_create(request: HttpRequest) -> HttpResponse:
     """Neues Feedback (Bug/Feature) erstellen"""
     from ..models import Feedback
 
@@ -219,7 +221,7 @@ def feedback_create(request):
 
 
 @login_required
-def feedback_detail(request, feedback_id):
+def feedback_detail(request: HttpRequest, feedback_id: int) -> HttpResponse:
     """Feedback-Details anzeigen"""
     from ..models import Feedback
 
@@ -228,7 +230,7 @@ def feedback_detail(request, feedback_id):
 
 
 @login_required
-def profile(request):
+def profile(request: HttpRequest) -> HttpResponse:
     """Profil-Seite zum Bearbeiten von Benutzerdaten"""
     from django.contrib.auth import update_session_auth_hash
     from django.contrib.auth.hashers import check_password

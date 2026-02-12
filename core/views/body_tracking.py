@@ -2,17 +2,18 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..models import KoerperWerte, ProgressPhoto
 
 
 @login_required
-def add_koerperwert(request):
+def add_koerperwert(request: HttpRequest) -> HttpResponse:
     """Formular zum Eintragen der erweiterten Watch-Daten"""
 
     # Wir holen den letzten Eintrag, um die Größe vorzuschlagen
-    letzter_wert = KoerperWerte.objects.first()
+    letzter_wert = KoerperWerte.objects.filter(user=request.user).last()
     standard_groesse = letzter_wert.groesse_cm if letzter_wert else 180
 
     if request.method == "POST":
@@ -46,9 +47,10 @@ def add_koerperwert(request):
     return render(request, "core/add_koerperwert.html", context)
 
 
-def body_stats(request):
+@login_required
+def body_stats(request: HttpRequest) -> HttpResponse:
     """Zeigt Körperwerte-Verlauf mit Graphen."""
-    werte = KoerperWerte.objects.all().order_by("datum")
+    werte = KoerperWerte.objects.filter(user=request.user).order_by("datum")
 
     if not werte.exists():
         return render(request, "core/body_stats.html", {"no_data": True})
@@ -88,7 +90,7 @@ def body_stats(request):
 
 
 @login_required
-def edit_koerperwert(request, wert_id):
+def edit_koerperwert(request: HttpRequest, wert_id: int) -> HttpResponse:
     """Körperwert bearbeiten."""
     wert = get_object_or_404(KoerperWerte, id=wert_id, user=request.user)
 
@@ -110,7 +112,7 @@ def edit_koerperwert(request, wert_id):
 
 
 @login_required
-def delete_koerperwert(request, wert_id):
+def delete_koerperwert(request: HttpRequest, wert_id: int) -> HttpResponse:
     """Körperwert löschen – nur per POST."""
     wert = get_object_or_404(KoerperWerte, id=wert_id, user=request.user)
     if request.method == "POST":
@@ -120,7 +122,7 @@ def delete_koerperwert(request, wert_id):
 
 
 @login_required
-def progress_photos(request):
+def progress_photos(request: HttpRequest) -> HttpResponse:
     """Zeigt alle Fortschrittsfotos des Users in einer Timeline."""
     photos = ProgressPhoto.objects.filter(user=request.user).order_by("-datum")
 
@@ -135,7 +137,7 @@ def progress_photos(request):
 
 
 @login_required
-def upload_progress_photo(request):
+def upload_progress_photo(request: HttpRequest) -> HttpResponse:
     """Upload eines neuen Fortschrittsfotos."""
     if request.method == "POST":
         foto = request.FILES.get("foto")
@@ -161,7 +163,7 @@ def upload_progress_photo(request):
 
 
 @login_required
-def delete_progress_photo(request, photo_id):
+def delete_progress_photo(request: HttpRequest, photo_id: int) -> HttpResponse:
     """Löscht ein Fortschrittsfoto."""
     photo = get_object_or_404(ProgressPhoto, id=photo_id, user=request.user)
 

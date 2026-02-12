@@ -83,6 +83,7 @@ EQUIPMENT_CHOICES = [
     ("KOERPER", "Nur Körpergewicht"),
     ("ADDUKTOREN_MASCHINE", "Adduktoren Maschine"),
     ("ABDUKTOREN_MASCHINE", "Abduktoren Maschine"),
+    ("BRUSTPRESSE_MASCHINE", "Brustpresse Maschine"),
 ]
 
 CARDIO_AKTIVITAETEN = [

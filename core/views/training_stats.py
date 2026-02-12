@@ -22,6 +22,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, DecimalField, F, Max, Q, Sum
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -40,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-def dashboard(request):
+def dashboard(request: HttpRequest) -> HttpResponse:
     letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
     letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
 
@@ -595,7 +596,7 @@ def dashboard(request):
 
 
 @login_required
-def training_list(request):
+def training_list(request: HttpRequest) -> HttpResponse:
     """Zeigt eine Liste aller vergangenen Trainings."""
     # Wir holen NUR die Trainings des aktuellen Users, sortiert nach Datum (neu -> alt)
     # annotate(satz_count=Count('saetze')) zählt die Sätze für die Vorschau
@@ -623,7 +624,7 @@ def training_list(request):
 
 
 @login_required
-def delete_training(request, training_id):
+def delete_training(request: HttpRequest, training_id: int) -> HttpResponse:
     """Löscht ein komplettes Training aus der Historie."""
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
     if request.method == "POST":
@@ -633,7 +634,7 @@ def delete_training(request, training_id):
 
 
 @login_required
-def exercise_stats(request, uebung_id):
+def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
     """Berechnet 1RM-Verlauf und Rekorde für eine Übung."""
     uebung = get_object_or_404(
         Uebung,
@@ -740,7 +741,7 @@ def exercise_stats(request, uebung_id):
 
 
 @login_required
-def training_stats(request):
+def training_stats(request: HttpRequest) -> HttpResponse:
     """Erweiterte Trainingsstatistiken mit Volumen-Progression und Analyse."""
     # Alle Trainings mit Volumen
     trainings = Trainingseinheit.objects.filter(user=request.user).order_by("datum")
