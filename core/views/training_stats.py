@@ -626,7 +626,8 @@ def training_list(request):
 def delete_training(request, training_id):
     """Löscht ein komplettes Training aus der Historie."""
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
-    training.delete()
+    if request.method == "POST":
+        training.delete()
     # Wir leiten zurück zur Liste (History)
     return redirect("training_list")
 

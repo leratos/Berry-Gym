@@ -10,7 +10,7 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
 
@@ -76,6 +76,8 @@ def ml_train_model(request):
             )
 
     except Exception as e:
+        if isinstance(e, Http404):
+            raise
         logger.error(f"ML Training Error: {e}", exc_info=True)
         return JsonResponse(
             {
@@ -89,7 +91,7 @@ def ml_train_model(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def ml_predict_weight(request, uebung_id):
+def ml_predict_weight(request, uebung_id):  # noqa: C901
     """
     Vorhersage des nächsten Gewichts für eine Übung
     GET/POST /api/ml/predict/<uebung_id>/
@@ -156,6 +158,8 @@ def ml_predict_weight(request, uebung_id):
         return JsonResponse({"success": True, "uebung": uebung.bezeichnung, "prediction": result})
 
     except Exception as e:
+        if isinstance(e, Http404):
+            raise
         logger.error(f"ML Prediction Error: {e}", exc_info=True)
         return JsonResponse(
             {"success": False, "message": "Fehler bei Gewichtsvorhersage"}, status=500
@@ -185,6 +189,8 @@ def ml_model_info(request, uebung_id):
             )
 
     except Exception as e:
+        if isinstance(e, Http404):
+            raise
         logger.error(f"ML Model Info Error: {e}", exc_info=True)
         return JsonResponse(
             {"success": False, "message": "Fehler beim Abrufen der Modell-Infos"}, status=500
