@@ -17,7 +17,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.db.models import Avg, Count, F, Max, Sum
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-def export_training_csv(request):
+def export_training_csv(request: HttpRequest) -> HttpResponse:
     """Export all training data as CSV.
 
     Exports all training sessions and sets for the current user in CSV format,
@@ -112,7 +112,7 @@ def export_training_csv(request):
 
 
 @login_required
-def export_training_pdf(request):
+def export_training_pdf(request: HttpRequest) -> HttpResponse:
     """Export training statistics as PDF.
 
     Generates a comprehensive PDF report of training statistics including
@@ -545,7 +545,7 @@ def export_training_pdf(request):
 
 
 @login_required
-def export_plan_pdf(request, plan_id):
+def export_plan_pdf(request: HttpRequest, plan_id: int) -> HttpResponse:
     """Export a training plan as PDF with QR code.
 
     Generates a PDF document for a single training plan including all exercises
@@ -777,7 +777,7 @@ def export_plan_pdf(request, plan_id):
 
 
 @login_required
-def export_plan_group_pdf(request, gruppe_id):
+def export_plan_group_pdf(request: HttpRequest, gruppe_id: int) -> HttpResponse:
     """Export a complete training plan group as PDF.
 
     Generates a comprehensive PDF document for an entire training plan group,

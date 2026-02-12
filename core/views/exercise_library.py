@@ -16,7 +16,7 @@ from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Max, Q
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-def uebungen_auswahl(request):
+def uebungen_auswahl(request: HttpRequest) -> HttpResponse:
     """Übersicht aller Übungen mit grafischer Muskelgruppen-Darstellung"""
     # Equipment-Filter: Nur Übungen mit verfügbarem Equipment
     user_equipment_ids = request.user.verfuegbares_equipment.values_list("id", flat=True)
@@ -123,7 +123,7 @@ def uebungen_auswahl(request):
 
 
 @login_required
-def muscle_map(request):
+def muscle_map(request: HttpRequest) -> HttpResponse:
     """Interaktive Muscle-Map mit klickbaren Muskelgruppen"""
     # Filter nach Muskelgruppe (optional)
     selected_group = request.GET.get("muskelgruppe", None)
@@ -185,7 +185,7 @@ def muscle_map(request):
 
 
 @login_required
-def uebung_detail(request, uebung_id):
+def uebung_detail(request: HttpRequest, uebung_id: int) -> HttpResponse:
     """Detail-Ansicht einer Übung mit anatomischer Visualisierung"""
     uebung = get_object_or_404(Uebung, id=uebung_id)
 
@@ -265,7 +265,7 @@ def uebung_detail(request, uebung_id):
 
 
 @login_required
-def exercise_detail(request, uebung_id):
+def exercise_detail(request: HttpRequest, uebung_id: int) -> HttpResponse:
     """
     Kombinierte Übungs-Detailansicht:
     - Beschreibung & Info
@@ -381,7 +381,7 @@ def exercise_detail(request, uebung_id):
 
 
 @login_required
-def toggle_favorite(request, uebung_id):
+def toggle_favorite(request: HttpRequest, uebung_id: int) -> JsonResponse:
     """Toggle Favoriten-Status einer Übung."""
     uebung = get_object_or_404(Uebung, id=uebung_id)
 
@@ -396,7 +396,7 @@ def toggle_favorite(request, uebung_id):
 
 
 @login_required
-def toggle_favorit(request, uebung_id):
+def toggle_favorit(request: HttpRequest, uebung_id: int) -> JsonResponse:
     """
     Toggle Favorit-Status einer Übung für den aktuellen User.
     Returns: JSON mit {'is_favorit': bool, 'message': str}
@@ -417,7 +417,7 @@ def toggle_favorit(request, uebung_id):
 
 
 @login_required
-def get_alternative_exercises(request, uebung_id):
+def get_alternative_exercises(request: HttpRequest, uebung_id: int) -> JsonResponse:
     """
     API Endpoint: Gibt alternative Übungen zurück basierend auf:
     - Gleicher Bewegungstyp (Compound/Isolation)
@@ -529,7 +529,7 @@ def get_alternative_exercises(request, uebung_id):
 
 
 @login_required
-def suggest_alternative_exercises(request, exercise_id):
+def suggest_alternative_exercises(request: HttpRequest, exercise_id: int) -> JsonResponse:
     """
     Schlägt alternative Übungen vor basierend auf:
     - Gleiche Muskelgruppe
@@ -587,7 +587,7 @@ def suggest_alternative_exercises(request, exercise_id):
 
 
 @login_required
-def exercise_api_detail(request, exercise_id):
+def exercise_api_detail(request: HttpRequest, exercise_id: int) -> JsonResponse:
     """
     API Endpoint für Übungsdetails (für Modal)
     Gibt JSON mit allen Übungsinformationen zurück
