@@ -2,7 +2,9 @@
 
 **Projekt:** Complete Project Restructuring & Production Preparation  
 **Startdatum:** 09.02.2026  
-**Aktueller Status:** Week 3 - Phase 3.2 In Progress (38% Coverage, 392 Tests grün, 3 Templates migriert)  
+**Aktueller Status:** Week 3 - Phase 3.2 In Progress (44% Coverage, 392 Tests grün, 9 Templates migriert)
+**Projektpfad:** `C:\Dev\Berry-Gym` (aus OneDrive migriert am 2026-02-12)
+**Python:** 3.12.3 via `.venv` (py -3.12)  
 **Ziel:** Production-ready application for public launch
 
 ---
@@ -404,8 +406,28 @@ core/
 ---
 
 #### **Phase 3.2 - Template Base Refactoring** 🔥 CRITICAL
-**Time Estimate:** 1-2 days  
-**Impact:** DRY principle, easier maintenance
+**Time Estimate:** 1-2 days
+**Status:** 🔄 In Progress (9/~30 Templates migriert)
+
+**Migriert:**
+- ✅ training_list.html (+ delete_training GET→POST Bugfix)
+- ✅ training_stats.html
+- ✅ stats_exercise.html
+- ✅ body_stats.html (+ delete_koerperwert GET→POST Bugfix)
+- ✅ profile.html (global_header war dupliziert)
+- ✅ feedback_list.html (global_header fehlte komplett – Bugfix)
+- ✅ cardio_list.html (global_header fehlte komplett – Bugfix)
+- ✅ cardio_add.html (global_header fehlte komplett – Bugfix)
+- ✅ dashboard.html (960→673 Zeilen, duplizierte Theme-Funktionen entfernt)
+
+**Noch ausstehend (~20 Templates):**
+- ⏳ training_session.html (1654 Zeilen – komplex)
+- ⏳ training_finish.html, training_select_plan.html
+- ⏳ plan_details.html, plan_library.html, create_plan.html, edit_plan.html
+- ⏳ uebungen_auswahl.html, uebung_detail.html, muscle_map.html
+- ⏳ add_koerperwert.html, edit_koerperwert.html, progress_photos.html
+- ⏳ equipment_management.html, ai_coach_chat.html, ml_dashboard.html
+- ⏳ weitere ~6 Templates (metriken_help, datenschutz, impressum, etc.)
 
 **Current Problem:**
 - **No `base.html` template**
