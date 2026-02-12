@@ -136,3 +136,4 @@ htmlcov/
 .coverage.*
 .pytest_cache/
 .tox/
+docs/journal.txt
