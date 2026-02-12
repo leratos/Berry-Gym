@@ -111,10 +111,11 @@ def edit_koerperwert(request, wert_id):
 
 @login_required
 def delete_koerperwert(request, wert_id):
-    """Körperwert löschen."""
+    """Körperwert löschen – nur per POST."""
     wert = get_object_or_404(KoerperWerte, id=wert_id, user=request.user)
-    wert.delete()
-    messages.success(request, "Körperwert erfolgreich gelöscht!")
+    if request.method == "POST":
+        wert.delete()
+        messages.success(request, "Körperwert erfolgreich gelöscht!")
     return redirect("body_stats")
 
 
