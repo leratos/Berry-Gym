@@ -13,12 +13,7 @@ from django.urls import reverse
 
 import pytest
 
-from .factories import (
-    SatzFactory,
-    TrainingseinheitFactory,
-    UebungFactory,
-    UserFactory,
-)
+from .factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Dashboard Tests
