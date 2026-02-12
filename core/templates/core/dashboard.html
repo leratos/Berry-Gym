@@ -1,959 +1,673 @@
+{% extends 'base.html' %}
 {% load static %}
-<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>HomeGym Dashboard</title>
 
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#0d6efd">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="HomeGym">
-    <link rel="apple-touch-icon" href="{% static 'core/images/icon-192x192.png' %}">
-    <link rel="manifest" href="/manifest.json">
+{% block title %}HomeGym Dashboard{% endblock %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+{% block extra_head %}
+<style>
+    .btn-action {
+        height: 80px;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .card-stat {
+        border: none;
+        height: 100%;
+    }
+    [data-bs-theme="dark"] .card-stat {
+        background-color: #2b3035;
+        color: #fff;
+    }
+    [data-bs-theme="dark"] .stat-label { color: #adb5bd; }
+    [data-bs-theme="light"] .card-stat {
+        background-color: #ffffff;
+        color: #212529;
+        border: 1px solid #dee2e6;
+    }
+    [data-bs-theme="light"] .stat-label { color: #6c757d; }
+    [data-bs-theme="light"] .card-stat.text-white { color: #212529 !important; }
+    .stat-label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .stat-value { font-size: 1.5rem; font-weight: bold; }
+    [data-bs-theme="dark"] .list-group-item.bg-transparent { color: #fff; }
+    [data-bs-theme="light"] .list-group-item.bg-transparent { color: #212529; }
+    [data-bs-theme="light"] .list-group-item.border-secondary { border-color: #dee2e6 !important; }
 
-    <!-- Offline Manager CSS -->
-    <link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
+    /* Heatmap */
+    #training-heatmap {
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        padding: 10px 0;
+        scrollbar-width: thin;
+    }
+    #training-heatmap::-webkit-scrollbar { height: 6px; }
+    [data-bs-theme="dark"] #training-heatmap::-webkit-scrollbar-track { background: #161b22; border-radius: 3px; }
+    [data-bs-theme="dark"] #training-heatmap::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    [data-bs-theme="dark"] .heatmap-day[data-level="0"] { background-color: #161b22; }
+    [data-bs-theme="dark"] .heatmap-legend-box[data-level="0"] { background-color: #161b22; }
+    [data-bs-theme="light"] #training-heatmap::-webkit-scrollbar-track { background: #e9ecef; border-radius: 3px; }
+    [data-bs-theme="light"] #training-heatmap::-webkit-scrollbar-thumb { background: #adb5bd; border-radius: 3px; }
+    [data-bs-theme="light"] .heatmap-day[data-level="0"] { background-color: #ebedf0; }
+    [data-bs-theme="light"] .heatmap-legend-box[data-level="0"] { background-color: #ebedf0; }
+    [data-bs-theme="light"] .heatmap-day { border: 1px solid rgba(0,0,0,0.05); }
+    .heatmap-month { display: flex; flex-direction: column; gap: 4px; }
+    .heatmap-week { display: flex; flex-direction: column; gap: 4px; }
+    .heatmap-day {
+        width: 15px; height: 15px; border-radius: 3px;
+        cursor: pointer; transition: all 0.2s;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .heatmap-day[data-level="1"] { background-color: #0e4429; }
+    .heatmap-day[data-level="2"] { background-color: #006d32; }
+    .heatmap-day[data-level="3"] { background-color: #26a641; }
+    .heatmap-day[data-level="4"] { background-color: #39d353; }
+    .heatmap-day:hover { transform: scale(1.3); opacity: 0.8; }
+    .heatmap-legend-box {
+        width: 15px; height: 15px; border-radius: 3px;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .heatmap-legend-box[data-level="1"] { background-color: #0e4429; }
+    .heatmap-legend-box[data-level="2"] { background-color: #006d32; }
+    .heatmap-legend-box[data-level="3"] { background-color: #26a641; }
+    .heatmap-legend-box[data-level="4"] { background-color: #39d353; }
+    @media (max-width: 768px) {
+        .heatmap-day { width: 12px; height: 12px; }
+        .heatmap-legend-box { width: 12px; height: 12px; }
+        #training-heatmap { gap: 3px; }
+        .heatmap-month, .heatmap-week { gap: 3px; }
+    }
+</style>
+{% endblock %}
 
-    <script>
-        // Theme laden vor Render
-        (function() {
-            const theme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-bs-theme', theme);
-        })();
-    </script>
+{% block content %}
+<div class="container pb-5 pt-3">
 
-    <style>
-        .btn-action {
-            height: 80px;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Card Stats - Theme-aware */
-        .card-stat {
-            border: none;
-            height: 100%;
-        }
-
-        /* Dark Theme */
-        [data-bs-theme="dark"] .card-stat {
-            background-color: #2b3035;
-            color: #fff;
-        }
-        [data-bs-theme="dark"] .stat-label {
-            color: #adb5bd;
-        }
-
-        /* Light Theme */
-        [data-bs-theme="light"] .card-stat {
-            background-color: #ffffff;
-            color: #212529;
-            border: 1px solid #dee2e6;
-        }
-        [data-bs-theme="light"] .stat-label {
-            color: #6c757d;
-        }
-        [data-bs-theme="light"] .card-stat.text-white {
-            color: #212529 !important;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        /* List Group Items - Theme-aware */
-        [data-bs-theme="dark"] .list-group-item.bg-transparent {
-            color: #fff;
-        }
-        [data-bs-theme="light"] .list-group-item.bg-transparent {
-            color: #212529;
-        }
-        [data-bs-theme="light"] .list-group-item.border-secondary {
-            border-color: #dee2e6 !important;
-        }
-
-        /* Heatmap Styles */
-        #training-heatmap {
-            display: flex;
-            gap: 4px;
-            overflow-x: auto;
-            padding: 10px 0;
-            scrollbar-width: thin;
-        }
-
-        /* Dark Theme Heatmap */
-        [data-bs-theme="dark"] #training-heatmap::-webkit-scrollbar-track {
-            background: #161b22;
-            border-radius: 3px;
-        }
-        [data-bs-theme="dark"] #training-heatmap::-webkit-scrollbar-thumb {
-            background: #30363d;
-            border-radius: 3px;
-        }
-        [data-bs-theme="dark"] .heatmap-day[data-level="0"] {
-            background-color: #161b22;
-        }
-        [data-bs-theme="dark"] .heatmap-legend-box[data-level="0"] {
-            background-color: #161b22;
-        }
-
-        /* Light Theme Heatmap */
-        [data-bs-theme="light"] #training-heatmap::-webkit-scrollbar-track {
-            background: #e9ecef;
-            border-radius: 3px;
-        }
-        [data-bs-theme="light"] #training-heatmap::-webkit-scrollbar-thumb {
-            background: #adb5bd;
-            border-radius: 3px;
-        }
-        [data-bs-theme="light"] .heatmap-day[data-level="0"] {
-            background-color: #ebedf0;
-        }
-        [data-bs-theme="light"] .heatmap-legend-box[data-level="0"] {
-            background-color: #ebedf0;
-        }
-        [data-bs-theme="light"] .heatmap-day {
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-
-        #training-heatmap::-webkit-scrollbar {
-            height: 6px;
-        }
-        .heatmap-month {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .heatmap-week {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .heatmap-day {
-            width: 15px;
-            height: 15px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .heatmap-day[data-level="1"] {
-            background-color: #0e4429;
-        }
-        .heatmap-day[data-level="2"] {
-            background-color: #006d32;
-        }
-        .heatmap-day[data-level="3"] {
-            background-color: #26a641;
-        }
-        .heatmap-day[data-level="4"] {
-            background-color: #39d353;
-        }
-        .heatmap-day:hover {
-            transform: scale(1.3);
-            opacity: 0.8;
-        }
-        .heatmap-legend-box {
-            width: 15px;
-            height: 15px;
-            border-radius: 3px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .heatmap-legend-box[data-level="1"] {
-            background-color: #0e4429;
-        }
-        .heatmap-legend-box[data-level="2"] {
-            background-color: #006d32;
-        }
-        .heatmap-legend-box[data-level="3"] {
-            background-color: #26a641;
-        }
-        .heatmap-legend-box[data-level="4"] {
-            background-color: #39d353;
-        }
-
-        @media (max-width: 768px) {
-            .heatmap-day {
-                width: 12px;
-                height: 12px;
-            }
-            .heatmap-legend-box {
-                width: 12px;
-                height: 12px;
-            }
-            #training-heatmap {
-                gap: 3px;
-            }
-            .heatmap-month, .heatmap-week {
-                gap: 3px;
-            }
-        }
-    </style>
-  </head>
-  <body>
-
-    <!-- Global Header -->
-    {% include 'core/includes/global_header.html' %}
-
-    <div class="container pb-5 pt-3">
-
-      <!-- Sektion 1: Training -->
-      <div class="d-flex justify-content-between align-items-center mb-3">
-          <h6 class="text-secondary ps-1 mb-0">TRAINING</h6>
-          <div class="d-flex gap-3">
-              <a href="{% url 'equipment_management' %}" class="text-decoration-none small fw-bold text-warning" title="Ausrüstung verwalten">
-                  <i class="bi bi-tools"></i> Equipment
-              </a>
-              <!-- Push Notifications Toggle -->
-              <button onclick="togglePushNotifications()" class="btn btn-sm btn-outline-secondary border-0" id="pushToggleBtn" title="Push-Benachrichtigungen">
-                  <i class="bi bi-bell-slash" id="pushIcon"></i>
-              </button>
-              <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
-                  <i class="bi bi-moon-fill" id="themeIcon"></i>
-              </button>
-              <a href="{% url 'training_stats' %}" class="text-decoration-none small fw-bold text-info">
-                  <i class="bi bi-graph-up"></i> Statistiken
-              </a>
-              <a href="{% url 'training_list' %}" class="text-decoration-none small fw-bold text-primary">
-                  Alle anzeigen <i class="bi bi-chevron-right"></i>
-              </a>
-          </div>
-      </div>
-
-      <!-- Trainingsfrequenz & Streak -->
-      <div class="row g-3 mb-3">
-        <div class="col-6">
-          <div class="card card-stat shadow-sm">
-            <div class="card-body text-center py-3">
-                <div class="stat-label mb-1"><i class="bi bi-calendar-week me-1"></i> Diese Woche</div>
-                <div class="display-4 fw-bold text-primary">{{ trainings_diese_woche }}</div>
-                <small class="text-muted">Trainings</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-6">
-          <div class="card card-stat shadow-sm">
-            <div class="card-body text-center py-3">
-                <div class="stat-label mb-1"><i class="bi bi-fire me-1"></i> Streak</div>
-                <div class="display-4 fw-bold text-warning">{{ streak }}</div>
-                <small class="text-muted">Wochen</small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Aktiver Trainingsplan Widget -->
-      {% if active_plan_group_name %}
-      <div class="card card-stat {% if is_deload %}border-warning{% else %}border-primary{% endif %} mb-3 shadow">
-        <div class="card-body p-3">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="d-flex align-items-center">
-              <div class="{% if is_deload %}bg-warning{% else %}bg-primary{% endif %} bg-opacity-10 rounded-circle p-2 me-3 {% if is_deload %}text-warning{% else %}text-primary{% endif %}">
-                <i class="bi {% if is_deload %}bi-battery-half{% else %}bi-bullseye{% endif %} fs-4"></i>
-              </div>
-              <div>
-                <small class="text-muted">Aktiver Plan</small>
-                <h5 class="mb-0">{{ active_plan_group_name }}</h5>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              {% if cycle_week %}
-              <span class="badge {% if is_deload %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                {% if is_deload %}Deload{% else %}Woche {{ cycle_week }}/{{ cycle_length }}{% endif %}
-              </span>
-              {% endif %}
-              <a href="{% url 'set_active_plan_group' %}" class="btn btn-sm btn-outline-{% if is_deload %}warning{% else %}primary{% endif %}" title="Plan wechseln">
-                <i class="bi bi-arrow-repeat"></i>
-              </a>
-            </div>
-          </div>
-          {% if is_deload %}
-          <div class="alert alert-warning py-2 px-3 mb-2 small">
-            <i class="bi bi-info-circle me-1"></i>
-            <strong>Deload-Woche:</strong> Volumen &minus;{{ deload_volume_pct }}%, Gewicht &minus;{{ deload_weight_pct }}%, Ziel-RPE {{ deload_rpe_target }}
-          </div>
-          {% endif %}
-          {% if next_plan %}
-          <a href="{% url 'training_start_plan' next_plan.id %}" class="btn {% if is_deload %}btn-warning{% else %}btn-primary{% endif %} w-100 d-flex align-items-center justify-content-center gap-2">
-            <i class="bi bi-play-fill"></i>
-            <span>{{ next_plan.name }}</span>
-            <span class="badge {% if is_deload %}bg-dark{% else %}bg-light text-primary{% endif %} ms-1">{{ next_plan_index }}/{{ group_plan_count }}</span>
+  <!-- Sektion 1: Training -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="text-secondary ps-1 mb-0">TRAINING</h6>
+      <div class="d-flex gap-3">
+          <a href="{% url 'equipment_management' %}" class="text-decoration-none small fw-bold text-warning" title="Ausrüstung verwalten">
+              <i class="bi bi-tools"></i> Equipment
           </a>
-          {% endif %}
+          <button onclick="togglePushNotifications()" class="btn btn-sm btn-outline-secondary border-0" id="pushToggleBtn" title="Push-Benachrichtigungen">
+              <i class="bi bi-bell-slash" id="pushIcon"></i>
+          </button>
+          <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+              <i class="bi bi-moon-fill" id="themeIcon"></i>
+          </button>
+          <a href="{% url 'training_stats' %}" class="text-decoration-none small fw-bold text-info">
+              <i class="bi bi-graph-up"></i> Statistiken
+          </a>
+          <a href="{% url 'training_list' %}" class="text-decoration-none small fw-bold text-primary">
+              Alle anzeigen <i class="bi bi-chevron-right"></i>
+          </a>
+      </div>
+  </div>
+
+  <!-- Trainingsfrequenz & Streak -->
+  <div class="row g-3 mb-3">
+    <div class="col-6">
+      <div class="card card-stat shadow-sm">
+        <div class="card-body text-center py-3">
+            <div class="stat-label mb-1"><i class="bi bi-calendar-week me-1"></i> Diese Woche</div>
+            <div class="display-4 fw-bold text-primary">{{ trainings_diese_woche }}</div>
+            <small class="text-muted">Trainings</small>
         </div>
       </div>
-      {% elif active_plan_group_stale %}
-      <div class="alert alert-warning mb-3 d-flex align-items-center">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <div class="flex-grow-1">
-          <small>Deine aktive Plan-Gruppe existiert nicht mehr.</small>
+    </div>
+    <div class="col-6">
+      <div class="card card-stat shadow-sm">
+        <div class="card-body text-center py-3">
+            <div class="stat-label mb-1"><i class="bi bi-fire me-1"></i> Streak</div>
+            <div class="display-4 fw-bold text-warning">{{ streak }}</div>
+            <small class="text-muted">Wochen</small>
         </div>
-        <a href="{% url 'set_active_plan_group' %}" class="btn btn-sm btn-warning ms-2">Neu wählen</a>
       </div>
-      {% else %}
-      <a href="{% url 'set_active_plan_group' %}" class="card card-stat border-secondary mb-3 text-decoration-none shadow-sm">
-        <div class="card-body p-3">
-          <div class="d-flex align-items-center">
-            <div class="bg-secondary bg-opacity-10 rounded-circle p-2 me-3 text-secondary">
-              <i class="bi bi-bullseye fs-4"></i>
-            </div>
-            <div class="flex-grow-1">
-              <small class="text-muted">Kein aktiver Plan gesetzt</small>
-              <div class="fw-bold">Aktiven Trainingsplan festlegen</div>
-            </div>
-            <i class="bi bi-chevron-right text-muted"></i>
+    </div>
+  </div>
+
+  <!-- Aktiver Trainingsplan Widget -->
+  {% if active_plan_group_name %}
+  <div class="card card-stat {% if is_deload %}border-warning{% else %}border-primary{% endif %} mb-3 shadow">
+    <div class="card-body p-3">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="d-flex align-items-center">
+          <div class="{% if is_deload %}bg-warning{% else %}bg-primary{% endif %} bg-opacity-10 rounded-circle p-2 me-3 {% if is_deload %}text-warning{% else %}text-primary{% endif %}">
+            <i class="bi {% if is_deload %}bi-battery-half{% else %}bi-bullseye{% endif %} fs-4"></i>
+          </div>
+          <div>
+            <small class="text-muted">Aktiver Plan</small>
+            <h5 class="mb-0">{{ active_plan_group_name }}</h5>
           </div>
         </div>
+        <div class="d-flex align-items-center gap-2">
+          {% if cycle_week %}
+          <span class="badge {% if is_deload %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+            {% if is_deload %}Deload{% else %}Woche {{ cycle_week }}/{{ cycle_length }}{% endif %}
+          </span>
+          {% endif %}
+          <a href="{% url 'set_active_plan_group' %}" class="btn btn-sm btn-outline-{% if is_deload %}warning{% else %}primary{% endif %}" title="Plan wechseln">
+            <i class="bi bi-arrow-repeat"></i>
+          </a>
+        </div>
+      </div>
+      {% if is_deload %}
+      <div class="alert alert-warning py-2 px-3 mb-2 small">
+        <i class="bi bi-info-circle me-1"></i>
+        <strong>Deload-Woche:</strong> Volumen &minus;{{ deload_volume_pct }}%, Gewicht &minus;{{ deload_weight_pct }}%, Ziel-RPE {{ deload_rpe_target }}
+      </div>
+      {% endif %}
+      {% if next_plan %}
+      <a href="{% url 'training_start_plan' next_plan.id %}" class="btn {% if is_deload %}btn-warning{% else %}btn-primary{% endif %} w-100 d-flex align-items-center justify-content-center gap-2">
+        <i class="bi bi-play-fill"></i>
+        <span>{{ next_plan.name }}</span>
+        <span class="badge {% if is_deload %}bg-dark{% else %}bg-light text-primary{% endif %} ms-1">{{ next_plan_index }}/{{ group_plan_count }}</span>
       </a>
       {% endif %}
+    </div>
+  </div>
+  {% elif active_plan_group_stale %}
+  <div class="alert alert-warning mb-3 d-flex align-items-center">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <div class="flex-grow-1">
+      <small>Deine aktive Plan-Gruppe existiert nicht mehr.</small>
+    </div>
+    <a href="{% url 'set_active_plan_group' %}" class="btn btn-sm btn-warning ms-2">Neu wählen</a>
+  </div>
+  {% else %}
+  <a href="{% url 'set_active_plan_group' %}" class="card card-stat border-secondary mb-3 text-decoration-none shadow-sm">
+    <div class="card-body p-3">
+      <div class="d-flex align-items-center">
+        <div class="bg-secondary bg-opacity-10 rounded-circle p-2 me-3 text-secondary">
+          <i class="bi bi-bullseye fs-4"></i>
+        </div>
+        <div class="flex-grow-1">
+          <small class="text-muted">Kein aktiver Plan gesetzt</small>
+          <div class="fw-bold">Aktiven Trainingsplan festlegen</div>
+        </div>
+        <i class="bi bi-chevron-right text-muted"></i>
+      </div>
+    </div>
+  </a>
+  {% endif %}
 
-      <!-- Performance Form-Index -->
-      {% if gesamt_trainings >= 4 %}
-      <div class="card card-stat border-{{ form_color }} mb-3 shadow-sm">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">
-                    <i class="bi bi-speedometer2 me-2"></i>Performance Form-Index
-                    <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="Wie wird das berechnet?">
-                        <i class="bi bi-question-circle text-muted"></i>
-                    </a>
-                </h6>
-                <span class="badge bg-{{ form_color }} px-3 py-2" style="font-size: 1rem;">
-                    {{ form_rating }}
-                </span>
-            </div>
-
-            <div class="progress mb-3" style="height: 30px;">
-                <div class="progress-bar bg-{{ form_color }}" role="progressbar"
-                     style="width: {{ form_index }}%;" aria-valuenow="{{ form_index }}"
-                     aria-valuemin="0" aria-valuemax="100">
-                    <strong>{{ form_index }}/100</strong>
-                </div>
-            </div>
-
-            <div class="row g-2 small">
-                {% for factor, score in form_factors %}
-                <div class="col-6">
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted">{{ factor }}:</span>
-                        <strong class="text-{{ form_color }}">{{ score }}</strong>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <div class="mt-3 pt-3 border-top border-secondary">
-                <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Basiert auf Frequenz, Konsistenz, RPE und Volumen-Trends
-                </small>
+  <!-- Performance Form-Index -->
+  {% if gesamt_trainings >= 4 %}
+  <div class="card card-stat border-{{ form_color }} mb-3 shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">
+                <i class="bi bi-speedometer2 me-2"></i>Performance Form-Index
+                <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="Wie wird das berechnet?">
+                    <i class="bi bi-question-circle text-muted"></i>
+                </a>
+            </h6>
+            <span class="badge bg-{{ form_color }} px-3 py-2" style="font-size: 1rem;">{{ form_rating }}</span>
+        </div>
+        <div class="progress mb-3" style="height: 30px;">
+            <div class="progress-bar bg-{{ form_color }}" role="progressbar"
+                 style="width: {{ form_index }}%;">
+                <strong>{{ form_index }}/100</strong>
             </div>
         </div>
-      </div>
-      {% endif %}
-
-      <!-- AI Auto-Suggest: Performance-Warnungen -->
-      {% if performance_warnings %}
-      <div class="card card-stat mb-4 shadow-sm border-warning">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">
-                    <i class="bi bi-lightbulb me-2 text-warning"></i>AI Performance-Analyse
-                </h6>
-                <span class="badge bg-warning text-dark">{{ performance_warnings|length }}</span>
+        <div class="row g-2 small">
+            {% for factor, score in form_factors %}
+            <div class="col-6">
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">{{ factor }}:</span>
+                    <strong class="text-{{ form_color }}">{{ score }}</strong>
+                </div>
             </div>
+            {% endfor %}
+        </div>
+        <div class="mt-3 pt-3 border-top border-secondary">
+            <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>Basiert auf Frequenz, Konsistenz, RPE und Volumen-Trends
+            </small>
+        </div>
+    </div>
+  </div>
+  {% endif %}
 
-            <p class="text-muted small mb-3">
-                <i class="bi bi-info-circle me-1"></i>
-                Automatische Erkennung von Plateau, Rückschritt und Stagnation
-            </p>
-
-            <div class="list-group list-group-flush bg-transparent">
-                {% for warning in performance_warnings %}
-                <div class="list-group-item bg-transparent border-{{ warning.color }} border-start border-3 ps-3 mb-2">
-                    <div class="d-flex align-items-start">
-                        <i class="bi {{ warning.icon }} text-{{ warning.color }} fs-4 me-3 mt-1"></i>
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <strong class="text-{{ warning.color }}">{{ warning.exercise }}</strong>
-                                <span class="badge bg-{{ warning.color }} bg-opacity-25 text-{{ warning.color }}">
-                                    {% if warning.type == 'plateau' %}Plateau
-                                    {% elif warning.type == 'regression' %}Rückschritt
-                                    {% elif warning.type == 'stagnation' %}Stagnation
-                                    {% endif %}
-                                </span>
-                            </div>
-                            <p class="mb-2 small">{{ warning.message }}</p>
-                            <p class="mb-0 small text-muted">
-                                <i class="bi bi-lightbulb-fill me-1"></i>
-                                <strong>Tipp:</strong> {{ warning.suggestion }}
-                            </p>
+  <!-- AI Auto-Suggest: Performance-Warnungen -->
+  {% if performance_warnings %}
+  <div class="card card-stat mb-4 shadow-sm border-warning">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>AI Performance-Analyse</h6>
+            <span class="badge bg-warning text-dark">{{ performance_warnings|length }}</span>
+        </div>
+        <p class="text-muted small mb-3">
+            <i class="bi bi-info-circle me-1"></i>Automatische Erkennung von Plateau, Rückschritt und Stagnation
+        </p>
+        <div class="list-group list-group-flush bg-transparent">
+            {% for warning in performance_warnings %}
+            <div class="list-group-item bg-transparent border-{{ warning.color }} border-start border-3 ps-3 mb-2">
+                <div class="d-flex align-items-start">
+                    <i class="bi {{ warning.icon }} text-{{ warning.color }} fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong class="text-{{ warning.color }}">{{ warning.exercise }}</strong>
+                            <span class="badge bg-{{ warning.color }} bg-opacity-25 text-{{ warning.color }}">
+                                {% if warning.type == 'plateau' %}Plateau
+                                {% elif warning.type == 'regression' %}Rückschritt
+                                {% elif warning.type == 'stagnation' %}Stagnation
+                                {% endif %}
+                            </span>
                         </div>
+                        <p class="mb-2 small">{{ warning.message }}</p>
+                        <p class="mb-0 small text-muted">
+                            <i class="bi bi-lightbulb-fill me-1"></i>
+                            <strong>Tipp:</strong> {{ warning.suggestion }}
+                        </p>
                     </div>
                 </div>
-                {% endfor %}
             </div>
-
-            <div class="mt-3 pt-3 border-top border-secondary">
-                <small class="text-muted">
-                    <i class="bi bi-cpu me-1"></i>
-                    Powered by AI-Algorithmus • Analysiert deine letzten 4 Wochen
-                </small>
-            </div>
+            {% endfor %}
         </div>
-      </div>
-      {% endif %}
+        <div class="mt-3 pt-3 border-top border-secondary">
+            <small class="text-muted">
+                <i class="bi bi-cpu me-1"></i>Powered by AI-Algorithmus • Analysiert deine letzten 4 Wochen
+            </small>
+        </div>
+    </div>
+  </div>
+  {% endif %}
 
-      <div class="card card-stat mb-4 shadow-sm">
-        <div class="card-body d-flex justify-content-between align-items-center">
+  <!-- Letztes Workout -->
+  <div class="card card-stat mb-4 shadow-sm">
+    <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+            <div class="stat-label mb-1"><i class="bi bi-calendar-check me-1"></i> Letztes Workout</div>
+            <div class="stat-value">
+                {% if letztes_training %}{{ letztes_training.datum|date:"d.m.Y" }}{% else %}--{% endif %}
+            </div>
+            <small class="text-muted">
+                {% if letztes_training %}vor {{ letztes_training.datum|timesince }}{% else %}Noch kein Eintrag{% endif %}
+            </small>
+        </div>
+        <i class="bi bi-fire fs-1 text-danger opacity-50"></i>
+    </div>
+  </div>
+
+  <!-- Favoriten-Übungen -->
+  {% if favoriten %}
+  <div class="card card-stat mb-4 shadow-sm">
+    <div class="card-body">
+        <div class="stat-label mb-3"><i class="bi bi-star-fill me-1"></i> Deine Top 3 Übungen</div>
+        <div class="list-group list-group-flush bg-transparent">
+            {% for fav in favoriten %}
+            <a href="{% url 'exercise_stats' fav.uebung__id %}" class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center">
+                <span>{{ fav.uebung__bezeichnung }}</span>
+                <span class="badge bg-primary rounded-pill">{{ fav.anzahl }}×</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Trainings-Kalender Heatmap -->
+  <div class="card card-stat mb-3 shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <div class="stat-label mb-1"><i class="bi bi-calendar-check me-1"></i> Letztes Workout</div>
-                <div class="stat-value">
-                    {% if letztes_training %}
-                        {{ letztes_training.datum|date:"d.m.Y" }}
-                    {% else %}
-                        --
-                    {% endif %}
-                </div>
-                <small class="text-muted">
-                    {% if letztes_training %}
-                        vor {{ letztes_training.datum|timesince }}
-                    {% else %}
-                        Noch kein Eintrag
-                    {% endif %}
-                </small>
+                <span class="stat-label d-block mb-1">TRAININGS-HISTORIE</span>
+                <small class="text-muted">Letzte 12 Monate</small>
             </div>
             <div class="text-end">
-                <!-- Kleines Icon je nach Zeit -->
-                <i class="bi bi-fire fs-1 text-danger opacity-50"></i>
+                <div class="stat-value text-primary">{{ gesamt_trainings }}</div>
+                <small class="text-muted">Gesamt</small>
             </div>
         </div>
-      </div>
+        <div id="training-heatmap" class="mb-2"></div>
+        <div class="d-flex justify-content-end align-items-center gap-2 mt-2">
+            <small class="text-muted">Weniger</small>
+            <div class="heatmap-legend-box" data-level="0"></div>
+            <div class="heatmap-legend-box" data-level="1"></div>
+            <div class="heatmap-legend-box" data-level="2"></div>
+            <div class="heatmap-legend-box" data-level="3"></div>
+            <div class="heatmap-legend-box" data-level="4"></div>
+            <small class="text-muted">Mehr</small>
+        </div>
+    </div>
+  </div>
 
-      <!-- Favoriten-Übungen -->
-      {% if favoriten %}
-      <div class="card card-stat mb-4 shadow-sm">
-        <div class="card-body">
-            <div class="stat-label mb-3"><i class="bi bi-star-fill me-1"></i> Deine Top 3 Übungen</div>
-            <div class="list-group list-group-flush bg-transparent">
-                {% for fav in favoriten %}
-                <a href="{% url 'exercise_stats' fav.uebung__id %}" class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center">
-                    <span>{{ fav.uebung__bezeichnung }}</span>
-                    <span class="badge bg-primary rounded-pill">{{ fav.anzahl }}×</span>
+  <!-- Sektion 2: Körper & Vitalwerte -->
+  <h6 class="text-secondary mb-3 ps-1">KÖRPER & VITALWERTE</h6>
+
+  {% if letzter_koerperwert %}<a href="{% url 'body_stats' %}" class="text-decoration-none">{% endif %}
+  <div class="card card-stat mb-3 shadow-sm">
+    <div class="card-body text-center py-4">
+        <div class="stat-label mb-2">Aktuelles Gewicht</div>
+        <div class="display-3 fw-bold">
+            {% if letzter_koerperwert %}
+                {{ letzter_koerperwert.gewicht }} <span class="fs-4 text-muted">kg</span>
+            {% else %}--{% endif %}
+        </div>
+        {% if letzter_koerperwert %}<small class="text-info"><i class="bi bi-graph-up-arrow"></i> Verlauf anzeigen</small>{% endif %}
+    </div>
+  </div>
+  {% if letzter_koerperwert %}</a>{% endif %}
+
+  <!-- Wöchentliches Volumen -->
+  {% if weekly_volumes %}
+  <div class="card card-stat border-secondary mb-3 shadow-sm">
+    <div class="card-body">
+        <h6 class="mb-3"><i class="bi bi-calendar-week me-2"></i>Wöchentliches Volumen</h6>
+        <div class="row g-2">
+            {% for week in weekly_volumes %}
+            <div class="col-6 col-md-3">
+                <div class="text-center p-2 {% if week.week_num == 0 %}bg-primary bg-opacity-10 border border-primary{% else %}bg-secondary bg-opacity-10{% endif %} rounded">
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">{{ week.label }}</small>
+                    <strong class="{% if week.week_num == 0 %}text-primary{% else %}text-white{% endif %}" style="font-size: 1.2rem;">
+                        {{ week.volume|floatformat:0 }}
+                    </strong>
+                    <small class="text-muted d-block">kg</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Cardio diese Woche -->
+  {% if cardio_diese_woche > 0 %}
+  <div class="card card-stat border-danger mb-3 shadow-sm">
+    <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-1"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio diese Woche</h6>
+                <small class="text-muted">{{ cardio_diese_woche }} Einheit{% if cardio_diese_woche > 1 %}en{% endif %}</small>
+            </div>
+            <div class="text-end">
+                <div class="fs-4 fw-bold text-danger">{{ cardio_minuten_diese_woche }}</div>
+                <small class="text-muted">Minuten</small>
+            </div>
+        </div>
+        <a href="{% url 'cardio_list' %}" class="stretched-link"></a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Ermüdungs-Index -->
+  {% if gesamt_trainings >= 4 %}
+  <div class="card card-stat border-{{ fatigue_color }} mb-3 shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">
+                <i class="bi bi-battery-charging me-2"></i>Ermüdungs-Index
+                <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="Wie wird das berechnet?">
+                    <i class="bi bi-question-circle text-muted"></i>
                 </a>
-                {% endfor %}
+            </h6>
+            <span class="badge bg-{{ fatigue_color }} px-3 py-2" style="font-size: 1rem;">{{ fatigue_rating }}</span>
+        </div>
+        <div class="progress mb-3" style="height: 25px;">
+            <div class="progress-bar bg-{{ fatigue_color }}" role="progressbar" style="width: {{ fatigue_index }}%;">
+                <strong>{{ fatigue_index }}/100</strong>
             </div>
+        </div>
+        <p class="text-{{ fatigue_color }} mb-2"><i class="bi bi-info-circle me-1"></i>{{ fatigue_message }}</p>
+        {% if fatigue_warnings %}
+        <div class="mt-2 pt-2 border-top border-secondary">
+            <small class="text-muted d-block mb-1">Faktoren:</small>
+            {% for warning in fatigue_warnings %}
+            <small class="badge bg-{{ fatigue_color }} bg-opacity-25 text-{{ fatigue_color }} me-1">{{ warning }}</small>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Motivations-Quote -->
+  <div class="card bg-gradient text-center py-4 mb-4 shadow" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="card-body">
+        <h5 class="text-white mb-0">{{ motivation_quote }}</h5>
+    </div>
+  </div>
+
+  <!-- Körperwerte Detail-Kacheln -->
+  {% if letzter_koerperwert %}
+  <div class="row g-3 mb-4">
+      <div class="col-6">
+        <div class="card card-stat p-3 text-center">
+            <div class="stat-label mb-1">BMI</div>
+            <div class="stat-value text-info">{{ letzter_koerperwert.bmi|default:"--" }}</div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="card card-stat p-3 text-center">
+            <div class="stat-label mb-1">FFMI</div>
+            <div class="stat-value text-success">{{ letzter_koerperwert.ffmi|default:"--" }}</div>
+        </div>
+      </div>
+      {% if letzter_koerperwert.muskelmasse_kg %}
+      <div class="col-6">
+        <div class="card card-stat p-3 text-center">
+            <div class="stat-label mb-1">Muskeln</div>
+            <div class="stat-value text-warning">{{ letzter_koerperwert.muskelmasse_kg }} <small class="fs-6">kg</small></div>
         </div>
       </div>
       {% endif %}
-
-      <!-- Trainings-Kalender Heatmap (GitHub-Style) -->
-      <div class="card card-stat mb-3 shadow-sm">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <span class="stat-label d-block mb-1">TRAININGS-HISTORIE</span>
-                    <small class="text-muted">Letzte 12 Monate</small>
-                </div>
-                <div class="text-end">
-                    <div class="stat-value text-primary">{{ gesamt_trainings }}</div>
-                    <small class="text-muted">Gesamt</small>
-                </div>
-            </div>
-
-            <!-- Heatmap Container -->
-            <div id="training-heatmap" class="mb-2"></div>
-
-            <!-- Legende -->
-            <div class="d-flex justify-content-end align-items-center gap-2 mt-2">
-                <small class="text-muted">Weniger</small>
-                <div class="heatmap-legend-box" data-level="0"></div>
-                <div class="heatmap-legend-box" data-level="1"></div>
-                <div class="heatmap-legend-box" data-level="2"></div>
-                <div class="heatmap-legend-box" data-level="3"></div>
-                <div class="heatmap-legend-box" data-level="4"></div>
-                <small class="text-muted">Mehr</small>
-            </div>
-        </div>
-      </div>
-
-      <!-- Sektion 2: Körper-Analyse -->
-      <h6 class="text-secondary mb-3 ps-1">KÖRPER & VITALWERTE</h6>
-
-      <!-- Link zu den Graphen -->
-      {% if letzter_koerperwert %}
-      <a href="{% url 'body_stats' %}" class="text-decoration-none">
-      {% endif %}
-
-      <!-- Hauptwert Gewicht -->
-      <div class="card card-stat mb-3 shadow-sm">
-        <div class="card-body text-center py-4">
-            <div class="stat-label mb-2">Aktuelles Gewicht</div>
-            <div class="display-3 fw-bold">
-                {% if letzter_koerperwert %}
-                    {{ letzter_koerperwert.gewicht }} <span class="fs-4 text-muted">kg</span>
+      {% if letzter_koerperwert.koerperfett_prozent or letzter_koerperwert.fettmasse_kg %}
+      <div class="col-6">
+        <div class="card card-stat p-3 text-center">
+            <div class="stat-label mb-1">KFA / Fett</div>
+            <div class="stat-value text-danger">
+                {% if letzter_koerperwert.koerperfett_prozent %}
+                    {{ letzter_koerperwert.koerperfett_prozent }}<small class="fs-6">%</small>
                 {% else %}
-                    --
+                    {{ letzter_koerperwert.fettmasse_kg }}<small class="fs-6">kg</small>
                 {% endif %}
             </div>
-            {% if letzter_koerperwert %}
-            <small class="text-info">
-                <i class="bi bi-graph-up-arrow"></i> Verlauf anzeigen
-            </small>
-            {% endif %}
-        </div>
-      </div>
-
-      {% if letzter_koerperwert %}
-      </a>
-      {% endif %}
-
-      <!-- Wöchentliches Volumen -->
-      {% if weekly_volumes %}
-      <div class="card card-stat border-secondary mb-3 shadow-sm">
-        <div class="card-body">
-            <h6 class="mb-3">
-                <i class="bi bi-calendar-week me-2"></i>Wöchentliches Volumen
-            </h6>
-            <div class="row g-2">
-                {% for week in weekly_volumes %}
-                <div class="col-6 col-md-3">
-                    <div class="text-center p-2 {% if week.week_num == 0 %}bg-primary bg-opacity-10 border border-primary{% else %}bg-secondary bg-opacity-10{% endif %} rounded">
-                        <small class="text-muted d-block" style="font-size: 0.7rem;">{{ week.label }}</small>
-                        <strong class="{% if week.week_num == 0 %}text-primary{% else %}text-white{% endif %}" style="font-size: 1.2rem;">
-                            {{ week.volume|floatformat:0 }}
-                        </strong>
-                        <small class="text-muted d-block">kg</small>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
         </div>
       </div>
       {% endif %}
+  </div>
+  {% endif %}
 
-      <!-- Cardio diese Woche -->
-      {% if cardio_diese_woche > 0 %}
-      <div class="card card-stat border-danger mb-3 shadow-sm">
-        <div class="card-body py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-1">
-                        <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio diese Woche
-                    </h6>
-                    <small class="text-muted">{{ cardio_diese_woche }} Einheit{% if cardio_diese_woche > 1 %}en{% endif %}</small>
-                </div>
-                <div class="text-end">
-                    <div class="fs-4 fw-bold text-danger">{{ cardio_minuten_diese_woche }}</div>
-                    <small class="text-muted">Minuten</small>
-                </div>
-            </div>
-            <a href="{% url 'cardio_list' %}" class="stretched-link"></a>
-        </div>
-      </div>
-      {% endif %}
+  <!-- Haupt-Buttons -->
+  <div class="d-grid gap-3 mt-5">
+    <a href="{% url 'training_select_plan' %}" class="btn btn-success btn-action fw-bold rounded-4 shadow">
+        <i class="bi bi-play-circle-fill me-2"></i> Training starten
+    </a>
+    <a href="{% url 'cardio_add' %}" class="btn btn-outline-danger btn-action fw-bold rounded-4">
+        <i class="bi bi-heart-pulse-fill me-2"></i> Cardio hinzufügen
+        {% if cardio_diese_woche > 0 %}<span class="badge bg-danger ms-2">{{ cardio_diese_woche }}×</span>{% endif %}
+    </a>
+    <button type="button" class="btn btn-warning btn-action fw-bold rounded-4 shadow" data-bs-toggle="modal" data-bs-target="#aiPlanGeneratorModal">
+        <i class="bi bi-stars me-2"></i> KI-Plan erstellen
+    </button>
+    <a href="{% url 'workout_recommendations' %}" class="btn btn-outline-success btn-action fw-bold rounded-4 shadow">
+        <i class="bi bi-robot me-2"></i> Trainingsempfehlungen (AI)
+    </a>
+    <a href="{% url 'ml_dashboard' %}" class="btn btn-info btn-action fw-bold rounded-4 shadow">
+        <i class="bi bi-cpu me-2"></i> ML Vorhersage-Modelle
+    </a>
+    <a href="{% url 'muscle_map' %}" class="btn btn-primary btn-action fw-bold rounded-4 shadow">
+        <i class="bi bi-person-arms-up me-2"></i> Muskelgruppen & Übungen
+    </a>
+    <a href="{% url 'add_koerperwert' %}" class="btn btn-outline-secondary btn-action fw-bold rounded-4">
+        <i class="bi bi-smartwatch me-2"></i> Werte eintragen
+    </a>
+  </div>
 
-      <!-- Ermüdungs-Index -->
-      {% if gesamt_trainings >= 4 %}
-      <div class="card card-stat border-{{ fatigue_color }} mb-3 shadow-sm">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">
-                    <i class="bi bi-battery-charging me-2"></i>Ermüdungs-Index
-                    <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="Wie wird das berechnet?">
-                        <i class="bi bi-question-circle text-muted"></i>
-                    </a>
-                </h6>
-                <span class="badge bg-{{ fatigue_color }} px-3 py-2" style="font-size: 1rem;">
-                    {{ fatigue_rating }}
-                </span>
-            </div>
+</div>
 
-            <div class="progress mb-3" style="height: 25px;">
-                <div class="progress-bar bg-{{ fatigue_color }}" role="progressbar"
-                     style="width: {{ fatigue_index }}%;" aria-valuenow="{{ fatigue_index }}"
-                     aria-valuemin="0" aria-valuemax="100">
-                    <strong>{{ fatigue_index }}/100</strong>
-                </div>
-            </div>
+<!-- AI Plan Generator Modal -->
+{% include 'core/ai_plan_generator.html' %}
 
-            <p class="text-{{ fatigue_color }} mb-2">
-                <i class="bi bi-info-circle me-1"></i>{{ fatigue_message }}
-            </p>
+{% endblock %}
 
-            {% if fatigue_warnings %}
-            <div class="mt-2 pt-2 border-top border-secondary">
-                <small class="text-muted d-block mb-1">Faktoren:</small>
-                {% for warning in fatigue_warnings %}
-                <small class="badge bg-{{ fatigue_color }} bg-opacity-25 text-{{ fatigue_color }} me-1">
-                    {{ warning }}
-                </small>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Motivations-Quote -->
-      <div class="card bg-gradient text-center py-4 mb-4 shadow" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="card-body">
-            <h5 class="text-white mb-0">{{ motivation_quote }}</h5>
-        </div>
-      </div>
-
-      <!-- Körperwerte -->
-      {% if letzter_koerperwert %}
-      <!-- Detail-Kacheln für BMI, FFMI, Fett, Muskeln -->
-      <div class="row g-3 mb-4">
-
-          <!-- BMI & FFMI -->
-          <div class="col-6">
-            <div class="card card-stat p-3 text-center">
-                <div class="stat-label mb-1">BMI</div>
-                <div class="stat-value text-info">
-                    {{ letzter_koerperwert.bmi|default:"--" }}
-                </div>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="card card-stat p-3 text-center">
-                <div class="stat-label mb-1">FFMI</div>
-                <div class="stat-value text-success">
-                    {{ letzter_koerperwert.ffmi|default:"--" }}
-                </div>
-            </div>
-          </div>
-
-          <!-- Muskeln & Fett (wenn vorhanden) -->
-          {% if letzter_koerperwert.muskelmasse_kg %}
-          <div class="col-6">
-            <div class="card card-stat p-3 text-center">
-                <div class="stat-label mb-1">Muskeln</div>
-                <div class="stat-value text-warning">
-                    {{ letzter_koerperwert.muskelmasse_kg }} <small class="fs-6">kg</small>
-                </div>
-            </div>
-          </div>
-          {% endif %}
-
-          {% if letzter_koerperwert.koerperfett_prozent or letzter_koerperwert.fettmasse_kg %}
-          <div class="col-6">
-            <div class="card card-stat p-3 text-center">
-                <div class="stat-label mb-1">KFA / Fett</div>
-                <div class="stat-value text-danger">
-                    {% if letzter_koerperwert.koerperfett_prozent %}
-                        {{ letzter_koerperwert.koerperfett_prozent }}<small class="fs-6">%</small>
-                    {% else %}
-                        {{ letzter_koerperwert.fettmasse_kg }}<small class="fs-6">kg</small>
-                    {% endif %}
-                </div>
-            </div>
-          </div>
-          {% endif %}
-
-      </div>
-      {% endif %}
-
-      <!-- Buttons -->
-      <div class="d-grid gap-3 mt-5">
-        <a href="{% url 'training_select_plan' %}" class="btn btn-success btn-action fw-bold rounded-4 shadow">
-            <i class="bi bi-play-circle-fill me-2"></i> Training starten
-        </a>
-
-        <a href="{% url 'cardio_add' %}" class="btn btn-outline-danger btn-action fw-bold rounded-4">
-            <i class="bi bi-heart-pulse-fill me-2"></i> Cardio hinzufügen
-            {% if cardio_diese_woche > 0 %}
-            <span class="badge bg-danger ms-2">{{ cardio_diese_woche }}×</span>
-            {% endif %}
-        </a>
-
-        <button type="button" class="btn btn-warning btn-action fw-bold rounded-4 shadow" data-bs-toggle="modal" data-bs-target="#aiPlanGeneratorModal">
-            <i class="bi bi-stars me-2"></i> KI-Plan erstellen
-        </button>
-
-        <a href="{% url 'workout_recommendations' %}" class="btn btn-outline-success btn-action fw-bold rounded-4 shadow">
-            <i class="bi bi-robot me-2"></i> Trainingsempfehlungen (AI)
-        </a>
-
-        <a href="{% url 'ml_dashboard' %}" class="btn btn-info btn-action fw-bold rounded-4 shadow">
-            <i class="bi bi-cpu me-2"></i> ML Vorhersage-Modelle
-        </a>
-
-        <a href="{% url 'muscle_map' %}" class="btn btn-primary btn-action fw-bold rounded-4 shadow">
-            <i class="bi bi-person-arms-up me-2"></i> Muskelgruppen & Übungen
-        </a>
-
-        <a href="{% url 'add_koerperwert' %}" class="btn btn-outline-secondary btn-action fw-bold rounded-4">
-            <i class="bi bi-smartwatch me-2"></i> Werte eintragen
-        </a>
-      </div>
-
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Theme Toggle Function
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
-            html.setAttribute('data-bs-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateThemeIcon(newTheme);
-        }
-
-        function updateThemeIcon(theme) {
-            const icon = document.getElementById('themeIcon');
-            if (theme === 'dark') {
-                icon.classList.remove('bi-sun-fill');
-                icon.classList.add('bi-moon-fill');
-            } else {
-                icon.classList.remove('bi-moon-fill');
-                icon.classList.add('bi-sun-fill');
+{% block extra_scripts %}
+<script>
+    // Push Notifications Toggle
+    async function togglePushNotifications() {
+        const btn = document.getElementById('pushToggleBtn');
+        const icon = document.getElementById('pushIcon');
+        try {
+            if (typeof pushManager === 'undefined') {
+                alert('Push Notifications werden geladen...\nBitte versuche es in wenigen Sekunden erneut.');
+                return;
             }
-        }
-
-        // Set initial icon
-        window.addEventListener('DOMContentLoaded', function() {
-            const currentTheme = localStorage.getItem('theme') || 'dark';
-            updateThemeIcon(currentTheme);
-
-            // Push Notifications Status prüfen
-            updatePushIcon();
-        });
-
-        // Push Notifications Toggle
-        async function togglePushNotifications() {
-            const btn = document.getElementById('pushToggleBtn');
-            const icon = document.getElementById('pushIcon');
-
-            try {
-                // Prüfe ob pushManager verfügbar ist
-                if (typeof pushManager === 'undefined') {
-                    alert('Push Notifications werden geladen...\nBitte versuche es in wenigen Sekunden erneut.');
-                    return;
-                }
-
-                // Initialisiere pushManager falls nötig
-                if (!pushManager.swRegistration) {
-                    await pushManager.init();
-                }
-
-                // Status prüfen
-                const isSubscribed = await pushManager.isSubscribed();
-
-                if (isSubscribed) {
-                    // Unsubscribe
-                    if (confirm('Push-Benachrichtigungen deaktivieren?')) {
-                        btn.disabled = true;
-                        const result = await pushManager.unsubscribe();
-                        if (result.success) {
-                            icon.className = 'bi bi-bell-slash';
-                            btn.classList.remove('text-primary');
-                            alert('✅ Push-Benachrichtigungen deaktiviert');
-                        }
-                        btn.disabled = false;
-                    }
-                } else {
-                    // Subscribe
+            if (!pushManager.swRegistration) { await pushManager.init(); }
+            const isSubscribed = await pushManager.isSubscribed();
+            if (isSubscribed) {
+                if (confirm('Push-Benachrichtigungen deaktivieren?')) {
                     btn.disabled = true;
-                    const result = await pushManager.subscribe();
+                    const result = await pushManager.unsubscribe();
                     if (result.success) {
-                        icon.className = 'bi bi-bell-fill';
-                        btn.classList.add('text-primary');
-                        alert('✅ Push-Benachrichtigungen aktiviert!\n\nDu erhältst jetzt Benachrichtigungen für:\n• Training-Erinnerungen\n• Achievements\n• Rest-Day Reminders');
-                    } else {
-                        alert('❌ Fehler: ' + result.message);
+                        icon.className = 'bi bi-bell-slash';
+                        btn.classList.remove('text-primary');
+                        alert('✅ Push-Benachrichtigungen deaktiviert');
                     }
                     btn.disabled = false;
                 }
-
-                updatePushIcon();
-            } catch (error) {
-                console.error('Push Toggle Error:', error);
-                alert('Fehler beim Aktivieren der Benachrichtigungen');
-                btn.disabled = false;
-            }
-        }
-
-        // Push Icon Status aktualisieren
-        async function updatePushIcon() {
-            if (typeof pushManager === 'undefined') return;
-
-            try {
-                await pushManager.init();
-                const isSubscribed = await pushManager.isSubscribed();
-                const icon = document.getElementById('pushIcon');
-                const btn = document.getElementById('pushToggleBtn');
-
-                if (isSubscribed) {
+            } else {
+                btn.disabled = true;
+                const result = await pushManager.subscribe();
+                if (result.success) {
                     icon.className = 'bi bi-bell-fill';
                     btn.classList.add('text-primary');
-                    btn.title = 'Push-Benachrichtigungen aktiv';
+                    alert('✅ Push-Benachrichtigungen aktiviert!\n\nDu erhältst jetzt Benachrichtigungen für:\n• Training-Erinnerungen\n• Achievements\n• Rest-Day Reminders');
                 } else {
-                    icon.className = 'bi bi-bell-slash';
-                    btn.classList.remove('text-primary');
-                    btn.title = 'Push-Benachrichtigungen aktivieren';
+                    alert('❌ Fehler: ' + result.message);
                 }
-            } catch (error) {
-                console.error('Push Icon Update Error:', error);
+                btn.disabled = false;
             }
+            updatePushIcon();
+        } catch (error) {
+            console.error('Push Toggle Error:', error);
+            alert('Fehler beim Aktivieren der Benachrichtigungen');
+            btn.disabled = false;
         }
+    }
 
-        // PWA Service Worker Registrierung
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(function(registration) {
-                        console.log('✅ Service Worker registriert:', registration.scope);
-                        console.log('✅ SW Scope:', registration.scope);
+    async function updatePushIcon() {
+        if (typeof pushManager === 'undefined') return;
+        try {
+            await pushManager.init();
+            const isSubscribed = await pushManager.isSubscribed();
+            const icon = document.getElementById('pushIcon');
+            const btn = document.getElementById('pushToggleBtn');
+            if (isSubscribed) {
+                icon.className = 'bi bi-bell-fill';
+                btn.classList.add('text-primary');
+                btn.title = 'Push-Benachrichtigungen aktiv';
+            } else {
+                icon.className = 'bi bi-bell-slash';
+                btn.classList.remove('text-primary');
+                btn.title = 'Push-Benachrichtigungen aktivieren';
+            }
+        } catch (error) {
+            console.error('Push Icon Update Error:', error);
+        }
+    }
 
-                        // Check for updates
-                        registration.addEventListener('updatefound', () => {
-                            console.log('🔄 Service Worker Update gefunden');
-                        });
-                    })
-                    .catch(function(error) {
-                        console.error('❌ Service Worker Registrierung fehlgeschlagen:', error);
+    // Push Icon beim Laden setzen
+    window.addEventListener('DOMContentLoaded', function() {
+        updatePushIcon();
+    });
+
+    // PWA Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(function(registration) {
+                    console.log('✅ Service Worker registriert:', registration.scope);
+                    registration.addEventListener('updatefound', () => {
+                        console.log('🔄 Service Worker Update gefunden');
                     });
-            });
-        }
-
-        // PWA Install Prompt für Android
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Verhindere automatisches Anzeigen
-            e.preventDefault();
-            deferredPrompt = e;
-
-            // Zeige Install-Button (optional - kann später hinzugefügt werden)
-            console.log('💾 PWA kann installiert werden!');
+                })
+                .catch(function(error) {
+                    console.error('❌ Service Worker Registrierung fehlgeschlagen:', error);
+                });
         });
+    }
 
-        // Track erfolgreiche Installation
-        window.addEventListener('appinstalled', () => {
-            console.log('✅ PWA erfolgreich installiert!');
-            deferredPrompt = null;
-        });
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        console.log('💾 PWA kann installiert werden!');
+    });
+    window.addEventListener('appinstalled', () => {
+        console.log('✅ PWA erfolgreich installiert!');
+        deferredPrompt = null;
+    });
 
-        // Trainings-Heatmap generieren
-        function generateHeatmap() {
-            const heatmapData = {{ training_heatmap_json|safe }};
-            const container = document.getElementById('training-heatmap');
+    // Trainings-Heatmap
+    function generateHeatmap() {
+        const heatmapData = {{ training_heatmap_json|safe }};
+        const container = document.getElementById('training-heatmap');
+        if (!container) return;
+        container.innerHTML = '';
 
-            if (!container) return;
+        const today = new Date();
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - 364);
+        const dayOfWeek = startDate.getDay();
+        if (dayOfWeek !== 0) { startDate.setDate(startDate.getDate() + (7 - dayOfWeek)); }
 
-            // Leere Container
-            container.innerHTML = '';
+        let currentDate = new Date(startDate);
+        let currentMonth = null;
+        let currentMonthContainer = null;
 
-            // Start: vor 52 Wochen (364 Tage)
-            const today = new Date();
-            const startDate = new Date(today);
-            startDate.setDate(today.getDate() - 364);
-
-            // Gehe zum nächsten Sonntag (Wochenstart)
-            const dayOfWeek = startDate.getDay();
-            if (dayOfWeek !== 0) {
-                startDate.setDate(startDate.getDate() + (7 - dayOfWeek));
+        while (currentDate <= today) {
+            const month = currentDate.getMonth();
+            const isFirstWeekOfMonth = currentDate.getDate() <= 7;
+            if (month !== currentMonth && isFirstWeekOfMonth) {
+                const monthCol = document.createElement('div');
+                monthCol.className = 'heatmap-month';
+                const monthLabel = document.createElement('small');
+                monthLabel.className = 'text-muted mb-2';
+                monthLabel.style.fontSize = '11px';
+                monthLabel.style.fontWeight = '600';
+                monthLabel.textContent = currentDate.toLocaleDateString('de-DE', { month: 'short' });
+                monthCol.appendChild(monthLabel);
+                container.appendChild(monthCol);
+                currentMonth = month;
+                currentMonthContainer = monthCol;
             }
 
-            let currentDate = new Date(startDate);
-            let currentMonth = null;
-            let currentMonthContainer = null;
+            const weekCol = document.createElement('div');
+            weekCol.className = 'heatmap-week';
 
-            while (currentDate <= today) {
-                // Neuer Monat? (nur anzeigen wenn es der erste Sonntag im Monat ist)
-                const month = currentDate.getMonth();
-                const isFirstWeekOfMonth = currentDate.getDate() <= 7;
+            for (let d = 0; d < 7; d++) {
+                const dayDate = new Date(currentDate);
+                dayDate.setDate(currentDate.getDate() + d);
+                if (dayDate > today) break;
+                const dateStr = dayDate.toISOString().split('T')[0];
+                const count = heatmapData[dateStr] || 0;
+                let level = 0;
+                if (count >= 3) level = 4;
+                else if (count === 2) level = 3;
+                else if (count === 1) level = 2;
 
-                if (month !== currentMonth && isFirstWeekOfMonth) {
-                    // Monatsspalte hinzufügen
-                    const monthCol = document.createElement('div');
-                    monthCol.className = 'heatmap-month';
-
-                    // Monatsname
-                    const monthLabel = document.createElement('small');
-                    monthLabel.className = 'text-muted mb-2';
-                    monthLabel.style.fontSize = '11px';
-                    monthLabel.style.fontWeight = '600';
-                    monthLabel.textContent = currentDate.toLocaleDateString('de-DE', { month: 'short' });
-                    monthCol.appendChild(monthLabel);
-
-                    container.appendChild(monthCol);
-                    currentMonth = month;
-                    currentMonthContainer = monthCol;
-                }
-
-                // Wochenspalte erstellen
-                const weekCol = document.createElement('div');
-                weekCol.className = 'heatmap-week';
-
-                // 7 Tage (Sonntag bis Samstag)
-                for (let d = 0; d < 7; d++) {
-                    const dayDate = new Date(currentDate);
-                    dayDate.setDate(currentDate.getDate() + d);
-
-                    // Stoppe wenn über heute hinaus
-                    if (dayDate > today) break;
-
-                    const dateStr = dayDate.toISOString().split('T')[0];
-                    const count = heatmapData[dateStr] || 0;
-
-                    // Level bestimmen (0-4)
-                    let level = 0;
-                    if (count >= 3) level = 4;
-                    else if (count === 2) level = 3;
-                    else if (count === 1) level = 2;
-                    else level = 0;
-
-                    const dayBox = document.createElement('div');
-                    dayBox.className = 'heatmap-day';
-                    dayBox.setAttribute('data-level', level);
-                    dayBox.setAttribute('data-date', dateStr);
-                    dayBox.setAttribute('data-count', count);
-                    dayBox.title = `${dayDate.toLocaleDateString('de-DE', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short'
-                    })}: ${count} Training${count !== 1 ? 's' : ''}`;
-
-                    weekCol.appendChild(dayBox);
-                }
-
-                // Füge Woche zum aktuellen Monatscontainer hinzu
-                if (currentMonthContainer) {
-                    currentMonthContainer.appendChild(weekCol);
-                }
-
-                // Nächste Woche
-                currentDate.setDate(currentDate.getDate() + 7);
+                const dayBox = document.createElement('div');
+                dayBox.className = 'heatmap-day';
+                dayBox.setAttribute('data-level', level);
+                dayBox.setAttribute('data-date', dateStr);
+                dayBox.setAttribute('data-count', count);
+                dayBox.title = `${dayDate.toLocaleDateString('de-DE', {
+                    weekday: 'short', day: 'numeric', month: 'short'
+                })}: ${count} Training${count !== 1 ? 's' : ''}`;
+                weekCol.appendChild(dayBox);
             }
+            if (currentMonthContainer) { currentMonthContainer.appendChild(weekCol); }
+            currentDate.setDate(currentDate.getDate() + 7);
         }
+    }
 
-        // Heatmap beim Laden generieren
-        window.addEventListener('DOMContentLoaded', generateHeatmap);
-    </script>
-
-    <!-- AI Plan Generator Modal -->
-    {% include 'core/ai_plan_generator.html' %}
-
-    <!-- Footer -->
-    {% include 'core/includes/global_footer.html' %}
-  </body>
-</html>
+    window.addEventListener('DOMContentLoaded', generateHeatmap);
+</script>
+{% endblock %}
