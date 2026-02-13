@@ -405,39 +405,29 @@ core/
 
 ---
 
-#### **Phase 3.2 - Template Base Refactoring** 🔥 CRITICAL
-**Time Estimate:** 1-2 days
-**Status:** 🔄 In Progress (9/~30 Templates migriert)
+#### **Phase 3.2 - Template Base Refactoring** ✅ ABGESCHLOSSEN (24/26)
+**Time Estimate:** 1-2 days  
+**Status:** ✅ Batch 1+2+3 DONE — Commit eba7083 + 37eb077 (Branch: feature/phase-3-2-template-base)
 
-**Migriert:**
+**Migriert (24 Templates):**
 - ✅ training_list.html (+ delete_training GET→POST Bugfix)
-- ✅ training_stats.html
-- ✅ stats_exercise.html
-- ✅ body_stats.html (+ delete_koerperwert GET→POST Bugfix)
-- ✅ profile.html (global_header war dupliziert)
-- ✅ feedback_list.html (global_header fehlte komplett – Bugfix)
-- ✅ cardio_list.html (global_header fehlte komplett – Bugfix)
-- ✅ cardio_add.html (global_header fehlte komplett – Bugfix)
+- ✅ training_stats.html, stats_exercise.html, body_stats.html
+- ✅ profile.html, feedback_list.html, cardio_list.html, cardio_add.html
 - ✅ dashboard.html (960→673 Zeilen, duplizierte Theme-Funktionen entfernt)
+- ✅ plan_details.html, plan_library.html, training_finish.html
+- ✅ muscle_map.html, ml_dashboard.html, equipment_management.html
+- ✅ add_koerperwert.html, edit_koerperwert.html, progress_photos.html
+- ✅ metriken_help.html, exercise_detail.html, uebungen_auswahl.html
+- ✅ edit_plan.html, training_select_plan.html
+- ✅ equipment_management_old.html → GELÖSCHT
 
-**Noch ausstehend (~20 Templates):**
-- ⏳ training_session.html (1654 Zeilen – komplex)
-- ⏳ training_finish.html, training_select_plan.html
-- ⏳ plan_details.html, plan_library.html, create_plan.html, edit_plan.html
-- ⏳ uebungen_auswahl.html, uebung_detail.html, muscle_map.html
-- ⏳ add_koerperwert.html, edit_koerperwert.html, progress_photos.html
-- ⏳ equipment_management.html, ai_coach_chat.html, ml_dashboard.html
-- ⏳ weitere ~6 Templates (metriken_help, datenschutz, impressum, etc.)
+**Ausgenommen (korrekt, kein extends nötig):**
+- Partials/Modals: ai_coach_chat.html, ai_plan_generator.html, exercise_info_modal.html, plan_optimization_modal.html
+- PDF-Templates (standalone): training_pdf.html, training_pdf_simple.html, training_pdf_v2.html
 
-**Current Problem:**
-- **No `base.html` template**
-- Every template repeats:
-  - `<head>` section (50+ lines)
-  - Bootstrap CDN links
-  - Dark mode toggle script
-  - Footer include
-  - Navigation (if applicable)
-- 29+ templates with duplicated code
+**Noch ausstehend (separater Chat, komplex):**
+- ⏳ create_plan.html (721 Zeilen) → Phase 3.2b
+- ⏳ training_session.html (1654 Zeilen) → Phase 3.2c
 
 **Solution - Create Template Hierarchy:**
 
