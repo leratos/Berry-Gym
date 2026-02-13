@@ -192,6 +192,23 @@ def api_rename_group(request: HttpRequest) -> JsonResponse:
         )
 
 
+def _find_plan_index(plans: list, plan_id: int) -> int | None:
+    """Gibt den Index des Plans mit der angegebenen ID zurück, oder None."""
+    for i, p in enumerate(plans):
+        if p.id == plan_id:
+            return i
+    return None
+
+
+def _calc_reorder_index(direction: str, current_index: int, total: int) -> int | None:
+    """Berechnet neuen Index für 'up'/'down'; None wenn keine Änderung möglich."""
+    if direction == "up" and current_index > 0:
+        return current_index - 1
+    if direction == "down" and current_index < total - 1:
+        return current_index + 1
+    return None
+
+
 @login_required
 @require_http_methods(["POST"])
 def api_reorder_group(request: HttpRequest) -> JsonResponse:
@@ -205,40 +222,25 @@ def api_reorder_group(request: HttpRequest) -> JsonResponse:
         if not gruppe_id or not plan_id or not direction:
             return JsonResponse({"success": False, "error": "Fehlende Parameter"}, status=400)
 
-        # Alle Pläne dieser Gruppe holen, sortiert nach Reihenfolge
         plans = list(
             Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).order_by(
                 "gruppe_reihenfolge", "name"
             )
         )
-
         if not plans:
             return JsonResponse(
                 {"success": False, "error": "Keine Pläne in dieser Gruppe"}, status=404
             )
 
-        # Index des zu verschiebenden Plans finden
-        current_index = None
-        for i, p in enumerate(plans):
-            if p.id == plan_id:
-                current_index = i
-                break
-
+        current_index = _find_plan_index(plans, plan_id)
         if current_index is None:
             return JsonResponse({"success": False, "error": "Plan nicht gefunden"}, status=404)
 
-        # Neuen Index berechnen
-        if direction == "up" and current_index > 0:
-            new_index = current_index - 1
-        elif direction == "down" and current_index < len(plans) - 1:
-            new_index = current_index + 1
-        else:
+        new_index = _calc_reorder_index(direction, current_index, len(plans))
+        if new_index is None:
             return JsonResponse({"success": True, "message": "Keine Änderung nötig"})
 
-        # Pläne tauschen
         plans[current_index], plans[new_index] = plans[new_index], plans[current_index]
-
-        # Neue Reihenfolge speichern
         for i, p in enumerate(plans):
             p.gruppe_reihenfolge = i
             p.save(update_fields=["gruppe_reihenfolge"])
