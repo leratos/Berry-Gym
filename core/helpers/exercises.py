@@ -221,11 +221,9 @@ def find_substitute_exercise(original_name, required_equipment, available_equipm
         }
 
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
+        logger.error("find_substitute_exercise error for '%s': %s", original_name, e, exc_info=True)
         return {
             "name": f'Alternative für "{original_name}" nicht gefunden',
             "equipment": required_equipment,
-            "note": f"Fehler: {str(e)}",
+            "note": "Substitution konnte nicht berechnet werden",
         }

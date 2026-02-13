@@ -219,7 +219,8 @@ def _parse_import_file(import_file) -> tuple:
     try:
         data = json.load(import_file)
     except json.JSONDecodeError as e:
-        return None, f"Ungültiges JSON-Format: {e}"
+        logger.warning("JSON import parse error: %s", e)
+        return None, "Ungültiges JSON-Format. Bitte Datei prüfen."
 
     if isinstance(data, list):
         return data, None
@@ -330,7 +331,15 @@ def import_uebungen(request: HttpRequest) -> HttpResponse:
                 )
                 _save_or_count_uebung(ex_data, equipment_objs, update_existing, dry_run, stats)
             except Exception as e:
-                errors.append(f'Fehler bei "{ex_data.get("bezeichnung", "?")}": {str(e)}')
+                logger.error(
+                    "Import error for exercise '%s': %s",
+                    ex_data.get("bezeichnung", "?"),
+                    e,
+                    exc_info=True,
+                )
+                errors.append(
+                    f'Fehler bei "{ex_data.get("bezeichnung", "?")}" – Übung übersprungen'
+                )
 
         c, u, s = stats["created_count"], stats["updated_count"], stats["skipped_count"]
         if dry_run:

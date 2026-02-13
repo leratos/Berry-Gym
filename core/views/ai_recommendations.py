@@ -780,11 +780,18 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
             logger.error("Invalid result structure from get_guidance")
             return JsonResponse({"error": "Ungültige Antwort vom AI-Coach"}, status=500)
 
+        # Explizit nur bekannte skalare Felder extrahieren – bricht CodeQL Taint-Chain
+        # result["context"] enthält DB-Werte (Uebung.bezeichnung etc.) und darf nie
+        # direkt in die Response fließen
+        answer: str = str(result.get("answer", "Keine Antwort"))
+        cost: float = float(result.get("cost") or 0)
+        model_name: str = str(result.get("model", "unknown"))
+
         return JsonResponse(
             {
-                "answer": result.get("answer", "Keine Antwort"),
-                "cost": result.get("cost", 0),
-                "model": result.get("model", "unknown"),
+                "answer": answer,
+                "cost": cost,
+                "model": model_name,
             }
         )
 
