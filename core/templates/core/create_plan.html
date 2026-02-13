@@ -1,721 +1,679 @@
+{% extends 'base.html' %}
 {% load static %}
-{% load static %}<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neuer Trainingsplan - HomeGym</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
-    <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
 
-    <!-- Offline Manager CSS -->
-    <link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
+{% block title %}Neuer Trainingsplan - HomeGym{% endblock %}
 
-        <script src="{% static 'core/js/theme-toggle.js' %}"></script>
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
 <style>
-        .exercise-card {
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-        .exercise-card:hover {
-            border-color: #0dcaf0;
-            transform: translateY(-2px);
-        }
-        .exercise-card.selected {
-            border-color: #198754;
-            background-color: rgba(25, 135, 84, 0.1);
-        }
-        .muscle-badge {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.5rem;
-        }
-        .muscle-badge.primary {
-            background-color: #198754;
-        }
-        .muscle-badge.secondary {
-            background-color: #0dcaf0;
-        }
-        .selected-exercises {
-            position: sticky;
-            top: 20px;
-        }
-        .exercise-order {
-            counter-reset: exercise-counter;
-        }
-        .exercise-order-item::before {
-            counter-increment: exercise-counter;
-            content: counter(exercise-counter) ". ";
-            font-weight: bold;
-            color: #198754;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-page border-bottom">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <i class="bi bi-house-door"></i> HomeGym
-            </a>
-            <span class="navbar-text">Neuer Trainingsplan</span>
-                    <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
-              <i class="bi bi-moon-fill" id="themeIcon"></i>
-            </button>
-</div>
-    </nav>
+    .exercise-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+    .exercise-card:hover {
+        border-color: #0dcaf0;
+        transform: translateY(-2px);
+    }
+    .exercise-card.selected {
+        border-color: #198754;
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+    .muscle-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+    .muscle-badge.primary {
+        background-color: #198754;
+    }
+    .muscle-badge.secondary {
+        background-color: #0dcaf0;
+    }
+    .selected-exercises {
+        position: sticky;
+        top: 20px;
+    }
+    .exercise-order {
+        counter-reset: exercise-counter;
+    }
+    .exercise-order-item::before {
+        counter-increment: exercise-counter;
+        content: counter(exercise-counter) ". ";
+        font-weight: bold;
+        color: #198754;
+    }
+</style>
+{% endblock %}
 
-    <div class="container-fluid py-4">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+{% block header %}
+<nav class="navbar navbar-page border-bottom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">
+            <i class="bi bi-house-door"></i> HomeGym
+        </a>
+        <span class="navbar-text">Neuer Trainingsplan</span>
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+            <i class="bi bi-moon-fill" id="themeIcon"></i>
+        </button>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Template-Auswahl Button -->
+    <div class="mb-3">
+        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#templateModal">
+            <i class="bi bi-lightning-charge-fill me-2"></i>Von Template starten
+        </button>
+        <span class="text-muted ms-2">Oder erstelle einen Plan von Grund auf:</span>
+    </div>
+
+    <div class="row">
+        <!-- Übungsauswahl -->
+        <div class="col-lg-8">
+            <div class="card card-stat border-secondary mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-list-check me-2"></i>Übungen auswählen
+                    </h5>
+                    <p class="text-muted small">Klicke auf Übungen, um sie zum Plan hinzuzufügen</p>
+
+                    <!-- Suche -->
+                    <div class="mb-3">
+                        <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
+                    </div>
+
+                    <!-- Übungen nach Muskelgruppen -->
+                    {% for gruppe, uebungen in uebungen_nach_gruppe.items %}
+                    <div class="muscle-group-section mb-4">
+                        <h6 class="text-secondary text-uppercase mb-3">
+                            <i class="bi bi-diagram-3 me-2"></i>{{ gruppe }}
+                        </h6>
+                        <div class="row g-2">
+                            {% for uebung in uebungen %}
+                            <div class="col-md-6 exercise-item" data-name="{{ uebung.bezeichnung|lower }}">
+                                <div class="card exercise-card bg-black border-secondary h-100"
+                                     data-id="{{ uebung.id }}"
+                                     data-name="{{ uebung.bezeichnung }}"
+                                     data-muscle="{{ uebung.muskelgruppe_label }}"
+                                     data-pattern="{{ uebung.bewegungstyp }}"
+                                     onclick="toggleExercise(this)">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <strong>{{ uebung.bezeichnung }}</strong>
+                                                <div class="mt-1">
+                                                    <span class="badge muscle-badge primary me-1">
+                                                        <i class="bi bi-star-fill"></i> {{ uebung.muskelgruppe_label }}
+                                                    </span>
+                                                    {% for hilfs in uebung.hilfsmuskeln %}
+                                                    <span class="badge muscle-badge secondary me-1">
+                                                        <i class="bi bi-plus-circle"></i> {{ hilfs }}
+                                                    </span>
+                                                    {% endfor %}
+                                                </div>
+                                                <small class="text-muted d-block mt-1">
+                                                    <i class="bi bi-info-circle"></i> {{ uebung.gewichts_typ }}
+                                                </small>
+                                            </div>
+                                            <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem; display: none;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
-            {% endfor %}
-        {% endif %}
-
-        <!-- Template-Auswahl Button -->
-        <div class="mb-3">
-            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#templateModal">
-                <i class="bi bi-lightning-charge-fill me-2"></i>Von Template starten
-            </button>
-            <span class="text-muted ms-2">Oder erstelle einen Plan von Grund auf:</span>
+            </div>
         </div>
 
-        <div class="row">
-            <!-- Übungsauswahl -->
-            <div class="col-lg-8">
-                <div class="card card-stat border-secondary mb-4">
+        <!-- Plan-Details und ausgewählte Übungen -->
+        <div class="col-lg-4">
+            <div class="selected-exercises">
+                <div class="card card-stat border-secondary mb-3">
                     <div class="card-body">
                         <h5 class="card-title">
-                            <i class="bi bi-list-check me-2"></i>Übungen auswählen
+                            <i class="bi bi-clipboard-check me-2"></i>Neuer Plan
                         </h5>
-                        <p class="text-muted small">Klicke auf Übungen, um sie zum Plan hinzuzufügen</p>
 
-                        <!-- Filter nach Muskelgruppen -->
-                        <div class="mb-3">
-                            <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
-                        </div>
+                        <form method="post" id="planForm">
+                            {% csrf_token %}
 
-                        <!-- Übungen nach Muskelgruppen -->
-                        {% for gruppe, uebungen in uebungen_nach_gruppe.items %}
-                        <div class="muscle-group-section mb-4">
-                            <h6 class="text-secondary text-uppercase mb-3">
-                                <i class="bi bi-diagram-3 me-2"></i>{{ gruppe }}
-                            </h6>
-                            <div class="row g-2">
-                                {% for uebung in uebungen %}
-                                <div class="col-md-6 exercise-item" data-name="{{ uebung.bezeichnung|lower }}">
-                                    <div class="card exercise-card bg-black border-secondary h-100"
-                                         data-id="{{ uebung.id }}"
-                                         data-name="{{ uebung.bezeichnung }}"
-                                         data-muscle="{{ uebung.muskelgruppe_label }}"
-                                         data-pattern="{{ uebung.bewegungstyp }}"
-                                         onclick="toggleExercise(this)">
-                                        <div class="card-body p-2">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div class="flex-grow-1">
-                                                    <strong>{{ uebung.bezeichnung }}</strong>
-                                                    <div class="mt-1">
-                                                        <span class="badge muscle-badge primary me-1">
-                                                            <i class="bi bi-star-fill"></i> {{ uebung.muskelgruppe_label }}
-                                                        </span>
-                                                        {% for hilfs in uebung.hilfsmuskeln %}
-                                                        <span class="badge muscle-badge secondary me-1">
-                                                            <i class="bi bi-plus-circle"></i> {{ hilfs }}
-                                                        </span>
-                                                        {% endfor %}
-                                                    </div>
-                                                    <small class="text-muted d-block mt-1">
-                                                        <i class="bi bi-info-circle"></i> {{ uebung.gewichts_typ }}
-                                                    </small>
-                                                </div>
-                                                <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem; display: none;"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
+                            <div class="mb-3">
+                                <label class="form-label">Name des Plans *</label>
+                                <input type="text" name="name" class="form-control" required>
                             </div>
-                        </div>
-                        {% endfor %}
+
+                            <div class="mb-3">
+                                <label class="form-label">Beschreibung</label>
+                                <textarea name="beschreibung" class="form-control" rows="2"></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="is_public" id="isPublicCheck">
+                                    <label class="form-check-label" for="isPublicCheck">
+                                        <i class="bi bi-globe me-1"></i> Plan öffentlich machen
+                                        <small class="text-muted d-block">Andere User können diesen Plan sehen und kopieren</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <hr class="border-secondary">
+
+                            <h6 class="text-secondary mb-3">
+                                Ausgewählte Übungen (<span id="selectedCount">0</span>)
+                            </h6>
+
+                            <div id="recommendationWarnings"></div>
+
+                            <div id="selectedExercises" class="exercise-order">
+                                <p class="text-muted small text-center py-3">
+                                    <i class="bi bi-arrow-left-circle me-1"></i>
+                                    Wähle Übungen aus der Liste
+                                </p>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100" id="submitBtn" disabled>
+                                <i class="bi bi-check-lg me-2"></i>Plan erstellen
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <!-- Plan-Details und ausgewählte Übungen -->
-            <div class="col-lg-4">
-                <div class="selected-exercises">
-                    <div class="card card-stat border-secondary mb-3">
+<!-- Template Modal -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">
+                    <i class="bi bi-lightning-charge-fill text-warning me-2"></i>
+                    Aus Template starten
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">
+                    Wähle ein vorgefertigtes Template basierend auf bewährten Trainingsprinzipien.
+                    Die Übungen werden automatisch an dein verfügbares Equipment angepasst.
+                </p>
+
+                <div id="templatesContainer" class="row g-4">
+                    <!-- Templates werden hier geladen -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Lädt...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Detail View (nested) -->
+                <div id="templateDetailView" style="display: none;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="showTemplateList()">
+                        <i class="bi bi-arrow-left me-2"></i>Zurück zur Auswahl
+                    </button>
+                    <div id="templateDetailContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'core/js/loading-manager.js' %}"></script>
+<script src="{% static 'core/js/toast.js' %}"></script>
+<script>
+    let selectedExercises = [];
+
+    // Empfehlungs-Regeln
+    const muscleRecommendations = {
+        'BRUST': {
+            name: 'Brust',
+            patterns: ['DRUECKEN', 'ISOLATION'],
+            message: 'Für optimales Brustwachstum kombiniere drückende Übungen (Bankdrücken) mit Isolationsübungen (Fliegende).'
+        },
+        'SCHULTER_VORN': {
+            name: 'Vordere Schulter',
+            patterns: ['DRUECKEN', 'ISOLATION'],
+            message: 'Kombiniere Schulterdrücken mit Isolationsübungen für beste Resultate.'
+        },
+        'SCHULTER_SEIT': {
+            name: 'Seitliche Schulter',
+            patterns: ['DRUECKEN', 'ISOLATION'],
+            message: 'Seitliche Schulter braucht gezieltes Training! Füge Seitheben zu deinem Plan hinzu.'
+        },
+        'SCHULTER_HINT': {
+            name: 'Hintere Schulter',
+            patterns: ['ZIEHEN', 'ISOLATION'],
+            message: 'Hintere Schulter wird oft vernachlässigt. Face Pulls oder vorgebeugtes Seitheben sind wichtig für Balance!'
+        },
+        'BIZEPS': {
+            name: 'Bizeps',
+            patterns: ['ZIEHEN', 'ISOLATION'],
+            message: 'Rudern trainiert den Bizeps mit, aber direkte Curls sind effektiver für maximales Wachstum.'
+        },
+        'TRIZEPS': {
+            name: 'Trizeps',
+            patterns: ['DRUECKEN', 'ISOLATION'],
+            message: 'Drückübungen trainieren Trizeps, aber Isolationsübungen (Pushdowns) maximieren das Volumen.'
+        },
+        'BEINE_QUAD': {
+            name: 'Quadrizeps',
+            patterns: ['BEUGEN', 'ISOLATION'],
+            message: 'Kniebeugen sind super, Beinstrecker können zusätzliches Volumen ohne Ermüdung liefern.'
+        },
+        'BEINE_HAM': {
+            name: 'Hamstrings',
+            patterns: ['HEBEN', 'ISOLATION'],
+            message: 'Kreuzheben trainiert Hamstrings, aber Beinbeuger isolieren sie perfekt.'
+        }
+    };
+
+    function analyzeBalance() {
+        const muscleGroups = {};
+        const warnings = [];
+
+        selectedExercises.forEach(ex => {
+            const card = document.querySelector(`.exercise-card[data-id="${ex.id}"]`);
+            const muscle = card.dataset.muscle;
+            const pattern = card.dataset.pattern;
+
+            if (!muscleGroups[muscle]) {
+                muscleGroups[muscle] = new Set();
+            }
+            muscleGroups[muscle].add(pattern);
+        });
+
+        Object.keys(muscleGroups).forEach(muscle => {
+            const patterns = muscleGroups[muscle];
+            const muscleKey = Object.keys(muscleRecommendations).find(key => {
+                return muscleRecommendations[key].name === muscle;
+            });
+
+            if (muscleKey && muscleRecommendations[muscleKey]) {
+                const rec = muscleRecommendations[muscleKey];
+                const hasAllPatterns = rec.patterns.every(p => patterns.has(p));
+
+                if (!hasAllPatterns) {
+                    warnings.push({
+                        muscle: rec.name,
+                        message: rec.message,
+                        missing: rec.patterns.filter(p => !patterns.has(p))
+                    });
+                }
+            }
+        });
+
+        displayWarnings(warnings);
+    }
+
+    function displayWarnings(warnings) {
+        const container = document.getElementById('recommendationWarnings');
+        if (!container) return;
+
+        if (warnings.length === 0) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'block';
+        let html = '<div class="alert alert-info border-info mb-3"><h6 class="mb-2"><i class="bi bi-lightbulb me-2"></i>Empfehlungen für deinen Plan</h6>';
+        warnings.forEach(w => {
+            html += `<div class="small mb-2"><strong>${w.muscle}:</strong> ${w.message}</div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function toggleExercise(card) {
+        const id = card.dataset.id;
+        const name = card.dataset.name;
+        const muscle = card.dataset.muscle;
+        const icon = card.querySelector('.bi-check-circle-fill');
+
+        if (card.classList.contains('selected')) {
+            card.classList.remove('selected');
+            icon.style.display = 'none';
+            selectedExercises = selectedExercises.filter(e => e.id != id);
+        } else {
+            card.classList.add('selected');
+            icon.style.display = 'block';
+            selectedExercises.push({ id, name, muscle });
+        }
+
+        updateSelectedList();
+        analyzeBalance();
+    }
+
+    function removeExercise(id) {
+        selectedExercises = selectedExercises.filter(e => e.id != id);
+
+        const card = document.querySelector(`.exercise-card[data-id="${id}"]`);
+        if (card) {
+            card.classList.remove('selected');
+            card.querySelector('.bi-check-circle-fill').style.display = 'none';
+        }
+
+        updateSelectedList();
+        analyzeBalance();
+    }
+
+    function moveUp(id) {
+        const idx = selectedExercises.findIndex(e => e.id == id);
+        if (idx > 0) {
+            [selectedExercises[idx - 1], selectedExercises[idx]] = [selectedExercises[idx], selectedExercises[idx - 1]];
+            updateSelectedList();
+        }
+    }
+
+    function moveDown(id) {
+        const idx = selectedExercises.findIndex(e => e.id == id);
+        if (idx < selectedExercises.length - 1) {
+            [selectedExercises[idx], selectedExercises[idx + 1]] = [selectedExercises[idx + 1], selectedExercises[idx]];
+            updateSelectedList();
+        }
+    }
+
+    function updateSelectedList() {
+        const container = document.getElementById('selectedExercises');
+        const count = document.getElementById('selectedCount');
+        const submitBtn = document.getElementById('submitBtn');
+
+        count.textContent = selectedExercises.length;
+        submitBtn.disabled = selectedExercises.length === 0;
+
+        if (selectedExercises.length === 0) {
+            container.innerHTML = `
+                <p class="text-muted small text-center py-3">
+                    <i class="bi bi-arrow-left-circle me-1"></i>
+                    Wähle Übungen aus der Liste
+                </p>
+            `;
+            return;
+        }
+
+        let html = '';
+        selectedExercises.forEach((ex, idx) => {
+            html += `
+                <div class="card bg-black border-secondary mb-2">
+                    <div class="card-body p-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="exercise-order-item">
+                                    <strong>${ex.name}</strong>
+                                    <small class="text-muted d-block">${ex.muscle}</small>
+                                </div>
+                                <input type="hidden" name="uebungen" value="${ex.id}">
+                                <div class="row g-2 mt-1">
+                                    <div class="col-6">
+                                        <input type="number" name="saetze_${ex.id}" class="form-control form-control-sm"
+                                               placeholder="Sätze" value="3" min="1" max="10">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" name="wdh_${ex.id}" class="form-control form-control-sm"
+                                               placeholder="Wdh." value="8-12">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="btn-group-vertical ms-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        onclick="moveUp('${ex.id}')" ${idx === 0 ? 'disabled' : ''}>
+                                    <i class="bi bi-arrow-up"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        onclick="moveDown('${ex.id}')" ${idx === selectedExercises.length - 1 ? 'disabled' : ''}>
+                                    <i class="bi bi-arrow-down"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="removeExercise('${ex.id}')">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    // Search functionality
+    document.getElementById('searchExercises').addEventListener('input', function(e) {
+        const search = e.target.value.toLowerCase();
+        document.querySelectorAll('.exercise-item').forEach(item => {
+            const name = item.dataset.name;
+            item.style.display = name.includes(search) ? 'block' : 'none';
+        });
+    });
+
+    // Template Modal: load on open
+    document.getElementById('templateModal').addEventListener('show.bs.modal', function() {
+        loadTemplates();
+    });
+
+    let templates = {};
+    let selectedTemplate = null;
+
+    function loadTemplates() {
+        const container = document.getElementById('templatesContainer');
+        const requestId = loadingManager.startOverlay(container);
+
+        fetch('/api/plan-templates/')
+            .then(response => response.json())
+            .then(data => {
+                templates = data;
+                displayTemplates();
+            })
+            .catch(error => {
+                console.error('Fehler beim Laden:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Fehler beim Laden der Templates
+                    </div>
+                `;
+            })
+            .finally(() => loadingManager.stopOverlay(container, requestId));
+    }
+
+    function displayTemplates() {
+        const container = document.getElementById('templatesContainer');
+        let html = '';
+
+        for (const [key, template] of Object.entries(templates)) {
+            html += `
+                <div class="col-md-4">
+                    <div class="card bg-black border-secondary h-100 template-card"
+                         style="cursor: pointer; transition: all 0.2s;"
+                         onmouseover="this.style.borderColor='#0dcaf0'"
+                         onmouseout="this.style.borderColor=''"
+                         onclick="showTemplateDetail('${key}')">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <i class="bi bi-clipboard-check me-2"></i>Neuer Plan
+                                <i class="bi bi-card-checklist text-info me-2"></i>
+                                ${template.name}
                             </h5>
-
-                            <form method="post" id="planForm">
-                                {% csrf_token %}
-
-                                <div class="mb-3">
-                                    <label class="form-label">Name des Plans *</label>
-                                    <input type="text" name="name" class="form-control" required>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Beschreibung</label>
-                                    <textarea name="beschreibung" class="form-control" rows="2"></textarea>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="is_public" id="isPublicCheck">
-                                        <label class="form-check-label" for="isPublicCheck">
-                                            <i class="bi bi-globe me-1"></i> Plan öffentlich machen
-                                            <small class="text-muted d-block">Andere User können diesen Plan sehen und kopieren</small>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <hr class="border-secondary">
-
-                                <h6 class="text-secondary mb-3">
-                                    Ausgewählte Übungen (<span id="selectedCount">0</span>)
-                                </h6>
-
-                                <div id="recommendationWarnings"></div>
-
-                                <div id="selectedExercises" class="exercise-order">
-                                    <p class="text-muted small text-center py-3">
-                                        <i class="bi bi-arrow-left-circle me-1"></i>
-                                        Wähle Übungen aus der Liste
-                                    </p>
-                                </div>
-
-                                <button type="submit" class="btn btn-success w-100" id="submitBtn" disabled>
-                                    <i class="bi bi-check-lg me-2"></i>Plan erstellen
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'core/js/loading-manager.js' %}"></script>
-    <script>
-        let selectedExercises = [];
-
-        // Empfehlungs-Regeln: Welche Muskelgruppen profitieren von mehreren Bewegungstypen
-        const muscleRecommendations = {
-            'BRUST': {
-                name: 'Brust',
-                patterns: ['DRUECKEN', 'ISOLATION'],
-                message: 'Für optimales Brustwachstum kombiniere drückende Übungen (Bankdrücken) mit Isolationsübungen (Fliegende).'
-            },
-            'SCHULTER_VORN': {
-                name: 'Vordere Schulter',
-                patterns: ['DRUECKEN', 'ISOLATION'],
-                message: 'Kombiniere Schulterdrücken mit Isolationsübungen für beste Resultate.'
-            },
-            'SCHULTER_SEIT': {
-                name: 'Seitliche Schulter',
-                patterns: ['DRUECKEN', 'ISOLATION'],
-                message: 'Seitliche Schulter braucht gezieltes Training! Füge Seitheben zu deinem Plan hinzu.'
-            },
-            'SCHULTER_HINT': {
-                name: 'Hintere Schulter',
-                patterns: ['ZIEHEN', 'ISOLATION'],
-                message: 'Hintere Schulter wird oft vernachlässigt. Face Pulls oder vorgebeugtes Seitheben sind wichtig für Balance!'
-            },
-            'BIZEPS': {
-                name: 'Bizeps',
-                patterns: ['ZIEHEN', 'ISOLATION'],
-                message: 'Rudern trainiert den Bizeps mit, aber direkte Curls sind effektiver für maximales Wachstum.'
-            },
-            'TRIZEPS': {
-                name: 'Trizeps',
-                patterns: ['DRUECKEN', 'ISOLATION'],
-                message: 'Drückübungen trainieren Trizeps, aber Isolationsübungen (Pushdowns) maximieren das Volumen.'
-            },
-            'BEINE_QUAD': {
-                name: 'Quadrizeps',
-                patterns: ['BEUGEN', 'ISOLATION'],
-                message: 'Kniebeugen sind super, Beinstrecker können zusätzliches Volumen ohne Ermüdung liefern.'
-            },
-            'BEINE_HAM': {
-                name: 'Hamstrings',
-                patterns: ['HEBEN', 'ISOLATION'],
-                message: 'Kreuzheben trainiert Hamstrings, aber Beinbeuger isolieren sie perfekt.'
-            }
-        };
-
-        function analyzeBalance() {
-            const muscleGroups = {};
-            const warnings = [];
-
-            // Analysiere gewählte Übungen
-            selectedExercises.forEach(ex => {
-                const card = document.querySelector(`.exercise-card[data-id="${ex.id}"]`);
-                const muscle = card.dataset.muscle;
-                const pattern = card.dataset.pattern;
-
-                if (!muscleGroups[muscle]) {
-                    muscleGroups[muscle] = new Set();
-                }
-                muscleGroups[muscle].add(pattern);
-            });
-
-            // Prüfe Empfehlungen
-            Object.keys(muscleGroups).forEach(muscle => {
-                const patterns = muscleGroups[muscle];
-
-                // Suche Muskelgruppe in Recommendations (vergleiche mit Key)
-                const muscleKey = Object.keys(muscleRecommendations).find(key => {
-                    const rec = muscleRecommendations[key];
-                    return rec.name === muscle;
-                });
-
-                if (muscleKey && muscleRecommendations[muscleKey]) {
-                    const rec = muscleRecommendations[muscleKey];
-                    const hasAllPatterns = rec.patterns.every(p => patterns.has(p));
-
-                    if (!hasAllPatterns) {
-                        const missingPatterns = rec.patterns.filter(p => !patterns.has(p));
-                        warnings.push({
-                            muscle: rec.name,
-                            message: rec.message,
-                            missing: missingPatterns
-                        });
-                    }
-                }
-            });
-
-            displayWarnings(warnings);
-        }
-
-        function displayWarnings(warnings) {
-            const container = document.getElementById('recommendationWarnings');
-            if (!container) return;
-
-            if (warnings.length === 0) {
-                container.innerHTML = '';
-                container.style.display = 'none';
-                return;
-            }
-
-            container.style.display = 'block';
-            let html = '<div class="alert alert-info border-info mb-3"><h6 class="mb-2"><i class="bi bi-lightbulb me-2"></i>Empfehlungen für deinen Plan</h6>';
-
-            warnings.forEach(w => {
-                html += `<div class="small mb-2"><strong>${w.muscle}:</strong> ${w.message}</div>`;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function toggleExercise(card) {
-            const id = card.dataset.id;
-            const name = card.dataset.name;
-            const muscle = card.dataset.muscle;
-            const icon = card.querySelector('.bi-check-circle-fill');
-
-            if (card.classList.contains('selected')) {
-                // Deselect
-                card.classList.remove('selected');
-                icon.style.display = 'none';
-                selectedExercises = selectedExercises.filter(e => e.id != id);
-            } else {
-                // Select
-                card.classList.add('selected');
-                icon.style.display = 'block';
-                selectedExercises.push({ id, name, muscle });
-            }
-
-            updateSelectedList();
-            analyzeBalance();
-        }
-
-        function removeExercise(id) {
-            selectedExercises = selectedExercises.filter(e => e.id != id);
-
-            // Deselect in list
-            const card = document.querySelector(`.exercise-card[data-id="${id}"]`);
-            if (card) {
-                card.classList.remove('selected');
-                card.querySelector('.bi-check-circle-fill').style.display = 'none';
-            }
-
-            updateSelectedList();
-            analyzeBalance();
-        }
-
-        function moveUp(id) {
-            const idx = selectedExercises.findIndex(e => e.id == id);
-            if (idx > 0) {
-                [selectedExercises[idx - 1], selectedExercises[idx]] = [selectedExercises[idx], selectedExercises[idx - 1]];
-                updateSelectedList();
-            }
-        }
-
-        function moveDown(id) {
-            const idx = selectedExercises.findIndex(e => e.id == id);
-            if (idx < selectedExercises.length - 1) {
-                [selectedExercises[idx], selectedExercises[idx + 1]] = [selectedExercises[idx + 1], selectedExercises[idx]];
-                updateSelectedList();
-            }
-        }
-
-        function updateSelectedList() {
-            const container = document.getElementById('selectedExercises');
-            const count = document.getElementById('selectedCount');
-            const submitBtn = document.getElementById('submitBtn');
-
-            count.textContent = selectedExercises.length;
-            submitBtn.disabled = selectedExercises.length === 0;
-
-            if (selectedExercises.length === 0) {
-                container.innerHTML = `
-                    <p class="text-muted small text-center py-3">
-                        <i class="bi bi-arrow-left-circle me-1"></i>
-                        Wähle Übungen aus der Liste
-                    </p>
-                `;
-                return;
-            }
-
-            let html = '';
-            selectedExercises.forEach((ex, idx) => {
-                html += `
-                    <div class="card bg-black border-secondary mb-2">
-                        <div class="card-body p-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="flex-grow-1">
-                                    <div class="exercise-order-item">
-                                        <strong>${ex.name}</strong>
-                                        <small class="text-muted d-block">${ex.muscle}</small>
-                                    </div>
-                                    <input type="hidden" name="uebungen" value="${ex.id}">
-                                    <div class="row g-2 mt-1">
-                                        <div class="col-6">
-                                            <input type="number" name="saetze_${ex.id}" class="form-control form-control-sm"
-                                                   placeholder="Sätze" value="3" min="1" max="10">
-                                        </div>
-                                        <div class="col-6">
-                                            <input type="text" name="wdh_${ex.id}" class="form-control form-control-sm"
-                                                   placeholder="Wdh." value="8-12">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="btn-group-vertical ms-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="moveUp('${ex.id}')" ${idx === 0 ? 'disabled' : ''}>
-                                        <i class="bi bi-arrow-up"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="moveDown('${ex.id}')" ${idx === selectedExercises.length - 1 ? 'disabled' : ''}>
-                                        <i class="bi bi-arrow-down"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
-                                            onclick="removeExercise('${ex.id}')">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </div>
+                            <p class="text-muted small mb-3">${template.description}</p>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="badge bg-info">
+                                    <i class="bi bi-calendar-week me-1"></i>${template.frequency_per_week}x / Woche
+                                </span>
+                                <span class="badge bg-secondary">${template.difficulty}</span>
+                                <span class="badge bg-success">${template.goal}</span>
+                            </div>
+                            <div class="text-muted small">
+                                <i class="bi bi-list-ol me-1"></i>${template.days_count} Trainingstage
                             </div>
                         </div>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
-        }
-
-        // Search functionality
-        document.getElementById('searchExercises').addEventListener('input', function(e) {
-            const search = e.target.value.toLowerCase();
-            document.querySelectorAll('.exercise-item').forEach(item => {
-                const name = item.dataset.name;
-                item.style.display = name.includes(search) ? 'block' : 'none';
-            });
-        });
-    </script>
-
-    <!-- Template Modal -->
-    <div class="modal fade" id="templateModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content bg-dark">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title">
-                        <i class="bi bi-lightning-charge-fill text-warning me-2"></i>
-                        Aus Template starten
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted mb-4">
-                        Wähle ein vorgefertigtes Template basierend auf bewährten Trainingsprinzipien.
-                        Die Übungen werden automatisch an dein verfügbares Equipment angepasst.
-                    </p>
-
-                    <div id="templatesContainer" class="row g-4">
-                        <!-- Templates werden hier geladen -->
-                        <div class="text-center py-5">
-                            <div class="spinner-border text-info" role="status">
-                                <span class="visually-hidden">Lädt...</span>
-                            </div>
+                        <div class="card-footer bg-transparent border-secondary">
+                            <button class="btn btn-sm btn-info w-100">
+                                <i class="bi bi-eye me-2"></i>Details anzeigen
+                            </button>
                         </div>
                     </div>
-
-                    <!-- Template Detail Modal (nested) -->
-                    <div id="templateDetailView" style="display: none;">
-                        <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="showTemplateList()">
-                            <i class="bi bi-arrow-left me-2"></i>Zurück zur Auswahl
-                        </button>
-                        <div id="templateDetailContent"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let templates = {};
-        let selectedTemplate = null;
-
-        // Modal öffnen - Templates laden
-        document.getElementById('templateModal').addEventListener('show.bs.modal', function() {
-            loadTemplates();
-        });
-
-        function loadTemplates() {
-            const container = document.getElementById('templatesContainer');
-            const requestId = loadingManager.startOverlay(container);
-
-            fetch('/api/plan-templates/')
-                .then(response => response.json())
-                .then(data => {
-                    templates = data;
-                    displayTemplates();
-                })
-                .catch(error => {
-                    console.error('Fehler beim Laden:', error);
-                    container.innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            Fehler beim Laden der Templates
-                        </div>
-                    `;
-                })
-                .finally(() => loadingManager.stopOverlay(container, requestId));
-        }
-
-        function displayTemplates() {
-            const container = document.getElementById('templatesContainer');
-            let html = '';
-
-            for (const [key, template] of Object.entries(templates)) {
-                html += `
-                    <div class="col-md-4">
-                        <div class="card bg-black border-secondary h-100 template-card"
-                             style="cursor: pointer; transition: all 0.2s;"
-                             onmouseover="this.style.borderColor='#0dcaf0'"
-                             onmouseout="this.style.borderColor=''"
-                             onclick="showTemplateDetail('${key}')">
-                            <div class="card-body">
-                                <h5 class="card-title">
-                                    <i class="bi bi-card-checklist text-info me-2"></i>
-                                    ${template.name}
-                                </h5>
-                                <p class="text-muted small mb-3">${template.description}</p>
-
-                                <div class="d-flex flex-wrap gap-2 mb-3">
-                                    <span class="badge bg-info">
-                                        <i class="bi bi-calendar-week me-1"></i>${template.frequency_per_week}x / Woche
-                                    </span>
-                                    <span class="badge bg-secondary">
-                                        ${template.difficulty}
-                                    </span>
-                                    <span class="badge bg-success">
-                                        ${template.goal}
-                                    </span>
-                                </div>
-
-                                <div class="text-muted small">
-                                    <i class="bi bi-list-ol me-1"></i>${template.days_count} Trainingstage
-                                </div>
-                            </div>
-                            <div class="card-footer bg-transparent border-secondary">
-                                <button class="btn btn-sm btn-info w-100">
-                                    <i class="bi bi-eye me-2"></i>Details anzeigen
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            container.innerHTML = html;
-        }
-
-        function showTemplateDetail(templateKey) {
-            selectedTemplate = templateKey;
-
-            // Detail-View anzeigen, Liste verstecken
-            document.getElementById('templatesContainer').style.display = 'none';
-            document.getElementById('templateDetailView').style.display = 'block';
-
-            // Loading anzeigen
-            document.getElementById('templateDetailContent').innerHTML = `
-                <div class="text-center py-5">
-                    <div class="spinner-border text-info" role="status"></div>
                 </div>
             `;
-
-            // Template-Details laden
-            fetch(`/api/plan-templates/${templateKey}/`)
-                .then(response => response.json())
-                .then(data => {
-                    displayTemplateDetail(data);
-                })
-                .catch(error => {
-                    console.error('Fehler:', error);
-                    document.getElementById('templateDetailContent').innerHTML = `
-                        <div class="alert alert-danger">Fehler beim Laden</div>
-                    `;
-                });
         }
 
-        function displayTemplateDetail(template) {
-            let html = `
-                <div class="card bg-black border-info">
+        container.innerHTML = html;
+    }
+
+    function showTemplateDetail(templateKey) {
+        selectedTemplate = templateKey;
+
+        document.getElementById('templatesContainer').style.display = 'none';
+        document.getElementById('templateDetailView').style.display = 'block';
+
+        document.getElementById('templateDetailContent').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-info" role="status"></div>
+            </div>
+        `;
+
+        fetch(`/api/plan-templates/${templateKey}/`)
+            .then(response => response.json())
+            .then(data => displayTemplateDetail(data))
+            .catch(error => {
+                console.error('Fehler:', error);
+                document.getElementById('templateDetailContent').innerHTML =
+                    '<div class="alert alert-danger">Fehler beim Laden</div>';
+            });
+    }
+
+    function displayTemplateDetail(template) {
+        let html = `
+            <div class="card bg-black border-info">
+                <div class="card-body">
+                    <h4 class="card-title">${template.name}</h4>
+                    <p class="text-muted">${template.description}</p>
+                    <div class="d-flex gap-2 mb-4">
+                        <span class="badge bg-info">${template.frequency_per_week}x / Woche</span>
+                        <span class="badge bg-secondary">${template.difficulty}</span>
+                        <span class="badge bg-success">${template.goal}</span>
+                    </div>
+                    <h5 class="mb-3">Trainingstage:</h5>
+        `;
+
+        template.days_adapted.forEach((day, idx) => {
+            html += `
+                <div class="card bg-dark border-secondary mb-3">
+                    <div class="card-header">
+                        <strong>Tag ${idx + 1}: ${day.name}</strong>
+                    </div>
                     <div class="card-body">
-                        <h4 class="card-title">${template.name}</h4>
-                        <p class="text-muted">${template.description}</p>
-
-                        <div class="d-flex gap-2 mb-4">
-                            <span class="badge bg-info">${template.frequency_per_week}x / Woche</span>
-                            <span class="badge bg-secondary">${template.difficulty}</span>
-                            <span class="badge bg-success">${template.goal}</span>
-                        </div>
-
-                        <h5 class="mb-3">Trainingstage:</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Übung</th>
+                                        <th>Sätze</th>
+                                        <th>Wdh.</th>
+                                        <th>Equipment</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
             `;
 
-            template.days_adapted.forEach((day, idx) => {
-                html += `
-                    <div class="card bg-dark border-secondary mb-3">
-                        <div class="card-header">
-                            <strong>Tag ${idx + 1}: ${day.name}</strong>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Übung</th>
-                                            <th>Sätze</th>
-                                            <th>Wdh.</th>
-                                            <th>Equipment</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                `;
-
-                day.exercises.forEach(ex => {
-                    const statusIcon = ex.available
-                        ? '<i class="bi bi-check-circle-fill text-success"></i>'
-                        : '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
-
-                    const substituteInfo = ex.substitute && !ex.available
-                        ? `<br><small class="text-warning">→ Ersatz: ${ex.substitute.name}</small>`
-                        : '';
-
-                    html += `
-                        <tr class="${ex.available ? '' : 'text-muted'}">
-                            <td>${ex.name}${substituteInfo}</td>
-                            <td>${ex.sets}</td>
-                            <td>${ex.reps}</td>
-                            <td><span class="badge bg-secondary">${ex.equipment}</span></td>
-                            <td>${statusIcon}</td>
-                        </tr>
-                    `;
-                });
+            day.exercises.forEach(ex => {
+                const statusIcon = ex.available
+                    ? '<i class="bi bi-check-circle-fill text-success"></i>'
+                    : '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+                const substituteInfo = ex.substitute && !ex.available
+                    ? `<br><small class="text-warning">→ Ersatz: ${ex.substitute.name}</small>`
+                    : '';
 
                 html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    <tr class="${ex.available ? '' : 'text-muted'}">
+                        <td>${ex.name}${substituteInfo}</td>
+                        <td>${ex.sets}</td>
+                        <td>${ex.reps}</td>
+                        <td><span class="badge bg-secondary">${ex.equipment}</span></td>
+                        <td>${statusIcon}</td>
+                    </tr>
                 `;
             });
 
             html += `
-                        <button class="btn btn-success btn-lg w-100" onclick="createFromTemplate()">
-                            <i class="bi bi-check-circle-fill me-2"></i>
-                            Plan erstellen
-                        </button>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             `;
+        });
 
-            document.getElementById('templateDetailContent').innerHTML = html;
-        }
+        html += `
+                    <button class="btn btn-success btn-lg w-100" onclick="createFromTemplate()">
+                        <i class="bi bi-check-circle-fill me-2"></i>Plan erstellen
+                    </button>
+                </div>
+            </div>
+        `;
 
-        function showTemplateList() {
-            document.getElementById('templatesContainer').style.display = 'flex';
-            document.getElementById('templateDetailView').style.display = 'none';
-        }
+        document.getElementById('templateDetailContent').innerHTML = html;
+    }
 
-        function createFromTemplate() {
-            if (!selectedTemplate) return;
+    function showTemplateList() {
+        document.getElementById('templatesContainer').style.display = 'flex';
+        document.getElementById('templateDetailView').style.display = 'none';
+    }
 
-            // Button deaktivieren
-            const btn = document.querySelector('#templateDetailView .btn-success');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird erstellt...';
+    function createFromTemplate() {
+        if (!selectedTemplate) return;
 
-            fetch(`/api/plan-templates/${selectedTemplate}/create/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Bei mehreren Plänen zum Dashboard, sonst zum Plan
-                    if (data.plan_count > 1) {
-                        window.location.href = '/training/select/';
-                    } else if (data.plan_ids && data.plan_ids.length > 0) {
-                        window.location.href = `/plan/${data.plan_ids[0]}/`;
-                    } else {
-                        window.location.href = '/training/select/';
-                    }
+        const btn = document.querySelector('#templateDetailView .btn-success');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird erstellt...';
+
+        fetch(`/api/plan-templates/${selectedTemplate}/create/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.plan_count > 1) {
+                    window.location.href = '/training/select/';
+                } else if (data.plan_ids && data.plan_ids.length > 0) {
+                    window.location.href = `/plan/${data.plan_ids[0]}/`;
                 } else {
-                    toast.error('Fehler: ' + (data.error || 'Unbekannter Fehler'));
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Plan erstellen';
+                    window.location.href = '/training/select/';
                 }
-            })
-            .catch(error => {
-                console.error('Fehler:', error);
-                toast.error('Fehler beim Erstellen des Plans');
+            } else {
+                toast.error('Fehler: ' + (data.error || 'Unbekannter Fehler'));
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Plan erstellen';
-            });
-        }
-    </script>
-
-    <!-- Toast Notifications -->
-    <script src="{% static 'core/js/toast.js' %}"></script>
-
-    <!-- Footer -->
-    {% include 'core/includes/global_footer.html' %}
-</body>
-</html>
+            }
+        })
+        .catch(error => {
+            console.error('Fehler:', error);
+            toast.error('Fehler beim Erstellen des Plans');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Plan erstellen';
+        });
+    }
+</script>
+{% endblock %}
