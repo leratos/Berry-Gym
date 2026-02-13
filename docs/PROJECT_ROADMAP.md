@@ -2,7 +2,7 @@
 
 **Projekt:** Complete Project Restructuring & Production Preparation  
 **Startdatum:** 09.02.2026  
-**Aktueller Status:** Week 3 - Phase 3.3 COMPLETE (44% Coverage, 392 Tests grün)
+**Aktueller Status:** Week 3 - Phase 3.4.1 COMPLETE (47% Coverage, 406 Tests grün)
 **Projektpfad:** `C:\Dev\Berry-Gym` (aus OneDrive migriert am 2026-02-12)
 **Python:** 3.12.3 via `.venv` (py -3.12)  
 **Ziel:** Production-ready application for public launch
@@ -516,19 +516,70 @@ core/
 
 ---
 
-#### **Phase 3.4 - Complexity Reduction**
-**Time Estimate:** 2 days  
-**Goal:** Cyclomatic complexity < 10
+#### **Phase 3.4.1 - Complexity Reduction: Grade D/E/F (CC > 20)** ✅ COMPLETE
+**Abgeschlossen:** 2026-02-13
+**Goal:** Cyclomatic complexity < 10 für alle Grade D/E/F Funktionen
 
-**Refactor Complex Functions:**
-- `training_session.py:training_session_view()` - Complex logic
-- `plan_management.py:create_plan()` - Too many branches
-- `export.py:generate_training_pdf()` - 200+ lines
+**Offender (gemessen mit radon, 2026-02-12):**
+| CC | Funktion | Datei |
+|----|----------|-------|
+| 74 | `dashboard` | training_stats.py |
+| 57 | `export_training_pdf` | export.py |
+| 40 | `workout_recommendations` | ai_recommendations.py |
+| 33 | `training_stats` | training_stats.py |
+| 30 | `finish_training` | training_session.py |
+| 28 | `find_substitute_exercise` | helpers/exercises.py |
+| 26 | `training_session` | training_session.py |
+| 25 | `import_uebungen` | exercise_management.py |
 
-**Techniques:**
+**Techniken:**
 - Extract helper functions
-- Strategy pattern for conditionals
-- Reduce nesting levels
+- Early returns statt tief verschachtelter if/else
+- Komplexe Blöcke in klar benannte private Funktionen auslagern
+
+**Erfolgskriterium:**
+- Alle oben genannten Funktionen: CC < 10
+- Alle 392 bestehenden Tests bleiben grün
+
+---
+
+#### **Phase 3.4.2 - Complexity Reduction: Grade C (CC 11-20)** ⏳
+**Time Estimate:** 2 days
+**Goal:** Cyclomatic complexity < 10 für alle Grade C Funktionen
+
+**Offender (gemessen mit radon, 2026-02-12):**
+| CC | Funktion | Datei |
+|----|----------|-------|
+| 20 | `exercise_detail` | exercise_library.py |
+| 19 | `profile` | auth.py |
+| 18 | `generate_plan_api` | ai_recommendations.py |
+| 18 | `update_set` | training_session.py |
+| 18 | `sync_offline_data` | offline.py |
+| 17 | `exercise_stats` | training_stats.py |
+| 17 | `_apply_mesocycle_from_plan` | ai_recommendations.py |
+| 17 | `apply_optimizations_api` | ai_recommendations.py |
+| 15 | `training_start` | training_session.py |
+| 15 | `register` | auth.py |
+| 15 | `create_plan_from_template` | plan_templates.py |
+| 14 | `api_reorder_group` | api_plan_sharing.py |
+| 14 | `body_stats` | body_tracking.py |
+| 14 | `get_alternative_exercises` | exercise_library.py |
+| 14 | `exercise_api_detail` | exercise_library.py |
+| 14 | `export_plan_pdf` | export.py |
+| 14 | `export_plan_group_pdf` | export.py |
+| 13 | `set_active_plan_group` | plan_management.py |
+| 12 | `uebungen_auswahl` | exercise_library.py |
+| 12 | `training_select_plan` | training_session.py |
+| 12 | `add_set` | training_session.py |
+
+**Techniken:**
+- Extract helper functions
+- Early returns
+- Komplexe Query-Blöcke in Methoden auslagern
+
+**Erfolgskriterium:**
+- Alle oben genannten Funktionen: CC < 10
+- Alle Tests bleiben grün
 
 ---
 
@@ -1100,8 +1151,10 @@ Week 3 [🔄] Refactoring & Quality
   ├─ Phase 3.2: base.html Template Migration 🔄 (3/~30 Templates migriert)
   │    ✅ training_list.html  ✅ training_stats.html  ✅ stats_exercise.html
   │    + Delete-Modal: GET→POST Fix (verhindert Datenverlust durch Prefetching)
-  ├─ Phase 3.3: Type Hints ⏳
-  └─ Phase 3.4/3.5: Complexity / Tests ⏳
+  ├─ Phase 3.3: Type Hints ✅ (392 tests, mypy.ini)
+  ├─ Phase 3.4.1: Complexity Grade D/E/F (CC > 20) ⏳
+  ├─ Phase 3.4.2: Complexity Grade C (CC 11-20) ⏳
+  └─ Phase 3.5: Test Quality ⏳
   Target: 50% coverage
 
 Week 4 [⏳] Performance
@@ -1143,6 +1196,6 @@ Week 8 [🎯] PUBLIC LAUNCH
 
 ---
 
-**Last Updated:** February 12, 2026 (Phase 3.2 gestartet - 3 Templates auf base.html migriert + Delete-Modal GET→POST Fix)
-**Version:** 2.8 (training_list, training_stats, stats_exercise auf base.html umgestellt)
-**Next Review:** Phase 3.2 weitermachen - restliche Templates migrieren
+**Last Updated:** February 13, 2026 (Phase 3.4.1 COMPLETE – alle CC > 20 Funktionen refactored, 406 Tests, 47% Coverage)
+**Version:** 3.1 (Phase 3.4.1 complete)
+**Next Review:** Phase 3.4.2 – CC 11-20 Funktionen (Grade C) refactoren

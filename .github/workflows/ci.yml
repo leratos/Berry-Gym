@@ -9,7 +9,7 @@ on:
     branches:
       - main
       - develop
-      - 'phase-*'      # Alle Phase-Branches (phase-2.5, phase-3.1, etc.)
+      - '*phase-*'      # Alle Phase-Branches (phase-2.5, phase-3.1, etc.)
       - 'feature-*'    # Alle Feature-Branches
   pull_request:
     branches: [ main, develop ]

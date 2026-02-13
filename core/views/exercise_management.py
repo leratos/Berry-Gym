@@ -206,11 +206,101 @@ def export_uebungen(request: HttpRequest) -> HttpResponse:
     return JsonResponse({"error": "Invalid format"}, status=400)
 
 
+# ---------------------------------------------------------------------------
+# Private helpers for import_uebungen
+# ---------------------------------------------------------------------------
+
+
+def _parse_import_file(import_file) -> tuple:
+    """
+    Parst eine JSON-Importdatei und extrahiert die Übungsliste.
+    Gibt (exercises_list, error_message) zurück.
+    """
+    try:
+        data = json.load(import_file)
+    except json.JSONDecodeError as e:
+        logger.warning("JSON import parse error: %s", e)
+        return None, "Ungültiges JSON-Format. Bitte Datei prüfen."
+
+    if isinstance(data, list):
+        return data, None
+    if isinstance(data, dict) and "exercises" in data:
+        return data["exercises"], None
+    return None, 'JSON muss Array oder Object mit "exercises" Key sein'
+
+
+def _resolve_equipment_for_uebung(equipment_names: list, bezeichnung: str, errors: list) -> list:
+    """
+    Löst Equipment-Namen in Equipment-Objekte auf.
+    Fehler werden in errors-Liste gesammelt (mutiert).
+    """
+    equipment_objs = []
+    for eq_name in equipment_names:
+        try:
+            equipment_objs.append(Equipment.objects.get(name=eq_name))
+        except Equipment.DoesNotExist:
+            found = False
+            for choice_value, choice_display in EQUIPMENT_CHOICES:
+                if choice_display == eq_name:
+                    try:
+                        equipment_objs.append(Equipment.objects.get(name=choice_value))
+                        found = True
+                        break
+                    except Equipment.DoesNotExist:
+                        logger.warning(
+                            'Equipment "%s" not found while resolving "%s".', choice_value, eq_name
+                        )
+            if not found:
+                errors.append(f'Equipment "{eq_name}" nicht gefunden für Übung "{bezeichnung}"')
+    return equipment_objs
+
+
+def _save_or_count_uebung(
+    ex_data: dict, equipment_objs: list, update_existing: bool, dry_run: bool, stats: dict
+) -> None:
+    """
+    Erstellt/aktualisiert eine Übung oder zählt sie (bei dry_run).
+    Mutiert stats-Dict: created_count, updated_count.
+    """
+    bezeichnung = ex_data["bezeichnung"]
+    ex_id = ex_data.get("id")
+    defaults = {
+        "bezeichnung": bezeichnung,
+        "muskelgruppe": ex_data.get("muskelgruppe", "SONSTIGES"),
+        "hilfsmuskeln": ex_data.get("hilfsmuskeln", []),
+        "bewegungstyp": ex_data.get("bewegungstyp", "COMPOUND"),
+        "gewichts_typ": ex_data.get("gewichts_typ", "FREI"),
+    }
+
+    if dry_run:
+        if ex_id and Uebung.objects.filter(id=ex_id).exists():
+            stats["updated_count"] += 1
+        else:
+            stats["created_count"] += 1
+        return
+
+    if ex_id and update_existing:
+        uebung, created = Uebung.objects.update_or_create(id=ex_id, defaults=defaults)
+        uebung.equipment.set(equipment_objs)
+        stats["created_count" if created else "updated_count"] += 1
+    else:
+        uebung = Uebung.objects.create(
+            **{k: v for k, v in defaults.items() if k != "bezeichnung"}, bezeichnung=bezeichnung
+        )
+        uebung.equipment.set(equipment_objs)
+        stats["created_count"] += 1
+
+
+# ---------------------------------------------------------------------------
+# View
+# ---------------------------------------------------------------------------
+
+
 @staff_member_required
 def import_uebungen(request: HttpRequest) -> HttpResponse:
     """
-    Importiert Übungen aus JSON-Datei
-    Nur für Admin-User (staff_member_required)
+    Importiert Übungen aus JSON-Datei.
+    Nur für Admin-User (staff_member_required).
     """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
@@ -221,127 +311,43 @@ def import_uebungen(request: HttpRequest) -> HttpResponse:
             messages.error(request, "Keine Datei ausgewählt")
             return redirect("uebungen_auswahl")
 
-        # Parse JSON
-        try:
-            data = json.load(import_file)
-        except json.JSONDecodeError as e:
-            messages.error(request, f"Ungültiges JSON-Format: {e}")
+        exercises, parse_error = _parse_import_file(import_file)
+        if parse_error:
+            messages.error(request, parse_error)
             return redirect("uebungen_auswahl")
 
-        # Extract exercises array
-        if isinstance(data, list):
-            exercises = data
-        elif isinstance(data, dict) and "exercises" in data:
-            exercises = data["exercises"]
-        else:
-            messages.error(request, 'JSON muss Array oder Object mit "exercises" Key sein')
-            return redirect("uebungen_auswahl")
-
-        # Options
         update_existing = request.POST.get("update_existing") == "on"
         dry_run = request.POST.get("dry_run") == "on"
-
-        # Import-Statistiken
-        created_count = 0
-        updated_count = 0
-        skipped_count = 0
-        errors = []
+        stats = {"created_count": 0, "updated_count": 0, "skipped_count": 0}
+        errors: list = []
 
         for ex_data in exercises:
             try:
-                bezeichnung = ex_data.get("bezeichnung")
-                if not bezeichnung:
-                    skipped_count += 1
+                if not ex_data.get("bezeichnung"):
+                    stats["skipped_count"] += 1
                     continue
-
-                # Equipment-Objekte finden
-                equipment_names = ex_data.get("equipment", [])
-                equipment_objs = []
-                for eq_name in equipment_names:
-                    try:
-                        # Suche nach name (Display-Name aus Choices)
-                        eq = Equipment.objects.get(name=eq_name)
-                        equipment_objs.append(eq)
-                    except Equipment.DoesNotExist:
-                        # Fallback: Suche in EQUIPMENT_CHOICES by display name
-                        found = False
-                        for choice_value, choice_display in EQUIPMENT_CHOICES:
-                            if choice_display == eq_name:
-                                try:
-                                    eq = Equipment.objects.get(name=choice_value)
-                                    equipment_objs.append(eq)
-                                    found = True
-                                    break
-                                except Equipment.DoesNotExist:
-                                    logger.warning(
-                                        'Equipment with internal name "%s" not found while resolving display name "%s".',
-                                        choice_value,
-                                        eq_name,
-                                    )
-                                    # Continue searching other equipment choices for a matching entry.
-                                    continue
-                        if not found:
-                            errors.append(
-                                f'Equipment "{eq_name}" nicht gefunden für Übung "{bezeichnung}"'
-                            )
-
-                # Übung erstellen oder aktualisieren
-                ex_id = ex_data.get("id")
-
-                if not dry_run:
-                    if ex_id and update_existing:
-                        # Update existing
-                        uebung, created = Uebung.objects.update_or_create(
-                            id=ex_id,
-                            defaults={
-                                "bezeichnung": bezeichnung,
-                                "muskelgruppe": ex_data.get("muskelgruppe", "SONSTIGES"),
-                                "hilfsmuskeln": ex_data.get("hilfsmuskeln", []),
-                                "bewegungstyp": ex_data.get("bewegungstyp", "COMPOUND"),
-                                "gewichts_typ": ex_data.get("gewichts_typ", "FREI"),
-                            },
-                        )
-
-                        # Equipment zuweisen
-                        uebung.equipment.set(equipment_objs)
-
-                        if created:
-                            created_count += 1
-                        else:
-                            updated_count += 1
-                    else:
-                        # Create new (ohne ID-Angabe)
-                        uebung = Uebung.objects.create(
-                            bezeichnung=bezeichnung,
-                            muskelgruppe=ex_data.get("muskelgruppe", "SONSTIGES"),
-                            hilfsmuskeln=ex_data.get("hilfsmuskeln", []),
-                            bewegungstyp=ex_data.get("bewegungstyp", "COMPOUND"),
-                            gewichts_typ=ex_data.get("gewichts_typ", "FREI"),
-                        )
-                        uebung.equipment.set(equipment_objs)
-                        created_count += 1
-                else:
-                    # Dry-Run: nur zählen
-                    if ex_id and Uebung.objects.filter(id=ex_id).exists():
-                        updated_count += 1
-                    else:
-                        created_count += 1
-
+                equipment_objs = _resolve_equipment_for_uebung(
+                    ex_data.get("equipment", []), ex_data["bezeichnung"], errors
+                )
+                _save_or_count_uebung(ex_data, equipment_objs, update_existing, dry_run, stats)
             except Exception as e:
-                errors.append(f'Fehler bei "{ex_data.get("bezeichnung", "?")}": {str(e)}')
+                logger.error(
+                    "Import error for exercise '%s': %s",
+                    ex_data.get("bezeichnung", "?"),
+                    e,
+                    exc_info=True,
+                )
+                errors.append(
+                    f'Fehler bei "{ex_data.get("bezeichnung", "?")}" – Übung übersprungen'
+                )
 
-        # Feedback
+        c, u, s = stats["created_count"], stats["updated_count"], stats["skipped_count"]
         if dry_run:
             messages.info(
-                request,
-                f"Dry-Run abgeschlossen: {created_count} würden erstellt, {updated_count} würden aktualisiert, {skipped_count} übersprungen",
+                request, f"Dry-Run: {c} würden erstellt, {u} aktualisiert, {s} übersprungen"
             )
         else:
-            messages.success(
-                request,
-                f"Import erfolgreich: {created_count} erstellt, {updated_count} aktualisiert, {skipped_count} übersprungen",
-            )
-
+            messages.success(request, f"Import: {c} erstellt, {u} aktualisiert, {s} übersprungen")
         if errors:
             messages.warning(request, f"{len(errors)} Fehler: " + "; ".join(errors[:5]))
 

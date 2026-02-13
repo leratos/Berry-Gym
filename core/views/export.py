@@ -111,6 +111,302 @@ def export_training_csv(request: HttpRequest) -> HttpResponse:
     return response
 
 
+_EMPFOHLENE_SAETZE: dict[str, tuple[int, int]] = {
+    "brust": (12, 20),
+    "ruecken_breiter": (15, 25),
+    "ruecken_unterer": (10, 18),
+    "schulter_vordere": (8, 15),
+    "schulter_seitliche": (12, 20),
+    "schulter_hintere": (12, 20),
+    "bizeps": (10, 18),
+    "trizeps": (10, 18),
+    "quadrizeps": (15, 25),
+    "hamstrings": (12, 20),
+    "glutaeus": (10, 18),
+    "waden": (12, 20),
+    "bauch": (12, 25),
+    "unterer_ruecken": (8, 15),
+}
+
+_PUSH_GROUPS = ["BRUST", "SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS"]
+_PULL_GROUPS = [
+    "RUECKEN_LAT",
+    "RUECKEN_TRAPEZ",
+    "RUECKEN_UNTEN",
+    "RUECKEN_OBERER",
+    "SCHULTER_HINT",
+    "BIZEPS",
+]
+
+
+def _muscle_status(anzahl: int, min_s: int, max_s: int, wenig_daten: bool) -> tuple[str, str, str]:
+    """Return (status_key, status_label, erklaerung) for one muscle group."""
+    if anzahl == 0:
+        expl = (
+            f"Noch keine Sätze erfasst. Empfehlung: {min_s}-{max_s} Sätze/Monat"
+            if wenig_daten
+            else f"Diese Muskelgruppe wurde nicht trainiert. Empfehlung: {min_s}-{max_s} Sätze/Monat"
+        )
+        return "nicht_trainiert", "Nicht trainiert", expl
+    if anzahl < min_s:
+        if wenig_daten:
+            return (
+                "untertrainiert",
+                "Wenig trainiert",
+                f"{anzahl} Sätze in 30 Tagen. Empfehlung: {min_s}-{max_s} Sätze/Monat "
+                "(mehr Daten für genauere Analyse)",
+            )
+        return (
+            "untertrainiert",
+            "Untertrainiert",
+            f"Nur {anzahl} Sätze in 30 Tagen. Empfehlung: {min_s}-{max_s} Sätze für optimales Wachstum",
+        )
+    if anzahl > max_s:
+        if wenig_daten:
+            return (
+                "uebertrainiert",
+                "Viel trainiert",
+                f"{anzahl} Sätze - intensiver Start! Beobachte Regeneration. "
+                f"Empfehlung: {min_s}-{max_s} Sätze/Monat",
+            )
+        return (
+            "uebertrainiert",
+            "Mögl. Übertraining",
+            f"{anzahl} Sätze könnten zu viel sein. Empfehlung: {min_s}-{max_s} Sätze. Regeneration prüfen!",
+        )
+    return "optimal", "Optimal", f"{anzahl} Sätze liegen im optimalen Bereich ({min_s}-{max_s})"
+
+
+def _collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30_tage: int) -> list[dict]:
+    """Build muscle group balance stats with evidence-based set recommendations."""
+    wenig_daten = trainings_30_tage < 8
+    result = []
+    for gruppe_key, gruppe_name in MUSKELGRUPPEN:
+        gruppe_saetze = alle_saetze.filter(
+            uebung__muskelgruppe=gruppe_key, einheit__datum__gte=letzte_30_tage
+        )
+        anzahl = gruppe_saetze.count()
+        min_s, max_s = _EMPFOHLENE_SAETZE.get(gruppe_key, (12, 20))
+        status, status_label, erklaerung = _muscle_status(anzahl, min_s, max_s, wenig_daten)
+        if anzahl > 0:
+            volumen = sum(
+                float(s.gewicht) * s.wiederholungen
+                for s in gruppe_saetze
+                if s.gewicht and s.wiederholungen
+            )
+            avg_rpe_r = gruppe_saetze.aggregate(Avg("rpe"))["rpe__avg"]
+            result.append(
+                {
+                    "key": gruppe_key,
+                    "name": gruppe_name,
+                    "saetze": anzahl,
+                    "volumen": float(round(volumen, 0)),
+                    "avg_rpe": float(round(avg_rpe_r, 1)) if avg_rpe_r else 0.0,
+                    "status": status,
+                    "status_label": status_label,
+                    "erklaerung": erklaerung,
+                    "empfehlung_min": min_s,
+                    "empfehlung_max": max_s,
+                    "prozent_von_optimal": float(round((anzahl / ((min_s + max_s) / 2)) * 100, 0)),
+                }
+            )
+    return sorted(result, key=lambda x: x["saetze"], reverse=True)
+
+
+def _collect_push_pull(muskelgruppen_stats: list[dict]) -> dict:
+    """Compute push/pull balance and return analysis dict."""
+    push = sum(mg["saetze"] for mg in muskelgruppen_stats if mg["key"] in _PUSH_GROUPS)
+    pull = sum(mg["saetze"] for mg in muskelgruppen_stats if mg["key"] in _PULL_GROUPS)
+    if push == 0 and pull == 0:
+        ratio, bewertung, empfehlung = (
+            0,
+            "Keine Daten",
+            "Beginne mit ausgewogenem Push- und Pull-Training für optimale Muskelentwicklung.",
+        )
+    elif pull > 0:
+        ratio = round(push / pull, 2)
+        if 0.9 <= ratio <= 1.1:
+            bewertung, empfehlung = "Ausgewogen", "Perfekt! Push/Pull-Verhältnis ist ausgeglichen."
+        elif ratio > 1.1:
+            bewertung = "Zu viel Push"
+            empfehlung = (
+                f"Ratio {ratio}:1 - Mehr Pull-Training (Rücken, Bizeps) für Schultergesundheit!"
+            )
+        else:
+            bewertung = "Zu viel Pull"
+            empfehlung = f"Ratio {ratio}:1 - Mehr Push-Training (Brust, Schultern) für Balance!"
+    else:
+        ratio, bewertung, empfehlung = (
+            0,
+            "Nur Push",
+            "Füge Pull-Training (Rücken, Bizeps) hinzu für ausgeglichene Entwicklung!",
+        )
+    return {
+        "push_saetze": push,
+        "pull_saetze": pull,
+        "ratio": ratio,
+        "bewertung": bewertung,
+        "empfehlung": empfehlung,
+    }
+
+
+def _collect_strength_progression(
+    alle_saetze, top_uebungen: list, muskelgruppen_dict: dict
+) -> list[dict]:
+    """Extract top-5 exercises with measurable strength progression (first vs last 3 sets)."""
+    result = []
+    for uebung in top_uebungen[:5]:
+        uebung_name = uebung["uebung__bezeichnung"]
+        uebung_saetze = alle_saetze.filter(uebung__bezeichnung=uebung_name).order_by(
+            "einheit__datum"
+        )
+        if uebung_saetze.count() < 3:
+            continue
+        erste_saetze = uebung_saetze[:3]
+        letzte_saetze = list(uebung_saetze)[-3:]
+        erstes_max = max((s.gewicht or 0) for s in erste_saetze)
+        letztes_max = max((s.gewicht or 0) for s in letzte_saetze)
+        if erstes_max > 0:
+            progression_prozent = round(
+                ((float(letztes_max) - float(erstes_max)) / float(erstes_max)) * 100, 1
+            )
+            result.append(
+                {
+                    "uebung": uebung_name,
+                    "start_gewicht": float(erstes_max),
+                    "aktuell_gewicht": float(letztes_max),
+                    "progression": float(progression_prozent),
+                    "muskelgruppe": muskelgruppen_dict.get(
+                        uebung["uebung__muskelgruppe"], uebung["uebung__muskelgruppe"]
+                    ),
+                }
+            )
+    return sorted(result, key=lambda x: x["progression"], reverse=True)[:5]
+
+
+def _collect_intensity_data(alle_saetze, letzte_30_tage) -> tuple[float, dict]:
+    """Return (avg_rpe, rpe_verteilung) for the last 30 days."""
+    rpe_saetze = alle_saetze.filter(rpe__isnull=False, einheit__datum__gte=letzte_30_tage)
+    if not rpe_saetze.exists():
+        return 0.0, {"leicht": 0, "mittel": 0, "schwer": 0}
+    avg_rpe_val = rpe_saetze.aggregate(Avg("rpe"))["rpe__avg"]
+    avg_rpe = float(round(avg_rpe_val, 1)) if avg_rpe_val else 0.0
+    rpe_verteilung = {
+        "leicht": int(rpe_saetze.filter(rpe__lte=6).count()),
+        "mittel": int(rpe_saetze.filter(rpe__gt=6, rpe__lte=8).count()),
+        "schwer": int(rpe_saetze.filter(rpe__gt=8).count()),
+    }
+    return avg_rpe, rpe_verteilung
+
+
+def _collect_weekly_volume_pdf(alle_saetze) -> list[dict]:
+    """Build weekly volume progression (last 12 weeks) for PDF report."""
+    weekly_volume: dict[str, float] = defaultdict(float)
+    for satz in alle_saetze.filter(ist_aufwaermsatz=False):
+        if satz.gewicht and satz.wiederholungen:
+            iso_year, iso_week, _ = satz.einheit.datum.isocalendar()
+            week_key = f"{iso_year}-W{iso_week:02d}"
+            weekly_volume[week_key] += float(satz.gewicht) * satz.wiederholungen
+    labels = sorted(weekly_volume.keys())[-12:]
+    return [
+        {"woche": f"KW{label.split('-W')[1]}", "volumen": round(weekly_volume[label], 0)}
+        for label in labels
+    ]
+
+
+def _collect_weight_trend(koerperwerte: list) -> dict | None:
+    """Return weight trend dict (diff + direction) or None if insufficient data."""
+    if len(koerperwerte) < 2:
+        return None
+    gewichts_diff = koerperwerte[0].gewicht - koerperwerte[-1].gewicht
+    return {
+        "diff": round(gewichts_diff, 1),
+        "richtung": "zugenommen" if gewichts_diff > 0 else "abgenommen",
+    }
+
+
+def _generate_pdf_charts(
+    muskelgruppen_stats: list[dict], volumen_wochen: list[dict], push_saetze: int, pull_saetze: int
+) -> tuple:
+    """Generate chart images for PDF; returns (muscle_heatmap, volume_chart, push_pull_chart, body_map).
+    Returns (None, None, None, None) if generation fails."""
+    try:
+        muscle_heatmap = generate_muscle_heatmap(muskelgruppen_stats)
+        volume_chart = generate_volume_chart(volumen_wochen[-8:])
+        push_pull_chart = generate_push_pull_pie(push_saetze, pull_saetze)
+        body_map_image = generate_body_map_with_data(muskelgruppen_stats)
+        logger.info("Charts successfully generated")
+        return muscle_heatmap, volume_chart, push_pull_chart, body_map_image
+    except Exception as e:
+        logger.warning(f"Chart generation failed: {str(e)}")
+        return None, None, None, None
+
+
+def _calc_trainings_per_week(alle_trainings, heute) -> float:
+    """Calculate average training frequency per week from all sessions."""
+    gesamt = alle_trainings.count()
+    if gesamt == 0:
+        return 0.0
+    erste = alle_trainings.order_by("datum").first()
+    if not erste:
+        return 0.0
+    tage_aktiv = max(1, (heute - erste.datum).days)
+    return round((gesamt / tage_aktiv) * 7, 1)
+
+
+def _build_top_uebungen(alle_saetze, muskelgruppen_dict: dict) -> list[dict]:
+    """Query top 10 exercises by set count, annotated with display name."""
+    raw = (
+        alle_saetze.values("uebung__bezeichnung", "uebung__muskelgruppe")
+        .annotate(
+            anzahl=Count("id"),
+            max_gewicht=Max("gewicht"),
+            avg_gewicht=Avg("gewicht"),
+            total_volumen=Sum(F("gewicht") * F("wiederholungen"), output_field=models.FloatField()),
+        )
+        .order_by("-anzahl")[:10]
+    )
+    result = []
+    for uebung in raw:
+        uebung_dict = dict(uebung)
+        uebung_dict["muskelgruppe_display"] = muskelgruppen_dict.get(
+            uebung["uebung__muskelgruppe"], uebung["uebung__muskelgruppe"]
+        )
+        result.append(uebung_dict)
+    return result
+
+
+def _render_training_pdf_response(request: HttpRequest, context: dict, heute) -> HttpResponse:
+    """Render training PDF template and return PDF download response.
+
+    Handles both template rendering errors and xhtml2pdf generation errors,
+    returning redirect to training_stats with error message on failure.
+    """
+    try:
+        html_string = render_to_string("core/training_pdf_simple.html", context)
+    except Exception as e:
+        logger.error(f"Template rendering failed: {str(e)}", exc_info=True)
+        messages.error(request, "Template-Fehler: PDF konnte nicht erstellt werden.")
+        return redirect("training_stats")
+
+    try:
+        result = BytesIO()
+        pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
+        if pdf.err:
+            logger.error(f"PDF generation failed with {pdf.err} errors")
+            messages.error(request, "Fehler beim PDF-Export (pisaDocument failed)")
+            return redirect("training_stats")
+        response = HttpResponse(result.getvalue(), content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'attachment; filename="homegym_report_{heute.strftime("%Y%m%d")}.pdf"'
+        )
+        return response
+    except Exception as e:
+        logger.error(f"PDF export failed: {str(e)}", exc_info=True)
+        messages.error(request, "PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.")
+        return redirect("training_stats")
+
+
 @login_required
 def export_training_pdf(request: HttpRequest) -> HttpResponse:
     """Export training statistics as PDF.
@@ -166,217 +462,25 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     )
 
     # Average training frequency
-    if gesamt_trainings > 0:
-        erste_training = alle_trainings.order_by("datum").first()
-        if erste_training:
-            tage_aktiv = max(1, (heute - erste_training.datum).days)
-            trainings_pro_woche = round((gesamt_trainings / tage_aktiv) * 7, 1)
-        else:
-            trainings_pro_woche = 0
-    else:
-        trainings_pro_woche = 0
+    trainings_pro_woche = _calc_trainings_per_week(alle_trainings, heute)
 
     # NEU: Konsistenz-Metriken
     consistency_metrics = calculate_consistency_metrics(alle_trainings)
 
     # Top exercises with more details
-    top_uebungen_raw = (
-        alle_saetze.values("uebung__bezeichnung", "uebung__muskelgruppe")
-        .annotate(
-            anzahl=Count("id"),
-            max_gewicht=Max("gewicht"),
-            avg_gewicht=Avg("gewicht"),
-            total_volumen=Sum(F("gewicht") * F("wiederholungen"), output_field=models.FloatField()),
-        )
-        .order_by("-anzahl")[:10]
-    )
-
-    # Convert muscle group keys to display names
-    top_uebungen = []
-    for uebung in top_uebungen_raw:
-        uebung_dict = dict(uebung)
-        uebung_dict["muskelgruppe_display"] = muskelgruppen_dict.get(
-            uebung["uebung__muskelgruppe"], uebung["uebung__muskelgruppe"]
-        )
-        top_uebungen.append(uebung_dict)
+    top_uebungen = _build_top_uebungen(alle_saetze, muskelgruppen_dict)
 
     # NEU: Plateau-Analyse
     plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
 
     # Strength development: Top 5 exercises with measurable progression
-    kraft_progression = []
-    for uebung in top_uebungen[:5]:
-        uebung_name = uebung["uebung__bezeichnung"]
-        uebung_saetze = alle_saetze.filter(uebung__bezeichnung=uebung_name).order_by(
-            "einheit__datum"
-        )
-
-        if uebung_saetze.count() >= 3:
-            # Compare first 3 sets with last 3 sets
-            erste_saetze = uebung_saetze[:3]
-            letzte_saetze = list(uebung_saetze)[-3:]
-
-            erstes_max = max((s.gewicht or 0) for s in erste_saetze)
-            letztes_max = max((s.gewicht or 0) for s in letzte_saetze)
-
-            if erstes_max > 0:
-                progression_prozent = round(
-                    ((float(letztes_max) - float(erstes_max)) / float(erstes_max)) * 100, 1
-                )
-                kraft_progression.append(
-                    {
-                        "uebung": uebung_name,
-                        "start_gewicht": float(erstes_max),
-                        "aktuell_gewicht": float(letztes_max),
-                        "progression": float(progression_prozent),
-                        "muskelgruppe": muskelgruppen_dict.get(
-                            uebung["uebung__muskelgruppe"], uebung["uebung__muskelgruppe"]
-                        ),
-                    }
-                )
-
-    kraft_progression = sorted(kraft_progression, key=lambda x: x["progression"], reverse=True)[:5]
+    kraft_progression = _collect_strength_progression(alle_saetze, top_uebungen, muskelgruppen_dict)
 
     # Muscle group balance with intelligent assessment
-    muskelgruppen_stats = []
-
-    # Recommended sets per muscle group per month (evidence-based)
-    empfohlene_saetze = {
-        "brust": (12, 20),
-        "ruecken_breiter": (15, 25),
-        "ruecken_unterer": (10, 18),
-        "schulter_vordere": (8, 15),
-        "schulter_seitliche": (12, 20),
-        "schulter_hintere": (12, 20),
-        "bizeps": (10, 18),
-        "trizeps": (10, 18),
-        "quadrizeps": (15, 25),
-        "hamstrings": (12, 20),
-        "glutaeus": (10, 18),
-        "waden": (12, 20),
-        "bauch": (12, 25),
-        "unterer_ruecken": (8, 15),
-    }
-
-    for gruppe_key, gruppe_name in MUSKELGRUPPEN:
-        gruppe_saetze = alle_saetze.filter(
-            uebung__muskelgruppe=gruppe_key, einheit__datum__gte=letzte_30_tage
-        )
-        anzahl = gruppe_saetze.count()
-
-        # Calculate recommendation and status
-        empfehlung = empfohlene_saetze.get(gruppe_key, (12, 20))
-        min_saetze, max_saetze = empfehlung
-
-        # Data quality check: softer wording for few training sessions
-        wenig_daten = trainings_30_tage < 8
-
-        if anzahl == 0:
-            status = "nicht_trainiert"
-            status_label = "Nicht trainiert"
-            if wenig_daten:
-                erklaerung = (
-                    f"Noch keine Sätze erfasst. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat"
-                )
-            else:
-                erklaerung = f"Diese Muskelgruppe wurde nicht trainiert. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat"
-        elif anzahl < min_saetze:
-            status = "untertrainiert"
-            if wenig_daten:
-                status_label = "Wenig trainiert"
-                erklaerung = f"{anzahl} Sätze in 30 Tagen. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat (mehr Daten für genauere Analyse)"
-            else:
-                status_label = "Untertrainiert"
-                erklaerung = f"Nur {anzahl} Sätze in 30 Tagen. Empfehlung: {min_saetze}-{max_saetze} Sätze für optimales Wachstum"
-        elif anzahl > max_saetze:
-            status = "uebertrainiert"
-            if wenig_daten:
-                status_label = "Viel trainiert"
-                erklaerung = f"{anzahl} Sätze - intensiver Start! Beobachte Regeneration. Empfehlung: {min_saetze}-{max_saetze} Sätze/Monat"
-            else:
-                status_label = "Mögl. Übertraining"
-                erklaerung = f"{anzahl} Sätze könnten zu viel sein. Empfehlung: {min_saetze}-{max_saetze} Sätze. Regeneration prüfen!"
-        else:
-            status = "optimal"
-            status_label = "Optimal"
-            erklaerung = f"{anzahl} Sätze liegen im optimalen Bereich ({min_saetze}-{max_saetze})"
-
-        if anzahl > 0:
-            volumen = sum(
-                float(s.gewicht) * s.wiederholungen
-                for s in gruppe_saetze
-                if s.gewicht and s.wiederholungen
-            )
-            avg_rpe_result = gruppe_saetze.aggregate(Avg("rpe"))["rpe__avg"]
-            avg_rpe = float(avg_rpe_result) if avg_rpe_result else 0.0
-            muskelgruppen_stats.append(
-                {
-                    "key": gruppe_key,
-                    "name": gruppe_name,
-                    "saetze": anzahl,
-                    "volumen": float(round(volumen, 0)),
-                    "avg_rpe": float(round(avg_rpe, 1)),
-                    "status": status,
-                    "status_label": status_label,
-                    "erklaerung": erklaerung,
-                    "empfehlung_min": min_saetze,
-                    "empfehlung_max": max_saetze,
-                    "prozent_von_optimal": float(
-                        round((anzahl / ((min_saetze + max_saetze) / 2)) * 100, 0)
-                    ),
-                }
-            )
-
-    muskelgruppen_stats = sorted(muskelgruppen_stats, key=lambda x: x["saetze"], reverse=True)
+    muskelgruppen_stats = _collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30_tage)
 
     # Push/Pull balance analysis
-    push_groups = ["BRUST", "SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS"]
-    pull_groups = [
-        "RUECKEN_LAT",
-        "RUECKEN_TRAPEZ",
-        "RUECKEN_UNTEN",
-        "RUECKEN_OBERER",
-        "SCHULTER_HINT",
-        "BIZEPS",
-    ]
-
-    push_saetze = sum(mg["saetze"] for mg in muskelgruppen_stats if mg["key"] in push_groups)
-    pull_saetze = sum(mg["saetze"] for mg in muskelgruppen_stats if mg["key"] in pull_groups)
-
-    # Balance assessment
-    if push_saetze == 0 and pull_saetze == 0:
-        push_pull_ratio = 0
-        push_pull_bewertung = "Keine Daten"
-        push_pull_empfehlung = (
-            "Beginne mit ausgewogenem Push- und Pull-Training für optimale Muskelentwicklung."
-        )
-    elif pull_saetze > 0:
-        push_pull_ratio = round(push_saetze / pull_saetze, 2)
-        if 0.9 <= push_pull_ratio <= 1.1:
-            push_pull_bewertung = "Ausgewogen"
-            push_pull_empfehlung = "Perfekt! Push/Pull-Verhältnis ist ausgeglichen."
-        elif push_pull_ratio > 1.1:
-            push_pull_bewertung = "Zu viel Push"
-            push_pull_empfehlung = f"Ratio {push_pull_ratio}:1 - Mehr Pull-Training (Rücken, Bizeps) für Schultergesundheit!"
-        else:
-            push_pull_bewertung = "Zu viel Pull"
-            push_pull_empfehlung = (
-                f"Ratio {push_pull_ratio}:1 - Mehr Push-Training (Brust, Schultern) für Balance!"
-            )
-    else:
-        push_pull_ratio = 0
-        push_pull_bewertung = "Nur Push"
-        push_pull_empfehlung = (
-            "Füge Pull-Training (Rücken, Bizeps) hinzu für ausgeglichene Entwicklung!"
-        )
-
-    push_pull_balance = {
-        "push_saetze": push_saetze,
-        "pull_saetze": pull_saetze,
-        "ratio": push_pull_ratio,
-        "bewertung": push_pull_bewertung,
-        "empfehlung": push_pull_empfehlung,
-    }
+    push_pull_balance = _collect_push_pull(muskelgruppen_stats)
 
     # Identify weaknesses (undertrained muscle groups)
     schwachstellen = [
@@ -385,38 +489,14 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     schwachstellen = sorted(schwachstellen, key=lambda x: x["saetze"])[:5]
 
     # Intensity analysis (RPE-based)
+    avg_rpe, rpe_verteilung = _collect_intensity_data(alle_saetze, letzte_30_tage)
     rpe_saetze = alle_saetze.filter(rpe__isnull=False, einheit__datum__gte=letzte_30_tage)
-    if rpe_saetze.exists():
-        avg_rpe_val = rpe_saetze.aggregate(Avg("rpe"))["rpe__avg"]
-        avg_rpe = float(round(avg_rpe_val, 1)) if avg_rpe_val else 0.0
-        rpe_verteilung = {
-            "leicht": int(rpe_saetze.filter(rpe__lte=6).count()),
-            "mittel": int(rpe_saetze.filter(rpe__gt=6, rpe__lte=8).count()),
-            "schwer": int(rpe_saetze.filter(rpe__gt=8).count()),
-        }
-    else:
-        avg_rpe = 0
-        rpe_verteilung = {"leicht": 0, "mittel": 0, "schwer": 0}
 
     # NEU: RPE-Qualitäts-Analyse
     rpe_quality = calculate_rpe_quality_analysis(alle_saetze)
 
     # Volume progression over last 12 weeks
-    weekly_volume_pdf = defaultdict(float)
-
-    for satz in alle_saetze.filter(ist_aufwaermsatz=False):
-        if satz.gewicht and satz.wiederholungen:
-            iso_year, iso_week, _ = satz.einheit.datum.isocalendar()
-            week_key = f"{iso_year}-W{iso_week:02d}"
-            volumen = float(satz.gewicht) * satz.wiederholungen
-            weekly_volume_pdf[week_key] += volumen
-
-    # Last 12 weeks sorted
-    weekly_labels_pdf = sorted(weekly_volume_pdf.keys())[-12:]
-    volumen_wochen = [
-        {"woche": f"KW{label.split('-W')[1]}", "volumen": round(weekly_volume_pdf[label], 0)}
-        for label in weekly_labels_pdf
-    ]
+    volumen_wochen = _collect_weekly_volume_pdf(alle_saetze)
 
     # NEU: Ermüdungs-Index
     fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
@@ -433,15 +513,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)
 
     # Weight trend calculation
-    gewichts_trend = None
-    if len(koerperwerte) >= 2:
-        neueste = koerperwerte[0]
-        aelteste = koerperwerte[-1]
-        gewichts_diff = neueste.gewicht - aelteste.gewicht
-        gewichts_trend = {
-            "diff": round(gewichts_diff, 1),
-            "richtung": "zugenommen" if gewichts_diff > 0 else "abgenommen",
-        }
+    gewichts_trend = _collect_weight_trend(koerperwerte)
 
     # Push/Pull balance data for template
     push_saetze = int(push_pull_balance.get("push_saetze", 0))
@@ -454,18 +526,9 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     staerken = [mg for mg in muskelgruppen_stats if mg["status"] == "optimal"]
 
     # Generate charts
-    try:
-        muscle_heatmap = generate_muscle_heatmap(muskelgruppen_stats)
-        volume_chart = generate_volume_chart(volumen_wochen[-8:])
-        push_pull_chart = generate_push_pull_pie(push_saetze, pull_saetze)
-        body_map_image = generate_body_map_with_data(muskelgruppen_stats)
-        logger.info("Charts successfully generated")
-    except Exception as e:
-        logger.warning(f"Chart generation failed: {str(e)}")
-        muscle_heatmap = None
-        volume_chart = None
-        push_pull_chart = None
-        body_map_image = None
+    muscle_heatmap, volume_chart, push_pull_chart, body_map_image = _generate_pdf_charts(
+        muskelgruppen_stats, volumen_wochen, push_saetze, pull_saetze
+    )
 
     context = {
         "user": request.user,
@@ -514,34 +577,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         "rpe_quality": rpe_quality,
     }
 
-    # Render HTML
-    try:
-        html_string = render_to_string("core/training_pdf_simple.html", context)
-    except Exception as e:
-        logger.error(f"Template rendering failed: {str(e)}", exc_info=True)
-        messages.error(request, "Template-Fehler: PDF konnte nicht erstellt werden.")
-        return redirect("training_stats")
-
-    # Generate PDF with xhtml2pdf
-    try:
-        result = BytesIO()
-        pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
-
-        if pdf.err:
-            logger.error(f"PDF generation failed with {pdf.err} errors")
-            messages.error(request, "Fehler beim PDF-Export (pisaDocument failed)")
-            return redirect("training_stats")
-
-        response = HttpResponse(result.getvalue(), content_type="application/pdf")
-        response["Content-Disposition"] = (
-            f'attachment; filename="homegym_report_{heute.strftime("%Y%m%d")}.pdf"'
-        )
-        return response
-
-    except Exception as e:
-        logger.error(f"PDF export failed: {str(e)}", exc_info=True)
-        messages.error(request, "PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.")
-        return redirect("training_stats")
+    return _render_training_pdf_response(request, context, heute)
 
 
 @login_required
