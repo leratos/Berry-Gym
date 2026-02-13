@@ -83,34 +83,23 @@ def _apply_mesocycle_from_plan(user: User, plan_data: dict[str, Any], plan_ids: 
     )
 
 
-@login_required
-def workout_recommendations(request: HttpRequest) -> HttpResponse:
-    """Intelligente Trainingsempfehlungen basierend auf Datenanalyse."""
-    heute = timezone.now()
-    letzte_30_tage = heute - timedelta(days=30)
-    letzte_60_tage = heute - timedelta(days=60)
+# ---------------------------------------------------------------------------
+# Private helpers for workout_recommendations
+# ---------------------------------------------------------------------------
 
-    # Alle Trainings des Users
-    alle_saetze = Satz.objects.filter(einheit__user=request.user, ist_aufwaermsatz=False)
+PRIORITAET_ORDER = {"hoch": 0, "mittel": 1, "niedrig": 2, "info": 3}
 
-    letzte_30_tage_saetze = alle_saetze.filter(einheit__datum__gte=letzte_30_tage)
 
-    letzte_60_tage_saetze = alle_saetze.filter(einheit__datum__gte=letzte_60_tage)
-
-    empfehlungen = []
-
-    # === 1. MUSKELGRUPPEN-BALANCE ANALYSE (RPE-gewichtet) ===
+def _get_muscle_balance_empfehlung(letzte_30_tage_saetze) -> list:
+    """Analysiert Muskelgruppen-Balance (RPE-gewichtet) und gibt Empfehlungen zurück."""
     muskelgruppen_stats = {}
     for gruppe_key, gruppe_name in MUSKELGRUPPEN:
-        # Berechne effektive Wiederholungen: Sätze × Wiederholungen × (RPE/10)
         effektive_wdh = sum(
             s.wiederholungen * (float(s.rpe) / 10.0)
             for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe=gruppe_key)
             if s.wiederholungen and s.rpe
         )
-
         saetze_anzahl = letzte_30_tage_saetze.filter(uebung__muskelgruppe=gruppe_key).count()
-
         if effektive_wdh > 0:
             muskelgruppen_stats[gruppe_key] = {
                 "name": gruppe_name,
@@ -118,150 +107,150 @@ def workout_recommendations(request: HttpRequest) -> HttpResponse:
                 "saetze": saetze_anzahl,
             }
 
-    if muskelgruppen_stats:
-        # Finde untertrainierte Muskelgruppen (basierend auf effektiven Wiederholungen)
-        avg_effektive_wdh = sum(m["effektive_wdh"] for m in muskelgruppen_stats.values()) / len(
-            muskelgruppen_stats
-        )
+    if not muskelgruppen_stats:
+        return []
 
-        for gruppe_key, data in muskelgruppen_stats.items():
-            if data["effektive_wdh"] < avg_effektive_wdh * 0.5:  # Weniger als 50% des Durchschnitts
-                # Finde passende Übungen
-                passende_uebungen = Uebung.objects.filter(muskelgruppe=gruppe_key)[:3]
+    avg_effektive_wdh = sum(m["effektive_wdh"] for m in muskelgruppen_stats.values()) / len(
+        muskelgruppen_stats
+    )
+    empfehlungen = []
+    for gruppe_key, data in muskelgruppen_stats.items():
+        if data["effektive_wdh"] < avg_effektive_wdh * 0.5:
+            passende_uebungen = Uebung.objects.filter(muskelgruppe=gruppe_key)[:3]
+            empfehlungen.append(
+                {
+                    "typ": "muskelgruppe",
+                    "prioritaet": "hoch",
+                    "titel": f'{data["name"]} untertrainiert',
+                    "beschreibung": (
+                        f"Diese Muskelgruppe wurde in den letzten 30 Tagen unterdurchschnittlich trainiert "
+                        f'(nur {int(data["effektive_wdh"])} effektive Wiederholungen vs. '
+                        f"{int(avg_effektive_wdh)} Durchschnitt)."
+                    ),
+                    "empfehlung": f'Füge mehr Übungen für {data["name"]} hinzu',
+                    "uebungen": [{"id": u.id, "name": u.bezeichnung} for u in passende_uebungen],
+                }
+            )
+    return empfehlungen
 
-                empfehlungen.append(
-                    {
-                        "typ": "muskelgruppe",
-                        "prioritaet": "hoch",
-                        "titel": f'{data["name"]} untertrainiert',
-                        "beschreibung": f'Diese Muskelgruppe wurde in den letzten 30 Tagen unterdurchschnittlich trainiert (nur {int(data["effektive_wdh"])} effektive Wiederholungen vs. {int(avg_effektive_wdh)} Durchschnitt).',
-                        "empfehlung": f'Füge mehr Übungen für {data["name"]} hinzu',
-                        "uebungen": [
-                            {"id": u.id, "name": u.bezeichnung} for u in passende_uebungen
-                        ],
-                    }
-                )
 
-    # === 2. PUSH/PULL BALANCE (RPE-gewichtet) ===
+def _get_push_pull_empfehlung(letzte_30_tage_saetze) -> list:
+    """Analysiert Push/Pull-Balance und gibt Empfehlung zurück."""
     push_gruppen = ["BRUST", "SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS"]
     pull_gruppen = ["RUECKEN_LAT", "RUECKEN_TRAPEZ", "BIZEPS"]
 
-    push_effektiv = sum(
-        s.wiederholungen * (float(s.rpe) / 10.0)
-        for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=push_gruppen)
-        if s.wiederholungen and s.rpe
-    )
+    def _eff_wdh(gruppen):
+        return sum(
+            s.wiederholungen * (float(s.rpe) / 10.0)
+            for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=gruppen)
+            if s.wiederholungen and s.rpe
+        )
 
-    pull_effektiv = sum(
-        s.wiederholungen * (float(s.rpe) / 10.0)
-        for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=pull_gruppen)
-        if s.wiederholungen and s.rpe
-    )
-
-    # Zusätzlich Sätze zählen für konsistentere Anzeige mit PDF
+    push_effektiv = _eff_wdh(push_gruppen)
+    pull_effektiv = _eff_wdh(pull_gruppen)
     push_saetze = letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=push_gruppen).count()
     pull_saetze = letzte_30_tage_saetze.filter(uebung__muskelgruppe__in=pull_gruppen).count()
 
-    if push_effektiv > 0 and pull_effektiv > 0:
-        ratio = push_effektiv / pull_effektiv if pull_effektiv > 0 else 999
+    if not (push_effektiv > 0 and pull_effektiv > 0):
+        return []
 
-        if ratio > 1.5:  # Zu viel Push
-            empfehlungen.append(
-                {
-                    "typ": "balance",
-                    "prioritaet": "mittel",
-                    "titel": "Push/Pull Unbalance",
-                    "beschreibung": f"Dein Push-Training ({push_saetze} Sätze, {int(push_effektiv)} eff. Wdh) ist {ratio:.1f}x intensiver als dein Pull-Training ({pull_saetze} Sätze, {int(pull_effektiv)} eff. Wdh). Dies kann zu Haltungsschäden führen.",
-                    "empfehlung": "Mehr Zugübungen (Rücken, Bizeps) trainieren",
-                    "uebungen": [
-                        {"id": u.id, "name": u.bezeichnung}
-                        for u in Uebung.objects.filter(muskelgruppe__in=pull_gruppen)[:3]
-                    ],
-                }
-            )
-        elif ratio < 0.67:  # Zu viel Pull
-            empfehlungen.append(
-                {
-                    "typ": "balance",
-                    "prioritaet": "mittel",
-                    "titel": "Push/Pull Unbalance",
-                    "beschreibung": f"Dein Pull-Training ({pull_saetze} Sätze, {int(pull_effektiv)} eff. Wdh) ist intensiver als dein Push-Training ({push_saetze} Sätze, {int(push_effektiv)} eff. Wdh).",
-                    "empfehlung": "Mehr Druckübungen (Brust, Schultern, Trizeps) einbauen",
-                    "uebungen": [
-                        {"id": u.id, "name": u.bezeichnung}
-                        for u in Uebung.objects.filter(muskelgruppe__in=push_gruppen)[:3]
-                    ],
-                }
-            )
+    ratio = push_effektiv / pull_effektiv if pull_effektiv > 0 else 999
 
-    # === 3. STAGNIERENDE ÜBUNGEN ===
-    # Analysiere das MAX-Gewicht pro TRAINING (nicht pro Satz!)
-    # Mindestens 4 verschiedene Trainings mit der Übung nötig
+    if ratio > 1.5:
+        return [
+            {
+                "typ": "balance",
+                "prioritaet": "mittel",
+                "titel": "Push/Pull Unbalance",
+                "beschreibung": (
+                    f"Dein Push-Training ({push_saetze} Sätze, {int(push_effektiv)} eff. Wdh) ist "
+                    f"{ratio:.1f}x intensiver als dein Pull-Training ({pull_saetze} Sätze, "
+                    f"{int(pull_effektiv)} eff. Wdh). Dies kann zu Haltungsschäden führen."
+                ),
+                "empfehlung": "Mehr Zugübungen (Rücken, Bizeps) trainieren",
+                "uebungen": [
+                    {"id": u.id, "name": u.bezeichnung}
+                    for u in Uebung.objects.filter(muskelgruppe__in=pull_gruppen)[:3]
+                ],
+            }
+        ]
+    if ratio < 0.67:
+        return [
+            {
+                "typ": "balance",
+                "prioritaet": "mittel",
+                "titel": "Push/Pull Unbalance",
+                "beschreibung": (
+                    f"Dein Pull-Training ({pull_saetze} Sätze, {int(pull_effektiv)} eff. Wdh) ist "
+                    f"intensiver als dein Push-Training ({push_saetze} Sätze, {int(push_effektiv)} eff. Wdh)."
+                ),
+                "empfehlung": "Mehr Druckübungen (Brust, Schultern, Trizeps) einbauen",
+                "uebungen": [
+                    {"id": u.id, "name": u.bezeichnung}
+                    for u in Uebung.objects.filter(muskelgruppe__in=push_gruppen)[:3]
+                ],
+            }
+        ]
+    return []
 
-    # Gruppiere Sätze nach Übung und Trainingsdatum, nimm Max-Gewicht pro Training
-    uebung_trainings = defaultdict(list)
 
+def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
+    """Erkennt stagnierende Übungen (kein Fortschritt in 60 Tagen)."""
+    uebung_trainings: dict = defaultdict(list)
     for satz in letzte_60_tage_saetze.select_related("uebung", "einheit"):
         if satz.gewicht and satz.gewicht > 0:
-            key = satz.uebung_id
-            datum = satz.einheit.datum
-            uebung_trainings[key].append({"datum": datum, "gewicht": float(satz.gewicht)})
-
-    for uebung_id, saetze_list in uebung_trainings.items():
-        # Gruppiere nach Datum und nimm Max pro Training
-        trainings_max = defaultdict(float)
-        for s in saetze_list:
-            datum_key = s["datum"]
-            trainings_max[datum_key] = max(trainings_max[datum_key], s["gewicht"])
-
-        # Sortiere nach Datum (älteste zuerst)
-        sortierte_trainings = sorted(trainings_max.items(), key=lambda x: x[0])
-        max_gewichte = [g for d, g in sortierte_trainings]
-
-        # Mindestens 4 verschiedene Trainings für sinnvolle Stagnations-Analyse
-        if len(max_gewichte) >= 4:
-            uebung = Uebung.objects.get(id=uebung_id)
-
-            # Vergleiche älteste 2 Trainings vs. neueste 2 Trainings
-            erste_trainings = max_gewichte[:2]
-            letzte_trainings = max_gewichte[-2:]
-
-            avg_erste = sum(erste_trainings) / len(erste_trainings)
-            avg_letzte = sum(letzte_trainings) / len(letzte_trainings)
-
-            # Stagnation nur wenn:
-            # 1. Kein Fortschritt (weniger als 2.5% Steigerung)
-            # 2. Alle Max-Gewichte sind identisch
-            fortschritt_prozent = (
-                ((avg_letzte - avg_erste) / avg_erste * 100) if avg_erste > 0 else 0
+            uebung_trainings[satz.uebung_id].append(
+                {
+                    "datum": satz.einheit.datum,
+                    "gewicht": float(satz.gewicht),
+                }
             )
-            alle_gleich = len(set(max_gewichte)) == 1  # Alle Werte identisch
 
-            if fortschritt_prozent < 2.5 and alle_gleich:
-                empfehlungen.append(
-                    {
-                        "typ": "stagnation",
-                        "prioritaet": "niedrig",
-                        "titel": f"{uebung.bezeichnung}: Stagnation",
-                        "beschreibung": f"Bei dieser Übung gab es in den letzten {len(max_gewichte)} Trainings keinen Fortschritt (konstant {max_gewichte[-1]} kg).",
-                        "empfehlung": "Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren",
-                        "uebungen": [],
-                    }
-                )
+    empfehlungen = []
+    for uebung_id, saetze_list in uebung_trainings.items():
+        trainings_max: dict = defaultdict(float)
+        for s in saetze_list:
+            trainings_max[s["datum"]] = max(trainings_max[s["datum"]], s["gewicht"])
+        max_gewichte = [g for _, g in sorted(trainings_max.items())]
 
-    # === 4. TRAININGSFREQUENZ ===
-    trainings_letzte_woche = Trainingseinheit.objects.filter(
-        user=request.user, datum__gte=heute - timedelta(days=7)
+        if len(max_gewichte) < 4:
+            continue
+
+        erste = max_gewichte[:2]
+        letzte = max_gewichte[-2:]
+        avg_erste = sum(erste) / len(erste)
+        avg_letzte = sum(letzte) / len(letzte)
+        fortschritt = ((avg_letzte - avg_erste) / avg_erste * 100) if avg_erste > 0 else 0
+
+        if fortschritt < 2.5 and len(set(max_gewichte)) == 1:
+            uebung = Uebung.objects.get(id=uebung_id)
+            empfehlungen.append(
+                {
+                    "typ": "stagnation",
+                    "prioritaet": "niedrig",
+                    "titel": f"{uebung.bezeichnung}: Stagnation",
+                    "beschreibung": (
+                        f"Bei dieser Übung gab es in den letzten {len(max_gewichte)} Trainings "
+                        f"keinen Fortschritt (konstant {max_gewichte[-1]} kg)."
+                    ),
+                    "empfehlung": "Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren",
+                    "uebungen": [],
+                }
+            )
+    return empfehlungen
+
+
+def _get_frequenz_empfehlung(user, heute) -> list:
+    """Gibt Empfehlung bei zu niedriger Trainingsfrequenz zurück."""
+    letzte_woche = Trainingseinheit.objects.filter(
+        user=user, datum__gte=heute - timedelta(days=7)
+    ).count()
+    vorige_woche = Trainingseinheit.objects.filter(
+        user=user, datum__gte=heute - timedelta(days=14), datum__lt=heute - timedelta(days=7)
     ).count()
 
-    trainings_vorige_woche = Trainingseinheit.objects.filter(
-        user=request.user,
-        datum__gte=heute - timedelta(days=14),
-        datum__lt=heute - timedelta(days=7),
-    ).count()
-
-    if trainings_letzte_woche == 0:
-        empfehlungen.append(
+    if letzte_woche == 0:
+        return [
             {
                 "typ": "frequenz",
                 "prioritaet": "hoch",
@@ -270,62 +259,83 @@ def workout_recommendations(request: HttpRequest) -> HttpResponse:
                 "empfehlung": "Starte heute ein Training - Konsistenz ist der Schlüssel zum Erfolg!",
                 "uebungen": [],
             }
-        )
-    elif trainings_letzte_woche < trainings_vorige_woche - 1:
-        empfehlungen.append(
+        ]
+    if letzte_woche < vorige_woche - 1:
+        return [
             {
                 "typ": "frequenz",
                 "prioritaet": "mittel",
                 "titel": "Trainingsfrequenz gesunken",
-                "beschreibung": f"Diese Woche: {trainings_letzte_woche} Trainings, letzte Woche: {trainings_vorige_woche} Trainings.",
+                "beschreibung": f"Diese Woche: {letzte_woche} Trainings, letzte Woche: {vorige_woche} Trainings.",
                 "empfehlung": "Versuche deine Konsistenz beizubehalten!",
                 "uebungen": [],
             }
-        )
+        ]
+    return []
 
-    # === 5. RPE-BASIERTE EMPFEHLUNGEN ===
+
+def _get_rpe_empfehlung(letzte_30_tage_saetze) -> list:
+    """Gibt RPE-basierte Intensitätsempfehlung zurück."""
     avg_rpe = letzte_30_tage_saetze.filter(rpe__isnull=False).aggregate(Avg("rpe"))["rpe__avg"]
+    if not avg_rpe:
+        return []
+    if avg_rpe < 6:
+        return [
+            {
+                "typ": "intensitaet",
+                "prioritaet": "mittel",
+                "titel": "Zu niedrige Trainingsintensität",
+                "beschreibung": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}. Das Training könnte intensiver sein.",
+                "empfehlung": "Steigere das Gewicht, bis du bei RPE 7-9 trainierst für optimalen Muskelaufbau",
+                "uebungen": [],
+            }
+        ]
+    if avg_rpe > 9:
+        return [
+            {
+                "typ": "intensitaet",
+                "prioritaet": "hoch",
+                "titel": "Zu hohe Trainingsintensität",
+                "beschreibung": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}. Du trainierst möglicherweise zu nah am Muskelversagen.",
+                "empfehlung": "Reduziere das Gewicht leicht - Deload-Woche empfohlen!",
+                "uebungen": [],
+            }
+        ]
+    return []
 
-    if avg_rpe:
-        if avg_rpe < 6:
-            empfehlungen.append(
-                {
-                    "typ": "intensitaet",
-                    "prioritaet": "mittel",
-                    "titel": "Zu niedrige Trainingsintensität",
-                    "beschreibung": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}. Das Training könnte intensiver sein.",
-                    "empfehlung": "Steigere das Gewicht, bis du bei RPE 7-9 trainierst für optimalen Muskelaufbau",
-                    "uebungen": [],
-                }
-            )
-        elif avg_rpe > 9:
-            empfehlungen.append(
-                {
-                    "typ": "intensitaet",
-                    "prioritaet": "hoch",
-                    "titel": "Zu hohe Trainingsintensität",
-                    "beschreibung": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}. Du trainierst möglicherweise zu nah am Muskelversagen.",
-                    "empfehlung": "Reduziere das Gewicht leicht - Deload-Woche empfohlen!",
-                    "uebungen": [],
-                }
-            )
 
-    # Keine Empfehlungen? Lob!
+@login_required
+def workout_recommendations(request: HttpRequest) -> HttpResponse:
+    """Intelligente Trainingsempfehlungen basierend auf Datenanalyse."""
+    heute = timezone.now()
+    letzte_30_tage = heute - timedelta(days=30)
+    letzte_60_tage = heute - timedelta(days=60)
+
+    alle_saetze = Satz.objects.filter(einheit__user=request.user, ist_aufwaermsatz=False)
+    letzte_30_tage_saetze = alle_saetze.filter(einheit__datum__gte=letzte_30_tage)
+    letzte_60_tage_saetze = alle_saetze.filter(einheit__datum__gte=letzte_60_tage)
+
+    empfehlungen = (
+        _get_muscle_balance_empfehlung(letzte_30_tage_saetze)
+        + _get_push_pull_empfehlung(letzte_30_tage_saetze)
+        + _get_stagnation_empfehlung(letzte_60_tage_saetze)
+        + _get_frequenz_empfehlung(request.user, heute)
+        + _get_rpe_empfehlung(letzte_30_tage_saetze)
+    )
+
     if not empfehlungen:
         empfehlungen.append(
             {
                 "typ": "erfolg",
                 "prioritaet": "info",
-                "titel": "✌️ Perfekt ausgewogenes Training!",
-                "beschreibung": "Dein Training ist optimal ausbalanciert. Alle Muskelgruppen werden gleichmäßig trainiert!",
+                "titel": "\u270c\ufe0f Perfekt ausgewogenes Training!",
+                "beschreibung": "Dein Training ist optimal ausbalanciert. Alle Muskelgruppen werden gleichm\u00e4\u00dfig trainiert!",
                 "empfehlung": "Weiter so! Bleib konsistent und die Erfolge kommen.",
                 "uebungen": [],
             }
         )
 
-    # Sortiere nach Priorität
-    prioritaet_order = {"hoch": 0, "mittel": 1, "niedrig": 2, "info": 3}
-    empfehlungen.sort(key=lambda x: prioritaet_order.get(x["prioritaet"], 99))
+    empfehlungen.sort(key=lambda x: PRIORITAET_ORDER.get(x["prioritaet"], 99))
 
     context = {
         "empfehlungen": empfehlungen,

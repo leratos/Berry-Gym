@@ -11,7 +11,7 @@ from django.urls import reverse
 
 import pytest
 
-from core.models import Equipment
+from core.models import Equipment, Uebung
 from core.tests.factories import UebungFactory, UserFactory
 
 
@@ -269,3 +269,65 @@ class TestImportUebungen:
 
         # Darf nicht crashen - Redirect zu uebungen_auswahl
         assert response.status_code == 302
+
+    def test_import_dict_mit_exercises_key(self, client):
+        """JSON als Dict mit 'exercises'-Key wird korrekt verarbeitet."""
+        staff = UserFactory(is_staff=True)
+        client.force_login(staff)
+        url = reverse("import_uebungen")
+
+        import_data = json.dumps(
+            {"exercises": [{"bezeichnung": "Import Dict Test Übung", "muskelgruppe": "BRUST"}]}
+        ).encode()
+
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            f.write(import_data)
+            f.seek(0)
+            f.flush()
+            response = client.post(url, {"import_file": f})
+
+        assert response.status_code == 302
+        assert Uebung.objects.filter(bezeichnung="Import Dict Test Übung").exists()
+
+    def test_import_dry_run_erstellt_keine_uebungen(self, client):
+        """dry_run=on führt keinen echten Import durch."""
+        staff = UserFactory(is_staff=True)
+        client.force_login(staff)
+        url = reverse("import_uebungen")
+
+        import_data = json.dumps(
+            [{"bezeichnung": "Dry Run Test Übung", "muskelgruppe": "BRUST"}]
+        ).encode()
+
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            f.write(import_data)
+            f.seek(0)
+            f.flush()
+            response = client.post(url, {"import_file": f, "dry_run": "on"})
+
+        assert response.status_code == 302
+        # Dry run darf keine Übung erstellt haben
+        assert not Uebung.objects.filter(bezeichnung="Dry Run Test Übung").exists()
+
+    def test_import_uebung_ohne_bezeichnung_wird_uebersprungen(self, client):
+        """Übungs-Einträge ohne 'bezeichnung' werden übersprungen."""
+        staff = UserFactory(is_staff=True)
+        client.force_login(staff)
+        url = reverse("import_uebungen")
+
+        import_data = json.dumps(
+            [
+                {"muskelgruppe": "BRUST"},  # Kein bezeichnung → skip
+                {"bezeichnung": "Gültige Übung Import", "muskelgruppe": "BRUST"},
+            ]
+        ).encode()
+
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            f.write(import_data)
+            f.seek(0)
+            f.flush()
+            response = client.post(url, {"import_file": f})
+
+        assert response.status_code == 302
+        # Nur die gültige Übung wurde importiert
+        assert Uebung.objects.filter(bezeichnung="Gültige Übung Import").exists()

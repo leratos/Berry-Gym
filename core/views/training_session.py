@@ -238,34 +238,19 @@ def training_start(request: HttpRequest, plan_id: Optional[int] = None) -> HttpR
     return redirect("training_session", training_id=training.id)
 
 
-@login_required
-def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
-    training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
-
-    # Sortieren für Gruppierung: Erst Muskelgruppe, dann Übungsname
-    uebungen = Uebung.objects.filter(Q(is_custom=False) | Q(created_by=request.user)).order_by(
-        "muskelgruppe", "bezeichnung"
-    )
-
-    # Sortierung nach Plan-Reihenfolge wenn Training aus Plan gestartet wurde
+def _get_sorted_saetze(training):
+    """Sortiert Sätze nach Plan-Reihenfolge oder alphabetisch nach Übungsname."""
     if training.plan:
-        # Erstelle eine Map von uebung_id zu reihenfolge aus dem Plan
         plan_reihenfolge = {pu.uebung_id: pu.reihenfolge for pu in training.plan.uebungen.all()}
-        # Hole alle Sätze und sortiere nach Plan-Reihenfolge, dann Satz-Nummer
-        saetze = sorted(
-            training.saetze.all(), key=lambda s: (plan_reihenfolge.get(s.uebung_id, 999), s.satz_nr)
+        return sorted(
+            training.saetze.all(),
+            key=lambda s: (plan_reihenfolge.get(s.uebung_id, 999), s.satz_nr),
         )
-    else:
-        # Fallback: alphabetisch nach Übungsname
-        saetze = training.saetze.all().order_by("uebung__bezeichnung", "satz_nr")
+    return training.saetze.all().order_by("uebung__bezeichnung", "satz_nr")
 
-    # Volumen berechnen (nur Arbeitssätze, keine Warmups)
-    total_volume = 0
-    arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
-    for satz in arbeitssaetze:
-        total_volume += float(satz.gewicht) * satz.wiederholungen
 
-    # Zielwerte aus dem Plan laden (wenn vorhanden)
+def _get_plan_ziele(training):
+    """Gibt Satz- und Wiederholungsziele aus dem Plan zurück (leer wenn kein Plan)."""
     plan_ziele = {}
     if training.plan:
         for pu in training.plan.uebungen.all():
@@ -273,101 +258,119 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
                 "saetze_ziel": pu.saetze_ziel,
                 "wiederholungen_ziel": pu.wiederholungen_ziel,
             }
+    return plan_ziele
 
-    # Gewichtsempfehlungen für alle Übungen berechnen (auch ohne Plan!)
-    gewichts_empfehlungen = {}
 
-    # Übungen im aktuellen Training sammeln (aus QuerySet, nicht aus sortierter Liste)
-    uebungen_im_training = set(training.saetze.values_list("uebung_id", flat=True).distinct())
+def _parse_ziel_wdh(ziel_wdh_str: str) -> tuple[int, int]:
+    """Parst einen Wiederholungs-Zielbereich ('8-12' oder '10') in (min, max)."""
+    try:
+        if "-" in ziel_wdh_str:
+            parts = ziel_wdh_str.split("-")
+            return int(parts[0]), int(parts[1])
+        val = int(ziel_wdh_str)
+        return val, val
+    except (ValueError, IndexError):
+        return 8, 12
 
-    # Wenn Plan vorhanden, auch Plan-Übungen einschließen
-    if training.plan:
-        uebungen_im_training.update(training.plan.uebungen.values_list("uebung_id", flat=True))
 
-    for uebung_id in uebungen_im_training:
-        # Letzten echten Satz dieser Übung finden (aus vorherigen Trainings)
-        letzter_satz = (
-            Satz.objects.filter(
-                einheit__user=request.user,
-                uebung_id=uebung_id,
-                ist_aufwaermsatz=False,
-                einheit__ist_deload=False,
-            )
-            .exclude(einheit=training)
-            .order_by("-einheit__datum", "-satz_nr")
-            .first()
+def _calculate_empfohlene_pause(hint: str, plan_pausenzeit) -> int:
+    """Berechnet empfohlene Pause in Sekunden basierend auf Progressive-Overload-Hint."""
+    if plan_pausenzeit:
+        return plan_pausenzeit
+    if "+2.5kg" in hint:
+        return 180  # 3 Min für Kraftsteigerung
+    if "mehr Wdh" in hint:
+        return 90  # 90s für Volumen/Ausdauer
+    return 120  # 2 Min Standard
+
+
+def _calculate_single_empfehlung(user, uebung_id: int, training):
+    """
+    Berechnet Gewichts- und Wiederholungsempfehlung für eine einzelne Übung.
+    Gibt None zurück wenn kein Vorsatz vorhanden.
+    """
+    letzter_satz = (
+        Satz.objects.filter(
+            einheit__user=user,
+            uebung_id=uebung_id,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
         )
+        .exclude(einheit=training)
+        .order_by("-einheit__datum", "-satz_nr")
+        .first()
+    )
+    if not letzter_satz:
+        return None
 
-        if letzter_satz:
-            empfohlenes_gewicht = float(letzter_satz.gewicht)
-            empfohlene_wdh = letzter_satz.wiederholungen
+    empfohlenes_gewicht = float(letzter_satz.gewicht)
+    empfohlene_wdh = letzter_satz.wiederholungen
+    ziel_wdh_str = "8-12"
+    plan_pausenzeit = None
 
-            # Ziel-Wiederholungen: Aus Plan falls vorhanden, sonst Standard 8-12
-            ziel_wdh_str = "8-12"  # Standard
-            plan_pausenzeit = None
-            if training.plan:
-                pu = training.plan.uebungen.filter(uebung_id=uebung_id).first()
-                if pu and pu.wiederholungen_ziel:
-                    ziel_wdh_str = pu.wiederholungen_ziel
-                if pu and hasattr(pu, "pausenzeit") and pu.pausenzeit:
-                    plan_pausenzeit = pu.pausenzeit
+    if training.plan:
+        pu = training.plan.uebungen.filter(uebung_id=uebung_id).first()
+        if pu and pu.wiederholungen_ziel:
+            ziel_wdh_str = pu.wiederholungen_ziel
+        if pu and hasattr(pu, "pausenzeit") and pu.pausenzeit:
+            plan_pausenzeit = pu.pausenzeit
 
-            try:
-                if "-" in ziel_wdh_str:
-                    ziel_wdh_max = int(ziel_wdh_str.split("-")[1])
-                    ziel_wdh_min = int(ziel_wdh_str.split("-")[0])
-                else:
-                    ziel_wdh_max = int(ziel_wdh_str)
-                    ziel_wdh_min = int(ziel_wdh_str)
-            except ValueError:
-                ziel_wdh_max = 12
-                ziel_wdh_min = 8
+    ziel_wdh_min, ziel_wdh_max = _parse_ziel_wdh(ziel_wdh_str)
 
-            # Progressive Overload Logik - berücksichtigt Planziel
-            if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
-                # RPE zu leicht → mehr Gewicht
-                empfohlenes_gewicht += 2.5
-                hint = f"RPE {letzter_satz.rpe} → +2.5kg"
-            elif letzter_satz.wiederholungen >= ziel_wdh_max:
-                # Obere Grenze erreicht → mehr Gewicht, Wdh zurück auf Minimum
-                empfohlenes_gewicht += 2.5
-                empfohlene_wdh = ziel_wdh_min
-                hint = f"{ziel_wdh_max}+ Wdh → +2.5kg"
-            elif letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
-                # RPE hoch aber noch im Wdh-Bereich → Wdh erhöhen (max bis Ziel)
-                empfohlene_wdh = min(empfohlene_wdh + 1, ziel_wdh_max)
-                hint = f"RPE {letzter_satz.rpe} → mehr Wdh"
-            else:
-                hint = "Niveau halten"
+    if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
+        empfohlenes_gewicht += 2.5
+        hint = f"RPE {letzter_satz.rpe} → +2.5kg"
+    elif letzter_satz.wiederholungen >= ziel_wdh_max:
+        empfohlenes_gewicht += 2.5
+        empfohlene_wdh = ziel_wdh_min
+        hint = f"{ziel_wdh_max}+ Wdh → +2.5kg"
+    elif letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
+        empfohlene_wdh = min(empfohlene_wdh + 1, ziel_wdh_max)
+        hint = f"RPE {letzter_satz.rpe} → mehr Wdh"
+    else:
+        hint = "Niveau halten"
 
-            # Pausenempfehlung: Aus Plan nehmen falls vorhanden, sonst berechnen
-            if plan_pausenzeit:
-                # Plan hat Pausenzeit definiert → nutze diese
-                empfohlene_pause = plan_pausenzeit
-            elif "+2.5kg" in hint:
-                empfohlene_pause = 180  # 3 Min für Kraftsteigerung
-            elif "mehr Wdh" in hint:
-                empfohlene_pause = 90  # 90s für Volumen/Ausdauer
-            else:
-                empfohlene_pause = 120  # 2 Min Standard
+    return {
+        "gewicht": empfohlenes_gewicht,
+        "wdh": empfohlene_wdh,
+        "letztes_gewicht": float(letzter_satz.gewicht),
+        "letzte_wdh": letzter_satz.wiederholungen,
+        "hint": hint,
+        "pause": _calculate_empfohlene_pause(hint, plan_pausenzeit),
+        "pause_from_plan": bool(plan_pausenzeit),
+    }
 
-            gewichts_empfehlungen[uebung_id] = {
-                "gewicht": empfohlenes_gewicht,
-                "wdh": empfohlene_wdh,
-                "letztes_gewicht": float(letzter_satz.gewicht),
-                "letzte_wdh": letzter_satz.wiederholungen,
-                "hint": hint,
-                "pause": empfohlene_pause,
-                "pause_from_plan": bool(plan_pausenzeit),
-            }
 
-    # Deload-Status: Checkbox-Default basierend auf Zyklus
+def _get_gewichts_empfehlungen(user, training) -> dict:
+    """Berechnet Gewichtsempfehlungen für alle Übungen im aktuellen Training."""
+    uebungen_ids = set(training.saetze.values_list("uebung_id", flat=True).distinct())
+    if training.plan:
+        uebungen_ids.update(training.plan.uebungen.values_list("uebung_id", flat=True))
+
+    empfehlungen = {}
+    for uebung_id in uebungen_ids:
+        result = _calculate_single_empfehlung(user, uebung_id, training)
+        if result:
+            empfehlungen[uebung_id] = result
+    return empfehlungen
+
+
+@login_required
+def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
+    training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
+
+    uebungen = Uebung.objects.filter(Q(is_custom=False) | Q(created_by=request.user)).order_by(
+        "muskelgruppe", "bezeichnung"
+    )
+    saetze = _get_sorted_saetze(training)
+    arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
+    total_volume = sum(float(s.gewicht) * s.wiederholungen for s in arbeitssaetze)
+
     is_deload_week = False
     try:
         profile = request.user.profile
         is_deload_week = profile.is_deload_week()
     except UserProfile.DoesNotExist:
-        # Kein UserProfile vorhanden: Standardwert (kein Deload) beibehalten.
         pass
 
     context = {
@@ -376,8 +379,8 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
         "saetze": saetze,
         "total_volume": round(total_volume, 1),
         "arbeitssaetze_count": arbeitssaetze.count(),
-        "plan_ziele": plan_ziele,
-        "gewichts_empfehlungen": gewichts_empfehlungen,
+        "plan_ziele": _get_plan_ziele(training),
+        "gewichts_empfehlungen": _get_gewichts_empfehlungen(request.user, training),
         "is_deload_week": is_deload_week,
     }
     return render(request, "core/training_session.html", context)
@@ -605,39 +608,172 @@ def toggle_deload(request: HttpRequest, training_id: int) -> JsonResponse:
         )
 
 
+def _save_training_post(request, training) -> bool:
+    """
+    Verarbeitet POST-Daten und speichert Dauer/Kommentar am Training.
+    Gibt True zurück wenn erfolgreich gespeichert (Redirect nötig), False bei Fehler.
+    """
+    dauer_raw = request.POST.get("dauer_minuten")
+    kommentar = request.POST.get("kommentar")
+    has_error = False
+
+    if dauer_raw:
+        try:
+            dauer = int(dauer_raw)
+        except (TypeError, ValueError):
+            messages.error(request, "Bitte eine gültige Trainingsdauer in Minuten angeben.")
+            has_error = True
+        else:
+            if dauer <= 0 or dauer > 1440:
+                messages.error(
+                    request, "Die Trainingsdauer muss zwischen 1 und 1440 Minuten liegen."
+                )
+                has_error = True
+            else:
+                training.dauer_minuten = dauer
+
+    if kommentar:
+        training.kommentar = kommentar
+
+    if not has_error:
+        training.save()
+        return True
+    return False
+
+
+def _build_ai_suggestions(user, recent_training_ids: list, recent_sets, avg_rpe: float) -> list:
+    """Erstellt Trainingsoptimierungsvorschläge basierend auf RPE, Volumen und Vielfalt."""
+    suggestions = []
+
+    # Vorschlag 1: Intensität anpassen
+    if avg_rpe < 6.5:
+        suggestions.append(
+            {
+                "type": "intensity",
+                "title": "Intensität erhöhen",
+                "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
+                "action": "Steigere das Gewicht um 5-10% oder reduziere die Pausenzeit",
+                "icon": "bi-arrow-up-circle",
+                "color": "info",
+            }
+        )
+    elif avg_rpe > 8.5:
+        suggestions.append(
+            {
+                "type": "intensity",
+                "title": "Regeneration priorisieren",
+                "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
+                "action": "Reduziere die Intensität oder plane einen Deload",
+                "icon": "bi-shield-check",
+                "color": "warning",
+            }
+        )
+
+    # Vorschlag 2: Volumen anpassen
+    previous_training_ids = list(
+        Trainingseinheit.objects.filter(user=user, ist_deload=False)
+        .order_by("-datum")
+        .values_list("id", flat=True)[3:6]
+    )
+    recent_trainings = Trainingseinheit.objects.filter(id__in=recent_training_ids)
+    previous_trainings = Trainingseinheit.objects.filter(id__in=previous_training_ids)
+
+    recent_volume = sum(
+        float(s.gewicht or 0) * int(s.wiederholungen or 0)
+        for t in recent_trainings
+        for s in t.saetze.filter(ist_aufwaermsatz=False)
+    )
+    previous_volume = (
+        sum(
+            float(s.gewicht or 0) * int(s.wiederholungen or 0)
+            for t in previous_trainings
+            for s in t.saetze.filter(ist_aufwaermsatz=False)
+        )
+        if previous_trainings.exists()
+        else 0
+    )
+
+    if previous_volume > 0:
+        volume_change = ((recent_volume - previous_volume) / previous_volume) * 100
+        if volume_change < -15:
+            suggestions.append(
+                {
+                    "type": "volume",
+                    "title": "Volumen gesunken",
+                    "message": f"Dein Volumen ist um {abs(volume_change):.0f}% gefallen",
+                    "action": "Füge 1-2 Sätze pro Übung hinzu oder trainiere häufiger",
+                    "icon": "bi-graph-down",
+                    "color": "danger",
+                }
+            )
+        elif volume_change > 30:
+            suggestions.append(
+                {
+                    "type": "volume",
+                    "title": "Volumen stark gestiegen",
+                    "message": f"Dein Volumen ist um {volume_change:.0f}% gestiegen",
+                    "action": "Achte auf ausreichend Regeneration zwischen Trainings",
+                    "icon": "bi-graph-up",
+                    "color": "warning",
+                }
+            )
+
+    # Vorschlag 3: Übungsvariation
+    trained_exercises = set(recent_sets.values_list("uebung_id", flat=True).distinct())
+    if len(trained_exercises) < 5:
+        suggestions.append(
+            {
+                "type": "variety",
+                "title": "Mehr Übungsvielfalt",
+                "message": f"Du hast nur {len(trained_exercises)} verschiedene Übungen gemacht",
+                "action": "Integriere neue Übungen für besseres Muskelwachstum",
+                "icon": "bi-shuffle",
+                "color": "info",
+            }
+        )
+    return suggestions
+
+
+def _get_ai_training_suggestion(user) -> tuple:
+    """
+    Gibt (ai_suggestion, training_count) zurück.
+    ai_suggestion ist None wenn kein Vorschlag oder nicht jedes 3. Training.
+    """
+    training_count = Trainingseinheit.objects.filter(user=user).count()
+    if training_count == 0 or training_count % 3 != 0:
+        return None, training_count
+
+    recent_training_ids = list(
+        Trainingseinheit.objects.filter(user=user, ist_deload=False)
+        .order_by("-datum")
+        .values_list("id", flat=True)[:3]
+    )
+    recent_sets = Satz.objects.filter(
+        einheit_id__in=recent_training_ids,
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
+        rpe__isnull=False,
+    )
+    if not recent_sets.exists():
+        return None, training_count
+
+    avg_rpe = recent_sets.aggregate(Avg("rpe"))["rpe__avg"]
+    suggestions = _build_ai_suggestions(user, recent_training_ids, recent_sets, avg_rpe)
+
+    priority_order = {"danger": 0, "warning": 1, "info": 2}
+    ai_suggestion = (
+        sorted(suggestions, key=lambda x: priority_order[x["color"]])[0] if suggestions else None
+    )
+    return ai_suggestion, training_count
+
+
 @login_required
 def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
     """Zeigt Zusammenfassung und ermöglicht Speichern von Dauer/Kommentar."""
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
 
     if request.method == "POST":
-        # Dauer und Kommentar speichern
-        dauer_raw = request.POST.get("dauer_minuten")
-        kommentar = request.POST.get("kommentar")
-
-        has_error = False
-
-        if dauer_raw:
-            try:
-                dauer = int(dauer_raw)
-            except (TypeError, ValueError):
-                messages.error(request, "Bitte eine gültige Trainingsdauer in Minuten angeben.")
-                has_error = True
-            else:
-                # Plausibilitätsprüfung: Dauer muss positiv und realistisch sein
-                if dauer <= 0 or dauer > 1440:
-                    messages.error(
-                        request, "Die Trainingsdauer muss zwischen 1 und 1440 Minuten liegen."
-                    )
-                    has_error = True
-                else:
-                    training.dauer_minuten = dauer
-
-        if kommentar:
-            training.kommentar = kommentar
-
-        if not has_error:
-            training.save()
+        if _save_training_post(request, training):
             return redirect("dashboard")
 
     # Statistiken für die Zusammenfassung berechnen
@@ -656,128 +792,7 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
     else:
         dauer_geschaetzt = 60
 
-    # AI Auto-Suggest: Optimierungsvorschlag nach jedem 3. Training
-    ai_suggestion = None
-    training_count = Trainingseinheit.objects.filter(user=request.user).count()
-
-    if training_count > 0 and training_count % 3 == 0:
-        # Analysiere die letzten 3 Trainings
-        # Liste von IDs verwenden statt Subquery (MariaDB LIMIT-Kompatibilität)
-        recent_training_ids = list(
-            Trainingseinheit.objects.filter(user=request.user, ist_deload=False)
-            .order_by("-datum")
-            .values_list("id", flat=True)[:3]
-        )
-        recent_trainings = Trainingseinheit.objects.filter(id__in=recent_training_ids)
-
-        # Berechne durchschnittlichen RPE der letzten 3 Trainings
-        recent_sets = Satz.objects.filter(
-            einheit_id__in=recent_training_ids,
-            ist_aufwaermsatz=False,
-            einheit__ist_deload=False,
-            rpe__isnull=False,
-        )
-
-        if recent_sets.exists():
-            avg_rpe = recent_sets.aggregate(Avg("rpe"))["rpe__avg"]
-
-            # Volumen-Analyse der letzten 3 vs. vorherige 3 Trainings
-            previous_training_ids = list(
-                Trainingseinheit.objects.filter(user=request.user, ist_deload=False)
-                .order_by("-datum")
-                .values_list("id", flat=True)[3:6]
-            )
-            previous_trainings = Trainingseinheit.objects.filter(id__in=previous_training_ids)
-
-            recent_volume = sum(
-                float(s.gewicht or 0) * int(s.wiederholungen or 0)
-                for t in recent_trainings
-                for s in t.saetze.filter(ist_aufwaermsatz=False)
-            )
-
-            previous_volume = (
-                sum(
-                    float(s.gewicht or 0) * int(s.wiederholungen or 0)
-                    for t in previous_trainings
-                    for s in t.saetze.filter(ist_aufwaermsatz=False)
-                )
-                if previous_trainings.exists()
-                else 0
-            )
-
-            # Generiere intelligente Vorschläge basierend auf Daten
-            suggestions = []
-
-            # Vorschlag 1: Intensität anpassen
-            if avg_rpe < 6.5:
-                suggestions.append(
-                    {
-                        "type": "intensity",
-                        "title": "Intensität erhöhen",
-                        "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
-                        "action": "Steigere das Gewicht um 5-10% oder reduziere die Pausenzeit",
-                        "icon": "bi-arrow-up-circle",
-                        "color": "info",
-                    }
-                )
-            elif avg_rpe > 8.5:
-                suggestions.append(
-                    {
-                        "type": "intensity",
-                        "title": "Regeneration priorisieren",
-                        "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
-                        "action": "Reduziere die Intensität oder plane einen Deload",
-                        "icon": "bi-shield-check",
-                        "color": "warning",
-                    }
-                )
-
-            # Vorschlag 2: Volumen anpassen
-            if previous_volume > 0:
-                volume_change = ((recent_volume - previous_volume) / previous_volume) * 100
-
-                if volume_change < -15:
-                    suggestions.append(
-                        {
-                            "type": "volume",
-                            "title": "Volumen gesunken",
-                            "message": f"Dein Volumen ist um {abs(volume_change):.0f}% gefallen",
-                            "action": "Füge 1-2 Sätze pro Übung hinzu oder trainiere häufiger",
-                            "icon": "bi-graph-down",
-                            "color": "danger",
-                        }
-                    )
-                elif volume_change > 30:
-                    suggestions.append(
-                        {
-                            "type": "volume",
-                            "title": "Volumen stark gestiegen",
-                            "message": f"Dein Volumen ist um {volume_change:.0f}% gestiegen",
-                            "action": "Achte auf ausreichend Regeneration zwischen Trainings",
-                            "icon": "bi-graph-up",
-                            "color": "warning",
-                        }
-                    )
-
-            # Vorschlag 3: Übungsvariation
-            trained_exercises = set(recent_sets.values_list("uebung_id", flat=True).distinct())
-
-            if len(trained_exercises) < 5:
-                suggestions.append(
-                    {
-                        "type": "variety",
-                        "title": "Mehr Übungsvielfalt",
-                        "message": f"Du hast nur {len(trained_exercises)} verschiedene Übungen gemacht",
-                        "action": "Integriere neue Übungen für besseres Muskelwachstum",
-                        "icon": "bi-shuffle",
-                        "color": "info",
-                    }
-                )
-
-            # Wähle den wichtigsten Vorschlag (höchste Priorität)
-            priority_order = {"danger": 0, "warning": 1, "info": 2}
-            if suggestions:
-                ai_suggestion = sorted(suggestions, key=lambda x: priority_order[x["color"]])[0]
+    ai_suggestion, training_count = _get_ai_training_suggestion(request.user)
 
     context = {
         "training": training,
