@@ -1,228 +1,140 @@
+{% extends 'base.html' %}
 {% load static %}
-{% load static %}<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Übungen - HomeGym</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
-    <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
-        <script src="{% static 'core/js/theme-toggle.js' %}"></script>
+
+{% block title %}Übungen - HomeGym{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
 <style>
-        .exercise-card {
-            transition: all 0.2s;
-        }
-        .exercise-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            cursor: pointer;
-        }
-        a.text-decoration-none:hover {
-            text-decoration: none !important;
-        }
-        .exercise-card .text-light {
-            color: #f8f9fa !important;
-        }
-        .exercise-card:hover .text-light {
-            color: #0dcaf0 !important;
-        }
-        .muscle-visual {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .muscle-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .muscle-dot.primary {
-            background-color: #198754;
-            width: 16px;
-            height: 16px;
-            box-shadow: 0 0 8px rgba(25, 135, 84, 0.6);
-        }
-        .muscle-dot.secondary {
-            background-color: #0dcaf0;
-        }
-        .muscle-badge {
-            font-size: 0.7rem;
-            padding: 0.3rem 0.6rem;
-        }
-        .muscle-badge.primary {
-            background-color: #198754;
-        }
-        .muscle-badge.secondary {
-            background-color: rgba(13, 202, 240, 0.8);
-            border: 1px solid #0dcaf0;
-        }
-        .favorit-btn {
-            padding: 0.25rem 0.5rem;
-            transition: all 0.2s;
-        }
-        .favorit-btn:hover {
-            transform: scale(1.1);
-        }
-        .favorit-btn.active {
-            background-color: rgba(255, 193, 7, 0.1);
-        }
-    </style>
-</head>
-<body>
-    {% include 'core/includes/global_header.html' %}
+    .exercise-card { transition: all 0.2s; }
+    .exercise-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.5); cursor: pointer; }
+    a.text-decoration-none:hover { text-decoration: none !important; }
+    .exercise-card:hover .text-light { color: #0dcaf0 !important; }
+    .muscle-visual { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .muscle-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .muscle-dot.primary { background-color: #198754; width: 16px; height: 16px; box-shadow: 0 0 8px rgba(25,135,84,0.6); }
+    .muscle-dot.secondary { background-color: #0dcaf0; }
+    .muscle-badge { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
+    .muscle-badge.primary { background-color: #198754; }
+    .muscle-badge.secondary { background-color: rgba(13,202,240,0.8); border: 1px solid #0dcaf0; }
+    .favorit-btn { padding: 0.25rem 0.5rem; transition: all 0.2s; }
+    .favorit-btn:hover { transform: scale(1.1); }
+    .favorit-btn.active { background-color: rgba(255,193,7,0.1); }
+</style>
+{% endblock %}
 
-    <nav class="navbar navbar-page border-bottom">
-        <div class="container-fluid">
-            <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-                <i class="bi bi-arrow-left"></i> Dashboard
-            </a>
-            <span class="navbar-text">Übungs-Bibliothek</span>
-                    <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
-              <i class="bi bi-moon-fill" id="themeIcon"></i>
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom">
+    <div class="container-fluid">
+        <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+        <span class="navbar-text">Übungs-Bibliothek</span>
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+            <i class="bi bi-moon-fill" id="themeIcon"></i>
+        </button>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="mb-3"><i class="bi bi-collection me-2"></i>Alle Übungen</h2>
+            <p class="text-muted">Übersicht mit Haupt- und Hilfsmuskelgruppen</p>
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCustomExerciseModal">
+                <i class="bi bi-plus-circle me-2"></i>Eigene Übung erstellen
             </button>
-</div>
-    </nav>
-
-    <div class="container-fluid py-4">
-        <div class="row mb-4">
-            <div class="col">
-                <h2 class="mb-3">
-                    <i class="bi bi-collection me-2"></i>Alle Übungen
-                </h2>
-                <p class="text-muted">
-                    Übersicht mit Haupt- und Hilfsmuskelgruppen
-                </p>
-            </div>
-            <div class="col-auto">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCustomExerciseModal">
-                    <i class="bi bi-plus-circle me-2"></i>Eigene Übung erstellen
-                </button>
-            </div>
-            {% if user.is_staff %}
-            <div class="col-auto">
-                <div class="btn-group" role="group">
-                    <a href="{% url 'export_uebungen' %}" class="btn btn-outline-success" title="Übungen exportieren">
-                        <i class="bi bi-download me-2"></i>Export JSON
-                    </a>
-                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal" title="Übungen importieren">
-                        <i class="bi bi-upload me-2"></i>Import
-                    </button>
-                    <a href="{% url 'admin:core_uebung_add' %}" class="btn btn-outline-warning" title="Neue Übung">
-                        <i class="bi bi-plus-circle me-2"></i>Neu (Admin)
-                    </a>
-                </div>
-            </div>
-            {% endif %}
         </div>
-
-        <!-- Filter -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
-            </div>
-            <div class="col-md-4">
-                <select class="form-select" id="tagFilter">
-                    <option value="">Alle Tags</option>
-                    {% for tag in all_tags %}
-                    <option value="{{ tag.id }}">{{ tag.get_name_display }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-4">
-                <div class="form-check form-switch d-flex align-items-center h-100">
-                    <input class="form-check-input" type="checkbox" id="favoritenFilter" style="cursor: pointer;">
-                    <label class="form-check-label ms-2" for="favoritenFilter" style="cursor: pointer;">
-                        <i class="bi bi-star-fill text-warning me-1"></i>Nur Favoriten anzeigen
-                    </label>
-                </div>
+        {% if user.is_staff %}
+        <div class="col-auto">
+            <div class="btn-group" role="group">
+                <a href="{% url 'export_uebungen' %}" class="btn btn-outline-success"><i class="bi bi-download me-2"></i>Export JSON</a>
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload me-2"></i>Import</button>
+                <a href="{% url 'admin:core_uebung_add' %}" class="btn btn-outline-warning"><i class="bi bi-plus-circle me-2"></i>Neu (Admin)</a>
             </div>
         </div>
+        {% endif %}
+    </div>
 
-        <!-- Übungen nach Muskelgruppen -->
-        {% for gruppe, uebungen in uebungen_nach_gruppe.items %}
-        <div class="muscle-group-section mb-5">
-            <h4 class="text-secondary text-uppercase mb-3 border-bottom border-secondary pb-2">
-                <i class="bi bi-diagram-3 me-2"></i>{{ gruppe }}
-                <span class="badge bg-secondary ms-2">{{ uebungen|length }}</span>
-            </h4>
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
+        </div>
+        <div class="col-md-4">
+            <select class="form-select" id="tagFilter">
+                <option value="">Alle Tags</option>
+                {% for tag in all_tags %}
+                <option value="{{ tag.id }}">{{ tag.get_name_display }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <div class="form-check form-switch d-flex align-items-center h-100">
+                <input class="form-check-input" type="checkbox" id="favoritenFilter" style="cursor: pointer;">
+                <label class="form-check-label ms-2" for="favoritenFilter" style="cursor: pointer;">
+                    <i class="bi bi-star-fill text-warning me-1"></i>Nur Favoriten
+                </label>
+            </div>
+        </div>
+    </div>
 
-            <div class="row g-3">
-                {% for uebung in uebungen %}
-                <div class="col-lg-4 col-md-6 exercise-item"
-                     data-name="{{ uebung.bezeichnung|lower }}"
-                     data-tags="{% for tag in uebung.tags.all %}{{ tag.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
-                    <a href="{% url 'exercise_detail' uebung.id %}" class="text-decoration-none">
-                        <div class="card exercise-card bg-dark border-secondary h-100">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-0 text-light flex-grow-1">
-                                        {{ uebung.bezeichnung }}
-                                        {% if uebung.is_custom %}
-                                        <span class="badge bg-info text-dark ms-2" title="Eigene Übung">
-                                            <i class="bi bi-person-fill"></i> Custom
-                                        </span>
-                                        {% endif %}
-                                    </h5>
-                                    <button
-                                        class="btn btn-sm btn-outline-warning border-0 favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}"
+    {% for gruppe, uebungen in uebungen_nach_gruppe.items %}
+    <div class="muscle-group-section mb-5">
+        <h4 class="text-secondary text-uppercase mb-3 border-bottom border-secondary pb-2">
+            <i class="bi bi-diagram-3 me-2"></i>{{ gruppe }}
+            <span class="badge bg-secondary ms-2">{{ uebungen|length }}</span>
+        </h4>
+        <div class="row g-3">
+            {% for uebung in uebungen %}
+            <div class="col-lg-4 col-md-6 exercise-item"
+                 data-name="{{ uebung.bezeichnung|lower }}"
+                 data-tags="{% for tag in uebung.tags.all %}{{ tag.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                <a href="{% url 'exercise_detail' uebung.id %}" class="text-decoration-none">
+                    <div class="card exercise-card bg-dark border-secondary h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0 text-light flex-grow-1">
+                                    {{ uebung.bezeichnung }}
+                                    {% if uebung.is_custom %}<span class="badge bg-info text-dark ms-2"><i class="bi bi-person-fill"></i> Custom</span>{% endif %}
+                                </h5>
+                                <button class="btn btn-sm btn-outline-warning border-0 favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}"
                                         onclick="event.preventDefault(); event.stopPropagation(); toggleFavorit({{ uebung.id }}, this);"
                                         title="{% if user in uebung.favoriten.all %}Aus Favoriten entfernen{% else %}Zu Favoriten hinzufügen{% endif %}">
-                                        <i class="bi {% if user in uebung.favoriten.all %}bi-star-fill{% else %}bi-star{% endif %} text-warning"></i>
-                                    </button>
-                                </div>
-
-                            <!-- Muskelgruppen Visualisierung -->
+                                    <i class="bi {% if user in uebung.favoriten.all %}bi-star-fill{% else %}bi-star{% endif %} text-warning"></i>
+                                </button>
+                            </div>
                             <div class="mb-3">
-                                <h6 class="text-muted small mb-2">
-                                    <i class="bi bi-bullseye me-1"></i>Muskelgruppen
-                                </h6>
+                                <h6 class="text-muted small mb-2"><i class="bi bi-bullseye me-1"></i>Muskelgruppen</h6>
                                 <div class="muscle-visual mb-2">
-                                    <span class="muscle-dot primary" title="Hauptmuskel"></span>
-                                    <span class="badge muscle-badge primary">
-                                        <i class="bi bi-star-fill"></i> {{ uebung.muskelgruppe_label }}
-                                    </span>
+                                    <span class="muscle-dot primary"></span>
+                                    <span class="badge muscle-badge primary"><i class="bi bi-star-fill"></i> {{ uebung.muskelgruppe_label }}</span>
                                 </div>
-
                                 {% if uebung.hilfsmuskeln_labels %}
                                 <div class="muscle-visual">
                                     {% for hilfs in uebung.hilfsmuskeln_labels %}
-                                    <span class="muscle-dot secondary" title="Hilfsmuskel"></span>
-                                    <span class="badge muscle-badge secondary">
-                                        <i class="bi bi-plus-circle"></i> {{ hilfs }}
-                                    </span>
+                                    <span class="muscle-dot secondary"></span>
+                                    <span class="badge muscle-badge secondary"><i class="bi bi-plus-circle"></i> {{ hilfs }}</span>
                                     {% if not forloop.last %}<br>{% endif %}
                                     {% endfor %}
                                 </div>
                                 {% else %}
-                                <small class="text-muted">
-                                    <i class="bi bi-info-circle"></i> Keine Hilfsmuskeln erfasst
-                                </small>
+                                <small class="text-muted"><i class="bi bi-info-circle"></i> Keine Hilfsmuskeln erfasst</small>
                                 {% endif %}
                             </div>
-
-                            <!-- Tags -->
                             {% if uebung.tags.all %}
                             <div class="mb-2">
                                 {% for tag in uebung.tags.all %}
-                                <span class="badge" style="background-color: {{ tag.farbe }}; color: white; font-size: 0.7rem; margin-right: 3px;">
-                                    {{ tag.get_name_display }}
-                                </span>
+                                <span class="badge" style="background-color: {{ tag.farbe }}; color: white; font-size: 0.7rem; margin-right: 3px;">{{ tag.get_name_display }}</span>
                                 {% endfor %}
                             </div>
                             {% endif %}
-
-                            <!-- Zusatzinfos -->
                             <div class="mt-auto pt-3 border-top border-secondary">
-                                <small class="text-muted d-block">
-                                    <i class="bi bi-tag me-1"></i>{{ uebung.get_bewegungstyp_display }}
-                                </small>
-                                <small class="text-muted d-block">
-                                    <i class="bi bi-info-circle me-1"></i>{{ uebung.get_gewichts_typ_display }}
-                                </small>
+                                <small class="text-muted d-block"><i class="bi bi-tag me-1"></i>{{ uebung.get_bewegungstyp_display }}</small>
+                                <small class="text-muted d-block"><i class="bi bi-info-circle me-1"></i>{{ uebung.get_gewichts_typ_display }}</small>
                                 {% if user.is_staff %}
                                 <div class="mt-2">
                                     <a href="{% url 'admin:core_uebung_change' uebung.id %}" class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation();">
@@ -233,318 +145,222 @@
                             </div>
                         </div>
                     </div>
-                    </a>
-                </div>
-                {% endfor %}
+                </a>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
+    {% endfor %}
+</div>
 
-    <!-- Modal: Eigene Übung erstellen -->
-    <div class="modal fade" id="createCustomExerciseModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content bg-dark border-secondary">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title">
-                        <i class="bi bi-plus-circle me-2"></i>Eigene Übung erstellen
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="createCustomExerciseForm">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Erstelle eine eigene Übung, die nur für dich sichtbar ist.
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="exerciseName" class="form-label">Name der Übung *</label>
-                            <input type="text" class="form-control" id="exerciseName" name="bezeichnung" required
-                                   placeholder="z.B. Meine Variation für Bizeps">
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="muskelgruppe" class="form-label">Hauptmuskelgruppe *</label>
-                                <select class="form-select" id="muskelgruppe" name="muskelgruppe" required>
-                                    <option value="">-- Auswählen --</option>
-                                    <option value="Brust">Brust</option>
-                                    <option value="Rücken">Rücken</option>
-                                    <option value="Schultern">Schultern</option>
-                                    <option value="Bizeps">Bizeps</option>
-                                    <option value="Trizeps">Trizeps</option>
-                                    <option value="Unterarme">Unterarme</option>
-                                    <option value="Bauch">Bauch</option>
-                                    <option value="Beine">Beine</option>
-                                    <option value="Waden">Waden</option>
-                                    <option value="Gesäß">Gesäß</option>
-                                    <option value="Ganzkörper">Ganzkörper</option>
-                                    <option value="Cardio">Cardio</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="hilfsmuskeln" class="form-label">Hilfsmuskelgruppen</label>
-                                <input type="text" class="form-control" id="hilfsmuskeln" name="hilfsmuskeln"
-                                       placeholder="z.B. Trizeps, Schultern (kommagetrennt)">
-                                <small class="form-text text-muted">Optional, mehrere Gruppen mit Komma trennen</small>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="gewichtsTyp" class="form-label">Gewichtstyp</label>
-                                <select class="form-select" id="gewichtsTyp" name="gewichts_typ">
-                                    <option value="">-- Keine Angabe --</option>
-                                    <option value="Freies Gewicht">Freies Gewicht</option>
-                                    <option value="Maschine">Maschine</option>
-                                    <option value="Körpergewicht">Körpergewicht</option>
-                                    <option value="Kabel">Kabel</option>
-                                    <option value="Band">Band</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="bewegungsTyp" class="form-label">Bewegungstyp</label>
-                                <select class="form-select" id="bewegungsTyp" name="bewegungstyp">
-                                    <option value="">-- Keine Angabe --</option>
-                                    <option value="Compound">Compound (Mehrgelenkig)</option>
-                                    <option value="Isolation">Isolation (Eingelenkig)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="equipment" class="form-label">Benötigtes Equipment</label>
-                            <select class="form-select" id="equipment" name="equipment" multiple size="6">
-                                {% for eq in user_equipment %}
-                                <option value="{{ eq.id }}">{{ eq.name }}</option>
-                                {% endfor %}
+<!-- Modal: Eigene Übung erstellen -->
+<div class="modal fade" id="createCustomExerciseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Eigene Übung erstellen</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createCustomExerciseForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>Erstelle eine eigene Übung, die nur für dich sichtbar ist.</div>
+                    <div class="mb-3">
+                        <label for="exerciseName" class="form-label">Name der Übung *</label>
+                        <input type="text" class="form-control" id="exerciseName" name="bezeichnung" required placeholder="z.B. Meine Variation für Bizeps">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="muskelgruppe" class="form-label">Hauptmuskelgruppe *</label>
+                            <select class="form-select" id="muskelgruppe" name="muskelgruppe" required>
+                                <option value="">-- Auswählen --</option>
+                                <option>Brust</option><option>Rücken</option><option>Schultern</option>
+                                <option>Bizeps</option><option>Trizeps</option><option>Unterarme</option>
+                                <option>Bauch</option><option>Beine</option><option>Waden</option>
+                                <option>Gesäß</option><option>Ganzkörper</option><option>Cardio</option>
                             </select>
-                            <small class="form-text text-muted">Mehrfachauswahl mit Strg/Cmd + Klick</small>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="beschreibung" class="form-label">Beschreibung</label>
-                            <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3"
-                                      placeholder="Optionale Notizen zur Ausführung..."></textarea>
+                        <div class="col-md-6">
+                            <label for="hilfsmuskeln" class="form-label">Hilfsmuskelgruppen</label>
+                            <input type="text" class="form-control" id="hilfsmuskeln" name="hilfsmuskeln" placeholder="z.B. Trizeps, Schultern">
+                            <small class="form-text text-muted">Optional, kommagetrennt</small>
                         </div>
-
-                        <div id="customExerciseError" class="alert alert-danger d-none"></div>
-                        <div id="customExerciseSuccess" class="alert alert-success d-none"></div>
                     </div>
-                    <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="bi bi-x-circle me-2"></i>Abbrechen
-                        </button>
-                        <button type="submit" class="btn btn-primary" id="createCustomExerciseBtn">
-                            <i class="bi bi-check-circle me-2"></i>Übung erstellen
-                        </button>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="gewichtsTyp" class="form-label">Gewichtstyp</label>
+                            <select class="form-select" id="gewichtsTyp" name="gewichts_typ">
+                                <option value="">-- Keine Angabe --</option>
+                                <option>Freies Gewicht</option><option>Maschine</option><option>Körpergewicht</option><option>Kabel</option><option>Band</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="bewegungsTyp" class="form-label">Bewegungstyp</label>
+                            <select class="form-select" id="bewegungsTyp" name="bewegungstyp">
+                                <option value="">-- Keine Angabe --</option>
+                                <option value="Compound">Compound (Mehrgelenkig)</option>
+                                <option value="Isolation">Isolation (Eingelenkig)</option>
+                            </select>
+                        </div>
                     </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Import Modal (nur für Admin) -->
-    {% if user.is_staff %}
-    <div class="modal fade" id="importModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content bg-dark border-secondary">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title">
-                        <i class="bi bi-upload me-2"></i>Übungen importieren
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <div class="mb-3">
+                        <label for="equipment" class="form-label">Benötigtes Equipment</label>
+                        <select class="form-select" id="equipment" name="equipment" multiple size="6">
+                            {% for eq in user_equipment %}
+                            <option value="{{ eq.id }}">{{ eq.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Mehrfachauswahl mit Strg/Cmd + Klick</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="beschreibung" class="form-label">Beschreibung</label>
+                        <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3" placeholder="Optionale Notizen..."></textarea>
+                    </div>
+                    <div id="customExerciseError" class="alert alert-danger d-none"></div>
+                    <div id="customExerciseSuccess" class="alert alert-success d-none"></div>
                 </div>
-                <form method="post" action="{% url 'import_uebungen' %}" enctype="multipart/form-data" id="importForm">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle me-2"></i>
-                            <strong>Hinweise:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>JSON-Format erforderlich (aus Export oder manuell erstellt)</li>
-                                <li>Existierende Übungen mit gleicher ID werden aktualisiert</li>
-                                <li>Neue Übungen werden hinzugefügt</li>
-                                <li>Equipment-Namen müssen exakt übereinstimmen</li>
-                            </ul>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="importFile" class="form-label">JSON-Datei wählen</label>
-                            <input type="file" class="form-control" id="importFile" name="import_file" accept=".json" required>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="updateExisting" name="update_existing" checked>
-                            <label class="form-check-label" for="updateExisting">
-                                Existierende Übungen aktualisieren
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="dryRun" name="dry_run">
-                            <label class="form-check-label" for="dryRun">
-                                Dry-Run (nur prüfen, nicht importieren)
-                            </label>
-                        </div>
-
-                        <div id="importPreview" class="mt-3" style="display:none;">
-                            <h6 class="text-muted">Vorschau:</h6>
-                            <div id="importPreviewContent" class="bg-black p-3 rounded"></div>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="bi bi-x-circle me-2"></i>Abbrechen
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-upload me-2"></i>Importieren
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="createCustomExerciseBtn"><i class="bi bi-check-circle me-2"></i>Übung erstellen</button>
+                </div>
+            </form>
         </div>
     </div>
-    {% endif %}
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'core/js/toast.js' %}"></script>
-    <script src="{% static 'core/js/favoriten.js' %}"></script>
-    <script>
-        // Custom Exercise Form Submission
-        document.getElementById('createCustomExerciseForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+{% if user.is_staff %}
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="bi bi-upload me-2"></i>Übungen importieren</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'import_uebungen' %}" enctype="multipart/form-data" id="importForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i><strong>Hinweise:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>JSON-Format erforderlich</li>
+                            <li>Existierende Übungen mit gleicher ID werden aktualisiert</li>
+                            <li>Equipment-Namen müssen exakt übereinstimmen</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <label for="importFile" class="form-label">JSON-Datei wählen</label>
+                        <input type="file" class="form-control" id="importFile" name="import_file" accept=".json" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="updateExisting" name="update_existing" checked>
+                        <label class="form-check-label" for="updateExisting">Existierende Übungen aktualisieren</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="dryRun" name="dry_run">
+                        <label class="form-check-label" for="dryRun">Dry-Run (nur prüfen, nicht importieren)</label>
+                    </div>
+                    <div id="importPreview" class="mt-3" style="display:none;">
+                        <h6 class="text-muted">Vorschau:</h6>
+                        <div id="importPreviewContent" class="bg-black p-3 rounded"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-upload me-2"></i>Importieren</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
 
-            const form = e.target;
-            const submitBtn = document.getElementById('createCustomExerciseBtn');
-            const errorDiv = document.getElementById('customExerciseError');
-            const successDiv = document.getElementById('customExerciseSuccess');
-
-            // Hide previous messages
-            errorDiv.classList.add('d-none');
-            successDiv.classList.add('d-none');
-
-            // Disable submit button
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Erstelle...';
-
-            // Get form data
-            const formData = new FormData(form);
-            const data = {
-                bezeichnung: formData.get('bezeichnung'),
-                muskelgruppe: formData.get('muskelgruppe'),
-                hilfsmuskeln: formData.get('hilfsmuskeln') || '',
-                gewichts_typ: formData.get('gewichts_typ') || '',
-                bewegungstyp: formData.get('bewegungstyp') || '',
-                beschreibung: formData.get('beschreibung') || '',
-                equipment_ids: Array.from(document.getElementById('equipment').selectedOptions).map(opt => opt.value)
-            };
-
-            try {
-                const response = await fetch('{% url "create_custom_uebung" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                    },
-                    body: JSON.stringify(data)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    successDiv.textContent = result.message || 'Übung erfolgreich erstellt!';
-                    successDiv.classList.remove('d-none');
-
-                    // Show toast
-                    if (typeof showToast === 'function') {
-                        showToast('Übung erstellt', result.message, 'success');
-                    }
-
-                    // Reset form
-                    form.reset();
-
-                    // Reload page after short delay to show new exercise
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    errorDiv.textContent = result.error || 'Fehler beim Erstellen der Übung';
-                    errorDiv.classList.remove('d-none');
-                }
-            } catch (error) {
-                console.error('Error creating custom exercise:', error);
-                errorDiv.textContent = 'Netzwerkfehler: ' + error.message;
-                errorDiv.classList.remove('d-none');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Übung erstellen';
-            }
-        });
-
-        // Exercise Search & Filter
-        const searchInput = document.getElementById('searchExercises');
-        const tagFilter = document.getElementById('tagFilter');
-        const favoritenFilter = document.getElementById('favoritenFilter');
-
-        function filterExercises() {
-            const search = searchInput.value.toLowerCase();
-            const selectedTag = tagFilter.value;
-            const onlyFavorites = favoritenFilter.checked;
-
-            document.querySelectorAll('.exercise-item').forEach(item => {
-                const name = item.dataset.name;
-                const tags = item.dataset.tags ? item.dataset.tags.split(',') : [];
-                const isFavorite = item.querySelector('.favorit-btn.active') !== null;
-
-                // Check all conditions
-                const matchesSearch = name.includes(search);
-                const matchesTag = !selectedTag || tags.includes(selectedTag);
-                const matchesFavorite = !onlyFavorites || isFavorite;
-
-                // Show only if all conditions match
-                item.style.display = (matchesSearch && matchesTag && matchesFavorite) ? 'block' : 'none';
+{% block extra_scripts %}
+<script src="{% static 'core/js/toast.js' %}"></script>
+<script src="{% static 'core/js/favoriten.js' %}"></script>
+<script>
+    document.getElementById('createCustomExerciseForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const submitBtn = document.getElementById('createCustomExerciseBtn');
+        const errorDiv = document.getElementById('customExerciseError');
+        const successDiv = document.getElementById('customExerciseSuccess');
+        errorDiv.classList.add('d-none');
+        successDiv.classList.add('d-none');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Erstelle...';
+        const formData = new FormData(form);
+        const data = {
+            bezeichnung: formData.get('bezeichnung'),
+            muskelgruppe: formData.get('muskelgruppe'),
+            hilfsmuskeln: formData.get('hilfsmuskeln') || '',
+            gewichts_typ: formData.get('gewichts_typ') || '',
+            bewegungstyp: formData.get('bewegungstyp') || '',
+            beschreibung: formData.get('beschreibung') || '',
+            equipment_ids: Array.from(document.getElementById('equipment').selectedOptions).map(opt => opt.value)
+        };
+        try {
+            const response = await fetch('{% url "create_custom_uebung" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': formData.get('csrfmiddlewaretoken') },
+                body: JSON.stringify(data)
             });
+            const result = await response.json();
+            if (result.success) {
+                successDiv.textContent = result.message || 'Übung erfolgreich erstellt!';
+                successDiv.classList.remove('d-none');
+                form.reset();
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                errorDiv.textContent = result.error || 'Fehler beim Erstellen der Übung';
+                errorDiv.classList.remove('d-none');
+            }
+        } catch (error) {
+            errorDiv.textContent = 'Netzwerkfehler: ' + error.message;
+            errorDiv.classList.remove('d-none');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Übung erstellen';
         }
+    });
 
-        searchInput.addEventListener('input', filterExercises);
-        tagFilter.addEventListener('change', filterExercises);
-        favoritenFilter.addEventListener('change', filterExercises);
+    const searchInput = document.getElementById('searchExercises');
+    const tagFilter = document.getElementById('tagFilter');
+    const favoritenFilter = document.getElementById('favoritenFilter');
 
-        // Import File Preview (für Admin)
-        {% if user.is_staff %}
-        document.getElementById('importFile')?.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    const json = JSON.parse(event.target.result);
-                    const count = Array.isArray(json) ? json.length : (json.exercises ? json.exercises.length : 0);
-
-                    document.getElementById('importPreview').style.display = 'block';
-                    document.getElementById('importPreviewContent').innerHTML = `
-                        <p class="mb-2"><strong>${count}</strong> Übungen gefunden</p>
-                        <small class="text-muted">Format: ${Array.isArray(json) ? 'Array' : 'Object mit "exercises" Key'}</small>
-                    `;
-                } catch (err) {
-                    document.getElementById('importPreview').style.display = 'block';
-                    document.getElementById('importPreviewContent').innerHTML = `
-                        <p class="text-danger mb-0">
-                            <i class="bi bi-exclamation-triangle me-2"></i>Ungültiges JSON-Format
-                        </p>
-                    `;
-                }
-            };
-            reader.readAsText(file);
+    function filterExercises() {
+        const search = searchInput.value.toLowerCase();
+        const selectedTag = tagFilter.value;
+        const onlyFav = favoritenFilter.checked;
+        document.querySelectorAll('.exercise-item').forEach(item => {
+            const tags = item.dataset.tags ? item.dataset.tags.split(',') : [];
+            const isFav = item.querySelector('.favorit-btn.active') !== null;
+            item.style.display = (item.dataset.name.includes(search) && (!selectedTag || tags.includes(selectedTag)) && (!onlyFav || isFav)) ? 'block' : 'none';
         });
-        {% endif %}
-    </script>
+    }
 
-    <!-- Footer -->
-    {% include 'core/includes/global_footer.html' %}
-</body>
-</html>
+    searchInput.addEventListener('input', filterExercises);
+    tagFilter.addEventListener('change', filterExercises);
+    favoritenFilter.addEventListener('change', filterExercises);
+
+    {% if user.is_staff %}
+    document.getElementById('importFile')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                const json = JSON.parse(ev.target.result);
+                const count = Array.isArray(json) ? json.length : (json.exercises ? json.exercises.length : 0);
+                document.getElementById('importPreview').style.display = 'block';
+                document.getElementById('importPreviewContent').innerHTML = `<p class="mb-2"><strong>${count}</strong> Übungen gefunden</p>`;
+            } catch (err) {
+                document.getElementById('importPreview').style.display = 'block';
+                document.getElementById('importPreviewContent').innerHTML = '<p class="text-danger mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Ungültiges JSON-Format</p>';
+            }
+        };
+        reader.readAsText(file);
+    });
+    {% endif %}
+</script>
+{% endblock %}

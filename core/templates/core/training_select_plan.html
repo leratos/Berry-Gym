@@ -1,722 +1,375 @@
+{% extends 'base.html' %}
 {% load static %}
-{% load static %}<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Training wählen</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
-    <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
 
-    <!-- Offline Manager CSS -->
-    <link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
+{% block title %}Training wählen{% endblock %}
 
-    <style>
-        /* Beschreibung kürzen - max 2 Zeilen */
-        .plan-description {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: pre-wrap;
-            font-family: inherit;
-            font-size: inherit;
-            background: transparent;
-            border: none;
-            padding: 0;
-            margin-bottom: 0.5rem !important;
-            max-height: 3em;
-            line-height: 1.5;
-        }
-        .plan-description.expanded {
-            -webkit-line-clamp: unset;
-            max-height: none;
-        }
-        .toggle-description {
-            cursor: pointer;
-            color: var(--bs-info);
-            font-size: 0.75rem;
-        }
-        .toggle-description:hover {
-            text-decoration: underline;
-        }
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/offline-manager.css' %}">
+<style>
+    .plan-description { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        text-overflow: ellipsis; white-space: pre-wrap; font-family: inherit; font-size: inherit;
+        background: transparent; border: none; padding: 0; margin-bottom: 0.5rem !important; max-height: 3em; line-height: 1.5; }
+    .plan-description.expanded { -webkit-line-clamp: unset; max-height: none; }
+    .toggle-description { cursor: pointer; color: var(--bs-info); font-size: 0.75rem; }
+    .toggle-description:hover { text-decoration: underline; }
+    .plan-group-header { cursor: pointer; transition: background-color 0.2s; }
+    .plan-group-header:hover { background-color: rgba(255,255,255,0.05); }
+    .plan-group-header .chevron { transition: transform 0.3s; }
+    .plan-group-header.collapsed .chevron { transform: rotate(-90deg); }
+    .plan-group-content { border-left: 3px solid var(--bs-primary); margin-left: 0.5rem; padding-left: 0.75rem; }
+    .plan-group-badge { font-size: 0.7rem; }
+</style>
+{% endblock %}
 
-        /* Gruppierte Pläne */
-        .plan-group-header {
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .plan-group-header:hover {
-            background-color: rgba(255,255,255,0.05);
-        }
-        .plan-group-header .chevron {
-            transition: transform 0.3s;
-        }
-        .plan-group-header.collapsed .chevron {
-            transform: rotate(-90deg);
-        }
-        .plan-group-content {
-            border-left: 3px solid var(--bs-primary);
-            margin-left: 0.5rem;
-            padding-left: 0.75rem;
-        }
-        .plan-group-badge {
-            font-size: 0.7rem;
-        }
-    </style>
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom">
+  <div class="container-fluid">
+    <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
+        <i class="bi bi-x-lg"></i> Abbrechen
+    </a>
+    <span class="navbar-text page-title fw-bold">Modus wählen</span>
+    <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2">
+        <i class="bi bi-moon-fill" id="themeIcon"></i>
+    </button>
+  </div>
+</nav>
+{% endblock %}
 
-      <script src="{% static 'core/js/theme-toggle.js' %}"></script>
-</head>
-  <body>
-    {% include 'core/includes/global_header.html' %}
-
-    <nav class="navbar navbar-page border-bottom">
-      <div class="container-fluid">
-        <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-            <i class="bi bi-x-lg"></i> Abbrechen
-        </a>
-        <span class="navbar-text page-title fw-bold">Modus wählen</span>
-        <div style="width: 40px;">            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
-              <i class="bi bi-moon-fill" id="themeIcon"></i>
-            </button>
-</div>
-      </div>
-    </nav>
-
-    <div class="container pt-3">
-
-      <!-- Option 1: Freies Training -->
-      <a href="{% url 'training_start_free' %}" class="card card-stat border-primary mb-4 text-decoration-none shadow">
+{% block content %}
+<div class="container pt-3">
+    <a href="{% url 'training_start_free' %}" class="card card-stat border-primary mb-4 text-decoration-none shadow">
         <div class="card-body d-flex align-items-center p-4">
-            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3 text-primary">
-                <i class="bi bi-shuffle fs-1"></i>
-            </div>
+            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3 text-primary"><i class="bi bi-shuffle fs-1"></i></div>
             <div>
                 <h4 class="mb-1">Freies Training</h4>
                 <p class="text-muted mb-0 small">Ohne Vorlage starten und Übungen spontan wählen.</p>
             </div>
         </div>
-      </a>
+    </a>
 
-      <h6 class="text-secondary ps-2 mb-3 mt-5">TRAININGSPLÄNE</h6>
+    <h6 class="text-secondary ps-2 mb-3 mt-5">TRAININGSPLÄNE</h6>
 
-      <!-- Filter-Buttons -->
-      <div class="btn-group w-100 mb-3" role="group">
+    <div class="btn-group w-100 mb-3" role="group">
         <a href="?filter=eigene" class="btn btn-outline-secondary {% if filter_type == 'eigene' %}active{% endif %}">
             <i class="bi bi-person-fill me-1"></i>Meine
         </a>
         <a href="?filter=shared" class="btn btn-outline-secondary {% if filter_type == 'shared' %}active{% endif %} position-relative">
             <i class="bi bi-people-fill me-1"></i>Geteilt
             {% if shared_count > 0 and filter_type != 'shared' %}
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">
-                {{ shared_count }}
-            </span>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">{{ shared_count }}</span>
             {% endif %}
         </a>
         <a href="?filter=public" class="btn btn-outline-secondary {% if filter_type == 'public' %}active{% endif %}">
             <i class="bi bi-globe me-1"></i>Öffentlich
         </a>
-      </div>
+    </div>
 
-      {% if filter_type == 'eigene' %}
-      <div class="d-flex gap-2 mb-3">
-        <a href="{% url 'create_plan' %}" class="btn btn-success flex-grow-1">
-            <i class="bi bi-plus-circle me-2"></i>Neuen Plan erstellen
-        </a>
-        <a href="{% url 'set_active_plan_group' %}" class="btn btn-outline-primary" title="Aktiven Plan festlegen">
-            <i class="bi bi-bullseye"></i>
-        </a>
-      </div>
-
-      <!-- Gruppierungs-Toolbar (erscheint wenn Pläne ausgewählt) -->
-      <div id="grouping-toolbar" class="alert alert-info d-none mb-3">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-              <span><i class="bi bi-check2-square me-2"></i><span id="selected-count">0</span> Pläne ausgewählt</span>
-              <div class="d-flex gap-2">
-                  <input type="text" id="gruppe-name-input" class="form-control form-control-sm" placeholder="Gruppenname" style="width: 150px;">
-                  <button class="btn btn-sm btn-primary" onclick="groupSelectedPlans()">
-                      <i class="bi bi-folder-plus me-1"></i>Gruppieren
-                  </button>
-                  <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
-                      <i class="bi bi-x-lg"></i>
-                  </button>
-              </div>
-          </div>
-      </div>
-      {% endif %}
-
-      {% if not plaene %}
-        <div class="alert alert-secondary text-center">
-            {% if filter_type == 'eigene' %}
-                <i class="bi bi-info-circle me-2"></i> Noch keine Pläne erstellt. Erstelle deinen ersten Plan!
-            {% elif filter_type == 'shared' %}
-                <i class="bi bi-people me-2"></i> Noch keine Pläne mit dir geteilt.
-                <br><small class="text-muted">Trainingspartner können Pläne über die Teilen-Funktion mit dir teilen.</small>
-            {% else %}
-                <i class="bi bi-info-circle me-2"></i> Noch keine öffentlichen Pläne verfügbar.
-            {% endif %}
+    {% if filter_type == 'eigene' %}
+    <div class="d-flex gap-2 mb-3">
+        <a href="{% url 'create_plan' %}" class="btn btn-success flex-grow-1"><i class="bi bi-plus-circle me-2"></i>Neuen Plan erstellen</a>
+        <a href="{% url 'set_active_plan_group' %}" class="btn btn-outline-primary" title="Aktiven Plan festlegen"><i class="bi bi-bullseye"></i></a>
+    </div>
+    <div id="grouping-toolbar" class="alert alert-info d-none mb-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span><i class="bi bi-check2-square me-2"></i><span id="selected-count">0</span> Pläne ausgewählt</span>
+            <div class="d-flex gap-2">
+                <input type="text" id="gruppe-name-input" class="form-control form-control-sm" placeholder="Gruppenname" style="width: 150px;">
+                <button class="btn btn-sm btn-primary" onclick="groupSelectedPlans()"><i class="bi bi-folder-plus me-1"></i>Gruppieren</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()"><i class="bi bi-x-lg"></i></button>
+            </div>
         </div>
-      {% else %}
-        <div class="d-grid gap-3">
+    </div>
+    {% endif %}
 
-            <!-- AKTIVE Plan-Gruppe (PRIORISIERT) -->
-            {% if active_plan_gruppen %}
-            {% for gruppe_key, gruppe in active_plan_gruppen.items %}
-            <div class="card border-primary shadow" data-gruppe-id="{{ gruppe_key }}">
-                <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3 bg-primary bg-opacity-10"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#active-gruppe-{{ forloop.counter }}"
-                     aria-expanded="true">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-bullseye text-primary me-2 fs-4"></i>
-                        <div>
-                            <h5 class="mb-0 gruppe-name-display" id="gruppe-name-{{ gruppe_key }}">{{ gruppe.name }}</h5>
-                            <small class="text-muted">{{ gruppe.plaene|length }} Trainingstage</small>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        {% if filter_type == 'eigene' %}
-                        <button class="btn btn-sm btn-outline-light" onclick="event.stopPropagation(); renameGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')" title="Gruppe umbenennen">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        {% endif %}
-                        <span class="badge bg-primary plan-group-badge">Aktiver Plan</span>
-                        <i class="bi bi-chevron-down chevron"></i>
+    {% if not plaene %}
+    <div class="alert alert-secondary text-center">
+        {% if filter_type == 'eigene' %}<i class="bi bi-info-circle me-2"></i> Noch keine Pläne erstellt. Erstelle deinen ersten Plan!
+        {% elif filter_type == 'shared' %}<i class="bi bi-people me-2"></i> Noch keine Pläne mit dir geteilt.<br><small class="text-muted">Trainingspartner können Pläne über die Teilen-Funktion mit dir teilen.</small>
+        {% else %}<i class="bi bi-info-circle me-2"></i> Noch keine öffentlichen Pläne verfügbar.{% endif %}
+    </div>
+    {% else %}
+    <div class="d-grid gap-3">
+
+        {% if active_plan_gruppen %}
+        {% for gruppe_key, gruppe in active_plan_gruppen.items %}
+        <div class="card border-primary shadow" data-gruppe-id="{{ gruppe_key }}">
+            <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3 bg-primary bg-opacity-10"
+                 data-bs-toggle="collapse" data-bs-target="#active-gruppe-{{ forloop.counter }}" aria-expanded="true">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-bullseye text-primary me-2 fs-4"></i>
+                    <div>
+                        <h5 class="mb-0 gruppe-name-display" id="gruppe-name-{{ gruppe_key }}">{{ gruppe.name }}</h5>
+                        <small class="text-muted">{{ gruppe.plaene|length }} Trainingstage</small>
                     </div>
                 </div>
-
-                <div class="collapse show" id="active-gruppe-{{ forloop.counter }}">
-                    <div class="card-body pt-2 pb-3">
-                        <div class="plan-group-content" data-gruppe-id="{{ gruppe_key }}">
-                            {% for plan in gruppe.plaene %}
-                            <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %} plan-row" data-plan-id="{{ plan.id }}">
-                                <div class="d-flex align-items-center flex-grow-1 me-2">
-                                    {% if filter_type == 'eigene' %}
-                                    <div class="btn-group-vertical me-2" style="margin-right: 8px;">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'up')" title="Nach oben" {% if forloop.first %}disabled{% endif %}>
-                                            <i class="bi bi-chevron-up"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'down')" title="Nach unten" {% if forloop.last %}disabled{% endif %}>
-                                            <i class="bi bi-chevron-down"></i>
-                                        </button>
-                                    </div>
-                                    {% endif %}
-                                    <div class="d-flex align-items-center flex-wrap">
-                                        <span class="fw-bold">{{ plan.name }}</span>
-                                        <span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} Übungen</span>
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-1">
-                                    {% if filter_type == 'eigene' %}
-                                        <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-play-fill"></i>
-                                        </a>
-                                        <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-info-circle"></i>
-                                        </a>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')" title="Löschen">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    {% else %}
-                                        <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-info-circle"></i>
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                        {% if filter_type == 'eigene' %}
-                        <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div class="d-flex gap-2">
-                                <a href="{% url 'duplicate_group' gruppe_key %}" class="btn btn-sm btn-outline-primary" title="Gruppe duplizieren">
-                                    <i class="bi bi-copy"></i>
-                                </a>
-                                <a href="{% url 'share_group' gruppe_key %}" class="btn btn-sm btn-outline-success" title="Gruppe teilen">
-                                    <i class="bi bi-share"></i>
-                                </a>
-                                <a href="{% url 'export_plan_group_pdf' gruppe_key %}" class="btn btn-sm btn-outline-secondary" title="Ganze Gruppe als PDF exportieren">
-                                    <i class="bi bi-file-pdf"></i>
-                                </a>
-                                <a href="{% url 'toggle_group_public' gruppe_key %}" class="btn btn-sm btn-outline-{% if gruppe.plaene.0.is_public %}warning{% else %}info{% endif %}" title="{% if gruppe.plaene.0.is_public %}Privat machen{% else %}Öffentlich machen{% endif %}">
-                                    {% if gruppe.plaene.0.is_public %}
-                                    <i class="bi bi-lock-fill"></i>
-                                    {% else %}
-                                    <i class="bi bi-globe"></i>
-                                    {% endif %}
-                                </a>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-outline-warning" onclick="ungroupPlans('{{ gruppe_key }}')" title="Gruppierung aufheben">
-                                    <i class="bi bi-folder-minus"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')" title="Ganze Gruppe löschen">
-                                    <i class="bi bi-trash"></i> Alle löschen
-                                </button>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
+                <div class="d-flex align-items-center gap-2">
+                    {% if filter_type == 'eigene' %}
+                    <button class="btn btn-sm btn-outline-light" onclick="event.stopPropagation(); renameGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')" title="Umbenennen"><i class="bi bi-pencil"></i></button>
+                    {% endif %}
+                    <span class="badge bg-primary plan-group-badge">Aktiver Plan</span>
+                    <i class="bi bi-chevron-down chevron"></i>
                 </div>
             </div>
-            {% endfor %}
-
-            {% if plan_gruppen.items or einzelne_plaene %}
-            <h6 class="text-secondary ps-2 mb-0 mt-3">WEITERE PLÄNE</h6>
-            {% endif %}
-            {% endif %}
-
-            <!-- Andere gruppierte Pläne (Splits) -->
-            {% for gruppe_key, gruppe in plan_gruppen.items %}
-            <div class="card card-stat border-info shadow-sm" data-gruppe-id="{{ gruppe_key }}">
-                <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#gruppe-{{ forloop.counter }}"
-                     aria-expanded="true">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-collection-fill text-info me-2 fs-4"></i>
-                        <div>
-                            <h5 class="mb-0 gruppe-name-display" id="gruppe-name-{{ gruppe_key }}">{{ gruppe.name }}</h5>
-                            <small class="text-muted">{{ gruppe.plaene|length }} Trainingstage</small>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        {% if filter_type == 'eigene' %}
-                        <button class="btn btn-sm btn-outline-light" onclick="event.stopPropagation(); renameGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')" title="Gruppe umbenennen">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        {% endif %}
-                        <span class="badge bg-info plan-group-badge">Split</span>
-                        <i class="bi bi-chevron-down chevron"></i>
-                    </div>
-                </div>
-
-                <div class="collapse show" id="gruppe-{{ forloop.counter }}">
-                    <div class="card-body pt-2 pb-3">
-                        <div class="plan-group-content" data-gruppe-id="{{ gruppe_key }}">
-                            {% for plan in gruppe.plaene %}
-                            <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %} plan-row" data-plan-id="{{ plan.id }}">
-                                <div class="d-flex align-items-center flex-grow-1 me-2">
-                                    {% if filter_type == 'eigene' %}
-                                    <div class="btn-group-vertical me-2" style="margin-right: 8px;">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'up')" title="Nach oben" {% if forloop.first %}disabled{% endif %}>
-                                            <i class="bi bi-chevron-up"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'down')" title="Nach unten" {% if forloop.last %}disabled{% endif %}>
-                                            <i class="bi bi-chevron-down"></i>
-                                        </button>
-                                    </div>
-                                    {% endif %}
-                                    <div class="d-flex align-items-center flex-wrap">
-                                        <span class="fw-bold">{{ plan.name }}</span>
-                                        <span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} Übungen</span>
-                                    </div>
+            <div class="collapse show" id="active-gruppe-{{ forloop.counter }}">
+                <div class="card-body pt-2 pb-3">
+                    <div class="plan-group-content" data-gruppe-id="{{ gruppe_key }}">
+                        {% for plan in gruppe.plaene %}
+                        <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %} plan-row" data-plan-id="{{ plan.id }}">
+                            <div class="d-flex align-items-center flex-grow-1 me-2">
+                                {% if filter_type == 'eigene' %}
+                                <div class="btn-group-vertical me-2">
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'up')" {% if forloop.first %}disabled{% endif %}><i class="bi bi-chevron-up"></i></button>
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'down')" {% if forloop.last %}disabled{% endif %}><i class="bi bi-chevron-down"></i></button>
                                 </div>
-                                <div class="d-flex gap-1">
-                                    {% if filter_type == 'eigene' %}
-                                        <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-play-fill"></i>
-                                        </a>
-                                        <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-info-circle"></i>
-                                        </a>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')" title="Löschen">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    {% else %}
-                                        <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-info-circle"></i>
-                                        </a>
-                                    {% endif %}
+                                {% endif %}
+                                <div class="d-flex align-items-center flex-wrap">
+                                    <span class="fw-bold">{{ plan.name }}</span>
+                                    <span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} Übungen</span>
                                 </div>
                             </div>
-                            {% endfor %}
-                        </div>
-
-                        {% if filter_type == 'eigene' %}
-                        <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div class="d-flex gap-2">
-                                <a href="{% url 'duplicate_group' gruppe_key %}" class="btn btn-sm btn-outline-primary" title="Gruppe duplizieren">
-                                    <i class="bi bi-copy"></i>
-                                </a>
-                                <a href="{% url 'share_group' gruppe_key %}" class="btn btn-sm btn-outline-success" title="Gruppe teilen">
-                                    <i class="bi bi-share"></i>
-                                </a>
-                                <a href="{% url 'export_plan_group_pdf' gruppe_key %}" class="btn btn-sm btn-outline-secondary" title="Ganze Gruppe als PDF exportieren">
-                                    <i class="bi bi-file-pdf"></i>
-                                </a>
-                                <a href="{% url 'toggle_group_public' gruppe_key %}" class="btn btn-sm btn-outline-{% if gruppe.plaene.0.is_public %}warning{% else %}info{% endif %}" title="{% if gruppe.plaene.0.is_public %}Privat machen{% else %}Öffentlich machen{% endif %}">
-                                    {% if gruppe.plaene.0.is_public %}
-                                    <i class="bi bi-lock-fill"></i>
-                                    {% else %}
-                                    <i class="bi bi-globe"></i>
-                                    {% endif %}
-                                </a>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-outline-warning" onclick="ungroupPlans('{{ gruppe_key }}')" title="Gruppierung aufheben">
-                                    <i class="bi bi-folder-minus"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')" title="Ganze Gruppe löschen">
-                                    <i class="bi bi-trash"></i> Alle löschen
-                                </button>
+                            <div class="d-flex gap-1">
+                                {% if filter_type == 'eigene' %}
+                                <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-sm btn-primary"><i class="bi bi-play-fill"></i></a>
+                                <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-info-circle"></i></a>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')"><i class="bi bi-trash"></i></button>
+                                {% else %}
+                                <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-primary"><i class="bi bi-info-circle"></i></a>
+                                {% endif %}
                             </div>
                         </div>
-                        {% endif %}
+                        {% endfor %}
                     </div>
-                </div>
-            </div>
-            {% endfor %}
-
-            <!-- Einzelne Pläne (nicht gruppiert) -->
-            {% for plan in einzelne_plaene %}
-            <div class="card card-stat border-secondary text-decoration-none shadow-sm plan-card" data-plan-id="{{ plan.id }}">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-2">
-                        {% if filter_type == 'eigene' %}
-                        <div class="form-check me-2">
-                            <input class="form-check-input plan-checkbox" type="checkbox" value="{{ plan.id }}" id="plan-check-{{ plan.id }}" onchange="updateGroupingToolbar()">
+                    {% if filter_type == 'eigene' %}
+                    <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'duplicate_group' gruppe_key %}" class="btn btn-sm btn-outline-primary" title="Duplizieren"><i class="bi bi-copy"></i></a>
+                            <a href="{% url 'share_group' gruppe_key %}" class="btn btn-sm btn-outline-success" title="Teilen"><i class="bi bi-share"></i></a>
+                            <a href="{% url 'export_plan_group_pdf' gruppe_key %}" class="btn btn-sm btn-outline-secondary" title="PDF"><i class="bi bi-file-pdf"></i></a>
+                            <a href="{% url 'toggle_group_public' gruppe_key %}" class="btn btn-sm btn-outline-{% if gruppe.plaene.0.is_public %}warning{% else %}info{% endif %}">
+                                {% if gruppe.plaene.0.is_public %}<i class="bi bi-lock-fill"></i>{% else %}<i class="bi bi-globe"></i>{% endif %}
+                            </a>
                         </div>
-                        {% endif %}
-                        <div class="me-3 text-secondary">
-                            <i class="bi bi-card-checklist fs-2"></i>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-warning" onclick="ungroupPlans('{{ gruppe_key }}')"><i class="bi bi-folder-minus"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')"><i class="bi bi-trash"></i> Alle löschen</button>
                         </div>
-                        <div class="flex-grow-1">
-                            <h5 class="mb-1">
-                                {{ plan.name }}
-                                {% if plan.is_public %}
-                                    <span class="badge bg-info text-dark ms-2"><i class="bi bi-globe"></i></span>
-                                {% endif %}
-                            </h5>
-                            <p class="text-muted mb-0 small">
-                                {{ plan.uebungen.count }} Übungen
-                                {% if filter_type == 'public' %}
-                                    <span class="ms-2">• von {{ plan.user.username }}</span>
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-
-                    {% if plan.beschreibung %}
-                    <div class="mb-2">
-                        <pre class="plan-description text-muted small" id="desc-{{ plan.id }}">{{ plan.beschreibung }}</pre>
-                        <span class="toggle-description d-none" onclick="toggleDescription({{ plan.id }})">
-                            <span class="show-more">Mehr anzeigen <i class="bi bi-chevron-down"></i></span>
-                            <span class="show-less d-none">Weniger <i class="bi bi-chevron-up"></i></span>
-                        </span>
                     </div>
                     {% endif %}
-
-                    <div class="d-flex gap-2 flex-wrap">
-                        {% if filter_type == 'eigene' %}
-                            <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-primary flex-grow-1">
-                                <i class="bi bi-play-circle-fill me-1"></i> Starten
-                            </a>
-                            <a href="{% url 'plan_details' plan.id %}" class="btn btn-outline-secondary" title="Details">
-                                <i class="bi bi-info-circle"></i>
-                            </a>
-                            <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info" title="Bearbeiten">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
-                            <a href="{% url 'duplicate_plan' plan.id %}" class="btn btn-outline-primary" title="Duplizieren">
-                                <i class="bi bi-copy"></i>
-                            </a>
-                            <a href="{% url 'share_plan' plan.id %}" class="btn btn-outline-success" title="Teilen">
-                                <i class="bi bi-share"></i>
-                            </a>
-                            <button class="btn btn-outline-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')" title="Löschen">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        {% else %}
-                            <a href="{% url 'plan_details' plan.id %}" class="btn btn-primary flex-grow-1">
-                                <i class="bi bi-info-circle me-1"></i> Details ansehen
-                            </a>
-                            <a href="{% url 'copy_plan' plan.id %}" class="btn btn-success">
-                                <i class="bi bi-copy"></i> Kopieren
-                            </a>
-                        {% endif %}
-                    </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
-      {% endif %}
+        {% endfor %}
+        {% if plan_gruppen.items or einzelne_plaene %}<h6 class="text-secondary ps-2 mb-0 mt-3">WEITERE PLÄNE</h6>{% endif %}
+        {% endif %}
+
+        {% for gruppe_key, gruppe in plan_gruppen.items %}
+        <div class="card card-stat border-info shadow-sm" data-gruppe-id="{{ gruppe_key }}">
+            <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3"
+                 data-bs-toggle="collapse" data-bs-target="#gruppe-{{ forloop.counter }}" aria-expanded="true">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-collection-fill text-info me-2 fs-4"></i>
+                    <div>
+                        <h5 class="mb-0 gruppe-name-display" id="gruppe-name-{{ gruppe_key }}">{{ gruppe.name }}</h5>
+                        <small class="text-muted">{{ gruppe.plaene|length }} Trainingstage</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    {% if filter_type == 'eigene' %}
+                    <button class="btn btn-sm btn-outline-light" onclick="event.stopPropagation(); renameGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')" title="Umbenennen"><i class="bi bi-pencil"></i></button>
+                    {% endif %}
+                    <span class="badge bg-info plan-group-badge">Split</span>
+                    <i class="bi bi-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="collapse show" id="gruppe-{{ forloop.counter }}">
+                <div class="card-body pt-2 pb-3">
+                    <div class="plan-group-content" data-gruppe-id="{{ gruppe_key }}">
+                        {% for plan in gruppe.plaene %}
+                        <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %}" data-plan-id="{{ plan.id }}">
+                            <div class="d-flex align-items-center flex-grow-1 me-2">
+                                {% if filter_type == 'eigene' %}
+                                <div class="btn-group-vertical me-2">
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'up')" {% if forloop.first %}disabled{% endif %}><i class="bi bi-chevron-up"></i></button>
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="movePlanInGroup('{{ gruppe_key }}', {{ plan.id }}, 'down')" {% if forloop.last %}disabled{% endif %}><i class="bi bi-chevron-down"></i></button>
+                                </div>
+                                {% endif %}
+                                <div><span class="fw-bold">{{ plan.name }}</span><span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} Übungen</span></div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                {% if filter_type == 'eigene' %}
+                                <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-sm btn-primary"><i class="bi bi-play-fill"></i></a>
+                                <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-info-circle"></i></a>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')"><i class="bi bi-trash"></i></button>
+                                {% else %}
+                                <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-primary"><i class="bi bi-info-circle"></i></a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if filter_type == 'eigene' %}
+                    <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'duplicate_group' gruppe_key %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-copy"></i></a>
+                            <a href="{% url 'share_group' gruppe_key %}" class="btn btn-sm btn-outline-success"><i class="bi bi-share"></i></a>
+                            <a href="{% url 'export_plan_group_pdf' gruppe_key %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-pdf"></i></a>
+                            <a href="{% url 'toggle_group_public' gruppe_key %}" class="btn btn-sm btn-outline-{% if gruppe.plaene.0.is_public %}warning{% else %}info{% endif %}">
+                                {% if gruppe.plaene.0.is_public %}<i class="bi bi-lock-fill"></i>{% else %}<i class="bi bi-globe"></i>{% endif %}
+                            </a>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-warning" onclick="ungroupPlans('{{ gruppe_key }}')"><i class="bi bi-folder-minus"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ gruppe_key }}', '{{ gruppe.name|escapejs }}')"><i class="bi bi-trash"></i> Alle löschen</button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% for plan in einzelne_plaene %}
+        <div class="card card-stat border-secondary shadow-sm" data-plan-id="{{ plan.id }}">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    {% if filter_type == 'eigene' %}
+                    <div class="form-check me-2">
+                        <input class="form-check-input plan-checkbox" type="checkbox" value="{{ plan.id }}" id="plan-check-{{ plan.id }}" onchange="updateGroupingToolbar()">
+                    </div>
+                    {% endif %}
+                    <div class="me-3 text-secondary"><i class="bi bi-card-checklist fs-2"></i></div>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">{{ plan.name }}{% if plan.is_public %}<span class="badge bg-info text-dark ms-2"><i class="bi bi-globe"></i></span>{% endif %}</h5>
+                        <p class="text-muted mb-0 small">{{ plan.uebungen.count }} Übungen{% if filter_type == 'public' %}<span class="ms-2">• von {{ plan.user.username }}</span>{% endif %}</p>
+                    </div>
+                </div>
+                {% if plan.beschreibung %}
+                <div class="mb-2">
+                    <pre class="plan-description text-muted small" id="desc-{{ plan.id }}">{{ plan.beschreibung }}</pre>
+                    <span class="toggle-description d-none" onclick="toggleDescription({{ plan.id }})">
+                        <span class="show-more">Mehr anzeigen <i class="bi bi-chevron-down"></i></span>
+                        <span class="show-less d-none">Weniger <i class="bi bi-chevron-up"></i></span>
+                    </span>
+                </div>
+                {% endif %}
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if filter_type == 'eigene' %}
+                    <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-primary flex-grow-1"><i class="bi bi-play-circle-fill me-1"></i> Starten</a>
+                    <a href="{% url 'plan_details' plan.id %}" class="btn btn-outline-secondary" title="Details"><i class="bi bi-info-circle"></i></a>
+                    <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info" title="Bearbeiten"><i class="bi bi-pencil-square"></i></a>
+                    <a href="{% url 'duplicate_plan' plan.id %}" class="btn btn-outline-primary" title="Duplizieren"><i class="bi bi-copy"></i></a>
+                    <a href="{% url 'share_plan' plan.id %}" class="btn btn-outline-success" title="Teilen"><i class="bi bi-share"></i></a>
+                    <button class="btn btn-outline-danger" onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')"><i class="bi bi-trash"></i></button>
+                    {% else %}
+                    <a href="{% url 'plan_details' plan.id %}" class="btn btn-primary flex-grow-1"><i class="bi bi-info-circle me-1"></i> Details</a>
+                    <a href="{% url 'copy_plan' plan.id %}" class="btn btn-success"><i class="bi bi-copy"></i> Kopieren</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% endif %}
+</div>
+{% endblock %}
 
-    <!-- Toggle Description + Collapse Logic -->
-    <script>
-        // Check if description needs "show more" button
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.plan-description').forEach(function(el) {
-                // Check if text is truncated (scrollHeight > clientHeight)
-                if (el.scrollHeight > el.clientHeight + 5) {
-                    const toggle = el.nextElementSibling;
-                    if (toggle && toggle.classList.contains('toggle-description')) {
-                        toggle.classList.remove('d-none');
-                    }
-                }
-            });
-
-            // Collapse chevron rotation
-            document.querySelectorAll('.plan-group-header').forEach(function(header) {
-                const target = document.querySelector(header.dataset.bsTarget);
-                if (target) {
-                    target.addEventListener('hide.bs.collapse', function() {
-                        header.classList.add('collapsed');
-                    });
-                    target.addEventListener('show.bs.collapse', function() {
-                        header.classList.remove('collapsed');
-                    });
-                }
-            });
+{% block extra_scripts %}
+<script src="{% static 'core/js/toast.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.plan-description').forEach(function(el) {
+            if (el.scrollHeight > el.clientHeight + 5) {
+                const toggle = el.nextElementSibling;
+                if (toggle?.classList.contains('toggle-description')) toggle.classList.remove('d-none');
+            }
         });
-
-        function toggleDescription(planId) {
-            const desc = document.getElementById('desc-' + planId);
-            const toggle = desc.nextElementSibling;
-            const showMore = toggle.querySelector('.show-more');
-            const showLess = toggle.querySelector('.show-less');
-
-            if (desc.classList.contains('expanded')) {
-                desc.classList.remove('expanded');
-                showMore.classList.remove('d-none');
-                showLess.classList.add('d-none');
-            } else {
-                desc.classList.add('expanded');
-                showMore.classList.add('d-none');
-                showLess.classList.remove('d-none');
+        document.querySelectorAll('.plan-group-header').forEach(function(header) {
+            const target = document.querySelector(header.dataset.bsTarget);
+            if (target) {
+                target.addEventListener('hide.bs.collapse', () => header.classList.add('collapsed'));
+                target.addEventListener('show.bs.collapse', () => header.classList.remove('collapsed'));
             }
-        }
+        });
+    });
 
-        // Plan-Gruppierung aufheben
-        function ungroupPlans(gruppeId) {
-            if (!confirm('Möchtest du diese Gruppe auflösen? Die Pläne werden einzeln angezeigt.')) {
-                return;
-            }
+    function toggleDescription(planId) {
+        const desc = document.getElementById('desc-' + planId);
+        const toggle = desc.nextElementSibling;
+        const expanded = desc.classList.toggle('expanded');
+        toggle.querySelector('.show-more').classList.toggle('d-none', expanded);
+        toggle.querySelector('.show-less').classList.toggle('d-none', !expanded);
+    }
 
-            fetch('{% url "api_ungroup_plans" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({ gruppe_id: gruppeId })
-            })
-            .then(response => response.json())
+    function apiPost(url, data) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify(data)
+        }).then(r => r.json());
+    }
+
+    function ungroupPlans(gruppeId) {
+        if (!confirm('Gruppe auflösen? Pläne werden einzeln angezeigt.')) return;
+        apiPost('{% url "api_ungroup_plans" %}', { gruppe_id: gruppeId })
+            .then(data => data.success ? location.reload() : toast.error('Fehler: ' + data.error))
+            .catch(() => toast.error('Fehler aufgetreten.'));
+    }
+
+    function deletePlan(planId, planName) {
+        if (!confirm(`Plan "${planName}" wirklich löschen?\n\nNicht rückgängig machbar.`)) return;
+        apiPost('{% url "api_delete_plan" %}', { plan_id: planId })
+            .then(data => data.success ? location.reload() : toast.error('Fehler: ' + data.error))
+            .catch(() => toast.error('Fehler aufgetreten.'));
+    }
+
+    function deleteGroup(gruppeId, gruppeName) {
+        if (!confirm(`Alle Pläne der Gruppe "${gruppeName}" löschen?\n\n⚠️ NICHT rückgängig machbar!`)) return;
+        if (!confirm('Bist du WIRKLICH sicher?')) return;
+        apiPost('{% url "api_delete_group" %}', { gruppe_id: gruppeId })
+            .then(data => data.success ? location.reload() : toast.error('Fehler: ' + data.error))
+            .catch(() => toast.error('Fehler aufgetreten.'));
+    }
+
+    function updateGroupingToolbar() {
+        const count = document.querySelectorAll('.plan-checkbox:checked').length;
+        document.getElementById('grouping-toolbar')?.classList.toggle('d-none', count < 2);
+        const el = document.getElementById('selected-count');
+        if (el) el.textContent = count;
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.plan-checkbox:checked').forEach(cb => cb.checked = false);
+        updateGroupingToolbar();
+    }
+
+    function groupSelectedPlans() {
+        const planIds = Array.from(document.querySelectorAll('.plan-checkbox:checked')).map(cb => parseInt(cb.value));
+        const gruppeName = document.getElementById('gruppe-name-input').value.trim() || 'Neue Gruppe';
+        if (planIds.length < 2) { toast.warning('Mindestens 2 Pläne auswählen.'); return; }
+        apiPost('{% url "api_group_plans" %}', { plan_ids: planIds, gruppe_name: gruppeName })
+            .then(data => data.success ? location.reload() : toast.error('Fehler: ' + data.error))
+            .catch(() => toast.error('Fehler aufgetreten.'));
+    }
+
+    function renameGroup(gruppeId, currentName) {
+        const newName = prompt('Neuer Gruppenname:', currentName);
+        if (!newName?.trim() || newName.trim() === currentName) return;
+        apiPost('{% url "api_rename_group" %}', { gruppe_id: gruppeId, new_name: newName.trim() })
             .then(data => {
                 if (data.success) {
-                    location.reload();
-                } else {
-                    toast.error('Fehler: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                toast.error('Ein Fehler ist aufgetreten.');
-            });
-        }
-
-        // Einzelnen Plan löschen
-        function deletePlan(planId, planName) {
-            if (!confirm(`Plan "${planName}" wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`)) {
-                return;
-            }
-
-            fetch('{% url "api_delete_plan" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({ plan_id: planId })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    toast.error('Fehler: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                toast.error('Ein Fehler ist aufgetreten.');
-            });
-        }
-
-        // Ganze Gruppe löschen
-        function deleteGroup(gruppeId, gruppeName) {
-            if (!confirm(`Alle Pläne der Gruppe "${gruppeName}" wirklich löschen?\n\n⚠️ ACHTUNG: Alle Pläne dieser Gruppe werden unwiderruflich gelöscht!`)) {
-                return;
-            }
-
-            // Doppelte Bestätigung für Gruppen-Löschung
-            if (!confirm('Bist du WIRKLICH sicher? Diese Aktion kann NICHT rückgängig gemacht werden.')) {
-                return;
-            }
-
-            fetch('{% url "api_delete_group" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({ gruppe_id: gruppeId })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    toast.error('Fehler: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                toast.error('Ein Fehler ist aufgetreten.');
-            });
-        }
-
-        // ========== GRUPPIERUNG ==========
-
-        // Toolbar aktualisieren wenn Checkboxen geändert werden
-        function updateGroupingToolbar() {
-            const checkboxes = document.querySelectorAll('.plan-checkbox:checked');
-            const toolbar = document.getElementById('grouping-toolbar');
-            const countSpan = document.getElementById('selected-count');
-
-            if (checkboxes.length >= 2) {
-                toolbar.classList.remove('d-none');
-                countSpan.textContent = checkboxes.length;
-            } else {
-                toolbar.classList.add('d-none');
-            }
-        }
-
-        // Auswahl zurücksetzen
-        function clearSelection() {
-            document.querySelectorAll('.plan-checkbox:checked').forEach(cb => cb.checked = false);
-            updateGroupingToolbar();
-        }
-
-        // Ausgewählte Pläne gruppieren
-        function groupSelectedPlans() {
-            const checkboxes = document.querySelectorAll('.plan-checkbox:checked');
-            const planIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-            const gruppeName = document.getElementById('gruppe-name-input').value.trim() || 'Neue Gruppe';
-
-            if (planIds.length < 2) {
-                toast.warning('Bitte mindestens 2 Pläne auswählen.');
-                return;
-            }
-
-            fetch('{% url "api_group_plans" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    plan_ids: planIds,
-                    gruppe_name: gruppeName
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    toast.error('Fehler: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                toast.error('Ein Fehler ist aufgetreten.');
-            });
-        }
-
-        // ========== GRUPPE UMBENENNEN ==========
-
-        function renameGroup(gruppeId, currentName) {
-            const newName = prompt('Neuer Gruppenname:', currentName);
-
-            if (newName === null || newName.trim() === '') {
-                return; // Abgebrochen oder leer
-            }
-
-            if (newName.trim() === currentName) {
-                return; // Keine Änderung
-            }
-
-            fetch('{% url "api_rename_group" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    gruppe_id: gruppeId,
-                    new_name: newName.trim()
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Direktes Update im DOM ohne Reload
-                    const nameElement = document.getElementById('gruppe-name-' + gruppeId);
-                    if (nameElement) {
-                        nameElement.textContent = newName.trim();
-                    }
+                    const el = document.getElementById('gruppe-name-' + gruppeId);
+                    if (el) el.textContent = newName.trim();
                     toast.success('Gruppe umbenannt');
-                } else {
-                    toast.error('Fehler: ' + data.error);
-                }
+                } else { toast.error('Fehler: ' + data.error); }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                toast.error('Ein Fehler ist aufgetreten.');
-            });
-        }
+            .catch(() => toast.error('Fehler aufgetreten.'));
+    }
 
-        // ========== PLÄNE IN GRUPPE SORTIEREN ==========
-
-        function movePlanInGroup(gruppeId, planId, direction) {
-            fetch('{% url "api_reorder_group" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    gruppe_id: gruppeId,
-                    plan_id: planId,
-                    direction: direction
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    toast.error('Fehler: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                toast.error('Ein Fehler ist aufgetreten.');
-            });
-        }
-    </script>
-
-    <!-- Toast Notifications -->
-    <script src="{% static 'core/js/toast.js' %}"></script>
-
-    <!-- Footer -->
-    {% include 'core/includes/global_footer.html' %}
-  </body>
-</html>
+    function movePlanInGroup(gruppeId, planId, direction) {
+        apiPost('{% url "api_reorder_group" %}', { gruppe_id: gruppeId, plan_id: planId, direction })
+            .then(data => data.success ? location.reload() : toast.error('Fehler: ' + data.error))
+            .catch(() => toast.error('Fehler aufgetreten.'));
+    }
+</script>
+{% endblock %}

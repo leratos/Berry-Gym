@@ -36,8 +36,10 @@
 </head>
 <body>
 
-    <!-- Global Navigation -->
+    <!-- Global Navigation (überschreibbar für öffentliche Seiten) -->
+    {% block header %}
     {% include 'core/includes/global_header.html' %}
+    {% endblock %}
 
     <!-- Optionale Seiten-Navigation (Zurück-Button, Titel, Theme-Toggle) -->
     {% block page_nav %}{% endblock %}

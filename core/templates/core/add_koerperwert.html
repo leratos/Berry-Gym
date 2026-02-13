@@ -1,102 +1,86 @@
-<!doctype html>
-<html lang="de" data-bs-theme="dark">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Körperwerte</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  </head>
-  <body>
+{% extends 'base.html' %}
 
-    <nav class="navbar navbar-page border-bottom mb-4">
-      <div class="container-fluid">
-        <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-            <i class="bi bi-x-lg"></i>
-        </a>
-        <span class="navbar-text page-title fw-bold">Watch-Daten erfassen</span>
-        <div style="width: 40px;"></div>
-      </div>
-    </nav>
+{% block title %}Körperwerte{% endblock %}
 
-    <div class="container">
-      <form method="post">
-        {% csrf_token %}
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom mb-4">
+  <div class="container-fluid">
+    <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
+        <i class="bi bi-x-lg"></i>
+    </a>
+    <span class="navbar-text page-title fw-bold">Watch-Daten erfassen</span>
+    <div style="width: 40px;"></div>
+  </div>
+</nav>
+{% endblock %}
 
-        <!-- Größe (Versteckt aber änderbar, wichtig für BMI) -->
-        <div class="mb-3">
-            <label class="form-label text-muted small">Größe (cm)</label>
-            <input type="number" name="groesse" value="{{ standard_groesse }}" class="form-control bg-dark text-white border-secondary" required>
-        </div>
+{% block content %}
+<div class="container">
+  <form method="post">
+    {% csrf_token %}
 
-        <!-- Hauptwert: Gewicht -->
-        <div class="card bg-dark border-secondary mb-3">
-            <div class="card-body text-center py-3">
-                <label class="form-label text-secondary text-uppercase fw-bold ls-1">Gewicht (kg)</label>
-                <div class="input-group justify-content-center">
-                    <input type="number" step="0.1" name="gewicht" class="form-control form-control-lg bg-dark text-white text-center border-0 display-1 fw-bold" style="font-size: 3rem; max-width: 200px;" required autofocus placeholder="00.0">
-                </div>
-            </div>
-        </div>
-
-        <h6 class="text-secondary mb-3 ps-2 mt-4">Daten von der Uhr</h6>
-
-        <!-- Reihe 1: Fett & Muskeln -->
-        <div class="row g-3 mb-3">
-            <div class="col-6">
-                <div class="p-3 bg-dark border border-secondary rounded-3">
-                    <label class="d-block text-muted small mb-1"><i class="bi bi-droplet-fill text-danger"></i> Fett (kg)</label>
-                    <input type="number" step="0.1" name="fett_kg" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="p-3 bg-dark border border-secondary rounded-3">
-                    <label class="d-block text-muted small mb-1"><i class="bi bi-lightning-fill text-warning"></i> Muskeln (kg)</label>
-                    <input type="number" step="0.1" name="muskel" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
-                </div>
-            </div>
-        </div>
-
-        <!-- Reihe 2: Wasser & KFA % -->
-        <div class="row g-3 mb-3">
-            <div class="col-6">
-                <div class="p-3 bg-dark border border-secondary rounded-3">
-                    <label class="d-block text-muted small mb-1"><i class="bi bi-water text-info"></i> Wasser (kg)</label>
-                    <input type="number" step="0.1" name="wasser" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="p-3 bg-dark border border-secondary rounded-3">
-                    <label class="d-block text-muted small mb-1">% KFA (Uhr)</label>
-                    <input type="number" step="0.1" name="kfa" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
-                </div>
-            </div>
-        </div>
-
-        <!-- Rest -->
-        <div class="row g-3">
-            <div class="col-6">
-                <label class="form-label text-muted small">Knochen (kg)</label>
-                <input type="number" step="0.1" name="knochen" class="form-control bg-dark text-white border-secondary">
-            </div>
-            <div class="col-6">
-                 <!-- Platzhalter für Layout -->
-            </div>
-        </div>
-
-        <div class="mt-4">
-            <textarea name="notiz" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="Notiz (z.B. Nüchtern)"></textarea>
-        </div>
-
-        <div class="d-grid mt-5 pb-5">
-            <button type="submit" class="btn btn-primary btn-lg fw-bold p-3 rounded-4">
-                Speichern & Berechnen
-            </button>
-        </div>
-
-      </form>
+    <div class="mb-3">
+        <label class="form-label text-muted small">Größe (cm)</label>
+        <input type="number" name="groesse" value="{{ standard_groesse }}" class="form-control bg-dark text-white border-secondary" required>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
-</html>
+    <div class="card bg-dark border-secondary mb-3">
+        <div class="card-body text-center py-3">
+            <label class="form-label text-secondary text-uppercase fw-bold ls-1">Gewicht (kg)</label>
+            <div class="input-group justify-content-center">
+                <input type="number" step="0.1" name="gewicht" class="form-control form-control-lg bg-dark text-white text-center border-0 display-1 fw-bold" style="font-size: 3rem; max-width: 200px;" required autofocus placeholder="00.0">
+            </div>
+        </div>
+    </div>
+
+    <h6 class="text-secondary mb-3 ps-2 mt-4">Daten von der Uhr</h6>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6">
+            <div class="p-3 bg-dark border border-secondary rounded-3">
+                <label class="d-block text-muted small mb-1"><i class="bi bi-droplet-fill text-danger"></i> Fett (kg)</label>
+                <input type="number" step="0.1" name="fett_kg" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="p-3 bg-dark border border-secondary rounded-3">
+                <label class="d-block text-muted small mb-1"><i class="bi bi-lightning-fill text-warning"></i> Muskeln (kg)</label>
+                <input type="number" step="0.1" name="muskel" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6">
+            <div class="p-3 bg-dark border border-secondary rounded-3">
+                <label class="d-block text-muted small mb-1"><i class="bi bi-water text-info"></i> Wasser (kg)</label>
+                <input type="number" step="0.1" name="wasser" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="p-3 bg-dark border border-secondary rounded-3">
+                <label class="d-block text-muted small mb-1">% KFA (Uhr)</label>
+                <input type="number" step="0.1" name="kfa" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-6">
+            <label class="form-label text-muted small">Knochen (kg)</label>
+            <input type="number" step="0.1" name="knochen" class="form-control bg-dark text-white border-secondary">
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <textarea name="notiz" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="Notiz (z.B. Nüchtern)"></textarea>
+    </div>
+
+    <div class="d-grid mt-5 pb-5">
+        <button type="submit" class="btn btn-primary btn-lg fw-bold p-3 rounded-4">
+            Speichern & Berechnen
+        </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

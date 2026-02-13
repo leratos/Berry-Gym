@@ -1,230 +1,196 @@
-{% load static %}<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Plan-Bibliothek</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
-    <style>
-        .plan-description {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: pre-wrap;
-        }
-        .plan-group-header {
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .plan-group-header:hover {
-            background-color: rgba(255,255,255,0.05);
-        }
-        .plan-group-header .chevron {
-            transition: transform 0.3s;
-        }
-        .plan-group-header.collapsed .chevron {
-            transform: rotate(-90deg);
-        }
-        .plan-group-content {
-            border-left: 3px solid var(--bs-primary);
-            margin-left: 0.5rem;
-            padding-left: 0.75rem;
-        }
-    </style>
-    <script src="{% static 'core/js/theme-toggle.js' %}"></script>
-  </head>
-  <body>
-    {% include 'core/includes/global_header.html' %}
+{% extends 'base.html' %}
+{% load static %}
 
-    <nav class="navbar navbar-page border-bottom">
-      <div class="container-fluid">
-        <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-            <i class="bi bi-arrow-left"></i> Dashboard
-        </a>
-        <span class="navbar-text page-title fw-bold">Plan-Bibliothek</span>
-        <div style="width: 40px;">
-            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
-                <i class="bi bi-moon-fill" id="themeIcon"></i>
-            </button>
+{% block title %}Plan-Bibliothek{% endblock %}
+
+{% block extra_head %}
+<style>
+    .plan-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: pre-wrap;
+    }
+    .plan-group-header { cursor: pointer; transition: background-color 0.2s; }
+    .plan-group-header:hover { background-color: rgba(255,255,255,0.05); }
+    .plan-group-header .chevron { transition: transform 0.3s; }
+    .plan-group-header.collapsed .chevron { transform: rotate(-90deg); }
+    .plan-group-content {
+        border-left: 3px solid var(--bs-primary);
+        margin-left: 0.5rem;
+        padding-left: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom">
+  <div class="container-fluid">
+    <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
+        <i class="bi bi-arrow-left"></i> Dashboard
+    </a>
+    <span class="navbar-text page-title fw-bold">Plan-Bibliothek</span>
+    <div style="width: 40px;">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+            <i class="bi bi-moon-fill" id="themeIcon"></i>
+        </button>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container pt-4">
+    <div class="text-center mb-4">
+        <h2><i class="bi bi-book text-primary me-2"></i>Öffentliche Plan-Bibliothek</h2>
+        <p class="text-muted">Entdecke Trainingspläne von anderen Nutzern und kopiere sie in deine Sammlung.</p>
+    </div>
+
+    <form method="GET" class="mb-4">
+        <div class="input-group">
+            <span class="input-group-text bg-dark border-secondary">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" class="form-control bg-dark border-secondary text-white"
+                   name="q" placeholder="Suche nach Plänen..." value="{{ search_query }}">
+            <button class="btn btn-primary" type="submit">Suchen</button>
+            {% if search_query %}
+            <a href="{% url 'plan_library' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg"></i>
+            </a>
+            {% endif %}
         </div>
-      </div>
-    </nav>
+    </form>
 
-    <div class="container pt-4">
-        <!-- Header -->
-        <div class="text-center mb-4">
-            <h2><i class="bi bi-book text-primary me-2"></i>Öffentliche Plan-Bibliothek</h2>
-            <p class="text-muted">Entdecke Trainingspläne von anderen Nutzern und kopiere sie in deine Sammlung.</p>
+    <div class="alert alert-info d-flex align-items-center mb-4">
+        <i class="bi bi-info-circle me-2 fs-4"></i>
+        <div>
+            <strong>{{ total_count }} öffentliche Pläne</strong> verfügbar
+            {% if search_query %}für "{{ search_query }}"{% endif %}
         </div>
+    </div>
 
-        <!-- Suchleiste -->
-        <form method="GET" class="mb-4">
-            <div class="input-group">
-                <span class="input-group-text bg-dark border-secondary">
-                    <i class="bi bi-search text-muted"></i>
-                </span>
-                <input type="text" class="form-control bg-dark border-secondary text-white"
-                       name="q" placeholder="Suche nach Plänen..." value="{{ search_query }}">
-                <button class="btn btn-primary" type="submit">Suchen</button>
-                {% if search_query %}
-                <a href="{% url 'plan_library' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-lg"></i>
-                </a>
-                {% endif %}
-            </div>
-        </form>
-
-        <!-- Statistik -->
-        <div class="alert alert-info d-flex align-items-center mb-4">
-            <i class="bi bi-info-circle me-2 fs-4"></i>
-            <div>
-                <strong>{{ total_count }} öffentliche Pläne</strong> verfügbar
-                {% if search_query %}
-                    für "{{ search_query }}"
-                {% endif %}
-            </div>
+    {% if not plan_gruppen and not einzelne_plaene %}
+        <div class="alert alert-secondary text-center">
+            <i class="bi bi-emoji-neutral me-2 fs-4"></i>
+            <p class="mb-0">Keine öffentlichen Pläne gefunden.</p>
+            {% if search_query %}
+                <a href="{% url 'plan_library' %}" class="btn btn-sm btn-primary mt-2">Alle anzeigen</a>
+            {% endif %}
         </div>
-
-        {% if not plan_gruppen and not einzelne_plaene %}
-            <div class="alert alert-secondary text-center">
-                <i class="bi bi-emoji-neutral me-2 fs-4"></i>
-                <p class="mb-0">Keine öffentlichen Pläne gefunden.</p>
-                {% if search_query %}
-                    <a href="{% url 'plan_library' %}" class="btn btn-sm btn-primary mt-2">Alle anzeigen</a>
-                {% endif %}
-            </div>
-        {% else %}
-            <div class="d-grid gap-3">
-
-                <!-- Gruppierte Pläne (Splits) -->
-                {% for gruppe_key, gruppe in plan_gruppen.items %}
-                <div class="card card-stat border-info shadow-sm">
-                    <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3"
-                         data-bs-toggle="collapse"
-                         data-bs-target="#gruppe-{{ forloop.counter }}"
-                         aria-expanded="true">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-collection-fill text-info me-2 fs-4"></i>
-                            <div>
-                                <h5 class="mb-0">{{ gruppe.name }}</h5>
-                                <small class="text-muted">{{ gruppe.plaene|length }} Trainingstage • von {{ gruppe.user.username }}</small>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-info">Split</span>
-                            <i class="bi bi-chevron-down chevron"></i>
+    {% else %}
+        <div class="d-grid gap-3">
+            {% for gruppe_key, gruppe in plan_gruppen.items %}
+            <div class="card card-stat border-info shadow-sm">
+                <div class="card-header plan-group-header d-flex align-items-center justify-content-between py-3"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#gruppe-{{ forloop.counter }}"
+                     aria-expanded="true">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-collection-fill text-info me-2 fs-4"></i>
+                        <div>
+                            <h5 class="mb-0">{{ gruppe.name }}</h5>
+                            <small class="text-muted">{{ gruppe.plaene|length }} Trainingstage • von {{ gruppe.user.username }}</small>
                         </div>
                     </div>
-
-                    <div class="collapse show" id="gruppe-{{ forloop.counter }}">
-                        <div class="card-body pt-2 pb-3">
-                            <div class="plan-group-content">
-                                {% for plan in gruppe.plaene %}
-                                <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %}">
-                                    <div class="d-flex align-items-center">
-                                        <span class="fw-bold">{{ plan.name }}</span>
-                                        <span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} Übungen</span>
-                                    </div>
-                                    <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-info-circle"></i>
-                                    </a>
-                                </div>
-                                {% endfor %}
-                            </div>
-
-                            <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <a href="{% url 'plan_library_group' gruppe_key %}" class="btn btn-outline-info btn-sm">
-                                    <i class="bi bi-eye me-1"></i>Details
-                                </a>
-                                {% if user.is_authenticated %}
-                                <a href="{% url 'copy_group' gruppe_key %}" class="btn btn-success btn-sm">
-                                    <i class="bi bi-copy me-1"></i>Komplett kopieren
-                                </a>
-                                {% else %}
-                                <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-secondary btn-sm">
-                                    <i class="bi bi-box-arrow-in-right me-1"></i>Anmelden zum Kopieren
-                                </a>
-                                {% endif %}
-                            </div>
-                        </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-info">Split</span>
+                        <i class="bi bi-chevron-down chevron"></i>
                     </div>
                 </div>
-                {% endfor %}
-
-                <!-- Einzelne Pläne -->
-                {% for plan in einzelne_plaene %}
-                <div class="card card-stat border-secondary shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="me-3 text-secondary">
-                                <i class="bi bi-card-checklist fs-2"></i>
+                <div class="collapse show" id="gruppe-{{ forloop.counter }}">
+                    <div class="card-body pt-2 pb-3">
+                        <div class="plan-group-content">
+                            {% for plan in gruppe.plaene %}
+                            <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="fw-bold">{{ plan.name }}</span>
+                                    <span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} Übungen</span>
+                                </div>
+                                <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
                             </div>
-                            <div class="flex-grow-1">
-                                <h5 class="mb-1">{{ plan.name }}</h5>
-                                <p class="text-muted mb-0 small">
-                                    {{ plan.uebungen.count }} Übungen • von {{ plan.user.username }}
-                                </p>
-                            </div>
+                            {% endfor %}
                         </div>
-
-                        {% if plan.beschreibung %}
-                        <p class="plan-description text-muted small mb-3">{{ plan.beschreibung }}</p>
-                        {% endif %}
-
-                        <div class="d-flex gap-2">
-                            <a href="{% url 'plan_details' plan.id %}" class="btn btn-primary flex-grow-1">
-                                <i class="bi bi-info-circle me-1"></i>Details
+                        <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <a href="{% url 'plan_library_group' gruppe_key %}" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-eye me-1"></i>Details
                             </a>
                             {% if user.is_authenticated %}
-                            <a href="{% url 'copy_plan' plan.id %}" class="btn btn-success">
-                                <i class="bi bi-copy"></i> Kopieren
+                            <a href="{% url 'copy_group' gruppe_key %}" class="btn btn-success btn-sm">
+                                <i class="bi bi-copy me-1"></i>Komplett kopieren
                             </a>
                             {% else %}
-                            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-secondary">
-                                <i class="bi bi-box-arrow-in-right"></i>
+                            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-secondary btn-sm">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Anmelden zum Kopieren
                             </a>
                             {% endif %}
                         </div>
                     </div>
                 </div>
-                {% endfor %}
             </div>
-        {% endif %}
+            {% endfor %}
 
-        <!-- Call to Action -->
-        {% if user.is_authenticated %}
-        <div class="card card-stat border-primary mt-4">
-            <div class="card-body text-center">
-                <h5><i class="bi bi-megaphone me-2"></i>Teile deine Pläne!</h5>
-                <p class="text-muted mb-3">Hilf der Community und mache deine besten Trainingspläne öffentlich.</p>
-                <a href="{% url 'training_select_plan' %}" class="btn btn-primary">
-                    <i class="bi bi-arrow-right me-1"></i>Zu meinen Plänen
-                </a>
+            {% for plan in einzelne_plaene %}
+            <div class="card card-stat border-secondary shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="me-3 text-secondary">
+                            <i class="bi bi-card-checklist fs-2"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">{{ plan.name }}</h5>
+                            <p class="text-muted mb-0 small">{{ plan.uebungen.count }} Übungen • von {{ plan.user.username }}</p>
+                        </div>
+                    </div>
+                    {% if plan.beschreibung %}
+                    <p class="plan-description text-muted small mb-3">{{ plan.beschreibung }}</p>
+                    {% endif %}
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'plan_details' plan.id %}" class="btn btn-primary flex-grow-1">
+                            <i class="bi bi-info-circle me-1"></i>Details
+                        </a>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'copy_plan' plan.id %}" class="btn btn-success">
+                            <i class="bi bi-copy"></i> Kopieren
+                        </a>
+                        {% else %}
+                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-secondary">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
+            {% endfor %}
         </div>
-        {% endif %}
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <div class="card card-stat border-primary mt-4">
+        <div class="card-body text-center">
+            <h5><i class="bi bi-megaphone me-2"></i>Teile deine Pläne!</h5>
+            <p class="text-muted mb-3">Hilf der Community und mache deine besten Trainingspläne öffentlich.</p>
+            <a href="{% url 'training_select_plan' %}" class="btn btn-primary">
+                <i class="bi bi-arrow-right me-1"></i>Zu meinen Plänen
+            </a>
+        </div>
     </div>
+    {% endif %}
+</div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Collapse chevron rotation
-        document.querySelectorAll('.plan-group-header').forEach(function(header) {
-            const target = document.querySelector(header.dataset.bsTarget);
-            if (target) {
-                target.addEventListener('hide.bs.collapse', function() {
-                    header.classList.add('collapsed');
-                });
-                target.addEventListener('show.bs.collapse', function() {
-                    header.classList.remove('collapsed');
-                });
-            }
-        });
-    </script>
-
-    {% include 'core/includes/global_footer.html' %}
-  </body>
-</html>
+{% block extra_scripts %}
+<script>
+    document.querySelectorAll('.plan-group-header').forEach(function(header) {
+        const target = document.querySelector(header.dataset.bsTarget);
+        if (target) {
+            target.addEventListener('hide.bs.collapse', function() { header.classList.add('collapsed'); });
+            target.addEventListener('show.bs.collapse', function() { header.classList.remove('collapsed'); });
+        }
+    });
+</script>
+{% endblock %}

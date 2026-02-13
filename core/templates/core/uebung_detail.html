@@ -1,291 +1,179 @@
+{% extends 'base.html' %}
 {% load static %}
-{% load static %}<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ uebung.bezeichnung }} - HomeGym</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-        }
-        .detail-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        .svg-container {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-        #muscleSvg {
-            width: 100%;
-            height: auto;
-            max-width: 800px;
-            display: block;
-            margin: 0 auto;
-        }
-        .stats-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 1.5rem;
-            text-align: center;
-        }
-        .stats-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #0d6efd;
-        }
-        .stats-label {
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.7);
-            text-transform: uppercase;
-        }
-        .legend-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-right: 1.5rem;
-        }
-        .legend-color {
-            width: 30px;
-            height: 30px;
-            border-radius: 5px;
-            border: 2px solid #333;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-page mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <strong>HomeGym</strong>
-            </a>
-            <div>
-                <a href="{% url 'muscle_map' %}" class="btn btn-outline-light btn-sm">← Zurück zur Muscle-Map</a>
-                <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm">Dashboard</a>
-                        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
-              <i class="bi bi-moon-fill" id="themeIcon"></i>
+
+{% block title %}{{ uebung.bezeichnung }} - HomeGym{% endblock %}
+
+{% block extra_head %}
+<style>
+    .detail-container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .svg-container { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    #muscleSvg { width: 100%; height: auto; max-width: 800px; display: block; margin: 0 auto; }
+    .stats-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 1.5rem; text-align: center; }
+    .stats-value { font-size: 2rem; font-weight: bold; color: #0d6efd; }
+    .stats-label { font-size: 0.875rem; color: rgba(255,255,255,0.7); text-transform: uppercase; }
+    .legend-item { display: inline-flex; align-items: center; gap: 0.5rem; margin-right: 1.5rem; }
+    .legend-color { width: 30px; height: 30px; border-radius: 5px; border: 2px solid #333; }
+</style>
+{% endblock %}
+
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom mb-4">
+  <div class="container-fluid">
+    <a class="btn btn-outline-secondary border-0" href="{% url 'muscle_map' %}">
+        <i class="bi bi-arrow-left"></i> Muscle-Map
+    </a>
+    <span class="navbar-text page-title fw-bold text-truncate" style="max-width: 180px;">{{ uebung.bezeichnung }}</span>
+    <div style="width: 40px;">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+          <i class="bi bi-moon-fill" id="themeIcon"></i>
+        </button>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="text-center mb-4">
+        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+            <h1 class="display-4 mb-0">{{ uebung.bezeichnung }}</h1>
+            <button class="btn btn-outline-warning btn-lg border-0 favorite-btn"
+                    onclick="toggleFavorite({{ uebung.id }})"
+                    id="favoriteBtn" title="Zu Favoriten hinzufügen">
+                <i class="bi bi-star{% if request.user in uebung.favoriten.all %}-fill text-warning{% endif %}" id="favoriteIcon"></i>
             </button>
-</div>
         </div>
-    </nav>
-
-    <div class="detail-container">
-        <!-- Header -->
-        <div class="text-center mb-4">
-            <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-                <h1 class="display-4 text-white mb-0">{{ uebung.bezeichnung }}</h1>
-                <button class="btn btn-outline-warning btn-lg border-0 favorite-btn"
-                        onclick="toggleFavorite({{ uebung.id }})"
-                        id="favoriteBtn"
-                        title="Zu Favoriten hinzufügen">
-                    <i class="bi bi-star{% if request.user in uebung.favoriten.all %}-fill text-warning{% endif %}" id="favoriteIcon"></i>
-                </button>
-            </div>
-            <div class="d-flex justify-content-center gap-2 mb-3">
-                <span class="badge bg-primary fs-6">{{ uebung.get_muskelgruppe_display }}</span>
-                <span class="badge bg-info fs-6">{{ uebung.get_bewegungstyp_display }}</span>
-                <span class="badge bg-success fs-6">{{ uebung.get_gewichts_typ_display }}</span>
-            </div>
+        <div class="d-flex justify-content-center gap-2 mb-3">
+            <span class="badge bg-primary fs-6">{{ uebung.get_muskelgruppe_display }}</span>
+            <span class="badge bg-info fs-6">{{ uebung.get_bewegungstyp_display }}</span>
+            <span class="badge bg-success fs-6">{{ uebung.get_gewichts_typ_display }}</span>
         </div>
+    </div>
 
-        <div class="row g-4">
-            <!-- Left: Muscle Visualization -->
-            <div class="col-lg-7">
-                <div class="svg-container">
-                    <h5 class="mb-3 text-center">Anatomische Darstellung</h5>
-
-                    <!-- Legend -->
-                    <div class="text-center mb-4">
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #dc3545;"></div>
-                            <span class="text-white">Hauptmuskel</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #0d6efd;"></div>
-                            <span class="text-white">Hilfsmuskeln</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #d9d9d9;"></div>
-                            <span class="text-white">Inaktiv</span>
-                        </div>
-                    </div>
-
-                    <div id="svgWrapper"></div>
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="svg-container">
+                <h5 class="mb-3 text-center">Anatomische Darstellung</h5>
+                <div class="text-center mb-4">
+                    <div class="legend-item"><div class="legend-color" style="background-color: #dc3545;"></div><span>Hauptmuskel</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: #0d6efd;"></div><span>Hilfsmuskeln</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: #d9d9d9;"></div><span>Inaktiv</span></div>
                 </div>
-
-                <!-- Statistics -->
-                <div class="row g-3 mt-3">
-                    <div class="col-md-4">
-                        <div class="stats-card">
-                            <div class="stats-value">{{ max_gewicht }}kg</div>
-                            <div class="stats-label">Max Gewicht</div>
-                        </div>
+                <div id="svgWrapper"></div>
+            </div>
+            <div class="row g-3 mt-3">
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <div class="stats-value">{{ max_gewicht }}kg</div>
+                        <div class="stats-label">Max Gewicht</div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="stats-card">
-                            <div class="stats-value">{{ total_volumen }}</div>
-                            <div class="stats-label">Gesamt Volumen (kg)</div>
-                        </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <div class="stats-value">{{ total_volumen }}</div>
+                        <div class="stats-label">Gesamt Volumen (kg)</div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="stats-card">
-                            <div class="stats-value">{{ anzahl_saetze }}</div>
-                            <div class="stats-label">Sätze Absolviert</div>
-                        </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <div class="stats-value">{{ anzahl_saetze }}</div>
+                        <div class="stats-label">Sätze Absolviert</div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Right: Exercise Info -->
-            <div class="col-lg-5">
-                <div class="card card-stat border-secondary">
-                    <div class="card-header bg-secondary">
-                        <h5 class="mb-0">Übungsbeschreibung</h5>
+        <div class="col-lg-5">
+            <div class="card card-stat border-secondary">
+                <div class="card-header bg-secondary">
+                    <h5 class="mb-0">Übungsbeschreibung</h5>
+                </div>
+                <div class="card-body">
+                    {% if uebung.bild %}
+                    <div class="mb-3 text-center">
+                        <img src="{{ uebung.bild.url }}" alt="{{ uebung.bezeichnung }}"
+                             class="img-fluid rounded" style="max-height: 300px; object-fit: contain;">
                     </div>
-                    <div class="card-body">
-                        {% if uebung.bild %}
-                        <div class="mb-3 text-center">
-                            <img src="{{ uebung.bild.url }}"
-                                 alt="{{ uebung.bezeichnung }}"
-                                 class="img-fluid rounded"
-                                 style="max-height: 300px; object-fit: contain;">
-                        </div>
+                    {% endif %}
+
+                    {% if uebung.beschreibung %}
+                    <p class="text-light">{{ uebung.beschreibung }}</p>
+                    {% else %}
+                    <p class="text-muted fst-italic">Keine Beschreibung verfügbar</p>
+                    {% endif %}
+
+                    {% if uebung.video_link %}
+                    <div class="mb-3">
+                        <a href="{{ uebung.video_link }}" target="_blank" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-play-circle"></i> Video Tutorial ansehen
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <hr class="border-secondary">
+                    <h6 class="mb-3">Details</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><strong class="text-primary">Hauptmuskelgruppe:</strong> <span>{{ uebung.get_muskelgruppe_display }}</span></li>
+                        <li class="mb-2"><strong class="text-primary">Bewegungstyp:</strong> <span>{{ uebung.get_bewegungstyp_display }}</span></li>
+                        <li class="mb-2"><strong class="text-primary">Gewichtstyp:</strong> <span>{{ uebung.get_gewichts_typ_display }}</span></li>
+                        {% if uebung.hilfsmuskeln %}
+                        <li class="mb-2"><strong class="text-primary">Hilfsmuskeln:</strong> <div class="mt-1">{{ uebung.hilfsmuskeln }}</div></li>
                         {% endif %}
-
-                        {% if uebung.beschreibung %}
-                        <p class="text-light">{{ uebung.beschreibung }}</p>
-                        {% else %}
-                        <p class="text-muted fst-italic">Keine Beschreibung verfügbar</p>
-                        {% endif %}
-
-                        {% if uebung.video_link %}
-                        <div class="mb-3">
-                            <a href="{{ uebung.video_link }}" target="_blank" class="btn btn-outline-danger btn-sm">
-                                <i class="bi bi-play-circle"></i> Video Tutorial ansehen
-                            </a>
-                        </div>
-                        {% endif %}
-
-                        <hr class="border-secondary">
-
-                        <h6 class="mb-3">Details</h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <strong class="text-primary">Hauptmuskelgruppe:</strong>
-                                <span class="text-light">{{ uebung.get_muskelgruppe_display }}</span>
-                            </li>
-                            <li class="mb-2">
-                                <strong class="text-primary">Bewegungstyp:</strong>
-                                <span class="text-light">{{ uebung.get_bewegungstyp_display }}</span>
-                            </li>
-                            <li class="mb-2">
-                                <strong class="text-primary">Gewichtstyp:</strong>
-                                <span class="text-light">{{ uebung.get_gewichts_typ_display }}</span>
-                            </li>
-                            {% if uebung.hilfsmuskeln %}
-                            <li class="mb-2">
-                                <strong class="text-primary">Hilfsmuskeln:</strong>
-                                <div class="mt-1 text-light">
-                                    {{ uebung.hilfsmuskeln }}
-                                </div>
-                            </li>
-                            {% endif %}
-                        </ul>
-
-                        <hr class="border-secondary">
-
-                        <div class="d-grid gap-2">
-                            <a href="{% url 'exercise_stats' uebung.id %}" class="btn btn-primary">
-                                📊 Statistiken ansehen
-                            </a>
-                            <a href="{% url 'muscle_map' %}?muskelgruppe={{ uebung.muskelgruppe }}" class="btn btn-outline-secondary">
-                                Ähnliche Übungen
-                            </a>
-                        </div>
+                    </ul>
+                    <hr class="border-secondary">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'exercise_stats' uebung.id %}" class="btn btn-primary">📊 Statistiken ansehen</a>
+                        <a href="{% url 'muscle_map' %}?muskelgruppe={{ uebung.muskelgruppe }}" class="btn btn-outline-secondary">Ähnliche Übungen</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Muscle IDs von Django
-        const mainMuscleIds = {{ main_muscle_ids|safe }};
-        const helperMuscleIds = {{ helper_muscle_ids|safe }};
+{% block extra_scripts %}
+<script>
+    const mainMuscleIds = {{ main_muscle_ids|safe }};
+    const helperMuscleIds = {{ helper_muscle_ids|safe }};
 
-        // SVG laden
-        fetch("{% static 'core/images/muscle_map.svg' %}")
-            .then(response => response.text())
-            .then(svgContent => {
-                document.getElementById('svgWrapper').innerHTML = svgContent;
-                const svg = document.getElementById('svgWrapper').querySelector('svg');
-                svg.id = 'muscleSvg';
+    fetch("{% static 'core/images/muscle_map.svg' %}")
+        .then(response => response.text())
+        .then(svgContent => {
+            document.getElementById('svgWrapper').innerHTML = svgContent;
+            const svg = document.getElementById('svgWrapper').querySelector('svg');
+            svg.id = 'muscleSvg';
+            highlightMuscles();
+        });
 
-                highlightMuscles();
-            });
+    function highlightMuscles() {
+        document.querySelectorAll('#muscleSvg .muscle').forEach(el => {
+            el.style.fill = '#d9d9d9'; el.style.stroke = '#333'; el.style.strokeWidth = '3';
+        });
+        mainMuscleIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.style.fill = '#dc3545'; el.style.stroke = '#dc3545'; el.style.strokeWidth = '4'; }
+        });
+        helperMuscleIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.style.fill = '#0d6efd'; el.style.stroke = '#0d6efd'; el.style.strokeWidth = '4'; }
+        });
+    }
 
-        function highlightMuscles() {
-            // Alle Muskeln auf Standard zurücksetzen
-            document.querySelectorAll('#muscleSvg .muscle').forEach(el => {
-                el.style.fill = '#d9d9d9';
-                el.style.stroke = '#333';
-                el.style.strokeWidth = '3';
-            });
-
-            // Hauptmuskel rot färben
-            mainMuscleIds.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.style.fill = '#dc3545';
-                    element.style.stroke = '#dc3545';
-                    element.style.strokeWidth = '4';
-                }
-            });
-
-            // Hilfsmuskeln blau färben
-            helperMuscleIds.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.style.fill = '#0d6efd';
-                    element.style.stroke = '#0d6efd';
-                    element.style.strokeWidth = '4';
-                }
-            });
-        }
-
-        // Toggle Favorite
-        function toggleFavorite(uebungId) {
-            fetch(`/uebung/${uebungId}/toggle-favorite/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                const icon = document.getElementById('favoriteIcon');
-                if (data.is_favorite) {
-                    icon.classList.remove('bi-star');
-                    icon.classList.add('bi-star-fill', 'text-warning');
-                } else {
-                    icon.classList.remove('bi-star-fill', 'text-warning');
-                    icon.classList.add('bi-star');
-                }
-            })
-            .catch(error => console.error('Fehler:', error));
-        }
-    </script>
-
-    <!-- Footer -->
-    {% include 'core/includes/global_footer.html' %}
-</body>
-</html>
+    function toggleFavorite(uebungId) {
+        fetch(`/uebung/${uebungId}/toggle-favorite/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const icon = document.getElementById('favoriteIcon');
+            if (data.is_favorite) {
+                icon.classList.remove('bi-star'); icon.classList.add('bi-star-fill', 'text-warning');
+            } else {
+                icon.classList.remove('bi-star-fill', 'text-warning'); icon.classList.add('bi-star');
+            }
+        });
+    }
+</script>
+{% endblock %}
