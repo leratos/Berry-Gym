@@ -40,264 +40,260 @@ from ..models import (
 logger = logging.getLogger(__name__)
 
 
-@login_required
-def dashboard(request: HttpRequest) -> HttpResponse:
-    letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
-    letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
+# ---------------------------------------------------------------------------
+# Private helpers for dashboard view
+# ---------------------------------------------------------------------------
 
-    # Trainingsfrequenz diese Woche (Montag bis Sonntag)
-    heute = timezone.now()
-    # ISO-Woche: Montag = 1, Sonntag = 7
+
+def _get_week_start(heute):
+    """Return the Monday midnight of the week containing 'heute'."""
     iso_weekday = heute.isoweekday()
-    # Start der Woche ist Montag
-    start_woche = heute - timedelta(days=iso_weekday - 1)
-    # Setze auf Mitternacht
-    start_woche = start_woche.replace(hour=0, minute=0, second=0, microsecond=0)
-    trainings_diese_woche = Trainingseinheit.objects.filter(
-        user=request.user, datum__gte=start_woche
-    ).count()
+    ws = heute - timedelta(days=iso_weekday - 1)
+    return ws.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Streak berechnen (aufeinanderfolgende Wochen mit mindestens 1 Training)
+
+def _count_trainings_this_week(user, heute) -> int:
+    """Count training sessions in the current ISO week (Mon–Sun)."""
+    start_woche = _get_week_start(heute)
+    return Trainingseinheit.objects.filter(user=user, datum__gte=start_woche).count()
+
+
+def _calculate_streak(user, heute) -> int:
+    """Count consecutive weeks with at least one training session."""
     streak = 0
     check_date = heute
-    while True:
-        # ISO-Woche: Montag = 1
-        iso_weekday = check_date.isoweekday()
-        week_start = check_date - timedelta(days=iso_weekday - 1)
-        week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    while streak <= 52:
+        week_start = _get_week_start(check_date)
         week_end = week_start + timedelta(days=7)
-        trainings_in_week = Trainingseinheit.objects.filter(
-            user=request.user, datum__gte=week_start, datum__lt=week_end
-        ).count()
-        if trainings_in_week > 0:
-            streak += 1
-            check_date = week_start - timedelta(days=1)  # Vorwoche prüfen
-        else:
+        if not Trainingseinheit.objects.filter(
+            user=user, datum__gte=week_start, datum__lt=week_end
+        ).exists():
             break
-        if streak > 52:  # Sicherheitslimit
-            break
+        streak += 1
+        check_date = week_start - timedelta(days=1)
+    return streak
 
-    # Favoriten-Übungen (Top 3 meist trainierte)
-    favoriten = (
-        Satz.objects.filter(
-            einheit__user=request.user, ist_aufwaermsatz=False, einheit__ist_deload=False
-        )
+
+def _get_favoriten(user):
+    """Return top-3 most-trained exercises (excluding warmup/deload sets)."""
+    return (
+        Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False, einheit__ist_deload=False)
         .values("uebung__bezeichnung", "uebung__id")
         .annotate(anzahl=Count("id"))
         .order_by("-anzahl")[:3]
     )
 
-    # Gesamtstatistiken
-    gesamt_trainings = Trainingseinheit.objects.filter(user=request.user).count()
-    gesamt_saetze = Satz.objects.filter(
-        einheit__user=request.user, ist_aufwaermsatz=False, einheit__ist_deload=False
-    ).count()
 
-    # Performance Form-Index berechnen (0-100 Score)
-    form_index = 0
-    form_factors = []
+def _get_rpe_score(user, heute) -> tuple[int, float | None]:
+    """Compute RPE form score (0-25) and raw avg_rpe for the last 2 weeks."""
+    two_weeks_ago = heute - timedelta(days=14)
+    recent_saetze = Satz.objects.filter(
+        einheit__datum__gte=two_weeks_ago,
+        einheit__user=user,
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
+        rpe__isnull=False,
+    )
+    if not recent_saetze.exists():
+        return 0, None
+    avg_rpe = recent_saetze.aggregate(Avg("rpe"))["rpe__avg"]
+    if not avg_rpe:
+        return 0, None
+    if 7 <= avg_rpe <= 8:
+        return 25, avg_rpe
+    if 6 <= avg_rpe <= 9:
+        return 20, avg_rpe
+    if 5 <= avg_rpe <= 9.5:
+        return 15, avg_rpe
+    return 10, avg_rpe
 
-    if gesamt_trainings >= 4:  # Mindestens 4 Trainings für aussagekräftige Analyse
-        # Faktor 1: Trainingsfrequenz (0-30 Punkte)
-        # Optimal: 3-5x pro Woche
-        freq_score = min(trainings_diese_woche * 7.5, 30)  # 4 Trainings = 30 Punkte
-        form_factors.append(("Trainingsfrequenz", round(freq_score, 1)))
 
-        # Faktor 2: Streak-Konsistenz (0-25 Punkte)
-        # Bis zu 10 Wochen = 25 Punkte
-        streak_score = min(streak * 2.5, 25)
-        form_factors.append(("Konsistenz", round(streak_score, 1)))
-
-        # Faktor 3: RPE-Durchschnitt letzte 2 Wochen (0-25 Punkte)
-        two_weeks_ago = heute - timedelta(days=14)
-        recent_saetze = Satz.objects.filter(
-            einheit__datum__gte=two_weeks_ago,
-            einheit__user=request.user,
+def _get_volume_trend_score(user, heute) -> int:
+    """Compute volume-trend form score (0-20) based on last 4 weeks."""
+    last_4_weeks = []
+    for i in range(4):
+        week_start = heute - timedelta(days=heute.isoweekday() - 1 + (i * 7))
+        week_end = week_start + timedelta(days=7)
+        result = Satz.objects.filter(
+            einheit__datum__gte=week_start,
+            einheit__datum__lt=week_end,
             ist_aufwaermsatz=False,
+            einheit__user=user,
             einheit__ist_deload=False,
-            rpe__isnull=False,
-        )
+        ).aggregate(total=Sum(F("gewicht") * F("wiederholungen"), output_field=DecimalField()))
+        if result["total"]:
+            last_4_weeks.append(float(result["total"]))
+    if len(last_4_weeks) < 2:
+        return 0
+    if last_4_weeks[0] >= last_4_weeks[1]:
+        return 20
+    if last_4_weeks[0] >= last_4_weeks[1] * 0.8:
+        return 15
+    return 10
 
-        if recent_saetze.exists():
-            avg_rpe = recent_saetze.aggregate(Avg("rpe"))["rpe__avg"]
-            # Optimal RPE: 7-8 (nicht zu leicht, nicht zu hart)
-            # 7-8 = 25 Punkte, <5 oder >9 = weniger Punkte
-            if 7 <= avg_rpe <= 8:
-                rpe_score = 25
-            elif 6 <= avg_rpe <= 9:
-                rpe_score = 20
-            elif 5 <= avg_rpe <= 9.5:
-                rpe_score = 15
-            else:
-                rpe_score = 10
-            form_factors.append(("Trainingsintensität (RPE)", rpe_score))
-        else:
-            rpe_score = 0
 
-        # Faktor 4: Volumen-Trend (0-20 Punkte)
-        # Letzte 4 Wochen: steigend = gut, fallend = schlecht
-        last_4_weeks = []
-        for i in range(4):
-            week_start = heute - timedelta(days=heute.weekday() + (i * 7))
-            week_end = week_start + timedelta(days=7)
-            week_volume = Satz.objects.filter(
-                einheit__datum__gte=week_start,
-                einheit__datum__lt=week_end,
-                ist_aufwaermsatz=False,
-                einheit__user=request.user,
-                einheit__ist_deload=False,
-            ).aggregate(total=Sum(F("gewicht") * F("wiederholungen"), output_field=DecimalField()))
-            if week_volume["total"]:
-                last_4_weeks.append(float(week_volume["total"] or 0))
+def _calculate_form_index(
+    user, heute, trainings_diese_woche: int, streak: int, gesamt_trainings: int
+) -> tuple[int, str, str, list]:
+    """Return (form_index, form_rating, form_color, form_factors)."""
+    if gesamt_trainings < 4:
+        return 0, "Nicht verfügbar", "secondary", []
 
-        if len(last_4_weeks) >= 2:
-            # Trend: positive Steigung = gut
-            if last_4_weeks[0] >= last_4_weeks[1]:  # Diese Woche >= letzte Woche
-                volume_score = 20
-            elif last_4_weeks[0] >= last_4_weeks[1] * 0.8:  # Nur leichter Rückgang
-                volume_score = 15
-            else:
-                volume_score = 10
-            form_factors.append(("Volumen-Trend", volume_score))
-        else:
-            volume_score = 0
+    freq_score = min(trainings_diese_woche * 7.5, 30)
+    streak_score = min(streak * 2.5, 25)
+    rpe_score, _ = _get_rpe_score(user, heute)
+    volume_score = _get_volume_trend_score(user, heute)
 
-        form_index = round(freq_score + streak_score + rpe_score + volume_score)
+    form_factors = [
+        ("Trainingsfrequenz", round(freq_score, 1)),
+        ("Konsistenz", round(streak_score, 1)),
+        ("Volumen-Trend", volume_score),
+    ]
+    if rpe_score:
+        form_factors.insert(2, ("Trainingsintensität (RPE)", rpe_score))
 
-        # Bewertung
-        if form_index >= 80:
-            form_rating = "Ausgezeichnet"
-            form_color = "success"
-        elif form_index >= 60:
-            form_rating = "Gut"
-            form_color = "info"
-        elif form_index >= 40:
-            form_rating = "Solide"
-            form_color = "warning"
-        else:
-            form_rating = "Ausbaufähig"
-            form_color = "danger"
-    else:
-        form_rating = "Nicht verfügbar"
-        form_color = "secondary"
+    form_index = round(freq_score + streak_score + rpe_score + volume_score)
 
-    # Wöchentliches Volumen (letzte 4 Wochen für Dashboard)
+    if form_index >= 80:
+        return form_index, "Ausgezeichnet", "success", form_factors
+    if form_index >= 60:
+        return form_index, "Gut", "info", form_factors
+    if form_index >= 40:
+        return form_index, "Solide", "warning", form_factors
+    return form_index, "Ausbaufähig", "danger", form_factors
+
+
+def _calculate_weekly_volumes(user, heute) -> list[dict]:
+    """Return volume data for the last 4 weeks."""
     weekly_volumes = []
     for i in range(4):
-        # ISO-Woche: Montag = 1, Sonntag = 7
-        iso_weekday = heute.isoweekday()
-        # Berechne Wochenstart (Montag) für Woche i
-        week_start = heute - timedelta(days=iso_weekday - 1 + (i * 7))
-        week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = _get_week_start(heute - timedelta(days=i * 7))
         week_end = week_start + timedelta(days=7)
-
         week_saetze = Satz.objects.filter(
-            einheit__user=request.user,
+            einheit__user=user,
             einheit__datum__gte=week_start,
             einheit__datum__lt=week_end,
             ist_aufwaermsatz=False,
             einheit__ist_deload=False,
         )
-
         week_total = sum(
-            [
-                float(s.gewicht) * int(s.wiederholungen)
-                for s in week_saetze
-                if s.gewicht and s.wiederholungen
-            ]
+            float(s.gewicht) * int(s.wiederholungen)
+            for s in week_saetze
+            if s.gewicht and s.wiederholungen
         )
-
-        # Woche benennen
-        if i == 0:
-            week_label = "Diese Woche"
-        elif i == 1:
-            week_label = "Letzte Woche"
-        else:
-            week_label = f"Vor {i} Wochen"
-
+        labels = {0: "Diese Woche", 1: "Letzte Woche"}
+        week_label = labels.get(i, f"Vor {i} Wochen")
         weekly_volumes.append({"label": week_label, "volume": round(week_total, 0), "week_num": i})
+    return weekly_volumes
 
-    # Ermüdungs-Index berechnen (0-100, höher = mehr Ermüdung)
+
+def _get_volume_spike_fatigue(weekly_volumes: list[dict]) -> tuple[int, list[str]]:
+    """Return (points, warnings) for a volume spike in the last 2 weeks."""
+    if len(weekly_volumes) < 2:
+        return 0, []
+    current_vol = weekly_volumes[0]["volume"]
+    last_vol = weekly_volumes[1]["volume"]
+    if last_vol <= 0:
+        return 0, []
+    vol_change = ((current_vol - last_vol) / last_vol) * 100
+    if vol_change > 30:
+        return 40, ["Sehr starker Volumen-Anstieg"]
+    if vol_change > 20:
+        return 30, ["Starker Volumen-Anstieg"]
+    if vol_change > 10:
+        return 15, []
+    return 0, []
+
+
+def _get_rpe_fatigue(user, heute) -> tuple[int, list[str]]:
+    """Return (points, warnings) based on avg RPE over the last 2 weeks."""
+    _, avg_rpe = _get_rpe_score(user, heute)
+    if avg_rpe and avg_rpe > 8.5:
+        return 30, ["Sehr hohe Trainingsintensität"]
+    if avg_rpe and avg_rpe > 8:
+        return 20, ["Hohe Trainingsintensität"]
+    return 0, []
+
+
+def _get_frequency_fatigue(user, heute) -> tuple[int, list[str]]:
+    """Return (points, warnings) based on training frequency in the last 7 days."""
+    count = Trainingseinheit.objects.filter(user=user, datum__gte=heute - timedelta(days=7)).count()
+    if count >= 6:
+        return 30, ["Sehr hohe Trainingsfrequenz"]
+    if count >= 5:
+        return 15, []
+    return 0, []
+
+
+def _get_cardio_fatigue(user, heute) -> tuple[int, list[str], int, int]:
+    """Return (points, warnings, session_count, total_minutes) from cardio last 7 days."""
+    sessions = CardioEinheit.objects.filter(user=user, datum__gte=heute - timedelta(days=7))
+    total = sum(c.ermuedungs_punkte for c in sessions)
+    if total >= 120:
+        return (
+            20,
+            [f"Hohes Cardio-Volumen ({total:.0f} Punkte)"],
+            sessions.count(),
+            sum(c.dauer_minuten for c in sessions),
+        )
+    if total >= 60:
+        return (
+            10,
+            [f"Moderates Cardio-Volumen ({total:.0f} Punkte)"],
+            sessions.count(),
+            sum(c.dauer_minuten for c in sessions),
+        )
+    if total >= 30:
+        return 5, [], sessions.count(), sum(c.dauer_minuten for c in sessions)
+    return 0, [], sessions.count(), sum(c.dauer_minuten for c in sessions)
+
+
+def _get_fatigue_rating(fatigue_index: int) -> tuple[str, str, str]:
+    """Return (rating, color, message) for a given fatigue index."""
+    if fatigue_index >= 60:
+        return "Hoch", "danger", "Deload-Woche empfohlen! Reduziere Volumen um 40-50%."
+    if fatigue_index >= 40:
+        return "Moderat", "warning", "Achte auf ausreichend Regeneration."
+    if fatigue_index >= 20:
+        return "Niedrig", "info", "Gute Balance zwischen Training und Erholung."
+    return "Sehr niedrig", "success", "Du kannst noch mehr trainieren!"
+
+
+def _calculate_fatigue_index(
+    user, heute, weekly_volumes: list[dict], gesamt_trainings: int
+) -> dict:
+    """Compute fatigue index and related display data. Returns a dict."""
     fatigue_index = 0
-    fatigue_warnings = []
+    fatigue_warnings: list[str] = []
 
     if gesamt_trainings >= 4:
-        # Faktor 1: Volumen-Spike (40% Gewicht)
-        if len(weekly_volumes) >= 2:
-            current_vol = weekly_volumes[0]["volume"]
-            last_vol = weekly_volumes[1]["volume"]
-            if last_vol > 0:
-                vol_change = ((current_vol - last_vol) / last_vol) * 100
-                if vol_change > 30:  # Sehr starker Anstieg
-                    fatigue_index += 40
-                    fatigue_warnings.append("Sehr starker Volumen-Anstieg")
-                elif vol_change > 20:
-                    fatigue_index += 30
-                    fatigue_warnings.append("Starker Volumen-Anstieg")
-                elif vol_change > 10:
-                    fatigue_index += 15
+        for pts, warns in [
+            _get_volume_spike_fatigue(weekly_volumes),
+            _get_rpe_fatigue(user, heute),
+            _get_frequency_fatigue(user, heute),
+        ]:
+            fatigue_index += pts
+            fatigue_warnings.extend(warns)
 
-        # Faktor 2: Hoher RPE-Durchschnitt (30% Gewicht)
-        if recent_saetze.exists():
-            avg_rpe = recent_saetze.aggregate(Avg("rpe"))["rpe__avg"]
-            if avg_rpe and avg_rpe > 8.5:
-                fatigue_index += 30
-                fatigue_warnings.append("Sehr hohe Trainingsintensität")
-            elif avg_rpe and avg_rpe > 8:
-                fatigue_index += 20
-                fatigue_warnings.append("Hohe Trainingsintensität")
+    cardio_pts, cardio_warns, cardio_count, cardio_mins = _get_cardio_fatigue(user, heute)
+    fatigue_index += cardio_pts
+    fatigue_warnings.extend(cardio_warns)
 
-        # Faktor 3: Hohe Frequenz ohne Ruhetag (30% Gewicht)
-        last_7_days = Trainingseinheit.objects.filter(
-            user=request.user, datum__gte=heute - timedelta(days=7)
-        ).count()
+    rating, color, message = _get_fatigue_rating(fatigue_index)
+    return {
+        "fatigue_index": fatigue_index,
+        "fatigue_rating": rating,
+        "fatigue_color": color,
+        "fatigue_message": message,
+        "fatigue_warnings": fatigue_warnings,
+        "cardio_diese_woche": cardio_count,
+        "cardio_minuten_diese_woche": cardio_mins,
+    }
 
-        if last_7_days >= 6:
-            fatigue_index += 30
-            fatigue_warnings.append("Sehr hohe Trainingsfrequenz")
-        elif last_7_days >= 5:
-            fatigue_index += 15
 
-    # NEU: Faktor 4: Cardio-Ermüdung (zusätzliche Punkte)
-    cardio_letzte_7_tage = CardioEinheit.objects.filter(
-        user=request.user, datum__gte=heute - timedelta(days=7)
-    )
-    cardio_fatigue_total = sum(c.ermuedungs_punkte for c in cardio_letzte_7_tage)
-
-    # Cardio-Ermüdung: max 20 Punkte (bei 120+ Ermüdungspunkten aus Cardio)
-    if cardio_fatigue_total >= 120:
-        fatigue_index += 20
-        fatigue_warnings.append(f"Hohes Cardio-Volumen ({cardio_fatigue_total:.0f} Punkte)")
-    elif cardio_fatigue_total >= 60:
-        fatigue_index += 10
-        fatigue_warnings.append(f"Moderates Cardio-Volumen ({cardio_fatigue_total:.0f} Punkte)")
-    elif cardio_fatigue_total >= 30:
-        fatigue_index += 5
-
-    # Cardio-Statistik für Dashboard
-    cardio_diese_woche = cardio_letzte_7_tage.count()
-    cardio_minuten_diese_woche = sum(c.dauer_minuten for c in cardio_letzte_7_tage)
-
-    # Ermüdungs-Bewertung
-    if fatigue_index >= 60:
-        fatigue_rating = "Hoch"
-        fatigue_color = "danger"
-        fatigue_message = "Deload-Woche empfohlen! Reduziere Volumen um 40-50%."
-    elif fatigue_index >= 40:
-        fatigue_rating = "Moderat"
-        fatigue_color = "warning"
-        fatigue_message = "Achte auf ausreichend Regeneration."
-    elif fatigue_index >= 20:
-        fatigue_rating = "Niedrig"
-        fatigue_color = "info"
-        fatigue_message = "Gute Balance zwischen Training und Erholung."
-    else:
-        fatigue_rating = "Sehr niedrig"
-        fatigue_color = "success"
-        fatigue_message = "Du kannst noch mehr trainieren!"
-
-    # Motivations-Quote basierend auf Performance
-    motivational_quotes = {
+def _get_motivation_quote(form_index: int, fatigue_index: int) -> str:
+    """Return a motivational quote based on form and fatigue."""
+    quotes = {
         "high_performance": [
             "💪 Du bist auf Feuer! Weiter so!",
             "🔥 Unglaubliche Leistung! Dein Fortschritt ist beeindruckend.",
@@ -323,192 +319,256 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "💤 Qualität über Quantität! Weniger kann mehr sein.",
         ],
     }
-
-    # Quote-Auswahl basierend auf Status
     if fatigue_index >= 60:
-        motivation_quote = random.choice(motivational_quotes["high_fatigue"])
-    elif form_index >= 70:
-        motivation_quote = random.choice(motivational_quotes["high_performance"])
-    elif form_index >= 40:
-        motivation_quote = random.choice(motivational_quotes["good_performance"])
-    else:
-        motivation_quote = random.choice(motivational_quotes["need_motivation"])
+        return random.choice(quotes["high_fatigue"])
+    if form_index >= 70:
+        return random.choice(quotes["high_performance"])
+    if form_index >= 40:
+        return random.choice(quotes["good_performance"])
+    return random.choice(quotes["need_motivation"])
 
-    # Trainings-Kalender Heatmap (365 Tage)
-    training_heatmap = {}
+
+def _get_training_heatmap(user, heute) -> str:
+    """Return JSON string of training counts per day for the last 365 days."""
     start_date = heute - timedelta(days=364)
-
-    # Alle Trainings der letzten 365 Tage gruppiert nach Datum
     trainings_by_date = (
-        Trainingseinheit.objects.filter(user=request.user, datum__gte=start_date)
+        Trainingseinheit.objects.filter(user=user, datum__gte=start_date)
         .values("datum__date")
         .annotate(count=Count("id"))
     )
+    heatmap = {
+        entry["datum__date"].strftime("%Y-%m-%d"): entry["count"] for entry in trainings_by_date
+    }
+    return json.dumps(heatmap)
 
-    # Dictionary mit Datum -> Anzahl Trainings erstellen
-    for entry in trainings_by_date:
-        date_str = entry["datum__date"].strftime("%Y-%m-%d")
-        training_heatmap[date_str] = entry["count"]
 
-    # JSON für Frontend vorbereiten
-    training_heatmap_json = json.dumps(training_heatmap)
-
-    # OpenRouter Flag für AI Plan Generator
-    # Auf dem Server (DEBUG=False) immer OpenRouter verwenden (keine lokale GPU)
-    use_openrouter = not settings.DEBUG or os.getenv("USE_OPENROUTER", "False").lower() == "true"
-
-    # AI Auto-Suggest: Performance-Warnungen analysieren
-    performance_warnings = []
-
-    if gesamt_trainings >= 4:
-        # 1. PLATEAU-Erkennung: Keine Progression bei Top-Übungen (letzte 4 Wochen)
-        four_weeks_ago = heute - timedelta(days=28)
-
-        two_weeks_ago = heute - timedelta(days=14)
-
-        for fav in favoriten[:3]:  # Top 3 Übungen prüfen
-            uebung_id = fav["uebung__id"]
-            uebung_name = fav["uebung__bezeichnung"]
-
-            # Max-Gewicht der letzten 2 Wochen vs. Wochen 2-4
-            recent_max_qs = Satz.objects.filter(
-                einheit__user=request.user,
-                uebung_id=uebung_id,
-                ist_aufwaermsatz=False,
-                einheit__ist_deload=False,
-                einheit__datum__gte=two_weeks_ago,
-            ).aggregate(max_gewicht=Max("gewicht"))
-
-            older_max_qs = Satz.objects.filter(
-                einheit__user=request.user,
-                uebung_id=uebung_id,
-                ist_aufwaermsatz=False,
-                einheit__ist_deload=False,
-                einheit__datum__gte=four_weeks_ago,
-                einheit__datum__lt=two_weeks_ago,
-            ).aggregate(max_gewicht=Max("gewicht"))
-
-            recent_max = float(recent_max_qs["max_gewicht"] or 0)
-            older_max = float(older_max_qs["max_gewicht"] or 0)
-
-            # Plateau nur wenn beide Zeiträume Daten haben und kein Anstieg
-            if older_max > 0 and recent_max > 0 and recent_max <= older_max:
-                performance_warnings.append(
-                    {
-                        "type": "plateau",
-                        "severity": "warning",
-                        "exercise": uebung_name,
-                        "message": "Kein Progress seit 4 Wochen",
-                        "suggestion": "Versuche Intensitätstechniken wie Drop-Sets oder erhöhe das Volumen um 10-15%",
-                        "icon": "bi-graph-down",
-                        "color": "warning",
-                    }
-                )
-
-        # 2. RÜCKSCHRITT-Erkennung: Leistungsabfall bei Übungen
-        two_weeks_ago = heute - timedelta(days=14)
-
-        # Prüfe alle Übungen die in den letzten 2 Wochen trainiert wurden
-        recent_exercises = (
-            Satz.objects.filter(
-                einheit__user=request.user,
-                einheit__datum__gte=two_weeks_ago,
-                ist_aufwaermsatz=False,
-                einheit__ist_deload=False,
-            )
-            .values("uebung__bezeichnung", "uebung_id")
-            .annotate(avg_gewicht=Avg("gewicht"))
-            .filter(avg_gewicht__isnull=False)
+def _check_plateau_warnings(user, heute, favoriten) -> list[dict]:
+    """Check for plateaus (no progress in top exercises over 4 weeks)."""
+    warnings = []
+    four_weeks_ago = heute - timedelta(days=28)
+    two_weeks_ago = heute - timedelta(days=14)
+    for fav in favoriten[:3]:
+        uebung_id = fav["uebung__id"]
+        uebung_name = fav["uebung__bezeichnung"]
+        base_filter = dict(
+            einheit__user=user,
+            uebung_id=uebung_id,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
         )
+        recent_max = float(
+            Satz.objects.filter(**base_filter, einheit__datum__gte=two_weeks_ago).aggregate(
+                max_gewicht=Max("gewicht")
+            )["max_gewicht"]
+            or 0
+        )
+        older_max = float(
+            Satz.objects.filter(
+                **base_filter, einheit__datum__gte=four_weeks_ago, einheit__datum__lt=two_weeks_ago
+            ).aggregate(max_gewicht=Max("gewicht"))["max_gewicht"]
+            or 0
+        )
+        if older_max > 0 and recent_max > 0 and recent_max <= older_max:
+            warnings.append(
+                {
+                    "type": "plateau",
+                    "severity": "warning",
+                    "exercise": uebung_name,
+                    "message": "Kein Progress seit 4 Wochen",
+                    "suggestion": "Versuche Intensitätstechniken wie Drop-Sets oder erhöhe das Volumen um 10-15%",
+                    "icon": "bi-graph-down",
+                    "color": "warning",
+                }
+            )
+    return warnings
 
-        for ex in recent_exercises:
-            ex_id = ex["uebung_id"]
-            ex_name = ex["uebung__bezeichnung"]
-            current_avg = float(ex["avg_gewicht"])
 
-            # Vergleiche mit 2-4 Wochen davor
-            comparison_sets = Satz.objects.filter(
-                einheit__user=request.user,
-                uebung_id=ex_id,
+def _check_regression_warnings(user, heute) -> list[dict]:
+    """Check for performance regressions (>15% weight drop) in recent exercises."""
+    warnings = []
+    two_weeks_ago = heute - timedelta(days=14)
+    recent_exercises = (
+        Satz.objects.filter(
+            einheit__user=user,
+            einheit__datum__gte=two_weeks_ago,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        )
+        .values("uebung__bezeichnung", "uebung_id")
+        .annotate(avg_gewicht=Avg("gewicht"))
+        .filter(avg_gewicht__isnull=False)
+    )
+    for ex in recent_exercises:
+        current_avg = float(ex["avg_gewicht"])
+        previous_avg = float(
+            Satz.objects.filter(
+                einheit__user=user,
+                uebung_id=ex["uebung_id"],
                 ist_aufwaermsatz=False,
                 einheit__ist_deload=False,
                 einheit__datum__gte=heute - timedelta(days=28),
                 einheit__datum__lt=two_weeks_ago,
-            ).aggregate(Avg("gewicht"))
+            ).aggregate(Avg("gewicht"))["gewicht__avg"]
+            or 0
+        )
+        if previous_avg > 0 and current_avg < previous_avg * 0.85:
+            drop_percent = round(((previous_avg - current_avg) / previous_avg) * 100)
+            warnings.append(
+                {
+                    "type": "regression",
+                    "severity": "danger",
+                    "exercise": ex["uebung__bezeichnung"],
+                    "message": f"Leistungsabfall von {drop_percent}%",
+                    "suggestion": "Prüfe Regeneration, Ernährung und Schlaf. Erwäge eine Deload-Woche.",
+                    "icon": "bi-arrow-down-circle",
+                    "color": "danger",
+                }
+            )
+    return warnings
 
-            previous_avg = float(comparison_sets["gewicht__avg"] or 0)
 
-            # Rückschritt wenn >15% Leistungsabfall
-            if previous_avg > 0 and current_avg < previous_avg * 0.85:
-                drop_percent = round(((previous_avg - current_avg) / previous_avg) * 100)
-                performance_warnings.append(
-                    {
-                        "type": "regression",
-                        "severity": "danger",
-                        "exercise": ex_name,
-                        "message": f"Leistungsabfall von {drop_percent}%",
-                        "suggestion": "Prüfe Regeneration, Ernährung und Schlaf. Erwäge eine Deload-Woche.",
-                        "icon": "bi-arrow-down-circle",
-                        "color": "danger",
-                    }
-                )
-
-        # 3. STAGNATION-Erkennung: Lange Pause bei Muskelgruppen
-        # Prüfe welche Muskelgruppen lange nicht trainiert wurden
-        all_muscle_groups = dict(MUSKELGRUPPEN)
-        trained_recently = set(
+def _check_stagnation_warnings(user, heute) -> list[dict]:
+    """Check for muscle groups not trained in the last 14 days."""
+    warnings = []
+    all_muscle_groups = dict(MUSKELGRUPPEN)
+    trained_recently = set(
+        Satz.objects.filter(
+            einheit__user=user,
+            einheit__datum__gte=heute - timedelta(days=14),
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        ).values_list("uebung__muskelgruppe", flat=True)
+    )
+    user_muscle_groups = set(
+        Uebung.objects.filter(Q(is_custom=False) | Q(created_by=user)).values_list(
+            "muskelgruppe", flat=True
+        )
+    )
+    for mg in user_muscle_groups:
+        if mg in trained_recently:
+            continue
+        last_training = (
             Satz.objects.filter(
-                einheit__user=request.user,
-                einheit__datum__gte=heute - timedelta(days=14),
+                einheit__user=user,
+                uebung__muskelgruppe=mg,
                 ist_aufwaermsatz=False,
                 einheit__ist_deload=False,
-            ).values_list("uebung__muskelgruppe", flat=True)
+            )
+            .order_by("-einheit__datum")
+            .first()
         )
+        if not last_training:
+            continue
+        days_ago = (heute.date() - last_training.einheit.datum.date()).days
+        if days_ago >= 14:
+            warnings.append(
+                {
+                    "type": "stagnation",
+                    "severity": "info",
+                    "exercise": all_muscle_groups.get(mg, mg),
+                    "message": f"Seit {days_ago} Tagen nicht trainiert",
+                    "suggestion": "Integriere diese Muskelgruppe wieder in deinen Trainingsplan",
+                    "icon": "bi-pause-circle",
+                    "color": "info",
+                }
+            )
+    return warnings
 
-        # Muskelgruppen die User Equipment hat aber nicht trainiert
-        # set() statt .distinct() weil Meta ordering=['bezeichnung'] das DISTINCT verfälscht
-        user_muscle_groups = set(
-            Uebung.objects.filter(Q(is_custom=False) | Q(created_by=request.user)).values_list(
-                "muskelgruppe", flat=True
+
+def _get_performance_warnings(user, heute, favoriten, gesamt_trainings: int) -> list[dict]:
+    """Aggregate performance warnings (plateau, regression, stagnation), max 3."""
+    if gesamt_trainings < 4:
+        return []
+    all_warnings = (
+        _check_plateau_warnings(user, heute, favoriten)
+        + _check_regression_warnings(user, heute)
+        + _check_stagnation_warnings(user, heute)
+    )
+    priority = {"regression": 0, "plateau": 1, "stagnation": 2}
+    return sorted(all_warnings, key=lambda w: priority[w["type"]])[:3]
+
+
+def _find_next_plan_idx(group_plans: list, user) -> int:
+    """Return the index of the next plan in the rotation."""
+    last_training = (
+        Trainingseinheit.objects.filter(user=user, plan__in=group_plans)
+        .select_related("plan")
+        .order_by("-datum")
+        .first()
+    )
+    if not (last_training and last_training.plan):
+        return 0
+    plan_ids = [p.id for p in group_plans]
+    try:
+        last_idx = plan_ids.index(last_training.plan.id)
+        return (last_idx + 1) % len(group_plans)
+    except ValueError:
+        return 0
+
+
+def _add_plan_group_context(user, context: dict) -> None:
+    """Extend context dict with active plan-group data (mutates context in-place)."""
+    try:
+        profile = user.profile
+        if not profile.active_plan_group:
+            return
+        group_plans = list(
+            Plan.objects.filter(user=user, gruppe_id=profile.active_plan_group).order_by(
+                "gruppe_reihenfolge", "name"
             )
         )
+        if not group_plans:
+            context["active_plan_group_stale"] = True
+            return
+        context["active_plan_group_name"] = group_plans[0].gruppe_name or "Unbenannte Gruppe"
+        context["active_plan_group_id"] = str(profile.active_plan_group)
+        next_idx = _find_next_plan_idx(group_plans, user)
+        context["next_plan"] = group_plans[next_idx]
+        context["next_plan_index"] = next_idx + 1
+        context["group_plan_count"] = len(group_plans)
+        current_week = profile.get_current_cycle_week()
+        if current_week:
+            context["cycle_week"] = current_week
+            context["cycle_length"] = profile.cycle_length
+            context["is_deload"] = profile.is_deload_week()
+            context["deload_volume_pct"] = int((1 - profile.deload_volume_factor) * 100)
+            context["deload_weight_pct"] = int((1 - profile.deload_weight_factor) * 100)
+            context["deload_rpe_target"] = profile.deload_rpe_target
+    except UserProfile.DoesNotExist:
+        pass
 
-        for mg in user_muscle_groups:
-            if mg not in trained_recently:
-                # Prüfe wann zuletzt trainiert
-                last_training = (
-                    Satz.objects.filter(
-                        einheit__user=request.user,
-                        uebung__muskelgruppe=mg,
-                        ist_aufwaermsatz=False,
-                        einheit__ist_deload=False,
-                    )
-                    .order_by("-einheit__datum")
-                    .first()
-                )
 
-                if last_training:
-                    days_ago = (heute.date() - last_training.einheit.datum.date()).days
-                    if days_ago >= 14:  # 2 Wochen keine Aktivität
-                        mg_label = all_muscle_groups.get(mg, mg)
-                        performance_warnings.append(
-                            {
-                                "type": "stagnation",
-                                "severity": "info",
-                                "exercise": mg_label,
-                                "message": f"Seit {days_ago} Tagen nicht trainiert",
-                                "suggestion": "Integriere diese Muskelgruppe wieder in deinen Trainingsplan",
-                                "icon": "bi-pause-circle",
-                                "color": "info",
-                            }
-                        )
+# ---------------------------------------------------------------------------
+# Dashboard view (orchestration only)
+# ---------------------------------------------------------------------------
 
-        # Limitiere auf Top 3 wichtigste Warnungen (Priorität: Rückschritt > Plateau > Stagnation)
-        warnings_sorted = sorted(
-            performance_warnings,
-            key=lambda x: {"regression": 0, "plateau": 1, "stagnation": 2}[x["type"]],
-        )
-        performance_warnings = warnings_sorted[:3]
+
+@login_required
+def dashboard(request: HttpRequest) -> HttpResponse:
+    letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
+    letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
+    heute = timezone.now()
+
+    trainings_diese_woche = _count_trainings_this_week(request.user, heute)
+    streak = _calculate_streak(request.user, heute)
+    favoriten = _get_favoriten(request.user)
+    gesamt_trainings = Trainingseinheit.objects.filter(user=request.user).count()
+    gesamt_saetze = Satz.objects.filter(
+        einheit__user=request.user, ist_aufwaermsatz=False, einheit__ist_deload=False
+    ).count()
+
+    form_index, form_rating, form_color, form_factors = _calculate_form_index(
+        request.user, heute, trainings_diese_woche, streak, gesamt_trainings
+    )
+    weekly_volumes = _calculate_weekly_volumes(request.user, heute)
+    fatigue_data = _calculate_fatigue_index(request.user, heute, weekly_volumes, gesamt_trainings)
+    motivation_quote = _get_motivation_quote(form_index, fatigue_data["fatigue_index"])
+    training_heatmap_json = _get_training_heatmap(request.user, heute)
+
+    use_openrouter = not settings.DEBUG or os.getenv("USE_OPENROUTER", "False").lower() == "true"
+    performance_warnings = _get_performance_warnings(
+        request.user, heute, favoriten, gesamt_trainings
+    )
 
     context = {
         "letztes_training": letztes_training,
@@ -524,74 +584,13 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "form_color": form_color,
         "form_factors": form_factors,
         "weekly_volumes": weekly_volumes,
-        "fatigue_index": fatigue_index,
-        "fatigue_rating": fatigue_rating,
-        "fatigue_color": fatigue_color,
-        "fatigue_message": fatigue_message,
-        "fatigue_warnings": fatigue_warnings,
+        **fatigue_data,
         "motivation_quote": motivation_quote,
         "training_heatmap_json": training_heatmap_json,
-        # Cardio-Statistiken
-        "cardio_diese_woche": cardio_diese_woche,
-        "cardio_minuten_diese_woche": cardio_minuten_diese_woche,
-        # AI Auto-Suggest
         "performance_warnings": performance_warnings,
     }
 
-    # Aktiver Plan-Gruppen-Info für Dashboard-Widget
-    try:
-        profile = request.user.profile
-        if profile.active_plan_group:
-            group_plans = list(
-                Plan.objects.filter(
-                    user=request.user, gruppe_id=profile.active_plan_group
-                ).order_by("gruppe_reihenfolge", "name")
-            )
-            if group_plans:
-                context["active_plan_group_name"] = (
-                    group_plans[0].gruppe_name or "Unbenannte Gruppe"
-                )
-                context["active_plan_group_id"] = str(profile.active_plan_group)
-
-                # Nächsten Plan ermitteln (Rotation: 1->2->3->1)
-                last_training = (
-                    Trainingseinheit.objects.filter(user=request.user, plan__in=group_plans)
-                    .select_related("plan")
-                    .order_by("-datum")
-                    .first()
-                )
-
-                if last_training and last_training.plan:
-                    # Finde Index des zuletzt trainierten Plans
-                    plan_ids = [p.id for p in group_plans]
-                    try:
-                        last_idx = plan_ids.index(last_training.plan.id)
-                        next_idx = (last_idx + 1) % len(group_plans)
-                    except ValueError:
-                        next_idx = 0
-                else:
-                    next_idx = 0
-
-                next_plan = group_plans[next_idx]
-                context["next_plan"] = next_plan
-                context["next_plan_index"] = next_idx + 1
-                context["group_plan_count"] = len(group_plans)
-
-                # Zyklus-Woche berechnen
-                current_week = profile.get_current_cycle_week()
-                if current_week:
-                    context["cycle_week"] = current_week
-                    context["cycle_length"] = profile.cycle_length
-                    context["is_deload"] = profile.is_deload_week()
-                    context["deload_volume_pct"] = int((1 - profile.deload_volume_factor) * 100)
-                    context["deload_weight_pct"] = int((1 - profile.deload_weight_factor) * 100)
-                    context["deload_rpe_target"] = profile.deload_rpe_target
-            else:
-                # Gruppe existiert nicht mehr
-                context["active_plan_group_stale"] = True
-    except UserProfile.DoesNotExist:
-        pass
-
+    _add_plan_group_context(request.user, context)
     return render(request, "core/dashboard.html", context)
 
 
@@ -633,6 +632,55 @@ def delete_training(request: HttpRequest, training_id: int) -> HttpResponse:
     return redirect("training_list")
 
 
+# ---------------------------------------------------------------------------
+# Private helpers for exercise_stats view
+# ---------------------------------------------------------------------------
+
+
+def _compute_1rm_and_weight(satz, uebung) -> tuple[float, float]:
+    """Return (estimated_1rm, effective_weight) for a single set.
+
+    Uses the Epley formula: weight * (1 + reps/30).
+    For time-based exercises the 'reps' value is used directly as a proxy.
+    """
+    effektives_gewicht = float(satz.gewicht)
+    if uebung.gewichts_typ == "PRO_SEITE":
+        effektives_gewicht *= 2
+    # KOERPERGEWICHT: only additional weight counted in V1 (no body weight lookup)
+
+    if uebung.gewichts_typ == "ZEIT":
+        return float(satz.wiederholungen), effektives_gewicht
+    if effektives_gewicht > 0:
+        return effektives_gewicht * (1 + satz.wiederholungen / 30), effektives_gewicht
+    return 0.0, effektives_gewicht
+
+
+def _calc_rpe_trend(saetze, avg_rpe) -> str | None:
+    """Return 'improving', 'declining', or 'stable' based on 4-week vs 4-8-week RPE comparison.
+
+    Returns None if insufficient data.
+    Lower RPE for same weights = improving adaptation.
+    """
+    if not avg_rpe:
+        return None
+    heute = timezone.now()
+    recent_rpe = saetze.filter(einheit__datum__gte=heute - timedelta(days=28)).aggregate(
+        Avg("rpe")
+    )["rpe__avg"]
+    older_rpe = saetze.filter(
+        einheit__datum__gte=heute - timedelta(days=56),
+        einheit__datum__lt=heute - timedelta(days=28),
+    ).aggregate(Avg("rpe"))["rpe__avg"]
+    if not (recent_rpe and older_rpe):
+        return None
+    diff = recent_rpe - older_rpe
+    if diff < -0.3:
+        return "improving"
+    if diff > 0.3:
+        return "declining"
+    return "stable"
+
+
 @login_required
 def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
     """Berechnet 1RM-Verlauf und Rekorde für eine Übung."""
@@ -642,7 +690,6 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
         id=uebung_id,
     )
 
-    # Alle Arbeitssätze holen (keine Warmups), chronologisch sortiert
     saetze = (
         Satz.objects.filter(
             einheit__user=request.user,
@@ -657,262 +704,192 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
     if not saetze.exists():
         return render(request, "core/stats_exercise.html", {"uebung": uebung, "no_data": True})
 
-    # Daten für den Graphen aufbereiten
-    # Wir wollen pro Datum nur den BESTEN 1RM Wert
-    history_data = {}  # Key: DatumString, Value: 1RM
-
-    personal_record = 0
-    best_weight = 0
+    # Best 1RM per day + overall records
+    history_data: dict[str, float] = {}
+    personal_record = 0.0
+    best_weight = 0.0
 
     for satz in saetze:
-        # 1. Gewicht normalisieren (für Vergleichbarkeit)
-        effektives_gewicht = float(satz.gewicht)
-        if uebung.gewichts_typ == "PRO_SEITE":
-            effektives_gewicht *= 2
-        elif uebung.gewichts_typ == "KOERPERGEWICHT":
-            # Hier könnten wir später das Körpergewicht des Nutzers addieren
-            # Für V1 nehmen wir nur das Zusatzgewicht
-            pass
-
-        # 2. 1RM nach Epley berechnen
-        # Formel: Gewicht * (1 + Wdh/30)
-        # Bei Zeit-Übungen macht 1RM keinen Sinn -> da nehmen wir einfach die Sekunden/Wdh als Wert
-        if uebung.gewichts_typ == "ZEIT":
-            one_rep_max = float(satz.wiederholungen)
-        else:
-            if effektives_gewicht > 0:
-                one_rep_max = effektives_gewicht * (1 + (satz.wiederholungen / 30))
-            else:
-                one_rep_max = 0
-
-        # 3. Bestwert des Tages ermitteln
+        one_rm, eff_weight = _compute_1rm_and_weight(satz, uebung)
         datum_str = satz.einheit.datum.strftime("%d.%m.%Y")
-        if datum_str not in history_data or one_rep_max > history_data[datum_str]:
-            history_data[datum_str] = round(one_rep_max, 1)
+        if datum_str not in history_data or one_rm > history_data[datum_str]:
+            history_data[datum_str] = round(one_rm, 1)
+        if one_rm > personal_record:
+            personal_record = round(one_rm, 1)
+        if eff_weight > best_weight:
+            best_weight = eff_weight
 
-        # 4. Rekorde updaten
-        if one_rep_max > personal_record:
-            personal_record = round(one_rep_max, 1)
-        if effektives_gewicht > best_weight:
-            best_weight = effektives_gewicht
-
-    # Chart.js braucht Listen
-    labels = list(history_data.keys())
-    data = list(history_data.values())
-
-    # Durchschnittliches RPE berechnen
     avg_rpe = saetze.aggregate(Avg("rpe"))["rpe__avg"]
-    avg_rpe_display = round(avg_rpe, 1) if avg_rpe else None
-
-    # RPE-Trend berechnen (letzte 4 Wochen vs. davor)
-    rpe_trend = None
-    if avg_rpe:
-        heute = timezone.now()
-        vier_wochen_alt = heute - timedelta(days=28)
-        acht_wochen_alt = heute - timedelta(days=56)
-
-        recent_rpe = saetze.filter(einheit__datum__gte=vier_wochen_alt).aggregate(Avg("rpe"))[
-            "rpe__avg"
-        ]
-
-        older_rpe = saetze.filter(
-            einheit__datum__gte=acht_wochen_alt, einheit__datum__lt=vier_wochen_alt
-        ).aggregate(Avg("rpe"))["rpe__avg"]
-
-        if recent_rpe and older_rpe:
-            diff = recent_rpe - older_rpe
-            if diff < -0.3:
-                rpe_trend = "improving"  # RPE sinkt = besser
-            elif diff > 0.3:
-                rpe_trend = "declining"  # RPE steigt = schlechter
-            else:
-                rpe_trend = "stable"
 
     context = {
         "uebung": uebung,
-        "labels_json": json.dumps(labels),
-        "data_json": json.dumps(data),
+        "labels_json": json.dumps(list(history_data.keys())),
+        "data_json": json.dumps(list(history_data.values())),
         "personal_record": personal_record,
         "best_weight": best_weight,
-        "avg_rpe": avg_rpe_display,
-        "rpe_trend": rpe_trend,
+        "avg_rpe": round(avg_rpe, 1) if avg_rpe else None,
+        "rpe_trend": _calc_rpe_trend(saetze, avg_rpe),
     }
     return render(request, "core/stats_exercise.html", context)
+
+
+# ---------------------------------------------------------------------------
+# Private helpers for training_stats view
+# ---------------------------------------------------------------------------
+
+_MUSCLE_MAPPING: dict[str, list[str]] = {
+    "BRUST": ["front_chest_left", "front_chest_right"],
+    "TRIZEPS": ["back_triceps_left", "back_triceps_right"],
+    "BIZEPS": ["front_biceps_left", "front_biceps_right"],
+    "SCHULTER_VORN": ["front_delt_left", "front_delt_right"],
+    "SCHULTER_SEIT": ["front_delt_left", "front_delt_right"],
+    "SCHULTER_HINT": ["back_delt_left", "back_delt_right"],
+    "RUECKEN_LAT": ["back_lat_left", "back_lat_right"],
+    "RUECKEN_TRAPEZ": ["back_trap_left", "back_trap_right"],
+    "RUECKEN_UNTEN": ["back_lower_back"],
+    "BEINE_QUAD": ["front_quad_left", "front_quad_right"],
+    "BEINE_HAM": ["back_ham_left", "back_ham_right"],
+    "WADEN": ["back_calves_left", "back_calves_right"],
+    "PO": ["back_glutes_left", "back_glutes_right"],
+    "BAUCH": ["front_abs"],
+    "UNTERARME": ["front_forearm_left", "front_forearm_right"],
+    "ADDUKTOREN": ["front_quad_left", "front_quad_right"],
+    "ABDUKTOREN": ["back_glutes_left", "back_glutes_right"],
+}
+
+
+def _calc_per_training_volume(trainings) -> tuple[list, list]:
+    """Return (date_labels, volumes) for every training session."""
+    labels: list[str] = []
+    data: list[float] = []
+    for training in trainings:
+        arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
+        vol = sum(
+            float(s.gewicht) * s.wiederholungen
+            for s in arbeitssaetze
+            if s.gewicht and s.wiederholungen
+        )
+        labels.append(training.datum.strftime("%d.%m"))
+        data.append(round(vol, 1))
+    return labels, data
+
+
+def _calc_weekly_volume(trainings) -> tuple[list, list]:
+    """Return (iso_week_labels, volumes) for the last 12 ISO calendar weeks."""
+    weekly: defaultdict[str, float] = defaultdict(float)
+    for training in trainings:
+        iso_year, iso_week, _ = training.datum.isocalendar()
+        key = f"{iso_year}-W{iso_week:02d}"
+        arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
+        vol = sum(
+            float(s.gewicht) * s.wiederholungen
+            for s in arbeitssaetze
+            if s.gewicht and s.wiederholungen
+        )
+        weekly[key] += vol
+    labels = sorted(weekly.keys())[-12:]
+    return labels, [round(weekly[k], 1) for k in labels]
+
+
+def _calc_muscle_balance(trainings) -> tuple[list, list, list, dict]:
+    """Return (sorted_items, mg_labels, mg_data, stats_by_code) for RPE-weighted muscle balance."""
+    stats: dict[str, dict] = {}
+    stats_code: dict[str, float] = {}
+    for training in trainings:
+        for satz in training.saetze.filter(ist_aufwaermsatz=False):
+            if not satz.wiederholungen or not satz.rpe:
+                continue
+            mg_display = satz.uebung.get_muskelgruppe_display()
+            mg_code = satz.uebung.muskelgruppe
+            eff_wdh = satz.wiederholungen * (float(satz.rpe) / 10.0)
+            if mg_display not in stats:
+                stats[mg_display] = {"saetze": 0, "volumen": 0.0}
+            stats[mg_display]["saetze"] += 1
+            stats[mg_display]["volumen"] += eff_wdh
+            stats_code[mg_code] = stats_code.get(mg_code, 0.0) + eff_wdh
+    sorted_items = sorted(stats.items(), key=lambda x: x[1]["volumen"], reverse=True)
+    mg_labels = [mg[0] for mg in sorted_items]
+    mg_data = [round(mg[1]["volumen"], 1) for mg in sorted_items]
+    return sorted_items, mg_labels, mg_data, stats_code
+
+
+def _build_svg_muscle_data(stats_code: dict) -> dict:
+    """Map muscle group codes → SVG-element intensities (0.0–1.0)."""
+    max_vol = max(stats_code.values()) if stats_code else 1
+    intensity = {code: round(vol / max_vol, 2) for code, vol in stats_code.items()}
+    svg_data: dict[str, float] = {}
+    for code, intens in intensity.items():
+        for svg_id in _MUSCLE_MAPPING.get(code, []):
+            svg_data[svg_id] = min(1.0, svg_data.get(svg_id, 0.0) + intens)
+    return svg_data
+
+
+def _detect_volume_warnings(weekly_labels: list, weekly_data: list) -> list[dict]:
+    """Flag weeks with >20 % volume spike or >30 % volume drop vs. prior week."""
+    warnings: list[dict] = []
+    for i in range(1, len(weekly_data)):
+        prev = weekly_data[i - 1]
+        if prev <= 0:
+            continue
+        change = ((weekly_data[i] - prev) / prev) * 100
+        if change > 20:
+            warnings.append(
+                {
+                    "week": weekly_labels[i],
+                    "increase": round(change, 1),
+                    "volume": round(weekly_data[i], 1),
+                    "type": "spike",
+                }
+            )
+        elif change < -30:
+            warnings.append(
+                {
+                    "week": weekly_labels[i],
+                    "decrease": abs(round(change, 1)),
+                    "volume": round(weekly_data[i], 1),
+                    "type": "drop",
+                }
+            )
+    return warnings
+
+
+def _build_90day_heatmap(trainings, heute) -> list[dict]:
+    """Return per-day training count for the last 90 days (as list of {date, count} dicts)."""
+    start = heute - timedelta(days=89)
+    counts: dict[str, int] = {}
+    for t in trainings.filter(datum__gte=start):
+        key = t.datum.date().isoformat()
+        counts[key] = counts.get(key, 0) + 1
+    result = []
+    d = start
+    while d <= heute:
+        result.append({"date": d.isoformat(), "count": counts.get(d.isoformat(), 0)})
+        d += timedelta(days=1)
+    return result
 
 
 @login_required
 def training_stats(request: HttpRequest) -> HttpResponse:
     """Erweiterte Trainingsstatistiken mit Volumen-Progression und Analyse."""
-    # Alle Trainings mit Volumen
     trainings = Trainingseinheit.objects.filter(user=request.user).order_by("datum")
-
     if not trainings.exists():
         return render(request, "core/training_stats.html", {"no_data": True})
 
-    # Volumen-Daten pro Training
-    volumen_labels = []
-    volumen_data = []
-
-    for training in trainings:
-        arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
-        volumen = sum(
-            float(s.gewicht) * s.wiederholungen
-            for s in arbeitssaetze
-            if s.gewicht and s.wiederholungen
-        )
-        volumen_labels.append(training.datum.strftime("%d.%m"))
-        volumen_data.append(round(volumen, 1))
-
-    # Wöchentliches Volumen (letzte 12 Wochen)
-    weekly_volume = defaultdict(float)
-
-    for training in trainings:
-        # ISO-Kalenderwoche verwenden (konsistent mit PDF Export)
-        iso_year, iso_week, _ = training.datum.isocalendar()
-        week_key = f"{iso_year}-W{iso_week:02d}"
-        arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
-        volumen = sum(
-            float(s.gewicht) * s.wiederholungen
-            for s in arbeitssaetze
-            if s.gewicht and s.wiederholungen
-        )
-        weekly_volume[week_key] += volumen
-
-    # Letzte 12 Wochen
-    weekly_labels = sorted(weekly_volume.keys())[-12:]
-    weekly_data = [round(weekly_volume[k], 1) for k in weekly_labels]
-
-    # Muskelgruppen-Balance (RPE-gewichtet)
-    muskelgruppen_stats = {}
-    muskelgruppen_stats_code = {}  # Für SVG-Mapping
-    for training in trainings:
-        for satz in training.saetze.filter(ist_aufwaermsatz=False):
-            # Überspringe Sätze ohne Wiederholungen/RPE
-            if not satz.wiederholungen or not satz.rpe:
-                continue
-
-            mg_display = satz.uebung.get_muskelgruppe_display()
-            mg_code = satz.uebung.muskelgruppe
-
-            # Effektive Wiederholungen: Wiederholungen × (RPE/10)
-            effektive_wdh = satz.wiederholungen * (float(satz.rpe) / 10.0)
-
-            if mg_display not in muskelgruppen_stats:
-                muskelgruppen_stats[mg_display] = {"saetze": 0, "volumen": 0}
-            muskelgruppen_stats[mg_display]["saetze"] += 1
-            muskelgruppen_stats[mg_display]["volumen"] += effektive_wdh
-
-            # Für SVG-Mapping
-            if mg_code not in muskelgruppen_stats_code:
-                muskelgruppen_stats_code[mg_code] = 0
-            muskelgruppen_stats_code[mg_code] += effektive_wdh
-
-    # Sortieren nach Volumen
-    muskelgruppen_sorted = sorted(
-        muskelgruppen_stats.items(), key=lambda x: x[1]["volumen"], reverse=True
-    )
-
-    mg_labels = [mg[0] for mg in muskelgruppen_sorted]
-    mg_data = [round(mg[1]["volumen"], 1) for mg in muskelgruppen_sorted]
-
-    # SVG-Mapping: MUSKELGRUPPEN Code → Volumen
-    # Normalisiere Volumen für Farb-Intensität (0-1)
-    max_volumen = max(muskelgruppen_stats_code.values()) if muskelgruppen_stats_code else 1
-    muscle_intensity = {}
-    for code, volumen in muskelgruppen_stats_code.items():
-        muscle_intensity[code] = round(volumen / max_volumen, 2)
-
-    # Muscle mapping für SVG (gleich wie in muscle_map view)
-    muscle_mapping = {
-        "BRUST": ["front_chest_left", "front_chest_right"],
-        "TRIZEPS": ["back_triceps_left", "back_triceps_right"],
-        "BIZEPS": ["front_biceps_left", "front_biceps_right"],
-        "SCHULTER_VORN": ["front_delt_left", "front_delt_right"],
-        "SCHULTER_SEIT": ["front_delt_left", "front_delt_right"],  # Approximation
-        "SCHULTER_HINT": ["back_delt_left", "back_delt_right"],
-        "RUECKEN_LAT": ["back_lat_left", "back_lat_right"],
-        "RUECKEN_TRAPEZ": ["back_trap_left", "back_trap_right"],
-        "RUECKEN_UNTEN": ["back_lower_back"],
-        "BEINE_QUAD": ["front_quad_left", "front_quad_right"],
-        "BEINE_HAM": ["back_ham_left", "back_ham_right"],
-        "WADEN": ["back_calves_left", "back_calves_right"],
-        "PO": ["back_glutes_left", "back_glutes_right"],
-        "BAUCH": ["front_abs"],
-        "UNTERARME": ["front_forearm_left", "front_forearm_right"],
-        "ADDUKTOREN": ["front_quad_left", "front_quad_right"],  # Approximation
-        "ABDUKTOREN": ["back_glutes_left", "back_glutes_right"],  # Approximation
-    }
-
-    # Erstelle JSON-Daten für SVG-Färbung
-    svg_muscle_data = {}
-    for code, intensity in muscle_intensity.items():
-        svg_ids = muscle_mapping.get(code, [])
-        for svg_id in svg_ids:
-            # Intensität akkumulieren falls mehrere Codes auf gleiche SVG-IDs mappen
-            if svg_id in svg_muscle_data:
-                svg_muscle_data[svg_id] = min(1.0, svg_muscle_data[svg_id] + intensity)
-            else:
-                svg_muscle_data[svg_id] = intensity
-
-    # Gesamtstatistiken
-    gesamt_volumen = sum(volumen_data)
-    durchschnitt_pro_training = round(gesamt_volumen / len(trainings), 1) if trainings else 0
-
-    # Deload-Erkennung: Volumen-Spikes zwischen Wochen
-    deload_warnings = []
-    if len(weekly_data) >= 2:
-        for i in range(1, len(weekly_data)):
-            current_volume = weekly_data[i]
-            previous_volume = weekly_data[i - 1]
-
-            if previous_volume > 0:  # Vermeide Division durch 0
-                change_percent = ((current_volume - previous_volume) / previous_volume) * 100
-
-                # Warnung bei >20% Anstieg
-                if change_percent > 20:
-                    deload_warnings.append(
-                        {
-                            "week": weekly_labels[i],
-                            "increase": round(change_percent, 1),
-                            "volume": round(current_volume, 1),
-                            "type": "spike",
-                        }
-                    )
-                # Warnung bei >30% Rückgang (mögliches Plateau/Burnout)
-                elif change_percent < -30:
-                    deload_warnings.append(
-                        {
-                            "week": weekly_labels[i],
-                            "decrease": abs(round(change_percent, 1)),
-                            "volume": round(current_volume, 1),
-                            "type": "drop",
-                        }
-                    )
-
-    # Heatmap-Daten (letzte 90 Tage)
+    volumen_labels, volumen_data = _calc_per_training_volume(trainings)
+    weekly_labels, weekly_data = _calc_weekly_volume(trainings)
+    muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(trainings)
+    svg_muscle_data = _build_svg_muscle_data(stats_code)
+    deload_warnings = _detect_volume_warnings(weekly_labels, weekly_data)
     heute = timezone.now().date()
-    start_date = heute - timedelta(days=89)  # 90 Tage
+    heatmap_data = _build_90day_heatmap(trainings, heute)
 
-    # Dictionary für schnelle Lookups
-    training_dates = {}
-    for training in trainings.filter(datum__gte=start_date):
-        date_key = training.datum.date().isoformat()
-        if date_key not in training_dates:
-            training_dates[date_key] = 0
-        training_dates[date_key] += 1
-
-    # Heatmap-Array erstellen
-    heatmap_data = []
-    current_date = start_date
-    while current_date <= heute:
-        date_key = current_date.isoformat()
-        heatmap_data.append({"date": date_key, "count": training_dates.get(date_key, 0)})
-        current_date += timedelta(days=1)
+    gesamt_volumen = sum(volumen_data)
+    durchschnitt = round(gesamt_volumen / len(volumen_data), 1) if volumen_data else 0
 
     context = {
         "trainings_count": trainings.count(),
         "gesamt_volumen": round(gesamt_volumen, 1),
-        "durchschnitt_volumen": durchschnitt_pro_training,
+        "durchschnitt_volumen": durchschnitt,
         "volumen_labels_json": json.dumps(volumen_labels),
         "volumen_data_json": json.dumps(volumen_data),
         "weekly_labels_json": json.dumps(weekly_labels),

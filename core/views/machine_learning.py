@@ -51,7 +51,6 @@ def ml_train_model(request: HttpRequest) -> JsonResponse:
                     {
                         "success": False,
                         "message": "Nicht genug Trainingsdaten (mind. 10 Sätze benötigt)",
-                        "error": metrics.get("error", "Unbekannter Fehler"),
                     },
                     status=400,
                 )
