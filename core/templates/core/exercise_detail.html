@@ -1,445 +1,300 @@
+{% extends 'base.html' %}
 {% load static %}
-<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ uebung.bezeichnung }} - Details</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
-    <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
-    <script src="{% static 'core/js/theme-toggle.js' %}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  </head>
-  <body>
 
-    <nav class="navbar navbar-page border-bottom mb-4">
-      <div class="container-fluid">
-        <a class="btn btn-outline-secondary border-0" href="{% url 'uebungen_auswahl' %}">
-            <i class="bi bi-arrow-left"></i> Zurück
-        </a>
-        <span class="navbar-text page-title fw-bold text-truncate" style="max-width: 200px;">
-            {{ uebung.bezeichnung }}
-        </span>
-        <div class="d-flex align-items-center gap-2">
-            <button
-                class="btn btn-sm btn-outline-warning favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}"
+{% block title %}{{ uebung.bezeichnung }} - Details{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .favorit-btn { padding: 0.25rem 0.5rem; transition: all 0.2s; }
+    .favorit-btn:hover { transform: scale(1.1); }
+    .favorit-btn.active { background-color: rgba(255, 193, 7, 0.1); }
+</style>
+{% endblock %}
+
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom mb-4">
+  <div class="container-fluid">
+    <a class="btn btn-outline-secondary border-0" href="{% url 'uebungen_auswahl' %}">
+        <i class="bi bi-arrow-left"></i> Zurück
+    </a>
+    <span class="navbar-text page-title fw-bold text-truncate" style="max-width: 200px;">{{ uebung.bezeichnung }}</span>
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-warning favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}"
                 onclick="toggleFavorit({{ uebung.id }}, this);"
                 title="{% if user in uebung.favoriten.all %}Aus Favoriten entfernen{% else %}Zu Favoriten hinzufügen{% endif %}">
-                <i class="bi {% if user in uebung.favoriten.all %}bi-star-fill{% else %}bi-star{% endif %} text-warning"></i>
-            </button>
-            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
-              <i class="bi bi-moon-fill" id="themeIcon"></i>
-            </button>
-        </div>
-      </div>
-    </nav>
+            <i class="bi {% if user in uebung.favoriten.all %}bi-star-fill{% else %}bi-star{% endif %} text-warning"></i>
+        </button>
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+          <i class="bi bi-moon-fill" id="themeIcon"></i>
+        </button>
+    </div>
+  </div>
+</nav>
+{% endblock %}
 
-    <div class="container pb-5">
-
-        <!-- Übungs-Info -->
-        <div class="card card-stat border-primary mb-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
-                        <i class="bi bi-info-circle fs-2 text-primary"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h4 class="mb-1">{{ uebung.bezeichnung }}</h4>
-                        <div class="d-flex flex-wrap gap-2 mt-2">
-                            <span class="badge bg-primary">
-                                <i class="bi bi-bullseye me-1"></i>{{ uebung.get_muskelgruppe_display }}
-                            </span>
-                            <span class="badge bg-secondary">
-                                {{ uebung.get_bewegungstyp_display }}
-                            </span>
-                            {% if uebung.tags.all %}
-                                {% for tag in uebung.tags.all %}
-                                <span class="badge" style="background-color: {{ tag.farbe }}; color: white;">
-                                    {{ tag.get_name_display }}
-                                </span>
-                                {% endfor %}
-                            {% endif %}
-                            {% if uebung.equipment.all %}
-                                <span class="badge bg-info">
-                                    <i class="bi bi-tools me-1"></i>{{ uebung.equipment.count }} Equipment
-                                </span>
-                            {% endif %}
-                        </div>
-                    </div>
+{% block content %}
+<div class="container pb-5">
+    <div class="card card-stat border-primary mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                    <i class="bi bi-info-circle fs-2 text-primary"></i>
                 </div>
-
-                {% if uebung.beschreibung %}
-                <div class="alert alert-dark mb-0">
-                    <h6 class="text-primary mb-2">
-                        <i class="bi bi-card-text me-2"></i>Beschreibung
-                    </h6>
-                    <p class="mb-0">{{ uebung.beschreibung }}</p>
-                </div>
-                {% endif %}
-
-                <!-- Video-Anleitung -->
-                {% if uebung.has_video %}
-                <div class="mt-3">
-                    <h6 class="text-secondary mb-2">
-                        <i class="bi bi-play-circle me-2"></i>Video-Anleitung
-                    </h6>
-                    <div class="ratio ratio-16x9 rounded overflow-hidden bg-dark">
-                        {% if uebung.video_file %}
-                            <!-- Hochgeladenes Video -->
-                            <video controls class="w-100 h-100" {% if uebung.video_thumbnail %}poster="{{ uebung.video_thumbnail.url }}"{% endif %}>
-                                <source src="{{ uebung.video_file.url }}" type="video/mp4">
-                                Dein Browser unterstützt das Video-Tag nicht.
-                            </video>
-                        {% elif uebung.video_embed_url %}
-                            <!-- YouTube/Vimeo Embed -->
-                            <iframe
-                                src="{{ uebung.video_embed_url }}"
-                                frameborder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowfullscreen
-                                class="w-100 h-100">
-                            </iframe>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if uebung.equipment.all %}
-                <div class="mt-3">
-                    <h6 class="text-secondary mb-2">
-                        <i class="bi bi-tools me-2"></i>Benötigtes Equipment
-                    </h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        {% for eq in uebung.equipment.all %}
-                        <span class="badge bg-info bg-opacity-25 text-info px-3 py-2">
-                            {{ eq.get_name_display }}
-                        </span>
+                <div class="flex-grow-1">
+                    <h4 class="mb-1">{{ uebung.bezeichnung }}</h4>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <span class="badge bg-primary"><i class="bi bi-bullseye me-1"></i>{{ uebung.get_muskelgruppe_display }}</span>
+                        <span class="badge bg-secondary">{{ uebung.get_bewegungstyp_display }}</span>
+                        {% for tag in uebung.tags.all %}
+                        <span class="badge" style="background-color: {{ tag.farbe }}; color: white;">{{ tag.get_name_display }}</span>
                         {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if uebung.hilfsmuskeln %}
-                <div class="mt-3">
-                    <h6 class="text-secondary mb-2">
-                        <i class="bi bi-plus-circle me-2"></i>Hilfsmuskeln
-                    </h6>
-                    <div class="text-muted">{{ uebung.hilfsmuskeln }}</div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Alternative Übungen Button -->
-        <div class="d-grid gap-2 mb-4">
-            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#alternativesModal" onclick="loadAlternatives()">
-                <i class="bi bi-shuffle me-2"></i>Alternative Übungen anzeigen
-            </button>
-        </div>
-
-        <!-- Statistiken (falls Daten vorhanden) -->
-        {% if has_data %}
-
-        <h5 class="text-secondary mb-3">
-            <i class="bi bi-graph-up me-2"></i>Deine Statistiken
-        </h5>
-
-        <!-- Zusammenfassung -->
-        <div class="row g-2 mb-4">
-            <div class="col-6 col-md-3">
-                <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Est. 1RM Max</small>
-                    <div class="h4 fw-bold text-success mb-0">{{ personal_record }}</div>
-                    <small class="text-muted">kg</small>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Schwerster Satz</small>
-                    <div class="h4 fw-bold text-info mb-0">{{ best_weight }}</div>
-                    <small class="text-muted">kg</small>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Gesamt-Volumen</small>
-                    <div class="h4 fw-bold text-warning mb-0">{{ total_volume|floatformat:0 }}</div>
-                    <small class="text-muted">kg</small>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Sätze gesamt</small>
-                    <div class="h4 fw-bold text-primary mb-0">{{ total_sets }}</div>
-                    <small class="text-muted">Arbeitssätze</small>
-                </div>
-            </div>
-        </div>
-
-        {% if avg_rpe %}
-        <!-- RPE Analyse -->
-        <div class="card card-stat border-secondary mb-4">
-            <div class="card-body">
-                <h6 class="text-secondary mb-3">
-                    <i class="bi bi-speedometer2 me-2"></i>Durchschnittliches RPE
-                </h6>
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="display-6 fw-bold">{{ avg_rpe }}</div>
-                        <small class="text-muted">von 10</small>
-                    </div>
-                    {% if rpe_trend %}
-                    <div class="text-end">
-                        {% if rpe_trend == 'improving' %}
-                            <span class="badge bg-success">
-                                <i class="bi bi-arrow-down"></i> Besser werdend
-                            </span>
-                            <small class="text-muted d-block mt-1">RPE sinkt</small>
-                        {% elif rpe_trend == 'declining' %}
-                            <span class="badge bg-warning">
-                                <i class="bi bi-arrow-up"></i> Schwieriger
-                            </span>
-                            <small class="text-muted d-block mt-1">RPE steigt</small>
-                        {% else %}
-                            <span class="badge bg-info">
-                                <i class="bi bi-dash"></i> Stabil
-                            </span>
-                            <small class="text-muted d-block mt-1">Konstant</small>
+                        {% if uebung.equipment.all %}
+                        <span class="badge bg-info"><i class="bi bi-tools me-1"></i>{{ uebung.equipment.count }} Equipment</span>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+
+            {% if uebung.beschreibung %}
+            <div class="alert alert-dark mb-0">
+                <h6 class="text-primary mb-2"><i class="bi bi-card-text me-2"></i>Beschreibung</h6>
+                <p class="mb-0">{{ uebung.beschreibung }}</p>
+            </div>
+            {% endif %}
+
+            {% if uebung.has_video %}
+            <div class="mt-3">
+                <h6 class="text-secondary mb-2"><i class="bi bi-play-circle me-2"></i>Video-Anleitung</h6>
+                <div class="ratio ratio-16x9 rounded overflow-hidden bg-dark">
+                    {% if uebung.video_file %}
+                    <video controls class="w-100 h-100" {% if uebung.video_thumbnail %}poster="{{ uebung.video_thumbnail.url }}"{% endif %}>
+                        <source src="{{ uebung.video_file.url }}" type="video/mp4">
+                    </video>
+                    {% elif uebung.video_embed_url %}
+                    <iframe src="{{ uebung.video_embed_url }}" frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen class="w-100 h-100"></iframe>
                     {% endif %}
                 </div>
             </div>
-        </div>
-        {% endif %}
+            {% endif %}
 
-        <!-- 1RM Progression Chart -->
-        <div class="card card-stat border-secondary mb-4">
-            <div class="card-body">
-                <h6 class="text-secondary mb-3">
-                    <i class="bi bi-graph-up-arrow me-2"></i>1RM Progression
-                </h6>
-                <canvas id="progressionChart" style="max-height: 300px;"></canvas>
+            {% if uebung.equipment.all %}
+            <div class="mt-3">
+                <h6 class="text-secondary mb-2"><i class="bi bi-tools me-2"></i>Benötigtes Equipment</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for eq in uebung.equipment.all %}
+                    <span class="badge bg-info bg-opacity-25 text-info px-3 py-2">{{ eq.get_name_display }}</span>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
+            {% endif %}
 
-        {% if letztes_training %}
-        <div class="alert alert-info">
-            <i class="bi bi-calendar-event me-2"></i>
-            <strong>Letztes Training:</strong> {{ letztes_training.datum|date:"d.m.Y" }}
-            {% if letztes_training.kommentar %}
-            <br><small class="text-muted">{{ letztes_training.kommentar }}</small>
+            {% if uebung.hilfsmuskeln %}
+            <div class="mt-3">
+                <h6 class="text-secondary mb-2"><i class="bi bi-plus-circle me-2"></i>Hilfsmuskeln</h6>
+                <div class="text-muted">{{ uebung.hilfsmuskeln }}</div>
+            </div>
             {% endif %}
         </div>
-        {% endif %}
-
-        {% else %}
-        <!-- Keine Daten -->
-        <div class="card card-stat border-secondary">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-graph-up display-1 opacity-25 text-muted"></i>
-                <h5 class="mt-3 text-muted">Noch keine Statistiken</h5>
-                <p class="text-muted">Trainiere diese Übung, um deine Fortschritte zu sehen!</p>
-            </div>
-        </div>
-        {% endif %}
-
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="d-grid gap-2 mb-4">
+        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#alternativesModal" onclick="loadAlternatives()">
+            <i class="bi bi-shuffle me-2"></i>Alternative Übungen anzeigen
+        </button>
+    </div>
 
     {% if has_data %}
-    <script>
-        const labels = {{ labels_json|safe }};
-        const data = {{ data_json|safe }};
+    <h5 class="text-secondary mb-3"><i class="bi bi-graph-up me-2"></i>Deine Statistiken</h5>
 
-        const ctx = document.getElementById('progressionChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Estimated 1RM (kg)',
-                    data: data,
-                    borderColor: '#0dcaf0',
-                    backgroundColor: 'rgba(13, 202, 240, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 5,
-                    pointBackgroundColor: '#0dcaf0',
-                    pointHoverRadius: 7
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        titleColor: '#0dcaf0',
-                        bodyColor: '#fff'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#adb5bd' }
-                    },
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: {
-                            color: '#adb5bd',
-                            maxRotation: 45,
-                            minRotation: 45
-                        }
-                    }
-                }
-            }
-        });
-    </script>
-    {% endif %}
-
-    <!-- Modal: Alternative Übungen -->
-    <div class="modal fade" id="alternativesModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content bg-dark border-secondary">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title">
-                        <i class="bi bi-shuffle me-2"></i>Alternative Übungen
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="alternativesLoading" class="text-center py-5">
-                        <div class="spinner-border text-info" role="status">
-                            <span class="visually-hidden">Lade...</span>
-                        </div>
-                        <p class="text-muted mt-3">Suche passende Alternativen...</p>
-                    </div>
-
-                    <div id="alternativesContent" class="d-none">
-                        <div class="alert alert-info mb-3">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Gefunden basierend auf Bewegungstyp, Muskelgruppe und deinem Equipment
-                        </div>
-
-                        <div id="alternativesList"></div>
-
-                        <div id="alternativesEmpty" class="text-center py-5 d-none">
-                            <i class="bi bi-inbox fs-1 text-muted mb-3"></i>
-                            <p class="text-muted">Keine passenden Alternativen gefunden</p>
-                            <small class="text-muted">Versuche dein Equipment zu erweitern oder andere Übungen zu erstellen</small>
-                        </div>
-                    </div>
-
-                    <div id="alternativesError" class="alert alert-danger d-none">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        Fehler beim Laden der Alternativen
-                    </div>
-                </div>
-                <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
-                </div>
+    <div class="row g-2 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card card-stat border-secondary text-center p-3">
+                <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Est. 1RM Max</small>
+                <div class="h4 fw-bold text-success mb-0">{{ personal_record }}</div>
+                <small class="text-muted">kg</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card card-stat border-secondary text-center p-3">
+                <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Schwerster Satz</small>
+                <div class="h4 fw-bold text-info mb-0">{{ best_weight }}</div>
+                <small class="text-muted">kg</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card card-stat border-secondary text-center p-3">
+                <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Gesamt-Volumen</small>
+                <div class="h4 fw-bold text-warning mb-0">{{ total_volume|floatformat:0 }}</div>
+                <small class="text-muted">kg</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card card-stat border-secondary text-center p-3">
+                <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Sätze gesamt</small>
+                <div class="h4 fw-bold text-primary mb-0">{{ total_sets }}</div>
+                <small class="text-muted">Arbeitssätze</small>
             </div>
         </div>
     </div>
 
-    <script>
-        async function loadAlternatives() {
-            const loading = document.getElementById('alternativesLoading');
-            const content = document.getElementById('alternativesContent');
-            const error = document.getElementById('alternativesError');
-            const list = document.getElementById('alternativesList');
-            const empty = document.getElementById('alternativesEmpty');
+    {% if avg_rpe %}
+    <div class="card card-stat border-secondary mb-4">
+        <div class="card-body">
+            <h6 class="text-secondary mb-3"><i class="bi bi-speedometer2 me-2"></i>Durchschnittliches RPE</h6>
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="display-6 fw-bold">{{ avg_rpe }}</div>
+                    <small class="text-muted">von 10</small>
+                </div>
+                {% if rpe_trend %}
+                <div class="text-end">
+                    {% if rpe_trend == 'improving' %}
+                    <span class="badge bg-success"><i class="bi bi-arrow-down"></i> Besser werdend</span>
+                    <small class="text-muted d-block mt-1">RPE sinkt</small>
+                    {% elif rpe_trend == 'declining' %}
+                    <span class="badge bg-warning"><i class="bi bi-arrow-up"></i> Schwieriger</span>
+                    <small class="text-muted d-block mt-1">RPE steigt</small>
+                    {% else %}
+                    <span class="badge bg-info"><i class="bi bi-dash"></i> Stabil</span>
+                    <small class="text-muted d-block mt-1">Konstant</small>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-            // Reset
-            loading.classList.remove('d-none');
-            content.classList.add('d-none');
-            error.classList.add('d-none');
+    <div class="card card-stat border-secondary mb-4">
+        <div class="card-body">
+            <h6 class="text-secondary mb-3"><i class="bi bi-graph-up-arrow me-2"></i>1RM Progression</h6>
+            <canvas id="progressionChart" style="max-height: 300px;"></canvas>
+        </div>
+    </div>
 
-            try {
-                const response = await fetch('{% url "get_alternative_exercises" uebung.id %}');
-                const data = await response.json();
+    {% if letztes_training %}
+    <div class="alert alert-info">
+        <i class="bi bi-calendar-event me-2"></i>
+        <strong>Letztes Training:</strong> {{ letztes_training.datum|date:"d.m.Y" }}
+        {% if letztes_training.kommentar %}
+        <br><small class="text-muted">{{ letztes_training.kommentar }}</small>
+        {% endif %}
+    </div>
+    {% endif %}
 
-                loading.classList.add('d-none');
-                content.classList.remove('d-none');
+    {% else %}
+    <div class="card card-stat border-secondary">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-graph-up display-1 opacity-25 text-muted"></i>
+            <h5 class="mt-3 text-muted">Noch keine Statistiken</h5>
+            <p class="text-muted">Trainiere diese Übung, um deine Fortschritte zu sehen!</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
 
-                if (data.success && data.alternatives && data.alternatives.length > 0) {
-                    empty.classList.add('d-none');
+<!-- Modal: Alternative Übungen -->
+<div class="modal fade" id="alternativesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="bi bi-shuffle me-2"></i>Alternative Übungen</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="alternativesLoading" class="text-center py-5">
+                    <div class="spinner-border text-info" role="status"></div>
+                    <p class="text-muted mt-3">Suche passende Alternativen...</p>
+                </div>
+                <div id="alternativesContent" class="d-none">
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle me-2"></i>Gefunden basierend auf Bewegungstyp, Muskelgruppe und deinem Equipment
+                    </div>
+                    <div id="alternativesList"></div>
+                    <div id="alternativesEmpty" class="text-center py-5 d-none">
+                        <i class="bi bi-inbox fs-1 text-muted mb-3"></i>
+                        <p class="text-muted">Keine passenden Alternativen gefunden</p>
+                    </div>
+                </div>
+                <div id="alternativesError" class="alert alert-danger d-none">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Fehler beim Laden der Alternativen
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-                    // Build list
-                    let html = '<div class="list-group">';
-
-                    data.alternatives.forEach((alt, index) => {
-                        const customBadge = alt.is_custom
-                            ? '<span class="badge bg-info text-dark ms-2"><i class="bi bi-person-fill"></i> Custom</span>'
-                            : '';
-
-                        const matchReasons = alt.match_reasons.join(' • ');
-
-                        html += `
-                            <a href="/uebung/${alt.id}/" class="list-group-item list-group-item-action bg-dark border-secondary">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1">
-                                            ${index + 1}. ${alt.bezeichnung}${customBadge}
-                                        </h6>
-                                        <div class="d-flex flex-wrap gap-2 mb-2">
-                                            <span class="badge bg-primary bg-opacity-25 text-primary">
-                                                <i class="bi bi-bullseye"></i> ${alt.muskelgruppe_label}
-                                            </span>
-                                            <span class="badge bg-secondary bg-opacity-25 text-secondary">
-                                                ${alt.bewegungstyp}
-                                            </span>
-                                        </div>
-                                        <small class="text-muted">
-                                            <i class="bi bi-check-circle text-success me-1"></i>${matchReasons}
-                                        </small>
-                                    </div>
-                                    <div class="ms-3">
-                                        <span class="badge bg-success fs-6">${alt.score}</span>
-                                        <small class="d-block text-center text-muted">Match</small>
-                                    </div>
-                                </div>
-                            </a>
-                        `;
-                    });
-
-                    html += '</div>';
-                    list.innerHTML = html;
-                } else {
-                    empty.classList.remove('d-none');
-                }
-            } catch (err) {
-                console.error('Error loading alternatives:', err);
-                loading.classList.add('d-none');
-                error.classList.remove('d-none');
+{% block extra_scripts %}
+{% if has_data %}
+<script>
+    const labels = {{ labels_json|safe }};
+    const data = {{ data_json|safe }};
+    const ctx = document.getElementById('progressionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{ label: 'Estimated 1RM (kg)', data: data, borderColor: '#0dcaf0',
+                backgroundColor: 'rgba(13, 202, 240, 0.1)', borderWidth: 3, fill: true,
+                tension: 0.3, pointRadius: 5, pointBackgroundColor: '#0dcaf0', pointHoverRadius: 7 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, titleColor: '#0dcaf0', bodyColor: '#fff' } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#adb5bd' } },
+                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#adb5bd', maxRotation: 45, minRotation: 45 } }
             }
         }
-    </script>
-
-    <script src="{% static 'core/js/toast.js' %}"></script>
-    <script src="{% static 'core/js/favoriten.js' %}"></script>
-    <style>
-        .favorit-btn {
-            padding: 0.25rem 0.5rem;
-            transition: all 0.2s;
+    });
+</script>
+{% endif %}
+<script>
+    async function loadAlternatives() {
+        const loading = document.getElementById('alternativesLoading');
+        const content = document.getElementById('alternativesContent');
+        const error = document.getElementById('alternativesError');
+        const list = document.getElementById('alternativesList');
+        const empty = document.getElementById('alternativesEmpty');
+        loading.classList.remove('d-none');
+        content.classList.add('d-none');
+        error.classList.add('d-none');
+        try {
+            const response = await fetch('{% url "get_alternative_exercises" uebung.id %}');
+            const data = await response.json();
+            loading.classList.add('d-none');
+            content.classList.remove('d-none');
+            if (data.success && data.alternatives && data.alternatives.length > 0) {
+                empty.classList.add('d-none');
+                list.innerHTML = '<div class="list-group">' + data.alternatives.map((alt, i) => `
+                    <a href="/uebung/${alt.id}/" class="list-group-item list-group-item-action bg-dark border-secondary">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">${i+1}. ${alt.bezeichnung}${alt.is_custom ? '<span class="badge bg-info text-dark ms-2"><i class="bi bi-person-fill"></i> Custom</span>' : ''}</h6>
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <span class="badge bg-primary bg-opacity-25 text-primary"><i class="bi bi-bullseye"></i> ${alt.muskelgruppe_label}</span>
+                                    <span class="badge bg-secondary bg-opacity-25 text-secondary">${alt.bewegungstyp}</span>
+                                </div>
+                                <small class="text-muted"><i class="bi bi-check-circle text-success me-1"></i>${alt.match_reasons.join(' • ')}</small>
+                            </div>
+                            <div class="ms-3"><span class="badge bg-success fs-6">${alt.score}</span><small class="d-block text-center text-muted">Match</small></div>
+                        </div>
+                    </a>`).join('') + '</div>';
+            } else { empty.classList.remove('d-none'); }
+        } catch (err) {
+            loading.classList.add('d-none');
+            error.classList.remove('d-none');
         }
-        .favorit-btn:hover {
-            transform: scale(1.1);
-        }
-        .favorit-btn.active {
-            background-color: rgba(255, 193, 7, 0.1);
-        }
-    </style>
-
-    <!-- Footer -->
-    {% include 'core/includes/global_footer.html' %}
-  </body>
-</html>
+    }
+</script>
+<script src="{% static 'core/js/toast.js' %}"></script>
+<script src="{% static 'core/js/favoriten.js' %}"></script>
+{% endblock %}

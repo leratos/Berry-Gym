@@ -1,26 +1,21 @@
-{% load static %}
-<!doctype html>
-<html lang="de" data-bs-theme="dark">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Trainingsempfehlungen - HomeGym</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  </head>
-  <body>
+{% extends 'base.html' %}
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-page mb-4 shadow">
-      <div class="container-fluid">
-        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
-            <i class="bi bi-activity"></i> HomeGym
-        </a>
-      </div>
-    </nav>
+{% block title %}Trainingsempfehlungen - HomeGym{% endblock %}
 
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom">
+  <div class="container-fluid">
+    <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <span class="navbar-text page-title fw-bold">Trainingsempfehlungen</span>
+    <div style="width: 40px;"></div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1">
@@ -30,12 +25,8 @@
                 Intelligente Analysen basierend auf deinen letzten {{ analysiert_tage }} Tagen
             </p>
         </div>
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-2"></i>Zurück
-        </a>
     </div>
 
-    <!-- Empfehlungen -->
     <div class="row g-3">
         {% for emp in empfehlungen %}
         <div class="col-12">
@@ -50,53 +41,45 @@
             {% endif %}
                 <div class="card-body">
                     <div class="d-flex align-items-start">
-                        <!-- Icon -->
                         <div class="me-3">
                             {% if emp.typ == 'muskelgruppe' %}
-                                <div class="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                    <i class="bi bi-lightning-charge-fill fs-4"></i>
-                                </div>
+                            <div class="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-lightning-charge-fill fs-4"></i>
+                            </div>
                             {% elif emp.typ == 'balance' %}
-                                <div class="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                    <i class="bi bi-exclude fs-4"></i>
-                                </div>
+                            <div class="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-exclude fs-4"></i>
+                            </div>
                             {% elif emp.typ == 'stagnation' %}
-                                <div class="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                    <i class="bi bi-graph-down fs-4"></i>
-                                </div>
+                            <div class="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-graph-down fs-4"></i>
+                            </div>
                             {% elif emp.typ == 'frequenz' %}
-                                <div class="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                    <i class="bi bi-calendar-x fs-4"></i>
-                                </div>
+                            <div class="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-calendar-x fs-4"></i>
+                            </div>
                             {% elif emp.typ == 'intensitaet' %}
-                                <div class="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                    <i class="bi bi-speedometer2 fs-4"></i>
-                                </div>
+                            <div class="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-speedometer2 fs-4"></i>
+                            </div>
                             {% else %}
-                                <div class="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                    <i class="bi bi-check-circle-fill fs-4"></i>
-                                </div>
+                            <div class="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-check-circle-fill fs-4"></i>
+                            </div>
                             {% endif %}
                         </div>
-
-                        <!-- Content -->
                         <div class="flex-grow-1">
-                            <!-- Priorität Badge -->
                             <div class="d-flex align-items-center mb-2">
                                 <h5 class="card-title mb-0 me-2">{{ emp.titel }}</h5>
                                 {% if emp.prioritaet == 'hoch' %}
-                                    <span class="badge bg-danger">Hohe Priorität</span>
+                                <span class="badge bg-danger">Hohe Priorität</span>
                                 {% elif emp.prioritaet == 'mittel' %}
-                                    <span class="badge bg-warning text-dark">Mittlere Priorität</span>
+                                <span class="badge bg-warning text-dark">Mittlere Priorität</span>
                                 {% elif emp.prioritaet == 'niedrig' %}
-                                    <span class="badge bg-info">Niedrige Priorität</span>
+                                <span class="badge bg-info">Niedrige Priorität</span>
                                 {% endif %}
                             </div>
-
-                            <!-- Beschreibung -->
                             <p class="text-muted mb-2">{{ emp.beschreibung }}</p>
-
-                            <!-- Empfehlung -->
                             {% if emp.prioritaet == 'hoch' %}
                             <div class="alert alert-danger alert-sm mb-0 py-2">
                             {% elif emp.prioritaet == 'mittel' %}
@@ -109,8 +92,6 @@
                                 <i class="bi bi-lightbulb me-2"></i>
                                 <strong>Empfehlung:</strong> {{ emp.empfehlung }}
                             </div>
-
-                            <!-- Übungen -->
                             {% if emp.uebungen %}
                             <div class="mt-3">
                                 <p class="small text-muted mb-2">
@@ -133,7 +114,6 @@
         {% endfor %}
     </div>
 
-    <!-- Info Box -->
     <div class="card mt-4 bg-dark bg-opacity-25 border-0">
         <div class="card-body">
             <h6 class="card-title mb-2">
@@ -149,10 +129,4 @@
         </div>
     </div>
 </div>
-
-    <!-- Footer -->
-    {% include 'core/includes/global_footer.html' %}
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
-</html>
+{% endblock %}

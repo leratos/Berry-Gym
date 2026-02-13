@@ -1,182 +1,141 @@
+{% extends 'base.html' %}
 {% load static %}
-{% load static %}
-<!doctype html>
-<html lang="de" data-bs-theme="dark" id="htmlRoot">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Training abschließen</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{% static 'core/css/theme-styles.css' %}">
-    <script src="{% static 'core/js/theme-toggle.js' %}"></script>
-    <style>
-        .stat-card {
-            background: linear-gradient(135deg, #1a1d20 0%, #2b3035 100%);
-            border: 1px solid #404448;
-            transition: transform 0.2s;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            line-height: 1;
-        }
-        .stat-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #adb5bd;
-        }
-        .congrats-icon {
-            font-size: 5rem;
-            animation: bounce 1s ease-in-out;
-        }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
-        }
-    </style>
-  </head>
-  <body>
 
-    <nav class="navbar navbar-page border-bottom mb-4">
-      <div class="container-fluid">
-        <a class="btn btn-outline-secondary border-0" href="{% url 'training_session' training.id %}">
-            <i class="bi bi-arrow-left"></i> Zurück
-        </a>
-        <span class="navbar-text page-title fw-bold">Training beenden</span>
-        <div style="width: 40px;">            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
-              <i class="bi bi-moon-fill" id="themeIcon"></i>
-            </button>
-</div>
-      </div>
-    </nav>
+{% block title %}Training abschließen{% endblock %}
 
-    <div class="container pb-5">
+{% block extra_head %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #1a1d20 0%, #2b3035 100%);
+        border: 1px solid #404448;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #adb5bd;
+    }
+    .congrats-icon {
+        font-size: 5rem;
+        animation: bounce 1s ease-in-out;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+    }
+</style>
+{% endblock %}
 
-      <!-- Congrats Header -->
-      <div class="text-center mb-4">
-        <div class="congrats-icon">🎉</div>
-        <h2 class="mb-2">Gut gemacht!</h2>
-        <p class="text-muted">Du hast es geschafft – hier ist deine Zusammenfassung</p>
-      </div>
-
-      <!-- Stats Grid -->
-      <div class="row g-3 mb-4">
-
-        <!-- Arbeitssätze -->
-        <div class="col-6">
-          <div class="stat-card rounded-3 p-3 text-center">
-            <div class="stat-label mb-2">Arbeitssätze</div>
-            <div class="stat-number text-primary">{{ arbeitssaetze_count }}</div>
-          </div>
-        </div>
-
-        <!-- Übungen -->
-        <div class="col-6">
-          <div class="stat-card rounded-3 p-3 text-center">
-            <div class="stat-label mb-2">Übungen</div>
-            <div class="stat-number text-info">{{ uebungen_count }}</div>
-          </div>
-        </div>
-
-        <!-- Gesamtvolumen -->
-        <div class="col-12">
-          <div class="stat-card rounded-3 p-4 text-center">
-            <div class="stat-label mb-2">Gesamtvolumen</div>
-            <div class="stat-number text-success">{{ total_volume|floatformat:0 }} <span class="fs-4 text-muted">kg</span></div>
-            <small class="text-muted">Gewicht × Wiederholungen (ohne Warmup)</small>
-          </div>
-        </div>
-
-        {% if warmup_saetze_count > 0 %}
-        <!-- Warmup Info -->
-        <div class="col-12">
-          <div class="stat-card rounded-3 p-3 text-center">
-            <div class="stat-label mb-2">Aufwärmsätze</div>
-            <div class="stat-number text-warning fs-3">{{ warmup_saetze_count }}</div>
-          </div>
-        </div>
-        {% endif %}
-
-      </div>
-
-      <!-- AI Auto-Suggest: Optimierungsvorschlag (jedes 3. Training) -->
-      {% if ai_suggestion %}
-      <div class="alert alert-{{ ai_suggestion.color }} border-{{ ai_suggestion.color }} mb-4" role="alert">
-        <div class="d-flex align-items-start">
-          <i class="bi {{ ai_suggestion.icon }} fs-2 me-3"></i>
-          <div class="flex-grow-1">
-            <h5 class="alert-heading mb-2">
-              <i class="bi bi-lightbulb-fill me-2"></i>AI-Trainings-Tipp #{{ training_count }}
-            </h5>
-            <p class="mb-2"><strong>{{ ai_suggestion.title }}</strong></p>
-            <p class="mb-2">{{ ai_suggestion.message }}</p>
-            <hr>
-            <p class="mb-0">
-              <i class="bi bi-arrow-right-circle me-2"></i>
-              <strong>Empfehlung:</strong> {{ ai_suggestion.action }}
-            </p>
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Formular für Dauer & Kommentar -->
-      <form method="post">
-        {% csrf_token %}
-
-        <div class="card card-stat border-secondary mb-3">
-          <div class="card-body">
-
-            <label class="form-label text-secondary small text-uppercase mb-2">
-              <i class="bi bi-clock-history"></i> Trainingsdauer
-            </label>
-            <div class="input-group mb-3">
-              <input
-                type="number"
-                name="dauer_minuten"
-                class="form-control bg-dark text-white border-secondary"
-                value="{{ dauer_geschaetzt }}"
-                min="1"
-                max="300"
-                required
-              >
-              <span class="input-group-text bg-dark text-secondary border-secondary">Minuten</span>
-            </div>
-
-            <label class="form-label text-secondary small text-uppercase mb-2">
-              <i class="bi bi-chat-left-text"></i> Wie lief's? (optional)
-            </label>
-            <textarea
-              name="kommentar"
-              class="form-control bg-dark text-white border-secondary"
-              rows="3"
-              placeholder="z.B. Gutes Pump-Gefühl, Schulter etwas müde..."
-            >{{ training.kommentar|default:"" }}</textarea>
-
-          </div>
-        </div>
-
-        <div class="d-grid gap-2 mt-4">
-          <button type="submit" class="btn btn-success btn-lg fw-bold">
-            <i class="bi bi-check-circle-fill me-2"></i> Training speichern
-          </button>
-          <a href="{% url 'training_session' training.id %}" class="btn btn-outline-secondary">
-            Nochmal anpassen
-          </a>
-        </div>
-
-      </form>
-
+{% block page_nav %}
+<nav class="navbar navbar-page border-bottom mb-4">
+  <div class="container-fluid">
+    <a class="btn btn-outline-secondary border-0" href="{% url 'training_session' training.id %}">
+        <i class="bi bi-arrow-left"></i> Zurück
+    </a>
+    <span class="navbar-text page-title fw-bold">Training beenden</span>
+    <div style="width: 40px;">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+            <i class="bi bi-moon-fill" id="themeIcon"></i>
+        </button>
     </div>
+  </div>
+</nav>
+{% endblock %}
 
-    <!-- Footer -->
-    {% include 'core/includes/global_footer.html' %}
+{% block content %}
+<div class="container pb-5">
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
-</html>
+  <div class="text-center mb-4">
+    <div class="congrats-icon">🎉</div>
+    <h2 class="mb-2">Gut gemacht!</h2>
+    <p class="text-muted">Du hast es geschafft – hier ist deine Zusammenfassung</p>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6">
+      <div class="stat-card rounded-3 p-3 text-center">
+        <div class="stat-label mb-2">Arbeitssätze</div>
+        <div class="stat-number text-primary">{{ arbeitssaetze_count }}</div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="stat-card rounded-3 p-3 text-center">
+        <div class="stat-label mb-2">Übungen</div>
+        <div class="stat-number text-info">{{ uebungen_count }}</div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="stat-card rounded-3 p-4 text-center">
+        <div class="stat-label mb-2">Gesamtvolumen</div>
+        <div class="stat-number text-success">{{ total_volume|floatformat:0 }} <span class="fs-4 text-muted">kg</span></div>
+        <small class="text-muted">Gewicht × Wiederholungen (ohne Warmup)</small>
+      </div>
+    </div>
+    {% if warmup_saetze_count > 0 %}
+    <div class="col-12">
+      <div class="stat-card rounded-3 p-3 text-center">
+        <div class="stat-label mb-2">Aufwärmsätze</div>
+        <div class="stat-number text-warning fs-3">{{ warmup_saetze_count }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if ai_suggestion %}
+  <div class="alert alert-{{ ai_suggestion.color }} border-{{ ai_suggestion.color }} mb-4" role="alert">
+    <div class="d-flex align-items-start">
+      <i class="bi {{ ai_suggestion.icon }} fs-2 me-3"></i>
+      <div class="flex-grow-1">
+        <h5 class="alert-heading mb-2">
+          <i class="bi bi-lightbulb-fill me-2"></i>AI-Trainings-Tipp #{{ training_count }}
+        </h5>
+        <p class="mb-2"><strong>{{ ai_suggestion.title }}</strong></p>
+        <p class="mb-2">{{ ai_suggestion.message }}</p>
+        <hr>
+        <p class="mb-0">
+          <i class="bi bi-arrow-right-circle me-2"></i>
+          <strong>Empfehlung:</strong> {{ ai_suggestion.action }}
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="card card-stat border-secondary mb-3">
+      <div class="card-body">
+        <label class="form-label text-secondary small text-uppercase mb-2">
+          <i class="bi bi-clock-history"></i> Trainingsdauer
+        </label>
+        <div class="input-group mb-3">
+          <input type="number" name="dauer_minuten" class="form-control bg-dark text-white border-secondary"
+                 value="{{ dauer_geschaetzt }}" min="1" max="300" required>
+          <span class="input-group-text bg-dark text-secondary border-secondary">Minuten</span>
+        </div>
+        <label class="form-label text-secondary small text-uppercase mb-2">
+          <i class="bi bi-chat-left-text"></i> Wie lief's? (optional)
+        </label>
+        <textarea name="kommentar" class="form-control bg-dark text-white border-secondary" rows="3"
+                  placeholder="z.B. Gutes Pump-Gefühl, Schulter etwas müde...">{{ training.kommentar|default:"" }}</textarea>
+      </div>
+    </div>
+    <div class="d-grid gap-2 mt-4">
+      <button type="submit" class="btn btn-success btn-lg fw-bold">
+        <i class="bi bi-check-circle-fill me-2"></i> Training speichern
+      </button>
+      <a href="{% url 'training_session' training.id %}" class="btn btn-outline-secondary">
+        Nochmal anpassen
+      </a>
+    </div>
+  </form>
+
+</div>
+{% endblock %}
