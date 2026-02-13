@@ -405,11 +405,11 @@ core/
 
 ---
 
-#### **Phase 3.2 - Template Base Refactoring** ✅ ABGESCHLOSSEN (24/26)
+#### **Phase 3.2 - Template Base Refactoring** ✅ VOLLSTÄNDIG ABGESCHLOSSEN (26/26)
 **Time Estimate:** 1-2 days  
-**Status:** ✅ Batch 1+2+3 DONE — Commit eba7083 + 37eb077 (Branch: feature/phase-3-2-template-base)
+**Status:** ✅ Alle 26 Templates migriert — Commits eba7083 + 37eb077 + 0938664 + fe50aa5 (Branch: feature/phase-3-2-template-base)
 
-**Migriert (24 Templates):**
+**Migriert (26/26 Templates):**
 - ✅ training_list.html (+ delete_training GET→POST Bugfix)
 - ✅ training_stats.html, stats_exercise.html, body_stats.html
 - ✅ profile.html, feedback_list.html, cardio_list.html, cardio_add.html
@@ -420,14 +420,12 @@ core/
 - ✅ metriken_help.html, exercise_detail.html, uebungen_auswahl.html
 - ✅ edit_plan.html, training_select_plan.html
 - ✅ equipment_management_old.html → GELÖSCHT
+- ✅ create_plan.html (722 → 680 Zeilen) — Phase 3.2b (Commit 0938664)
+- ✅ training_session.html (1655 → 1648 Zeilen) — Phase 3.2c (Commit fe50aa5)
 
 **Ausgenommen (korrekt, kein extends nötig):**
 - Partials/Modals: ai_coach_chat.html, ai_plan_generator.html, exercise_info_modal.html, plan_optimization_modal.html
 - PDF-Templates (standalone): training_pdf.html, training_pdf_simple.html, training_pdf_v2.html
-
-**Noch ausstehend (separater Chat, komplex):**
-- ⏳ create_plan.html (721 Zeilen) → Phase 3.2b
-- ⏳ training_session.html (1654 Zeilen) → Phase 3.2c
 
 **Solution - Create Template Hierarchy:**
 
@@ -475,12 +473,34 @@ core/
 - Reduced template size: 960 lines → 50 lines
 - Faster page updates
 
-**Priority Templates:**
-1. `dashboard.html`
-2. `training_session.html`
-3. `stats_exercise.html`
-4. `body_stats.html`
-5. All others
+**Priority Templates (erledigt):**
+1. ~~`dashboard.html`~~ ✅
+2. ~~`training_session.html`~~ ✅
+3. ~~`stats_exercise.html`~~ ✅
+4. ~~`body_stats.html`~~ ✅
+5. ~~Alle anderen~~ ✅
+
+---
+
+#### **Phase 3.2c - training_session.html Migration** ✅ COMPLETE
+**Abgeschlossen:** 2026-02-13
+**Commit:** fe50aa5 (Branch: feature/phase-3-2-template-base)
+
+**Was gemacht wurde:**
+- `training_session.html` (1655 Zeilen, WebSocket/Timer, offline-ready) auf `{% extends 'base.html' %}` umgestellt
+- `{% load custom_filters %}` beibehalten (eigene Template-Tags)
+- `{% block extra_head %}`: toast.css + komplettes inline CSS (~175 Zeilen)
+- `{% block header %}`: global_header include + Training-Navbar (custom)
+- `{% block content %}`: Haupt-Content mit Exercise-Cards, Modals, PR-Toast, Rest-Timer
+- `{% block extra_scripts %}`: Bootstrap CDN entfernt (base.html), loading-manager.js, keyboard-shortcuts.js, exercise-autocomplete.js + kompletter inline JS-Block (~1000 Zeilen)
+- Entfernt: Bootstrap CSS/JS CDN, theme-styles.css, offline-manager.css, theme-toggle.js im Head (alle in base.html), global_footer include
+
+**Besonderheit:**
+- `<body data-context="training">` entfernt – per JS `document.body.dataset.context = 'training'` gesetzt (war Redundanz)
+- theme-toggle.js stand doppelt drin (Head + base.html Footer) – Head-Variante entfernt
+
+**Ergebnis:** 1655 → 1648 Zeilen (−7 Zeilen; JS-Dominanz begrenzt Reduktion)
+**Tests:** 406/406 grün ✅
 
 ---
 
@@ -1138,11 +1158,13 @@ Week 3 [🔄] Refactoring & Quality
   ├─ Phase 3.1: Model Refactoring ✅ (247 tests grün, 11 Module)
   ├─ Phase 3.1b: Training Stats Tests ✅ (383→392 tests, Bug in delete_training gefixt)
   ├─ Phase 3.1c: test_context_helpers.py gefixt ✅ (392/396 grün, 0 Fehler)
-  ├─ Phase 3.2: base.html Template Migration 🔄 (3/~30 Templates migriert)
-  │    ✅ training_list.html  ✅ training_stats.html  ✅ stats_exercise.html
+  ├─ Phase 3.2:  base.html Template Migration ✅ (26/26 Templates, 406 Tests grün)
+  │    ✅ Batch 1+2+3: 24 Templates (Commits eba7083, 37eb077)
   │    + Delete-Modal: GET→POST Fix (verhindert Datenverlust durch Prefetching)
-  ├─ Phase 3.3: Type Hints ✅ (392 tests, mypy.ini)
-  ├─ Phase 3.4.1: Complexity Grade D/E/F (CC > 20) ⏳
+  ├─ Phase 3.2b: create_plan.html ✅ (722→680 Zeilen, Commit 0938664)
+  ├─ Phase 3.2c: training_session.html ✅ (1655→1648 Zeilen, Commit fe50aa5)
+  ├─ Phase 3.3:  Type Hints ✅ (392 tests, mypy.ini)
+  ├─ Phase 3.4.1: Complexity Grade D/E/F (CC > 20) ✅ (406 Tests, 47% Coverage)
   ├─ Phase 3.4.2: Complexity Grade C (CC 11-20) ⏳
   └─ Phase 3.5: Test Quality ⏳
   Target: 50% coverage
@@ -1186,6 +1208,6 @@ Week 8 [🎯] PUBLIC LAUNCH
 
 ---
 
-**Last Updated:** February 13, 2026 (Phase 3.4.1 COMPLETE – alle CC > 20 Funktionen refactored, 406 Tests, 47% Coverage)
-**Version:** 3.1 (Phase 3.4.1 complete)
+**Last Updated:** February 13, 2026 (Phase 3.2c COMPLETE – training_session.html auf base.html migriert, 406 Tests, 47% Coverage)
+**Version:** 3.2 (Phase 3.2 vollständig + Phase 3.4.1 complete)
 **Next Review:** Phase 3.4.2 – CC 11-20 Funktionen (Grade C) refactoren
