@@ -11,12 +11,11 @@ Handles training session workflows including:
 import json
 import logging
 import re
+from typing import Optional
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Max, Q
-from typing import Optional
-
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
