@@ -31,14 +31,14 @@ WorkingDirectory=/path/to/your/project
 Environment="PATH=/path/to/your/project/venv/bin"
 Environment="DJANGO_SETTINGS_MODULE=config.settings"
 
-# WICHTIG: Diese Secrets aus .env laden lassen!
-# Die .env Datei sollte folgende Variablen enthalten:
-#   - DJANGO_SECRET_KEY
-#   - DATABASE_NAME
-#   - DATABASE_USER
-#   - DATABASE_PASSWORD
-#   - DATABASE_HOST
-# Alternativ hier als Environment= setzen (NICHT ins Git committen!)
+# WICHTIG: Secrets NICHT hier eintragen – ausschliesslich via .env!
+# Die .env-Datei muss im WorkingDirectory liegen (siehe .env.example).
+# Benötigte Variablen:
+#   DB_ENGINE, DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+#   DJANGO_SECRET_KEY, ALLOWED_HOSTS
+#
+# WARNUNG: Environment="DATABASE_NAME=..." funktioniert NICHT –
+# settings.py liest DB_NAME, nicht DATABASE_NAME.
 
 # Gunicorn mit 4 Workern
 ExecStartPre=/bin/mkdir -p /path/to/your/project/logs
