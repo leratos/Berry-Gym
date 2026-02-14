@@ -224,6 +224,7 @@ class TestPushNotifications:
     # --- unsubscribe_push ---
 
     def test_unsubscribe_login_required(self):
+        """Unauthentifizierter Unsubscribe-Versuch → Redirect."""
         c = Client()
         url = reverse("unsubscribe_push")
         resp = c.post(url, data=json.dumps({}), content_type="application/json")
@@ -258,6 +259,7 @@ class TestPushNotifications:
     # --- get_vapid_public_key ---
 
     def test_vapid_key_login_required(self):
+        """Unauthentifizierter Zugriff auf VAPID-Key → Redirect."""
         c = Client()
         url = reverse("get_vapid_public_key")
         resp = c.get(url)
