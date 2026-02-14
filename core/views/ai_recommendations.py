@@ -237,6 +237,9 @@ def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
                 }
             )
 
+    # Batch-Query: alle benötigten Uebungen auf einmal laden (verhindert N+1)
+    uebungen_map = {u.id: u for u in Uebung.objects.filter(id__in=list(uebung_trainings.keys()))}
+
     empfehlungen = []
     for uebung_id, saetze_list in uebung_trainings.items():
         trainings_max: dict = defaultdict(float)
@@ -248,7 +251,9 @@ def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
             continue
 
         if _is_stagnating(max_gewichte):
-            uebung = Uebung.objects.get(id=uebung_id)
+            uebung = uebungen_map.get(uebung_id)
+            if uebung is None:
+                continue
             empfehlungen.append(
                 {
                     "typ": "stagnation",
