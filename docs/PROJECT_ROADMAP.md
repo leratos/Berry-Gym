@@ -75,45 +75,19 @@ Bugs gefunden: `toggle_favorit` hatte kein `@login_required` (Security-Fix)
 | 3.2    | base.html erstellt, 26/26 Templates migriert (Commits eba7083–fe50aa5)       |
 | 3.3    | View-Signaturen annotiert (HttpRequest→HttpResponse), mypy.ini erstellt      |
 | 3.4.1  | CC-Reduktion Grade D/E/F (CC>20): dashboard 74→<10, export_pdf 57→<10 u.a.  |
+| 3.4.2  | CC-Reduktion Grade C (CC 11–20): 26 Funktionen in 10 Dateien, alle CC < 11  |
 
 Bugs gefunden: `delete_training` hatte keinen POST-Guard (GET löschte Daten)
 
 ### ⏳ Offene Phasen
 
-#### Phase 3.4.2 – Complexity Grade C (CC 11–20) ← NÄCHSTE PHASE
+#### Phase 3.5 – Test Quality ← NÄCHSTE PHASE
 
-| CC | Funktion                   | Datei                  |
-|----|----------------------------|------------------------|
-| 20 | `exercise_detail`          | exercise_library.py    |
-| 19 | `profile`                  | auth.py                |
-| 18 | `generate_plan_api`        | ai_recommendations.py  |
-| 18 | `update_set`               | training_session.py    |
-| 18 | `sync_offline_data`        | offline.py             |
-| 17 | `exercise_stats`           | training_stats.py      |
-| 17 | `_apply_mesocycle_from_plan` | ai_recommendations.py |
-| 17 | `apply_optimizations_api`  | ai_recommendations.py  |
-| 15 | `training_start`           | training_session.py    |
-| 15 | `register`                 | auth.py                |
-| 15 | `create_plan_from_template`| plan_templates.py      |
-| 14 | `api_reorder_group`        | api_plan_sharing.py    |
-| 14 | `body_stats`               | body_tracking.py       |
-| 14 | `get_alternative_exercises`| exercise_library.py    |
-| 14 | `exercise_api_detail`      | exercise_library.py    |
-| 14 | `export_plan_pdf`          | export.py              |
-| 14 | `export_plan_group_pdf`    | export.py              |
-| 13 | `set_active_plan_group`    | plan_management.py     |
-| 12 | `uebungen_auswahl`         | exercise_library.py    |
-| 12 | `training_select_plan`     | training_session.py    |
-| 12 | `add_set`                  | training_session.py    |
+**Ist-Stand (2026-02-14):** 411 Tests, alle in Klassen, 53 ohne Docstring
 
-Ziel: Alle auf CC < 10. Alle Tests bleiben grün.
-
-#### Phase 3.5 – Test Quality
-
-- Docstrings für alle Test-Funktionen
-- Verwandte Tests in Klassen gruppieren
+- Docstrings für alle Test-Funktionen (53 fehlen in 6 Dateien)
 - `@pytest.mark.parametrize` für ähnliche Tests
-- Edge Cases ergänzen
+- Edge Cases aus Coverage-Gaps ergänzen
 
 ---
 
@@ -237,5 +211,5 @@ Aktuell: "Eingeschränkte wissenschaftliche Basis" – zu vage für Public Launc
 
 ---
 
-**Last Updated:** 2026-02-13
-**Nächste Phase:** 3.4.2 – Complexity Grade C (CC 11–20)
+**Last Updated:** 2026-02-14
+**Nächste Phase:** 3.5 – Test Quality
