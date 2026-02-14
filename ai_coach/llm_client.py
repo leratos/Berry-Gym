@@ -114,7 +114,7 @@ class LLMClient:
                 self.openrouter_client = OpenAI(
                     api_key=api_key,
                     base_url="https://openrouter.ai/api/v1",
-                    timeout=90.0,  # 90s max, damit Gunicorn nicht vorher killt
+                    timeout=150.0,  # Client-Level Timeout: höher als Gunicorn (180s) minus Puffer
                 )
                 print("✓ OpenRouter Client bereit (Key aus sicherer Quelle)")
             except ImportError:
@@ -216,7 +216,7 @@ class LLMClient:
             raise
 
     def _generate_with_openrouter(
-        self, messages: List[Dict[str, str]], max_tokens: int, timeout: int = 90
+        self, messages: List[Dict[str, str]], max_tokens: int, timeout: int = 120
     ) -> Dict[str, Any]:
         """Generiert Plan mit OpenRouter (70B Remote)"""
 
@@ -233,6 +233,7 @@ class LLMClient:
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=max_tokens,
+                timeout=timeout,
                 extra_headers={
                     "HTTP-Referer": "https://gym.last-strawberry.com",
                     "X-Title": "HomeGym AI Coach",
