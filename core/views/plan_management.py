@@ -403,8 +403,10 @@ def plan_library(request: HttpRequest) -> HttpResponse:
     search_query = request.GET.get("q", "").strip()
 
     # Alle öffentlichen Pläne
-    public_plans = Plan.objects.filter(is_public=True).order_by(
-        "gruppe_name", "gruppe_reihenfolge", "name"
+    public_plans = (
+        Plan.objects.filter(is_public=True)
+        .select_related("user")
+        .order_by("gruppe_name", "gruppe_reihenfolge", "name")
     )
 
     if search_query:

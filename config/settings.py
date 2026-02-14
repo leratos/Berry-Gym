@@ -30,7 +30,9 @@ TESTING = "test" in sys.argv or "pytest" in sys.argv[0]
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(
+# Primär: SECRET_KEY in .env (Standard-Setup)
+# Fallback: DJANGO_SECRET_KEY (für Plesk-Deployments die Env-Vars nutzen)
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or os.getenv(
     "SECRET_KEY", "django-insecure-dk%lwdezcs^e(5axd0yz%fslofr&cuu7#xuign*p0ftromsf0a"
 )
 
