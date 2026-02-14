@@ -12,11 +12,11 @@ import json
 import logging
 import re
 from collections import OrderedDict
-from typing import Optional
+from typing import Any, Optional
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Max, Q
+from django.db.models import Avg, DecimalField, F, Max, Q, Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -113,17 +113,22 @@ def plan_details(request: HttpRequest, plan_id: int) -> HttpResponse:
 
     # Prüfe ob User der Owner ist
     is_owner = plan.user == request.user
-    plan_uebungen = plan.uebungen.all().order_by("reihenfolge")
+    plan_uebungen = plan.uebungen.select_related("uebung").order_by("reihenfolge")
+
+    # Batch-Query: letzte Sätze für alle Übungen im Plan auf einmal laden (verhindert N+1)
+    uebung_ids = [pu.uebung_id for pu in plan_uebungen]
+    letzte_saetze_qs = Satz.objects.filter(
+        uebung_id__in=uebung_ids, ist_aufwaermsatz=False
+    ).order_by("-einheit__datum", "-satz_nr")
+    letzte_saetze_map: dict[int, Satz] = {}
+    for satz in letzte_saetze_qs:
+        if satz.uebung_id not in letzte_saetze_map:
+            letzte_saetze_map[satz.uebung_id] = satz
 
     # Für jede Übung das letzte verwendete Gewicht holen (für Vorschau)
     uebungen_mit_historie = []
     for plan_uebung in plan_uebungen:
-        letzter_satz = (
-            Satz.objects.filter(uebung=plan_uebung.uebung, ist_aufwaermsatz=False)
-            .order_by("-einheit__datum")
-            .first()
-        )
-
+        letzter_satz = letzte_saetze_map.get(plan_uebung.uebung_id)
         uebungen_mit_historie.append(
             {
                 "plan_uebung": plan_uebung,
@@ -171,13 +176,23 @@ def _create_ghost_saetze(
     training, plan, is_deload: bool, deload_vol_factor: float, deload_weight_factor: float
 ) -> None:
     """Erstellt Platzhalter-Sätze aus dem Plan mit Ghosting und optionalen Deload-Anpassungen."""
-    for plan_uebung in plan.uebungen.all().order_by("reihenfolge"):
+    plan_uebungen = list(plan.uebungen.select_related("uebung").order_by("reihenfolge"))
+    uebung_ids_ghost = [pu.uebung_id for pu in plan_uebungen]
+
+    # Batch-Query: letzte Arbeitssätze aller Übungen auf einmal laden (verhindert N+1)
+    letzte_saetze_qs = Satz.objects.filter(
+        einheit__user=training.user,
+        uebung_id__in=uebung_ids_ghost,
+        ist_aufwaermsatz=False,
+    ).order_by("-einheit__datum", "-satz_nr")
+    letzte_saetze_ghost: dict[int, Any] = {}
+    for satz in letzte_saetze_qs:
+        if satz.uebung_id not in letzte_saetze_ghost:
+            letzte_saetze_ghost[satz.uebung_id] = satz
+
+    for plan_uebung in plan_uebungen:
         uebung = plan_uebung.uebung
-        letzter_satz = (
-            Satz.objects.filter(einheit__user=training.user, uebung=uebung, ist_aufwaermsatz=False)
-            .order_by("-einheit__datum", "-satz_nr")
-            .first()
-        )
+        letzter_satz = letzte_saetze_ghost.get(uebung.id)
         start_gewicht = letzter_satz.gewicht if letzter_satz else 0
         start_wdh = 0
 
@@ -235,10 +250,10 @@ def _get_sorted_saetze(training):
     if training.plan:
         plan_reihenfolge = {pu.uebung_id: pu.reihenfolge for pu in training.plan.uebungen.all()}
         return sorted(
-            training.saetze.all(),
+            training.saetze.select_related("uebung").all(),
             key=lambda s: (plan_reihenfolge.get(s.uebung_id, 999), s.satz_nr),
         )
-    return training.saetze.all().order_by("uebung__bezeichnung", "satz_nr")
+    return training.saetze.select_related("uebung").all().order_by("uebung__bezeichnung", "satz_nr")
 
 
 def _get_plan_ziele(training):
@@ -300,6 +315,9 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
     """
     Berechnet Gewichts- und Wiederholungsempfehlung für eine einzelne Übung.
     Gibt None zurück wenn kein Vorsatz vorhanden.
+
+    Hinweis: Für Performance-kritische Pfade (training_session view) bitte
+    _get_gewichts_empfehlungen verwenden, welches alle Übungen per Batch lädt.
     """
     letzter_satz = (
         Satz.objects.filter(
@@ -342,23 +360,83 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
     }
 
 
+def _build_empfehlung_from_satz(letzter_satz: Any, plan_pu: Any) -> dict:
+    """Baut Empfehlungs-Dict aus vorgeladenem letzten Satz (kein DB-Zugriff)."""
+    ziel_wdh_str = "8-12"
+    plan_pausenzeit = None
+    if plan_pu:
+        if plan_pu.wiederholungen_ziel:
+            ziel_wdh_str = plan_pu.wiederholungen_ziel
+        if hasattr(plan_pu, "pausenzeit") and plan_pu.pausenzeit:
+            plan_pausenzeit = plan_pu.pausenzeit
+
+    ziel_wdh_min, ziel_wdh_max = _parse_ziel_wdh(ziel_wdh_str)
+    empfohlenes_gewicht, empfohlene_wdh, hint = _determine_empfehlung_hint(
+        letzter_satz, ziel_wdh_min, ziel_wdh_max
+    )
+    return {
+        "gewicht": empfohlenes_gewicht,
+        "wdh": empfohlene_wdh,
+        "letztes_gewicht": float(letzter_satz.gewicht),
+        "letzte_wdh": letzter_satz.wiederholungen,
+        "hint": hint,
+        "pause": _calculate_empfohlene_pause(hint, plan_pausenzeit),
+        "pause_from_plan": bool(plan_pausenzeit),
+    }
+
+
 def _get_gewichts_empfehlungen(user, training) -> dict:
-    """Berechnet Gewichtsempfehlungen für alle Übungen im aktuellen Training."""
+    """Berechnet Gewichtsempfehlungen für alle Übungen im aktuellen Training.
+
+    Verwendet Batch-Queries statt N+1: 2 DB-Zugriffe unabhängig von der Übungsanzahl.
+    """
     uebungen_ids = set(training.saetze.values_list("uebung_id", flat=True).distinct())
     if training.plan:
         uebungen_ids.update(training.plan.uebungen.values_list("uebung_id", flat=True))
 
+    if not uebungen_ids:
+        return {}
+
+    # Batch-Query 1: letzte nicht-Deload Arbeitssätze für alle Übungen auf einmal
+    letzte_saetze_qs = (
+        Satz.objects.filter(
+            einheit__user=user,
+            uebung_id__in=uebungen_ids,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        )
+        .exclude(einheit=training)
+        .order_by("-einheit__datum", "-satz_nr")
+    )
+    letzte_saetze_map: dict[int, Any] = {}
+    for satz in letzte_saetze_qs:
+        if satz.uebung_id not in letzte_saetze_map:
+            letzte_saetze_map[satz.uebung_id] = satz
+
+    # Batch-Query 2: PlanUebungen auf einmal laden (pausenzeit & wdh_ziel)
+    plan_uebungen_map: dict[int, Any] = {}
+    if training.plan:
+        for pu in training.plan.uebungen.all():
+            plan_uebungen_map[pu.uebung_id] = pu
+
     empfehlungen = {}
     for uebung_id in uebungen_ids:
-        result = _calculate_single_empfehlung(user, uebung_id, training)
-        if result:
-            empfehlungen[uebung_id] = result
+        letzter_satz = letzte_saetze_map.get(uebung_id)
+        if not letzter_satz:
+            continue
+        empfehlungen[uebung_id] = _build_empfehlung_from_satz(
+            letzter_satz, plan_uebungen_map.get(uebung_id)
+        )
     return empfehlungen
 
 
 @login_required
 def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
-    training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
+    training = get_object_or_404(
+        Trainingseinheit.objects.select_related("plan"),
+        id=training_id,
+        user=request.user,
+    )
 
     uebungen = Uebung.objects.filter(Q(is_custom=False) | Q(created_by=request.user)).order_by(
         "muskelgruppe", "bezeichnung"
@@ -668,11 +746,11 @@ def _build_volume_suggestion(user, recent_training_ids: list, recent_sets) -> di
     )
 
     def _calc_volume(training_ids):
-        return sum(
-            float(s.gewicht or 0) * int(s.wiederholungen or 0)
-            for t in Trainingseinheit.objects.filter(id__in=training_ids)
-            for s in t.saetze.filter(ist_aufwaermsatz=False)
+        # Einzelne aggregierte DB-Query statt N+1 (eine Query pro Training)
+        result = Satz.objects.filter(einheit_id__in=training_ids, ist_aufwaermsatz=False).aggregate(
+            total=Sum(F("gewicht") * F("wiederholungen"), output_field=DecimalField())
         )
+        return float(result["total"] or 0)
 
     recent_vol = _calc_volume(recent_training_ids)
     prev_vol = _calc_volume(previous_ids)
@@ -768,7 +846,11 @@ def _get_ai_training_suggestion(user) -> tuple:
 @login_required
 def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
     """Zeigt Zusammenfassung und ermöglicht Speichern von Dauer/Kommentar."""
-    training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
+    training = get_object_or_404(
+        Trainingseinheit.objects.select_related("plan"),
+        id=training_id,
+        user=request.user,
+    )
 
     if request.method == "POST":
         if _save_training_post(request, training):

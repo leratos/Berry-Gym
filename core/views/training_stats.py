@@ -21,7 +21,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, DecimalField, F, Max, Q, Sum
+from django.db.models import Avg, Count, DecimalField, F, Max, Prefetch, Q, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -602,19 +602,26 @@ def training_list(request: HttpRequest) -> HttpResponse:
     trainings = (
         Trainingseinheit.objects.filter(user=request.user)
         .annotate(satz_count=Count("saetze"))
+        .prefetch_related(
+            Prefetch(
+                "saetze",
+                queryset=Satz.objects.filter(ist_aufwaermsatz=False),
+                to_attr="arbeitssaetze_list",
+            )
+        )
         .order_by("-datum")
     )
 
     # Volumen für jedes Training berechnen
     trainings_mit_volumen = []
     for training in trainings:
-        arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
+        arbeitssaetze = training.arbeitssaetze_list
         volumen = sum(float(s.gewicht) * s.wiederholungen for s in arbeitssaetze)
         trainings_mit_volumen.append(
             {
                 "training": training,
                 "volumen": round(volumen, 1),
-                "arbeitssaetze": arbeitssaetze.count(),
+                "arbeitssaetze": len(arbeitssaetze),
             }
         )
 
@@ -763,7 +770,7 @@ def _calc_per_training_volume(trainings) -> tuple[list, list]:
     labels: list[str] = []
     data: list[float] = []
     for training in trainings:
-        arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
+        arbeitssaetze = training.arbeitssaetze_list
         vol = sum(
             float(s.gewicht) * s.wiederholungen
             for s in arbeitssaetze
@@ -780,7 +787,7 @@ def _calc_weekly_volume(trainings) -> tuple[list, list]:
     for training in trainings:
         iso_year, iso_week, _ = training.datum.isocalendar()
         key = f"{iso_year}-W{iso_week:02d}"
-        arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
+        arbeitssaetze = training.arbeitssaetze_list
         vol = sum(
             float(s.gewicht) * s.wiederholungen
             for s in arbeitssaetze
@@ -796,7 +803,7 @@ def _calc_muscle_balance(trainings) -> tuple[list, list, list, dict]:
     stats: dict[str, dict] = {}
     stats_code: dict[str, float] = {}
     for training in trainings:
-        for satz in training.saetze.filter(ist_aufwaermsatz=False):
+        for satz in training.arbeitssaetze_list:
             if not satz.wiederholungen or not satz.rpe:
                 continue
             mg_display = satz.uebung.get_muskelgruppe_display()
@@ -871,7 +878,17 @@ def _build_90day_heatmap(trainings, heute) -> list[dict]:
 @login_required
 def training_stats(request: HttpRequest) -> HttpResponse:
     """Erweiterte Trainingsstatistiken mit Volumen-Progression und Analyse."""
-    trainings = Trainingseinheit.objects.filter(user=request.user).order_by("datum")
+    trainings = (
+        Trainingseinheit.objects.filter(user=request.user)
+        .prefetch_related(
+            Prefetch(
+                "saetze",
+                queryset=Satz.objects.filter(ist_aufwaermsatz=False).select_related("uebung"),
+                to_attr="arbeitssaetze_list",
+            )
+        )
+        .order_by("datum")
+    )
     if not trainings.exists():
         return render(request, "core/training_stats.html", {"no_data": True})
 
