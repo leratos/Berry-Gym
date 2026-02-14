@@ -34,9 +34,12 @@ cd homegym
 3. **Python-Version:** 3.12
 4. **Anwendungsordner:** `/homegym`
 5. **Startdatei:** `config/wsgi.py`
-6. **Umgebungsvariablen hinzufügen:**
-   - `DJANGO_SETTINGS_MODULE` = `config.settings`
-   - `DJANGO_SECRET_KEY` = `[Generieren mit: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"]`
+6. **Secrets via .env konfigurieren** (nicht als Plesk-Umgebungsvariablen!):
+   ```bash
+   cp .env.example .env
+   nano .env  # SECRET_KEY, DB_NAME, DB_USER, DB_PASSWORD etc. setzen
+   ```
+   Hinweis: `DJANGO_SETTINGS_MODULE` wird vom systemd-Service gesetzt (siehe `deployment/homegym.service`).
 
 ### 3. Virtual Environment einrichten
 ```bash
@@ -336,7 +339,7 @@ sudo supervisorctl restart homegym
 
 ## 🔒 Sicherheit Checkliste
 - [x] `DEBUG = False` in Production
-- [x] `DJANGO_SECRET_KEY` als Umgebungsvariable (Plesk) – oder `SECRET_KEY` in .env
+- [x] `SECRET_KEY` in `.env` gesetzt (nicht der insecure Fallback aus dem Repo!)
 - [x] HTTPS aktiviert (Let's Encrypt)
 - [x] `ALLOWED_HOSTS` konfiguriert
 - [x] Firewall-Regeln (nur 80/443 offen)
