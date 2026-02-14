@@ -272,6 +272,25 @@ def uebung_detail(request: HttpRequest, uebung_id: int) -> HttpResponse:
     return render(request, "core/uebung_detail.html", context)
 
 
+def _compute_1rm_for_satz(satz, gewichts_typ: str) -> tuple[float, float, float]:
+    """Berechnet (effektives_gewicht, one_rep_max, volumen_beitrag) für einen Satz."""
+    effektives_gewicht = float(satz.gewicht) if satz.gewicht else 0.0
+    if gewichts_typ == "PRO_SEITE":
+        effektives_gewicht *= 2
+
+    if gewichts_typ == "ZEIT":
+        one_rep_max = float(satz.wiederholungen)
+    elif effektives_gewicht > 0:
+        one_rep_max = effektives_gewicht * (1 + (satz.wiederholungen / 30))
+    else:
+        one_rep_max = 0.0
+
+    volumen = (
+        float(satz.gewicht) * satz.wiederholungen if satz.gewicht and satz.wiederholungen else 0.0
+    )
+    return effektives_gewicht, one_rep_max, volumen
+
+
 def _calc_1rm_stats(saetze, uebung) -> dict:
     """Berechnet 1RM-Verlauf, Bestleistungen und Gesamtvolumen aus Satz-QS.
 
@@ -286,28 +305,15 @@ def _calc_1rm_stats(saetze, uebung) -> dict:
     total_sets = saetze.count()
 
     for satz in saetze:
-        effektives_gewicht = float(satz.gewicht) if satz.gewicht else 0
-        if uebung.gewichts_typ == "PRO_SEITE":
-            effektives_gewicht *= 2
-
-        if uebung.gewichts_typ == "ZEIT":
-            one_rep_max = float(satz.wiederholungen)
-        elif effektives_gewicht > 0:
-            one_rep_max = effektives_gewicht * (1 + (satz.wiederholungen / 30))
-        else:
-            one_rep_max = 0
-
+        eff_gewicht, one_rm, vol = _compute_1rm_for_satz(satz, uebung.gewichts_typ)
         datum_str = satz.einheit.datum.strftime("%d.%m.%Y")
-        if datum_str not in history_data or one_rep_max > history_data[datum_str]:
-            history_data[datum_str] = round(one_rep_max, 1)
-
-        if one_rep_max > personal_record:
-            personal_record = round(one_rep_max, 1)
-        if effektives_gewicht > best_weight:
-            best_weight = effektives_gewicht
-
-        if satz.gewicht and satz.wiederholungen:
-            total_volume += float(satz.gewicht) * satz.wiederholungen
+        if datum_str not in history_data or one_rm > history_data[datum_str]:
+            history_data[datum_str] = round(one_rm, 1)
+        if one_rm > personal_record:
+            personal_record = round(one_rm, 1)
+        if eff_gewicht > best_weight:
+            best_weight = eff_gewicht
+        total_volume += vol
 
     return {
         "history_data": history_data,
@@ -427,6 +433,26 @@ def toggle_favorit(request: HttpRequest, uebung_id: int) -> JsonResponse:
     return JsonResponse({"is_favorit": is_favorit, "message": message})
 
 
+def _score_movement_muscle_match(exercise, original) -> tuple[int, list[str]]:
+    """Berechnet Basis-Score für Bewegungstyp/Muskelgruppe-Übereinstimmung."""
+    score = 0
+    reasons: list[str] = []
+    if (
+        exercise.bewegungstyp == original.bewegungstyp
+        and exercise.muskelgruppe == original.muskelgruppe
+    ):
+        score += 100
+        reasons.append("Gleicher Bewegungstyp & Muskelgruppe")
+    else:
+        if exercise.bewegungstyp == original.bewegungstyp:
+            score += 50
+            reasons.append("Gleicher Bewegungstyp")
+        if exercise.muskelgruppe == original.muskelgruppe:
+            score += 40
+            reasons.append("Gleiche Hauptmuskelgruppe")
+    return score, reasons
+
+
 def _score_alternative_exercise(
     exercise, original, user_equipment_ids: set
 ) -> tuple[int, list[str]] | None:
@@ -440,22 +466,7 @@ def _score_alternative_exercise(
     if required_eq_ids and not required_eq_ids.issubset(user_equipment_ids):
         return None
 
-    score = 0
-    match_reasons: list[str] = []
-
-    if (
-        exercise.bewegungstyp == original.bewegungstyp
-        and exercise.muskelgruppe == original.muskelgruppe
-    ):
-        score += 100
-        match_reasons.append("Gleicher Bewegungstyp & Muskelgruppe")
-    else:
-        if exercise.bewegungstyp == original.bewegungstyp:
-            score += 50
-            match_reasons.append("Gleicher Bewegungstyp")
-        if exercise.muskelgruppe == original.muskelgruppe:
-            score += 40
-            match_reasons.append("Gleiche Hauptmuskelgruppe")
+    score, match_reasons = _score_movement_muscle_match(exercise, original)
 
     if original.hilfsmuskeln and exercise.hilfsmuskeln:
         original_hilfs = (
@@ -469,9 +480,7 @@ def _score_alternative_exercise(
             score += 10 * len(common)
             match_reasons.append(f"{len(common)} gemeinsame Hilfsmuskeln")
 
-    if score < 40:
-        return None
-    return score, match_reasons
+    return None if score < 40 else (score, match_reasons)
 
 
 @login_required
@@ -597,6 +606,11 @@ def suggest_alternative_exercises(request: HttpRequest, exercise_id: int) -> Jso
     )
 
 
+def _resolve_display(code: str | None, mapping: dict, fallback: str = "") -> str:
+    """Gibt Display-Namen zurück oder fallback wenn code None/leer."""
+    return mapping.get(code, code) if code else fallback
+
+
 def _build_exercise_api_data(uebung) -> dict:
     """Serialisiert eine Übung als JSON-Dict für den API-Endpoint."""
     muskelgruppen_dict = dict(MUSKELGRUPPEN)
@@ -614,19 +628,11 @@ def _build_exercise_api_data(uebung) -> dict:
         "beschreibung": uebung.beschreibung or "Keine Beschreibung verfügbar",
         "bild": uebung.bild.url if uebung.bild else None,
         "muskelgruppe": uebung.muskelgruppe or "",
-        "muskelgruppe_display": (
-            muskelgruppen_dict.get(uebung.muskelgruppe, uebung.muskelgruppe)
-            if uebung.muskelgruppe
-            else "-"
-        ),
+        "muskelgruppe_display": _resolve_display(uebung.muskelgruppe, muskelgruppen_dict, "-"),
         "bewegungstyp": uebung.bewegungstyp or "",
-        "bewegungstyp_display": (
-            bewegungstyp_dict.get(uebung.bewegungstyp, "") if uebung.bewegungstyp else ""
-        ),
+        "bewegungstyp_display": _resolve_display(uebung.bewegungstyp, bewegungstyp_dict),
         "gewichts_typ": uebung.gewichts_typ or "",
-        "gewichts_typ_display": (
-            gewichts_typ_dict.get(uebung.gewichts_typ, "") if uebung.gewichts_typ else "-"
-        ),
+        "gewichts_typ_display": _resolve_display(uebung.gewichts_typ, gewichts_typ_dict, "-"),
         "hilfsmuskeln": uebung.hilfsmuskeln or [],
         "hilfsmuskeln_display": hilfsmuskeln_display,
         "equipment": equipment_list,

@@ -408,6 +408,111 @@ def _render_training_pdf_response(request: HttpRequest, context: dict, heute) ->
         return redirect("training_stats")
 
 
+def _sum_volume(saetze_qs) -> float:
+    """Summiert Volumen (Gewicht × Wdh) aus einem Satz-QuerySet."""
+    return sum(
+        float(s.gewicht) * s.wiederholungen for s in saetze_qs if s.gewicht and s.wiederholungen
+    )
+
+
+def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
+    """Sammelt alle Statistiken für den PDF-Report.
+
+    Returns dict mit allen Daten für den Template-Kontext.
+    """
+    muskelgruppen_dict = dict(MUSKELGRUPPEN)
+
+    trainings = Trainingseinheit.objects.filter(user=user, datum__gte=letzte_30_tage).order_by(
+        "-datum"
+    )[:20]
+
+    alle_trainings = Trainingseinheit.objects.filter(user=user)
+    gesamt_trainings = alle_trainings.count()
+    trainings_30_tage = alle_trainings.filter(datum__gte=letzte_30_tage).count()
+
+    alle_saetze = Satz.objects.filter(
+        einheit__user=user,
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
+    )
+    gesamt_saetze = alle_saetze.count()
+    saetze_30_tage = alle_saetze.filter(einheit__datum__gte=letzte_30_tage).count()
+
+    gesamt_volumen = _sum_volume(alle_saetze)
+    volumen_30_tage = _sum_volume(alle_saetze.filter(einheit__datum__gte=letzte_30_tage))
+
+    trainings_pro_woche = _calc_trainings_per_week(alle_trainings, heute)
+    consistency_metrics = calculate_consistency_metrics(alle_trainings)
+    top_uebungen = _build_top_uebungen(alle_saetze, muskelgruppen_dict)
+    plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
+    kraft_progression = _collect_strength_progression(alle_saetze, top_uebungen, muskelgruppen_dict)
+    muskelgruppen_stats = _collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30_tage)
+    push_pull_balance = _collect_push_pull(muskelgruppen_stats)
+
+    schwachstellen_status = {"untertrainiert", "nicht_trainiert"}
+    schwachstellen = sorted(
+        [mg for mg in muskelgruppen_stats if mg["status"] in schwachstellen_status],
+        key=lambda x: x["saetze"],
+    )[:5]
+    staerken = [mg for mg in muskelgruppen_stats if mg["status"] == "optimal"]
+
+    avg_rpe, rpe_verteilung = _collect_intensity_data(alle_saetze, letzte_30_tage)
+    rpe_saetze = alle_saetze.filter(rpe__isnull=False, einheit__datum__gte=letzte_30_tage)
+    rpe_quality = calculate_rpe_quality_analysis(alle_saetze)
+    volumen_wochen = _collect_weekly_volume_pdf(alle_saetze)
+    fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
+
+    koerperwerte_qs = KoerperWerte.objects.filter(user=user).order_by("-datum")
+    koerperwerte = list(koerperwerte_qs[:5])
+    letzter_koerperwert = koerperwerte[0] if koerperwerte else None
+    user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
+    rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)
+    gewichts_trend = _collect_weight_trend(koerperwerte)
+
+    push_saetze = int(push_pull_balance.get("push_saetze", 0))
+    pull_saetze = int(push_pull_balance.get("pull_saetze", 0))
+
+    return {
+        "start_datum": letzte_30_tage,
+        "end_datum": heute,
+        "current_date": heute,
+        "trainings": trainings,
+        "gesamt_trainings": gesamt_trainings,
+        "gesamt_saetze": gesamt_saetze,
+        "gesamt_volumen": round(gesamt_volumen, 0),
+        "trainings_30_tage": trainings_30_tage,
+        "saetze_30_tage": saetze_30_tage,
+        "volumen_30_tage": round(volumen_30_tage, 0),
+        "trainings_pro_woche": trainings_pro_woche,
+        "top_uebungen": top_uebungen,
+        "kraft_progression": kraft_progression,
+        "kraftentwicklung": kraft_progression,
+        "muskelgruppen_stats": muskelgruppen_stats,
+        "push_pull_balance": push_pull_balance,
+        "push_saetze": push_saetze,
+        "pull_saetze": pull_saetze,
+        "push_pull_ratio": float(push_pull_balance.get("ratio", 0)),
+        "push_pull_bewertung": str(push_pull_balance.get("bewertung", "")),
+        "push_pull_empfehlung": str(push_pull_balance.get("empfehlung", "")),
+        "schwachstellen": schwachstellen,
+        "staerken": staerken,
+        "total_einheiten": gesamt_trainings,
+        "total_saetze": gesamt_saetze,
+        "total_volumen": round(gesamt_volumen, 0),
+        "avg_rpe": avg_rpe,
+        "rpe_verteilung": rpe_verteilung,
+        "volumen_wochen": volumen_wochen[-8:],
+        "koerperwerte": koerperwerte,
+        "letzter_koerperwert": letzter_koerperwert,
+        "gewichts_trend": gewichts_trend,
+        "plateau_analysis": plateau_analysis,
+        "consistency_metrics": consistency_metrics,
+        "fatigue_analysis": fatigue_analysis,
+        "rm_standards": rm_standards,
+        "rpe_quality": rpe_quality,
+    }
+
+
 @login_required
 def export_training_pdf(request: HttpRequest) -> HttpResponse:
     """Export training statistics as PDF.
@@ -427,106 +532,14 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         logger.error("xhtml2pdf import failed")
         return redirect("training_stats")
 
-    # Helper function: muscle group key to display name
-    muskelgruppen_dict = dict(MUSKELGRUPPEN)
-
-    # Collect data
     heute = timezone.now()
     letzte_30_tage = heute - timedelta(days=30)
+    stats = _collect_pdf_stats(request.user, letzte_30_tage, heute)
 
-    # Training sessions
-    trainings = Trainingseinheit.objects.filter(
-        user=request.user, datum__gte=letzte_30_tage
-    ).order_by("-datum")[:20]
-
-    # Statistics
-    alle_trainings = Trainingseinheit.objects.filter(user=request.user)
-    gesamt_trainings = alle_trainings.count()
-    trainings_30_tage = alle_trainings.filter(datum__gte=letzte_30_tage).count()
-
-    alle_saetze = Satz.objects.filter(
-        einheit__user=request.user,
-        ist_aufwaermsatz=False,
-        einheit__ist_deload=False,
-    )
-    gesamt_saetze = alle_saetze.count()
-    saetze_30_tage = alle_saetze.filter(einheit__datum__gte=letzte_30_tage).count()
-
-    # Volume
-    gesamt_volumen = sum(
-        float(s.gewicht) * s.wiederholungen for s in alle_saetze if s.gewicht and s.wiederholungen
-    )
-    volumen_30_tage = sum(
-        float(s.gewicht) * s.wiederholungen
-        for s in alle_saetze.filter(einheit__datum__gte=letzte_30_tage)
-        if s.gewicht and s.wiederholungen
-    )
-
-    # Average training frequency
-    trainings_pro_woche = _calc_trainings_per_week(alle_trainings, heute)
-
-    # NEU: Konsistenz-Metriken
-    consistency_metrics = calculate_consistency_metrics(alle_trainings)
-
-    # Top exercises with more details
-    top_uebungen = _build_top_uebungen(alle_saetze, muskelgruppen_dict)
-
-    # NEU: Plateau-Analyse
-    plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
-
-    # Strength development: Top 5 exercises with measurable progression
-    kraft_progression = _collect_strength_progression(alle_saetze, top_uebungen, muskelgruppen_dict)
-
-    # Muscle group balance with intelligent assessment
-    muskelgruppen_stats = _collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30_tage)
-
-    # Push/Pull balance analysis
-    push_pull_balance = _collect_push_pull(muskelgruppen_stats)
-
-    # Identify weaknesses (undertrained muscle groups)
-    schwachstellen = [
-        mg for mg in muskelgruppen_stats if mg["status"] in ["untertrainiert", "nicht_trainiert"]
-    ]
-    schwachstellen = sorted(schwachstellen, key=lambda x: x["saetze"])[:5]
-
-    # Intensity analysis (RPE-based)
-    avg_rpe, rpe_verteilung = _collect_intensity_data(alle_saetze, letzte_30_tage)
-    rpe_saetze = alle_saetze.filter(rpe__isnull=False, einheit__datum__gte=letzte_30_tage)
-
-    # NEU: RPE-Qualitäts-Analyse
-    rpe_quality = calculate_rpe_quality_analysis(alle_saetze)
-
-    # Volume progression over last 12 weeks
-    volumen_wochen = _collect_weekly_volume_pdf(alle_saetze)
-
-    # NEU: Ermüdungs-Index
-    fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
-
-    # Body measurements with trend
-    koerperwerte_qs = KoerperWerte.objects.filter(user=request.user).order_by("-datum")
-
-    koerperwerte = list(koerperwerte_qs[:5])
-    letzter_koerperwert = koerperwerte[0] if koerperwerte else None
-
-    # NEU: 1RM-Standards
-    # Hole Körpergewicht falls vorhanden
-    user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
-    rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)
-
-    # Weight trend calculation
-    gewichts_trend = _collect_weight_trend(koerperwerte)
-
-    # Push/Pull balance data for template
-    push_saetze = int(push_pull_balance.get("push_saetze", 0))
-    pull_saetze = int(push_pull_balance.get("pull_saetze", 0))
-    push_pull_ratio = float(push_pull_balance.get("ratio", 0))
-    push_pull_bewertung = str(push_pull_balance.get("bewertung", ""))
-    push_pull_empfehlung = str(push_pull_balance.get("empfehlung", ""))
-
-    # Identify strengths (optimal muscle groups)
-    staerken = [mg for mg in muskelgruppen_stats if mg["status"] == "optimal"]
-
-    # Generate charts
+    muskelgruppen_stats = stats["muskelgruppen_stats"]
+    volumen_wochen = stats["volumen_wochen"]
+    push_saetze = stats["push_saetze"]
+    pull_saetze = stats["pull_saetze"]
     muscle_heatmap, volume_chart, push_pull_chart, body_map_image = _generate_pdf_charts(
         muskelgruppen_stats, volumen_wochen, push_saetze, pull_saetze
     )
@@ -534,48 +547,11 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     context = {
         "user": request.user,
         "datum": heute,
-        "current_date": heute,
-        "start_datum": letzte_30_tage,
-        "end_datum": heute,
-        "trainings": trainings,
-        "gesamt_trainings": gesamt_trainings,
-        "gesamt_saetze": gesamt_saetze,
-        "gesamt_volumen": round(gesamt_volumen, 0),
-        "trainings_30_tage": trainings_30_tage,
-        "saetze_30_tage": saetze_30_tage,
-        "volumen_30_tage": round(volumen_30_tage, 0),
-        "trainings_pro_woche": trainings_pro_woche,
-        "top_uebungen": top_uebungen,
-        "kraft_progression": kraft_progression,
-        "kraftentwicklung": kraft_progression,
-        "muskelgruppen_stats": muskelgruppen_stats,
-        "push_pull_balance": push_pull_balance,
-        "push_saetze": push_saetze,
-        "pull_saetze": pull_saetze,
-        "push_pull_ratio": push_pull_ratio,
-        "push_pull_bewertung": push_pull_bewertung,
-        "push_pull_empfehlung": push_pull_empfehlung,
-        "schwachstellen": schwachstellen,
-        "staerken": staerken,
-        "total_einheiten": gesamt_trainings,
-        "total_saetze": gesamt_saetze,
-        "total_volumen": round(gesamt_volumen, 0),
-        "avg_rpe": avg_rpe,
-        "rpe_verteilung": rpe_verteilung,
-        "volumen_wochen": volumen_wochen[-8:],
         "muscle_heatmap": muscle_heatmap,
         "volume_chart": volume_chart,
         "push_pull_chart": push_pull_chart,
         "body_map_image": body_map_image,
-        "koerperwerte": koerperwerte,
-        "letzter_koerperwert": letzter_koerperwert,
-        "gewichts_trend": gewichts_trend,
-        # NEU: Erweiterte Analysen
-        "plateau_analysis": plateau_analysis,
-        "consistency_metrics": consistency_metrics,
-        "fatigue_analysis": fatigue_analysis,
-        "rm_standards": rm_standards,
-        "rpe_quality": rpe_quality,
+        **stats,
     }
 
     return _render_training_pdf_response(request, context, heute)
