@@ -88,11 +88,13 @@ class TestMuscleMapView:
     """Tests für die interaktive Muskel-Karte"""
 
     def test_muscle_map_erfordert_login(self, client):
+        """Unauthentifizierter Zugriff auf Muskelkarte → Redirect."""
         url = reverse("muscle_map")
         response = client.get(url)
         assert response.status_code == 302
 
     def test_muscle_map_geladen(self, client):
+        """Eingeloggter User kann die Muskelkarte aufrufen."""
         user = UserFactory()
         client.force_login(user)
         url = reverse("muscle_map")
@@ -105,12 +107,14 @@ class TestUebungDetailView:
     """Tests für die Übungs-Detailseite"""
 
     def test_uebung_detail_erfordert_login(self, client):
+        """Unauthentifizierter Zugriff auf Uebungsdetail → Redirect."""
         uebung = UebungFactory()
         url = reverse("uebung_detail", kwargs={"uebung_id": uebung.id})
         response = client.get(url)
         assert response.status_code == 302
 
     def test_uebung_detail_geladen(self, client):
+        """Detailseite einer bekannten Uebung rendert korrekt."""
         user = UserFactory()
         uebung = UebungFactory(bezeichnung="Bankdrücken", muskelgruppe="BRUST")
         client.force_login(user)
@@ -119,6 +123,7 @@ class TestUebungDetailView:
         assert response.status_code == 200
 
     def test_uebung_detail_404_bei_unbekannter_id(self, client):
+        """Nicht-existierende Uebungs-ID liefert 404."""
         user = UserFactory()
         client.force_login(user)
         url = reverse("uebung_detail", kwargs={"uebung_id": 99999})
@@ -140,6 +145,7 @@ class TestToggleFavoritViews:
     """Tests für Favoriten-Toggle (beide Endpoints)"""
 
     def test_toggle_favorit_erfordert_login(self, client):
+        """Unauthentifizierter Favoriten-Toggle → Redirect."""
         uebung = UebungFactory()
         url = reverse("toggle_favorit", kwargs={"uebung_id": uebung.id})
         response = client.post(url)
@@ -212,6 +218,7 @@ class TestCreateCustomUebung:
         )
 
     def test_create_custom_erfordert_login(self, client):
+        """Unauthentifizierter Versuch eine Custom-Uebung zu erstellen → Redirect."""
         url = reverse("create_custom_uebung")
         response = self._post_json(client, url, {"bezeichnung": "Test"})
         assert response.status_code == 302
@@ -335,6 +342,7 @@ class TestGetAlternativeExercises:
     """Tests für den Alternativen-Empfehlungs-Endpoint"""
 
     def test_alternatives_erfordert_login(self, client):
+        """Unauthentifizierter Zugriff auf Alternativen-Endpoint → Redirect."""
         uebung = UebungFactory()
         url = reverse("get_alternative_exercises", kwargs={"uebung_id": uebung.id})
         response = client.get(url)
@@ -352,6 +360,7 @@ class TestGetAlternativeExercises:
         assert "alternatives" in data or "exercises" in data or isinstance(data, list)
 
     def test_alternatives_404_bei_unbekannter_uebung(self, client):
+        """Nicht-existierende Uebungs-ID beim Alternativen-Endpoint → 404."""
         user = UserFactory()
         client.force_login(user)
         url = reverse("get_alternative_exercises", kwargs={"uebung_id": 99999})

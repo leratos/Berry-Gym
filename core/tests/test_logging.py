@@ -5,7 +5,6 @@ Diese Tests validieren dass Logging korrekt konfiguriert ist.
 """
 
 import logging
-from pathlib import Path
 
 import pytest
 
@@ -101,6 +100,7 @@ class TestPerformanceDecorator:
 
         @log_performance
         def test_func():
+            """Lokale Hilfsfunktion fuer den Performance-Logging-Test."""
             time.sleep(0.01)  # 10ms
             return "success"
 

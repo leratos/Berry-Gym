@@ -32,6 +32,7 @@ class TestGlobalContext:
         assert ctx["current_year"] == datetime.now().year
 
     def test_returns_dict(self):
+        """global_context gibt immer ein dict zurueck."""
         factory = RequestFactory()
         request = factory.get("/")
         ctx = global_context(request)
@@ -129,23 +130,29 @@ class TestDisclaimersContextProcessor:
 
 class TestGetItemFilter:
     def test_returns_value_for_existing_key(self):
+        """Vorhandener Key gibt den zugehoerigen Wert zurueck."""
         d = {"a": 1, "b": 2}
         assert get_item(d, "a") == 1
 
     def test_returns_none_for_missing_key(self):
+        """Nicht vorhandener Key gibt None zurueck."""
         d = {"a": 1}
         assert get_item(d, "x") is None
 
     def test_returns_none_for_none_dict(self):
+        """None als dict-Argument gibt None zurueck."""
         assert get_item(None, "key") is None
 
     def test_returns_none_for_none_key(self):
+        """None als Key gibt None zurueck."""
         assert get_item({"a": 1}, None) is None
 
     def test_returns_none_for_empty_dict(self):
+        """Leeres dict gibt None zurueck."""
         assert get_item({}, "key") is None
 
     def test_works_with_integer_keys(self):
+        """Integer-Keys werden korrekt aufgeloest."""
         d = {1: "eins", 2: "zwei"}
         assert get_item(d, 1) == "eins"
 

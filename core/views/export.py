@@ -19,8 +19,8 @@ from django.db import models
 from django.db.models import Avg, Count, F, Max, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils import timezone
 
 try:
