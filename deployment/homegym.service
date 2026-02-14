@@ -33,10 +33,13 @@ Environment="DJANGO_SETTINGS_MODULE=config.settings"
 
 # WICHTIG: Secrets NICHT hier eintragen – ausschliesslich via .env!
 # Die .env-Datei muss im WorkingDirectory liegen (siehe .env.example).
-# Benötigte Variablen:
+# Benötigte Variablen (GENAU diese Namen – settings.py ist case-sensitive):
+#   SECRET_KEY        (NICHT DJANGO_SECRET_KEY – wird ignoriert!)
 #   DB_ENGINE, DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
-#   DJANGO_SECRET_KEY, ALLOWED_HOSTS
+#   ALLOWED_HOSTS
 #
+# WARNUNG: Environment="DJANGO_SECRET_KEY=..." funktioniert NICHT –
+# settings.py liest os.getenv("SECRET_KEY"), nicht "DJANGO_SECRET_KEY".
 # WARNUNG: Environment="DATABASE_NAME=..." funktioniert NICHT –
 # settings.py liest DB_NAME, nicht DATABASE_NAME.
 
