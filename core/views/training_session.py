@@ -11,6 +11,7 @@ Handles training session workflows including:
 import json
 import logging
 import re
+from collections import OrderedDict
 from typing import Optional
 
 from django.contrib import messages
@@ -26,40 +27,57 @@ from ..models import Plan, Satz, Trainingseinheit, Uebung, UserProfile
 logger = logging.getLogger(__name__)
 
 
+def _build_plan_gruppen(
+    plaene, active_group_id: str | None
+) -> tuple[OrderedDict, OrderedDict, list]:
+    """Teilt Pläne in aktive Gruppe, andere Gruppen und einzelne Pläne auf.
+
+    Returns:
+        (active_plan_gruppen, plan_gruppen, einzelne_plaene)
+    """
+    active_plan_gruppen: OrderedDict = OrderedDict()
+    plan_gruppen: OrderedDict = OrderedDict()
+    einzelne_plaene: list = []
+
+    for plan in plaene:
+        if plan.gruppe_id:
+            gruppe_key = str(plan.gruppe_id)
+            target = active_plan_gruppen if gruppe_key == active_group_id else plan_gruppen
+            if gruppe_key not in target:
+                target[gruppe_key] = {"name": plan.gruppe_name or "Unbenannte Gruppe", "plaene": []}
+            target[gruppe_key]["plaene"].append(plan)
+        else:
+            einzelne_plaene.append(plan)
+
+    return active_plan_gruppen, plan_gruppen, einzelne_plaene
+
+
 @login_required
 def training_select_plan(request: HttpRequest) -> HttpResponse:
     """Zeigt alle verfügbaren Pläne zur Auswahl an. Priorisiert aktive Plan-Gruppe."""
-    from collections import OrderedDict
-
-    # Filter-Parameter (eigene, public oder shared)
     filter_type = request.GET.get("filter", "eigene")
 
     if filter_type == "public":
-        # Öffentliche Pläne von allen Usern (außer eigene)
         plaene = (
             Plan.objects.filter(is_public=True)
             .exclude(user=request.user)
             .order_by("gruppe_name", "gruppe_reihenfolge", "name")
         )
     elif filter_type == "shared":
-        # Mit mir geteilte Pläne (von Trainingspartnern)
         plaene = request.user.shared_plans.all().order_by(
             "gruppe_name", "gruppe_reihenfolge", "name"
         )
     else:
-        # Eigene Pläne (Standard) - sortiert nach Reihenfolge innerhalb Gruppe
         plaene = Plan.objects.filter(user=request.user).order_by(
             "gruppe_name", "gruppe_reihenfolge", "name"
         )
 
-    # Aktive Plan-Gruppe ermitteln
     active_group_id = None
     active_group_name = None
     try:
         profile = request.user.profile
         if profile.active_plan_group:
             active_group_id = str(profile.active_plan_group)
-            # Prüfe ob Gruppe noch existiert
             active_group_plan = Plan.objects.filter(
                 user=request.user, gruppe_id=profile.active_plan_group
             ).first()
@@ -70,34 +88,18 @@ def training_select_plan(request: HttpRequest) -> HttpResponse:
     except UserProfile.DoesNotExist:
         pass
 
-    # Gruppiere Pläne nach gruppe_id (echte Datenbankbeziehung)
-    # Aktive Gruppe zuerst, dann Rest
-    active_plan_gruppen = OrderedDict()
-    plan_gruppen = OrderedDict()
-    einzelne_plaene = []
-
-    for plan in plaene:
-        if plan.gruppe_id:
-            gruppe_key = str(plan.gruppe_id)
-            # Entscheide ob aktiv oder normal
-            target = active_plan_gruppen if gruppe_key == active_group_id else plan_gruppen
-            if gruppe_key not in target:
-                target[gruppe_key] = {"name": plan.gruppe_name or "Unbenannte Gruppe", "plaene": []}
-            target[gruppe_key]["plaene"].append(plan)
-        else:
-            einzelne_plaene.append(plan)
-
-    # Zähle geteilte Pläne für Badge
-    shared_count = request.user.shared_plans.count()
+    active_plan_gruppen, plan_gruppen, einzelne_plaene = _build_plan_gruppen(
+        plaene, active_group_id
+    )
 
     context = {
-        "plaene": plaene,  # Für Fallback
-        "active_plan_gruppen": active_plan_gruppen,  # Aktive Gruppe (priorisiert)
+        "plaene": plaene,
+        "active_plan_gruppen": active_plan_gruppen,
         "active_group_name": active_group_name,
-        "plan_gruppen": plan_gruppen,  # Andere gruppierte Pläne
-        "einzelne_plaene": einzelne_plaene,  # Nicht gruppierte Pläne
+        "plan_gruppen": plan_gruppen,
+        "einzelne_plaene": einzelne_plaene,
         "filter_type": filter_type,
-        "shared_count": shared_count,
+        "shared_count": request.user.shared_plans.count(),
     }
     return render(request, "core/training_select_plan.html", context)
 
@@ -138,93 +140,84 @@ def plan_details(request: HttpRequest, plan_id: int) -> HttpResponse:
     return render(request, "core/plan_details.html", context)
 
 
+def _get_deload_config(user, plan) -> tuple[bool, float, float, float]:
+    """Liest Deload-Konfiguration aus dem UserProfile.
+
+    Returns:
+        (is_deload, vol_factor, weight_factor, rpe_target)
+    """
+    try:
+        profile = user.profile
+        if (
+            profile.active_plan_group
+            and plan.gruppe_id
+            and str(plan.gruppe_id) == str(profile.active_plan_group)
+        ):
+            if not profile.cycle_start_date:
+                profile.cycle_start_date = timezone.now().date()
+                profile.save()
+            return (
+                profile.is_deload_week(),
+                profile.deload_volume_factor,
+                profile.deload_weight_factor,
+                profile.deload_rpe_target,
+            )
+    except UserProfile.DoesNotExist:
+        pass
+    return False, 0.8, 0.9, 7.0
+
+
+def _create_ghost_saetze(
+    training, plan, is_deload: bool, deload_vol_factor: float, deload_weight_factor: float
+) -> None:
+    """Erstellt Platzhalter-Sätze aus dem Plan mit Ghosting und optionalen Deload-Anpassungen."""
+    for plan_uebung in plan.uebungen.all().order_by("reihenfolge"):
+        uebung = plan_uebung.uebung
+        letzter_satz = (
+            Satz.objects.filter(einheit__user=training.user, uebung=uebung, ist_aufwaermsatz=False)
+            .order_by("-einheit__datum", "-satz_nr")
+            .first()
+        )
+        start_gewicht = letzter_satz.gewicht if letzter_satz else 0
+        start_wdh = 0
+
+        ziel_text = plan_uebung.wiederholungen_ziel
+        match = re.search(r"\d{1,4}", str(ziel_text)) if ziel_text else None
+        if match:
+            start_wdh = int(match.group())
+        elif letzter_satz:
+            start_wdh = letzter_satz.wiederholungen
+
+        anzahl_saetze = plan_uebung.saetze_ziel
+        if is_deload:
+            anzahl_saetze = max(2, int(anzahl_saetze * deload_vol_factor))
+            start_gewicht = round(float(start_gewicht) * deload_weight_factor, 1)
+
+        for i in range(1, anzahl_saetze + 1):
+            Satz.objects.create(
+                einheit=training,
+                uebung=uebung,
+                satz_nr=i,
+                gewicht=start_gewicht,
+                wiederholungen=start_wdh,
+                ist_aufwaermsatz=False,
+                superset_gruppe=plan_uebung.superset_gruppe,
+            )
+
+
 def training_start(request: HttpRequest, plan_id: Optional[int] = None) -> HttpResponse:
     """Startet Training. Wenn plan_id da ist, werden Übungen vor-angelegt."""
     training = Trainingseinheit.objects.create(user=request.user)
-
-    # Deload-Erkennung mit konfigurierbaren Parametern
-    is_deload = False
-    deload_vol_factor = 0.8
-    deload_weight_factor = 0.9
-    deload_rpe_target = 7.0
 
     if plan_id:
         plan = get_object_or_404(Plan, id=plan_id, user=request.user)
         training.plan = plan
         training.save()
 
-        # Zyklus-Tracking: cycle_start_date setzen beim ersten Training mit aktiver Gruppe
-        try:
-            profile = request.user.profile
-            if (
-                profile.active_plan_group
-                and plan.gruppe_id
-                and str(plan.gruppe_id) == str(profile.active_plan_group)
-            ):
-                if not profile.cycle_start_date:
-                    profile.cycle_start_date = timezone.now().date()
-                    profile.save()
-                is_deload = profile.is_deload_week()
-                deload_vol_factor = profile.deload_volume_factor
-                deload_weight_factor = profile.deload_weight_factor
-                deload_rpe_target = profile.deload_rpe_target
-        except UserProfile.DoesNotExist:
-            pass
-
-        # Wir gehen alle Übungen im Plan durch
-        for plan_uebung in plan.uebungen.all().order_by("reihenfolge"):
-            uebung = plan_uebung.uebung
-
-            # SMART GHOSTING: Wir schauen, was du letztes Mal gemacht hast
-            letzter_satz = (
-                Satz.objects.filter(
-                    einheit__user=request.user, uebung=uebung, ist_aufwaermsatz=False
-                )
-                .order_by("-einheit__datum", "-satz_nr")
-                .first()
-            )
-
-            # Gewicht: Historie gewinnt (Ghosting), da im Plan oft kein kg steht
-            start_gewicht = letzter_satz.gewicht if letzter_satz else 0
-
-            # Wiederholungen: PLAN gewinnt vor Historie!
-            start_wdh = 0
-
-            # Versuch 1: Wir lesen die Zahl aus dem Plan (z.B. "12" oder "8-12")
-            ziel_text = plan_uebung.wiederholungen_ziel
-            # re.search sucht die erste Zahl im Text (bounded for safety)
-            match = re.search(r"\d{1,4}", str(ziel_text)) if ziel_text else None
-
-            if match:
-                start_wdh = int(match.group())
-            # Versuch 2: Wenn im Plan nix steht, nehmen wir die Historie
-            elif letzter_satz:
-                start_wdh = letzter_satz.wiederholungen
-
-            # Anzahl der Sätze aus dem Plan holen
-            anzahl_saetze = plan_uebung.saetze_ziel
-
-            # DELOAD-ANPASSUNGEN: Volumen & Gewicht gemäß Profil-Einstellungen reduzieren
-            if is_deload:
-                # Sätze reduzieren (z.B. Faktor 0.8: 4 -> 3, mindestens 2)
-                anzahl_saetze = max(2, int(anzahl_saetze * deload_vol_factor))
-                # Gewicht reduzieren (z.B. Faktor 0.9 = -10%)
-                start_gewicht = round(float(start_gewicht) * deload_weight_factor, 1)
-
-            # Superset-Gruppe aus dem Plan übernehmen
-            superset_gruppe = plan_uebung.superset_gruppe
-
-            # Wir erstellen so viele Platzhalter-Sätze, wie im Plan stehen
-            for i in range(1, anzahl_saetze + 1):
-                Satz.objects.create(
-                    einheit=training,
-                    uebung=uebung,
-                    satz_nr=i,
-                    gewicht=start_gewicht,
-                    wiederholungen=start_wdh,
-                    ist_aufwaermsatz=False,
-                    superset_gruppe=superset_gruppe,
-                )
+        is_deload, deload_vol_factor, deload_weight_factor, deload_rpe_target = _get_deload_config(
+            request.user, plan
+        )
+        _create_ghost_saetze(training, plan, is_deload, deload_vol_factor, deload_weight_factor)
 
         if is_deload:
             vol_pct = int((1 - deload_vol_factor) * 100)
@@ -283,6 +276,26 @@ def _calculate_empfohlene_pause(hint: str, plan_pausenzeit) -> int:
     return 120  # 2 Min Standard
 
 
+def _determine_empfehlung_hint(
+    letzter_satz, ziel_wdh_min: int, ziel_wdh_max: int
+) -> tuple[float, int, str]:
+    """Bestimmt Empfehlung basierend auf letztem Satz (RPE/Wdh-Progression).
+
+    Returns:
+        (empfohlenes_gewicht, empfohlene_wdh, hint)
+    """
+    gewicht = float(letzter_satz.gewicht)
+    wdh = letzter_satz.wiederholungen
+
+    if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
+        return gewicht + 2.5, wdh, f"RPE {letzter_satz.rpe} → +2.5kg"
+    if letzter_satz.wiederholungen >= ziel_wdh_max:
+        return gewicht + 2.5, ziel_wdh_min, f"{ziel_wdh_max}+ Wdh → +2.5kg"
+    if letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
+        return gewicht, min(wdh + 1, ziel_wdh_max), f"RPE {letzter_satz.rpe} → mehr Wdh"
+    return gewicht, wdh, "Niveau halten"
+
+
 def _calculate_single_empfehlung(user, uebung_id: int, training):
     """
     Berechnet Gewichts- und Wiederholungsempfehlung für eine einzelne Übung.
@@ -302,8 +315,6 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
     if not letzter_satz:
         return None
 
-    empfohlenes_gewicht = float(letzter_satz.gewicht)
-    empfohlene_wdh = letzter_satz.wiederholungen
     ziel_wdh_str = "8-12"
     plan_pausenzeit = None
 
@@ -316,18 +327,9 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
 
     ziel_wdh_min, ziel_wdh_max = _parse_ziel_wdh(ziel_wdh_str)
 
-    if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
-        empfohlenes_gewicht += 2.5
-        hint = f"RPE {letzter_satz.rpe} → +2.5kg"
-    elif letzter_satz.wiederholungen >= ziel_wdh_max:
-        empfohlenes_gewicht += 2.5
-        empfohlene_wdh = ziel_wdh_min
-        hint = f"{ziel_wdh_max}+ Wdh → +2.5kg"
-    elif letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
-        empfohlene_wdh = min(empfohlene_wdh + 1, ziel_wdh_max)
-        hint = f"RPE {letzter_satz.rpe} → mehr Wdh"
-    else:
-        hint = "Niveau halten"
+    empfohlenes_gewicht, empfohlene_wdh, hint = _determine_empfehlung_hint(
+        letzter_satz, ziel_wdh_min, ziel_wdh_max
+    )
 
     return {
         "gewicht": empfohlenes_gewicht,
@@ -385,6 +387,32 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
     return render(request, "core/training_session.html", context)
 
 
+def _check_pr(user, uebung, neuer_satz, gewicht_float: float, wdh_int: int) -> str | None:
+    """Prüft ob ein neuer PR erzielt wurde.
+
+    Returns:
+        PR-Meldung (str) oder None wenn kein PR.
+    """
+    current_1rm = gewicht_float * (1 + wdh_int / 30)
+    alte_saetze = Satz.objects.filter(
+        uebung=uebung,
+        ist_aufwaermsatz=False,
+        einheit__user=user,
+        einheit__ist_deload=False,
+    ).exclude(id=neuer_satz.id)
+
+    if alte_saetze.exists():
+        max_alter_1rm = max(
+            float(s.gewicht) * (1 + int(s.wiederholungen) / 30) for s in alte_saetze
+        )
+        if current_1rm > max_alter_1rm:
+            diff = round(current_1rm - max_alter_1rm, 1)
+            return f"🎉 NEUER REKORD! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM) - +{diff} kg!"
+    else:
+        return f"🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)"
+    return None
+
+
 @login_required
 def add_set(request: HttpRequest, training_id: int) -> HttpResponse:
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
@@ -420,32 +448,8 @@ def add_set(request: HttpRequest, training_id: int) -> HttpResponse:
         # PR-Check (nur für Arbeitssätze)
         pr_message = None
         if not is_warmup and gewicht and wdh:
-            # Berechne 1RM für diesen Satz (Epley-Formel)
-            gewicht_float = float(gewicht)
-            wdh_int = int(wdh)
-            current_1rm = gewicht_float * (1 + wdh_int / 30)
-
-            # Hole bisheriges Maximum für diese Übung
-            alte_saetze = Satz.objects.filter(
-                uebung=uebung,
-                ist_aufwaermsatz=False,
-                einheit__user=request.user,
-                einheit__ist_deload=False,
-            ).exclude(id=neuer_satz.id)
-
-            if alte_saetze.exists():
-                max_alter_satz = max(
-                    [float(s.gewicht) * (1 + int(s.wiederholungen) / 30) for s in alte_saetze]
-                )
-
-                # Neuer PR?
-                if current_1rm > max_alter_satz:
-                    verbesserung = round(current_1rm - max_alter_satz, 1)
-                    pr_message = f"🎉 NEUER REKORD! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM) - +{verbesserung} kg!"
-                    messages.success(request, pr_message)
-            else:
-                # Erster Satz für diese Übung = automatisch PR
-                pr_message = f"🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)"
+            pr_message = _check_pr(request.user, uebung, neuer_satz, float(gewicht), int(wdh))
+            if pr_message:
                 messages.success(request, pr_message)
 
         # AJAX Request? Sende JSON
@@ -476,6 +480,40 @@ def delete_set(request: HttpRequest, set_id: int) -> HttpResponse:
     return redirect("training_session", training_id=training_id)
 
 
+def _parse_set_post_data(post) -> tuple[float | None, int | None, float | None]:
+    """Parst und validiert POST-Felder eines Satz-Updates.
+
+    Returns:
+        (gewicht, wiederholungen, rpe) – je None wenn leer/nicht gesetzt
+
+    Raises:
+        ValueError: Bei ungültigen oder out-of-range Werten
+    """
+    gewicht_raw = post.get("gewicht", "").strip()
+    wiederholungen_raw = post.get("wiederholungen", "").strip()
+    rpe_raw = post.get("rpe", "").strip()
+
+    gewicht = None
+    if gewicht_raw:
+        gewicht = float(gewicht_raw.replace(",", "."))
+        if not 0 <= gewicht <= 1000:
+            raise ValueError("Gewicht außerhalb gültiger Bereich (0-1000)")
+
+    wiederholungen = None
+    if wiederholungen_raw:
+        wiederholungen = int(wiederholungen_raw)
+        if not 0 <= wiederholungen <= 999:
+            raise ValueError("Wiederholungen außerhalb gültiger Bereich (0-999)")
+
+    rpe = None
+    if rpe_raw:
+        rpe = float(rpe_raw.replace(",", "."))
+        if not 0 <= rpe <= 10:
+            raise ValueError("RPE muss zwischen 0 und 10 sein")
+
+    return gewicht, wiederholungen, rpe
+
+
 def update_set(request: HttpRequest, set_id: int) -> HttpResponse:
     """Speichert Änderungen an einem existierenden Satz."""
     try:
@@ -484,64 +522,23 @@ def update_set(request: HttpRequest, set_id: int) -> HttpResponse:
         training_id = satz.einheit.id
 
         if request.method == "POST":
-            logger.info(f"POST data: {request.POST.dict()}")
-
-            # Parse und validiere Eingaben
             try:
-                gewicht_raw = request.POST.get("gewicht", "").strip()
-                wiederholungen_raw = request.POST.get("wiederholungen", "").strip()
-                rpe_raw = request.POST.get("rpe", "").strip()
+                gewicht, wiederholungen, rpe = _parse_set_post_data(request.POST)
+                logger.info(f"Validated - gewicht: {gewicht}, wdh: {wiederholungen}, rpe: {rpe}")
 
-                logger.info(
-                    f"Raw values - gewicht: '{gewicht_raw}', wdh: '{wiederholungen_raw}', rpe: '{rpe_raw}'"
-                )
-
-                # Gewicht validieren
-                gewicht = None
-                if gewicht_raw:
-                    # Ersetze Komma durch Punkt (deutsche Eingabe)
-                    gewicht_raw = gewicht_raw.replace(",", ".")
-                    gewicht = float(gewicht_raw)
-                    if gewicht < 0 or gewicht > 1000:
-                        raise ValueError("Gewicht außerhalb gültiger Bereich (0-1000)")
-
-                # Wiederholungen validieren
-                wiederholungen = None
-                if wiederholungen_raw:
-                    wiederholungen = int(wiederholungen_raw)
-                    if wiederholungen < 0 or wiederholungen > 999:
-                        raise ValueError("Wiederholungen außerhalb gültiger Bereich (0-999)")
-
-                # RPE validieren
-                rpe = None
-                if rpe_raw:
-                    rpe_raw = rpe_raw.replace(",", ".")
-                    rpe = float(rpe_raw)
-                    if rpe < 0 or rpe > 10:
-                        raise ValueError("RPE muss zwischen 0 und 10 sein")
-
-                logger.info(
-                    f"Validated values - gewicht: {gewicht}, wdh: {wiederholungen}, rpe: {rpe}"
-                )
-
-                # Speichere validierte Werte
                 satz.gewicht = gewicht
                 satz.wiederholungen = wiederholungen
                 satz.rpe = rpe
                 satz.ist_aufwaermsatz = request.POST.get("ist_aufwaermsatz") == "on"
                 notiz = request.POST.get("notiz", "").strip()
                 satz.notiz = notiz if notiz else None
-                superset_gruppe = request.POST.get("superset_gruppe", "0").strip()
-                satz.superset_gruppe = int(superset_gruppe) if superset_gruppe else 0
-
-                logger.info(f"Saving satz {set_id}...")
+                superset_raw = request.POST.get("superset_gruppe", "0").strip()
+                satz.superset_gruppe = int(superset_raw) if superset_raw else 0
                 satz.save()
                 logger.info(f"Satz {set_id} saved successfully")
 
-                # AJAX Request? Sende JSON
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return JsonResponse({"success": True})
-
                 return redirect("training_session", training_id=training_id)
 
             except (ValueError, TypeError) as e:
@@ -552,7 +549,6 @@ def update_set(request: HttpRequest, set_id: int) -> HttpResponse:
                     )
                 return redirect("training_session", training_id=training_id)
 
-        # GET Request - redirect to session
         return redirect("training_session", training_id=training_id)
 
     except Exception as e:
@@ -640,82 +636,85 @@ def _save_training_post(request, training) -> bool:
     return False
 
 
+def _build_intensity_suggestion(avg_rpe: float) -> dict | None:
+    """Gibt Intensitäts-Vorschlag zurück oder None."""
+    if avg_rpe < 6.5:
+        return {
+            "type": "intensity",
+            "title": "Intensität erhöhen",
+            "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
+            "action": "Steigere das Gewicht um 5-10% oder reduziere die Pausenzeit",
+            "icon": "bi-arrow-up-circle",
+            "color": "info",
+        }
+    if avg_rpe > 8.5:
+        return {
+            "type": "intensity",
+            "title": "Regeneration priorisieren",
+            "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
+            "action": "Reduziere die Intensität oder plane einen Deload",
+            "icon": "bi-shield-check",
+            "color": "warning",
+        }
+    return None
+
+
+def _build_volume_suggestion(user, recent_training_ids: list, recent_sets) -> dict | None:
+    """Gibt Volumen-Vorschlag basierend auf Vergleich letzte 3 vs. vorherige 3 Trainings zurück."""
+    previous_ids = list(
+        Trainingseinheit.objects.filter(user=user, ist_deload=False)
+        .order_by("-datum")
+        .values_list("id", flat=True)[3:6]
+    )
+
+    def _calc_volume(training_ids):
+        return sum(
+            float(s.gewicht or 0) * int(s.wiederholungen or 0)
+            for t in Trainingseinheit.objects.filter(id__in=training_ids)
+            for s in t.saetze.filter(ist_aufwaermsatz=False)
+        )
+
+    recent_vol = _calc_volume(recent_training_ids)
+    prev_vol = _calc_volume(previous_ids)
+    if not prev_vol:
+        return None
+
+    change_pct = ((recent_vol - prev_vol) / prev_vol) * 100
+    if change_pct < -15:
+        return {
+            "type": "volume",
+            "title": "Volumen gesunken",
+            "message": f"Dein Volumen ist um {abs(change_pct):.0f}% gefallen",
+            "action": "Füge 1-2 Sätze pro Übung hinzu oder trainiere häufiger",
+            "icon": "bi-graph-down",
+            "color": "danger",
+        }
+    if change_pct > 30:
+        return {
+            "type": "volume",
+            "title": "Volumen stark gestiegen",
+            "message": f"Dein Volumen ist um {change_pct:.0f}% gestiegen",
+            "action": "Achte auf ausreichend Regeneration zwischen Trainings",
+            "icon": "bi-graph-up",
+            "color": "warning",
+        }
+    return None
+
+
 def _build_ai_suggestions(user, recent_training_ids: list, recent_sets, avg_rpe: float) -> list:
     """Erstellt Trainingsoptimierungsvorschläge basierend auf RPE, Volumen und Vielfalt."""
     suggestions = []
 
     # Vorschlag 1: Intensität anpassen
-    if avg_rpe < 6.5:
-        suggestions.append(
-            {
-                "type": "intensity",
-                "title": "Intensität erhöhen",
-                "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
-                "action": "Steigere das Gewicht um 5-10% oder reduziere die Pausenzeit",
-                "icon": "bi-arrow-up-circle",
-                "color": "info",
-            }
-        )
-    elif avg_rpe > 8.5:
-        suggestions.append(
-            {
-                "type": "intensity",
-                "title": "Regeneration priorisieren",
-                "message": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}/10",
-                "action": "Reduziere die Intensität oder plane einen Deload",
-                "icon": "bi-shield-check",
-                "color": "warning",
-            }
-        )
+    # Vorschlag 1: Intensität
+    intensity = _build_intensity_suggestion(avg_rpe)
+    if intensity:
+        suggestions.append(intensity)
 
-    # Vorschlag 2: Volumen anpassen
-    previous_training_ids = list(
-        Trainingseinheit.objects.filter(user=user, ist_deload=False)
-        .order_by("-datum")
-        .values_list("id", flat=True)[3:6]
-    )
-    recent_trainings = Trainingseinheit.objects.filter(id__in=recent_training_ids)
-    previous_trainings = Trainingseinheit.objects.filter(id__in=previous_training_ids)
-
-    recent_volume = sum(
-        float(s.gewicht or 0) * int(s.wiederholungen or 0)
-        for t in recent_trainings
-        for s in t.saetze.filter(ist_aufwaermsatz=False)
-    )
-    previous_volume = (
-        sum(
-            float(s.gewicht or 0) * int(s.wiederholungen or 0)
-            for t in previous_trainings
-            for s in t.saetze.filter(ist_aufwaermsatz=False)
-        )
-        if previous_trainings.exists()
-        else 0
-    )
-
-    if previous_volume > 0:
-        volume_change = ((recent_volume - previous_volume) / previous_volume) * 100
-        if volume_change < -15:
-            suggestions.append(
-                {
-                    "type": "volume",
-                    "title": "Volumen gesunken",
-                    "message": f"Dein Volumen ist um {abs(volume_change):.0f}% gefallen",
-                    "action": "Füge 1-2 Sätze pro Übung hinzu oder trainiere häufiger",
-                    "icon": "bi-graph-down",
-                    "color": "danger",
-                }
-            )
-        elif volume_change > 30:
-            suggestions.append(
-                {
-                    "type": "volume",
-                    "title": "Volumen stark gestiegen",
-                    "message": f"Dein Volumen ist um {volume_change:.0f}% gestiegen",
-                    "action": "Achte auf ausreichend Regeneration zwischen Trainings",
-                    "icon": "bi-graph-up",
-                    "color": "warning",
-                }
-            )
+    # Vorschlag 2: Volumen
+    volume = _build_volume_suggestion(user, recent_training_ids, recent_sets)
+    if volume:
+        suggestions.append(volume)
 
     # Vorschlag 3: Übungsvariation
     trained_exercises = set(recent_sets.values_list("uebung_id", flat=True).distinct())

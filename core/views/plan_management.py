@@ -547,6 +547,60 @@ def toggle_group_public(request: HttpRequest, gruppe_id: int) -> HttpResponse:
     return redirect("training_select_plan")
 
 
+def _validate_cycle_params(request: HttpRequest, profile: "UserProfile") -> int:
+    """Liest und klemmt Zyklus- und Deload-Parameter aus POST, schreibt auf profile (kein save).
+
+    Returns:
+        Validierte Zykluslänge (2–12).
+    """
+    try:
+        cycle_length = max(2, min(12, int(request.POST.get("cycle_length", "4").strip())))
+    except (ValueError, TypeError):
+        cycle_length = 4
+    profile.cycle_length = cycle_length
+
+    _DELOAD_BOUNDS: dict[str, tuple[str, float, float, float]] = {
+        "deload_volume_factor": ("deload_volume_factor", 0.5, 1.0, 0.8),
+        "deload_weight_factor": ("deload_weight_factor", 0.5, 1.0, 0.9),
+        "deload_rpe_target": ("deload_rpe_target", 5.0, 9.0, 7.0),
+    }
+    for post_key, (attr, lo, hi, _default) in _DELOAD_BOUNDS.items():
+        try:
+            value = float(request.POST.get(post_key, str(_default)))
+            setattr(profile, attr, max(lo, min(hi, value)))
+        except (ValueError, TypeError):
+            pass
+
+    return cycle_length
+
+
+def _apply_gruppe_selection(
+    request: HttpRequest, profile: "UserProfile", gruppe_id: str, cycle_length: int
+) -> None:
+    """Setzt aktive Gruppe oder löscht sie; speichert profile; schreibt messages."""
+    if gruppe_id:
+        plan_exists = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).exists()
+        if plan_exists:
+            if str(profile.active_plan_group) != gruppe_id:
+                profile.cycle_start_date = None
+            profile.active_plan_group = gruppe_id
+            profile.save()
+            gruppe_name = (
+                Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).first().gruppe_name
+                or "Unbenannte Gruppe"
+            )
+            messages.success(
+                request, f"Aktiver Plan gesetzt: {gruppe_name} ({cycle_length} Wochen Zyklus)"
+            )
+        else:
+            messages.error(request, "Plan-Gruppe nicht gefunden!")
+    else:
+        profile.active_plan_group = None
+        profile.cycle_start_date = None
+        profile.save()
+        messages.success(request, "Aktiver Plan entfernt.")
+
+
 @login_required
 def set_active_plan_group(request: HttpRequest) -> HttpResponse:
     """
@@ -554,63 +608,12 @@ def set_active_plan_group(request: HttpRequest) -> HttpResponse:
     GET: Zeigt Liste aller Plan-Gruppen
     POST: Setzt die gewählte Gruppe als aktiv
     """
-    # Sicherstellen, dass UserProfile existiert
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
     if request.method == "POST":
         gruppe_id = request.POST.get("gruppe_id", "").strip()
-        cycle_length = request.POST.get("cycle_length", "4").strip()
-
-        # Zykluslänge validieren und speichern
-        try:
-            cycle_length = max(2, min(12, int(cycle_length)))
-        except (ValueError, TypeError):
-            cycle_length = 4
-        profile.cycle_length = cycle_length
-
-        # Deload-Parameter validieren und speichern
-        try:
-            vol_factor = float(request.POST.get("deload_volume_factor", "0.8"))
-            profile.deload_volume_factor = max(0.5, min(1.0, vol_factor))
-        except (ValueError, TypeError):
-            pass
-        try:
-            weight_factor = float(request.POST.get("deload_weight_factor", "0.9"))
-            profile.deload_weight_factor = max(0.5, min(1.0, weight_factor))
-        except (ValueError, TypeError):
-            pass
-        try:
-            rpe_target = float(request.POST.get("deload_rpe_target", "7.0"))
-            profile.deload_rpe_target = max(5.0, min(9.0, rpe_target))
-        except (ValueError, TypeError):
-            pass
-
-        if gruppe_id:
-            # Validierung: Prüfe ob Plan-Gruppe existiert
-            plan_exists = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).exists()
-
-            if plan_exists:
-                # Zyklus neu starten wenn Gruppe gewechselt wird
-                if str(profile.active_plan_group) != gruppe_id:
-                    profile.cycle_start_date = None
-                profile.active_plan_group = gruppe_id
-                profile.save()
-                gruppe_name = (
-                    Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).first().gruppe_name
-                    or "Unbenannte Gruppe"
-                )
-                messages.success(
-                    request, f"Aktiver Plan gesetzt: {gruppe_name} ({cycle_length} Wochen Zyklus)"
-                )
-            else:
-                messages.error(request, "Plan-Gruppe nicht gefunden!")
-        else:
-            # Leer = kein aktiver Plan
-            profile.active_plan_group = None
-            profile.cycle_start_date = None
-            profile.save()
-            messages.success(request, "Aktiver Plan entfernt.")
-
+        cycle_length = _validate_cycle_params(request, profile)
+        _apply_gruppe_selection(request, profile, gruppe_id, cycle_length)
         return redirect("dashboard")
 
     # GET: Zeige alle Plan-Gruppen des Users

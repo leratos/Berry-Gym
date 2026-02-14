@@ -19,6 +19,7 @@ from django.db import models
 from django.db.models import Avg, Count, F, Max, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -407,6 +408,111 @@ def _render_training_pdf_response(request: HttpRequest, context: dict, heute) ->
         return redirect("training_stats")
 
 
+def _sum_volume(saetze_qs) -> float:
+    """Summiert Volumen (Gewicht × Wdh) aus einem Satz-QuerySet."""
+    return sum(
+        float(s.gewicht) * s.wiederholungen for s in saetze_qs if s.gewicht and s.wiederholungen
+    )
+
+
+def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
+    """Sammelt alle Statistiken für den PDF-Report.
+
+    Returns dict mit allen Daten für den Template-Kontext.
+    """
+    muskelgruppen_dict = dict(MUSKELGRUPPEN)
+
+    trainings = Trainingseinheit.objects.filter(user=user, datum__gte=letzte_30_tage).order_by(
+        "-datum"
+    )[:20]
+
+    alle_trainings = Trainingseinheit.objects.filter(user=user)
+    gesamt_trainings = alle_trainings.count()
+    trainings_30_tage = alle_trainings.filter(datum__gte=letzte_30_tage).count()
+
+    alle_saetze = Satz.objects.filter(
+        einheit__user=user,
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
+    )
+    gesamt_saetze = alle_saetze.count()
+    saetze_30_tage = alle_saetze.filter(einheit__datum__gte=letzte_30_tage).count()
+
+    gesamt_volumen = _sum_volume(alle_saetze)
+    volumen_30_tage = _sum_volume(alle_saetze.filter(einheit__datum__gte=letzte_30_tage))
+
+    trainings_pro_woche = _calc_trainings_per_week(alle_trainings, heute)
+    consistency_metrics = calculate_consistency_metrics(alle_trainings)
+    top_uebungen = _build_top_uebungen(alle_saetze, muskelgruppen_dict)
+    plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
+    kraft_progression = _collect_strength_progression(alle_saetze, top_uebungen, muskelgruppen_dict)
+    muskelgruppen_stats = _collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30_tage)
+    push_pull_balance = _collect_push_pull(muskelgruppen_stats)
+
+    schwachstellen_status = {"untertrainiert", "nicht_trainiert"}
+    schwachstellen = sorted(
+        [mg for mg in muskelgruppen_stats if mg["status"] in schwachstellen_status],
+        key=lambda x: x["saetze"],
+    )[:5]
+    staerken = [mg for mg in muskelgruppen_stats if mg["status"] == "optimal"]
+
+    avg_rpe, rpe_verteilung = _collect_intensity_data(alle_saetze, letzte_30_tage)
+    rpe_saetze = alle_saetze.filter(rpe__isnull=False, einheit__datum__gte=letzte_30_tage)
+    rpe_quality = calculate_rpe_quality_analysis(alle_saetze)
+    volumen_wochen = _collect_weekly_volume_pdf(alle_saetze)
+    fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
+
+    koerperwerte_qs = KoerperWerte.objects.filter(user=user).order_by("-datum")
+    koerperwerte = list(koerperwerte_qs[:5])
+    letzter_koerperwert = koerperwerte[0] if koerperwerte else None
+    user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
+    rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)
+    gewichts_trend = _collect_weight_trend(koerperwerte)
+
+    push_saetze = int(push_pull_balance.get("push_saetze", 0))
+    pull_saetze = int(push_pull_balance.get("pull_saetze", 0))
+
+    return {
+        "start_datum": letzte_30_tage,
+        "end_datum": heute,
+        "current_date": heute,
+        "trainings": trainings,
+        "gesamt_trainings": gesamt_trainings,
+        "gesamt_saetze": gesamt_saetze,
+        "gesamt_volumen": round(gesamt_volumen, 0),
+        "trainings_30_tage": trainings_30_tage,
+        "saetze_30_tage": saetze_30_tage,
+        "volumen_30_tage": round(volumen_30_tage, 0),
+        "trainings_pro_woche": trainings_pro_woche,
+        "top_uebungen": top_uebungen,
+        "kraft_progression": kraft_progression,
+        "kraftentwicklung": kraft_progression,
+        "muskelgruppen_stats": muskelgruppen_stats,
+        "push_pull_balance": push_pull_balance,
+        "push_saetze": push_saetze,
+        "pull_saetze": pull_saetze,
+        "push_pull_ratio": float(push_pull_balance.get("ratio", 0)),
+        "push_pull_bewertung": str(push_pull_balance.get("bewertung", "")),
+        "push_pull_empfehlung": str(push_pull_balance.get("empfehlung", "")),
+        "schwachstellen": schwachstellen,
+        "staerken": staerken,
+        "total_einheiten": gesamt_trainings,
+        "total_saetze": gesamt_saetze,
+        "total_volumen": round(gesamt_volumen, 0),
+        "avg_rpe": avg_rpe,
+        "rpe_verteilung": rpe_verteilung,
+        "volumen_wochen": volumen_wochen[-8:],
+        "koerperwerte": koerperwerte,
+        "letzter_koerperwert": letzter_koerperwert,
+        "gewichts_trend": gewichts_trend,
+        "plateau_analysis": plateau_analysis,
+        "consistency_metrics": consistency_metrics,
+        "fatigue_analysis": fatigue_analysis,
+        "rm_standards": rm_standards,
+        "rpe_quality": rpe_quality,
+    }
+
+
 @login_required
 def export_training_pdf(request: HttpRequest) -> HttpResponse:
     """Export training statistics as PDF.
@@ -426,106 +532,14 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         logger.error("xhtml2pdf import failed")
         return redirect("training_stats")
 
-    # Helper function: muscle group key to display name
-    muskelgruppen_dict = dict(MUSKELGRUPPEN)
-
-    # Collect data
     heute = timezone.now()
     letzte_30_tage = heute - timedelta(days=30)
+    stats = _collect_pdf_stats(request.user, letzte_30_tage, heute)
 
-    # Training sessions
-    trainings = Trainingseinheit.objects.filter(
-        user=request.user, datum__gte=letzte_30_tage
-    ).order_by("-datum")[:20]
-
-    # Statistics
-    alle_trainings = Trainingseinheit.objects.filter(user=request.user)
-    gesamt_trainings = alle_trainings.count()
-    trainings_30_tage = alle_trainings.filter(datum__gte=letzte_30_tage).count()
-
-    alle_saetze = Satz.objects.filter(
-        einheit__user=request.user,
-        ist_aufwaermsatz=False,
-        einheit__ist_deload=False,
-    )
-    gesamt_saetze = alle_saetze.count()
-    saetze_30_tage = alle_saetze.filter(einheit__datum__gte=letzte_30_tage).count()
-
-    # Volume
-    gesamt_volumen = sum(
-        float(s.gewicht) * s.wiederholungen for s in alle_saetze if s.gewicht and s.wiederholungen
-    )
-    volumen_30_tage = sum(
-        float(s.gewicht) * s.wiederholungen
-        for s in alle_saetze.filter(einheit__datum__gte=letzte_30_tage)
-        if s.gewicht and s.wiederholungen
-    )
-
-    # Average training frequency
-    trainings_pro_woche = _calc_trainings_per_week(alle_trainings, heute)
-
-    # NEU: Konsistenz-Metriken
-    consistency_metrics = calculate_consistency_metrics(alle_trainings)
-
-    # Top exercises with more details
-    top_uebungen = _build_top_uebungen(alle_saetze, muskelgruppen_dict)
-
-    # NEU: Plateau-Analyse
-    plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
-
-    # Strength development: Top 5 exercises with measurable progression
-    kraft_progression = _collect_strength_progression(alle_saetze, top_uebungen, muskelgruppen_dict)
-
-    # Muscle group balance with intelligent assessment
-    muskelgruppen_stats = _collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30_tage)
-
-    # Push/Pull balance analysis
-    push_pull_balance = _collect_push_pull(muskelgruppen_stats)
-
-    # Identify weaknesses (undertrained muscle groups)
-    schwachstellen = [
-        mg for mg in muskelgruppen_stats if mg["status"] in ["untertrainiert", "nicht_trainiert"]
-    ]
-    schwachstellen = sorted(schwachstellen, key=lambda x: x["saetze"])[:5]
-
-    # Intensity analysis (RPE-based)
-    avg_rpe, rpe_verteilung = _collect_intensity_data(alle_saetze, letzte_30_tage)
-    rpe_saetze = alle_saetze.filter(rpe__isnull=False, einheit__datum__gte=letzte_30_tage)
-
-    # NEU: RPE-Qualitäts-Analyse
-    rpe_quality = calculate_rpe_quality_analysis(alle_saetze)
-
-    # Volume progression over last 12 weeks
-    volumen_wochen = _collect_weekly_volume_pdf(alle_saetze)
-
-    # NEU: Ermüdungs-Index
-    fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
-
-    # Body measurements with trend
-    koerperwerte_qs = KoerperWerte.objects.filter(user=request.user).order_by("-datum")
-
-    koerperwerte = list(koerperwerte_qs[:5])
-    letzter_koerperwert = koerperwerte[0] if koerperwerte else None
-
-    # NEU: 1RM-Standards
-    # Hole Körpergewicht falls vorhanden
-    user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
-    rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)
-
-    # Weight trend calculation
-    gewichts_trend = _collect_weight_trend(koerperwerte)
-
-    # Push/Pull balance data for template
-    push_saetze = int(push_pull_balance.get("push_saetze", 0))
-    pull_saetze = int(push_pull_balance.get("pull_saetze", 0))
-    push_pull_ratio = float(push_pull_balance.get("ratio", 0))
-    push_pull_bewertung = str(push_pull_balance.get("bewertung", ""))
-    push_pull_empfehlung = str(push_pull_balance.get("empfehlung", ""))
-
-    # Identify strengths (optimal muscle groups)
-    staerken = [mg for mg in muskelgruppen_stats if mg["status"] == "optimal"]
-
-    # Generate charts
+    muskelgruppen_stats = stats["muskelgruppen_stats"]
+    volumen_wochen = stats["volumen_wochen"]
+    push_saetze = stats["push_saetze"]
+    pull_saetze = stats["pull_saetze"]
     muscle_heatmap, volume_chart, push_pull_chart, body_map_image = _generate_pdf_charts(
         muskelgruppen_stats, volumen_wochen, push_saetze, pull_saetze
     )
@@ -533,51 +547,130 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     context = {
         "user": request.user,
         "datum": heute,
-        "current_date": heute,
-        "start_datum": letzte_30_tage,
-        "end_datum": heute,
-        "trainings": trainings,
-        "gesamt_trainings": gesamt_trainings,
-        "gesamt_saetze": gesamt_saetze,
-        "gesamt_volumen": round(gesamt_volumen, 0),
-        "trainings_30_tage": trainings_30_tage,
-        "saetze_30_tage": saetze_30_tage,
-        "volumen_30_tage": round(volumen_30_tage, 0),
-        "trainings_pro_woche": trainings_pro_woche,
-        "top_uebungen": top_uebungen,
-        "kraft_progression": kraft_progression,
-        "kraftentwicklung": kraft_progression,
-        "muskelgruppen_stats": muskelgruppen_stats,
-        "push_pull_balance": push_pull_balance,
-        "push_saetze": push_saetze,
-        "pull_saetze": pull_saetze,
-        "push_pull_ratio": push_pull_ratio,
-        "push_pull_bewertung": push_pull_bewertung,
-        "push_pull_empfehlung": push_pull_empfehlung,
-        "schwachstellen": schwachstellen,
-        "staerken": staerken,
-        "total_einheiten": gesamt_trainings,
-        "total_saetze": gesamt_saetze,
-        "total_volumen": round(gesamt_volumen, 0),
-        "avg_rpe": avg_rpe,
-        "rpe_verteilung": rpe_verteilung,
-        "volumen_wochen": volumen_wochen[-8:],
         "muscle_heatmap": muscle_heatmap,
         "volume_chart": volume_chart,
         "push_pull_chart": push_pull_chart,
         "body_map_image": body_map_image,
-        "koerperwerte": koerperwerte,
-        "letzter_koerperwert": letzter_koerperwert,
-        "gewichts_trend": gewichts_trend,
-        # NEU: Erweiterte Analysen
-        "plateau_analysis": plateau_analysis,
-        "consistency_metrics": consistency_metrics,
-        "fatigue_analysis": fatigue_analysis,
-        "rm_standards": rm_standards,
-        "rpe_quality": rpe_quality,
+        **stats,
     }
 
     return _render_training_pdf_response(request, context, heute)
+
+
+def _generate_qr_code_base64(url: str) -> str:
+    """Generiert einen QR-Code für die angegebene URL und gibt ihn als Base64-PNG zurück."""
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    qr_img.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode()
+
+
+def _group_exercises_by_day(plan) -> dict:
+    """Gruppiert PlanUebung-Objekte eines Plans nach Trainingstag."""
+    planuebungen = (
+        PlanUebung.objects.filter(plan=plan)
+        .select_related("uebung")
+        .order_by("trainingstag", "reihenfolge")
+    )
+    tage: dict = {}
+    for pu in planuebungen:
+        tag = pu.trainingstag or "Tag 1"
+        tage.setdefault(tag, []).append(pu)
+    return tage
+
+
+def _generate_and_return_pdf(
+    request: HttpRequest, html: str, filename: str, redirect_on_error: str
+) -> HttpResponse:
+    """Rendert HTML zu PDF und gibt eine Download-Response zurück.
+
+    Bei Fehler: messages.error + redirect zu redirect_on_error.
+    """
+    try:
+        result = BytesIO()
+        pdf = pisa.pisaDocument(BytesIO(html.encode("utf-8")), result)
+        if pdf.err:
+            logger.error(f"PDF generation errors: {pdf.err}")
+            messages.error(request, "Fehler bei PDF-Generierung")
+            return redirect(redirect_on_error)
+        response = HttpResponse(result.getvalue(), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+    except Exception as e:
+        logger.error(f"PDF export failed: {str(e)}", exc_info=True)
+        messages.error(request, "PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.")
+        return redirect(redirect_on_error)
+
+
+_PLAN_PDF_CSS = """
+    @page { size: A4; margin: 2cm; }
+    body { font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4; }
+    h1 { color: #198754; font-size: 24pt; margin-bottom: 10px;
+         border-bottom: 3px solid #198754; padding-bottom: 5px; }
+    h2 { color: #0dcaf0; font-size: 14pt; margin-top: 20px; margin-bottom: 10px;
+         border-left: 4px solid #0dcaf0; padding-left: 10px; }
+    .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px; }
+    .plan-info { flex: 1; }
+    .qr-code { text-align: right; }
+    .qr-code img { width: 120px; height: 120px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background-color: #198754; color: white; padding: 8px; text-align: left; font-size: 9pt; }
+    td { padding: 6px 8px; border-bottom: 1px solid #ddd; font-size: 9pt; }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 3px;
+             font-size: 8pt; font-weight: bold; }
+    .badge-primary { background-color: #198754; color: white; }
+    .badge-secondary { background-color: #6c757d; color: white; }
+    .footer { position: fixed; bottom: 1cm; left: 2cm; right: 2cm; text-align: center;
+              font-size: 8pt; color: #6c757d; border-top: 1px solid #ddd; padding-top: 5px; }
+    .page-break { page-break-after: always; }
+"""
+
+
+def _build_plan_pdf_html(
+    plan,
+    tage: dict,
+    qr_base64: str,
+    muskelgruppen_dict: dict,
+    beschreibung_html: str,
+    plan_url: str,
+) -> str:
+    """Baut das vollständige HTML-Dokument für den Einzel-Plan-PDF-Export."""
+    parts = [
+        f'<!DOCTYPE html><html><head><meta charset="utf-8"><style>{_PLAN_PDF_CSS}</style></head><body>',
+        '<div class="header"><div class="plan-info">',
+        f"<h1>{plan.name}</h1>",
+        f"<p><strong>Beschreibung:</strong><br>{beschreibung_html}</p>",
+        f'<p><strong>Erstellt:</strong> {plan.erstellt_am.strftime("%d.%m.%Y")}</p>',
+        '</div><div class="qr-code">',
+        f'<img src="data:image/png;base64,{qr_base64}" alt="QR Code">',
+        '<p style="font-size: 8pt; color: #6c757d;">Scan für Details</p>',
+        "</div></div>",
+    ]
+    for tag_nummer, uebungen in sorted(tage.items()):
+        parts.append(
+            f"<h2>{tag_nummer}</h2>"
+            "<table><thead><tr>"
+            "<th>#</th><th>Übung</th><th>Muskelgruppe</th><th>Sätze</th><th>Wiederholungen</th>"
+            "</tr></thead><tbody>"
+        )
+        for idx, pu in enumerate(uebungen, 1):
+            mg = muskelgruppen_dict.get(pu.uebung.muskelgruppe, pu.uebung.muskelgruppe)
+            parts.append(
+                f"<tr><td>{idx}</td><td><strong>{pu.uebung.bezeichnung}</strong></td>"
+                f'<td><span class="badge badge-primary">{mg}</span></td>'
+                f"<td>{pu.saetze_ziel or '-'}</td><td>{pu.wiederholungen_ziel or '-'}</td></tr>"
+            )
+        parts.append("</tbody></table>")
+    parts.append(
+        f'<div class="footer">HomeGym Trainingsplan | '
+        f'Erstellt: {timezone.now().strftime("%d.%m.%Y %H:%M")} | {plan_url}</div>'
+        "</body></html>"
+    )
+    return "".join(parts)
 
 
 @login_required
@@ -601,215 +694,102 @@ def export_plan_pdf(request: HttpRequest, plan_id: int) -> HttpResponse:
 
     plan = get_object_or_404(Plan, id=plan_id, user=request.user)
 
-    # Generate QR code (link to plan)
+    # Generate QR code + group exercises by day using helpers
     plan_url = request.build_absolute_uri(f"/plan/{plan.id}/")
-    qr = qrcode.QRCode(version=1, box_size=10, border=2)
-    qr.add_data(plan_url)
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white")
-
-    # Convert QR to Base64
-    buffer = BytesIO()
-    qr_img.save(buffer, format="PNG")
-    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-    # Group exercises by training day
-    planuebungen = (
-        PlanUebung.objects.filter(plan=plan)
-        .select_related("uebung")
-        .order_by("trainingstag", "reihenfolge")
-    )
-
-    # Group by day
-    tage = {}
-    for planuebung in planuebungen:
-        tag = planuebung.trainingstag or "Tag 1"
-        if tag not in tage:
-            tage[tag] = []
-        tage[tag].append(planuebung)
-
-    # Muscle groups for icon mapping
+    qr_base64 = _generate_qr_code_base64(plan_url)
+    tage = _group_exercises_by_day(plan)
     muskelgruppen_dict = dict(MUSKELGRUPPEN)
-
-    # Format description with line breaks
     beschreibung_html = (plan.beschreibung or "Keine Beschreibung").replace("\n", "<br>")
 
-    # HTML template for PDF
-    html_template = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            @page {{
-                size: A4;
-                margin: 2cm;
-            }}
-            body {{
-                font-family: Arial, sans-serif;
-                font-size: 10pt;
-                line-height: 1.4;
-            }}
-            h1 {{
-                color: #198754;
-                font-size: 24pt;
-                margin-bottom: 10px;
-                border-bottom: 3px solid #198754;
-                padding-bottom: 5px;
-            }}
-            h2 {{
-                color: #0dcaf0;
-                font-size: 14pt;
-                margin-top: 20px;
-                margin-bottom: 10px;
-                border-left: 4px solid #0dcaf0;
-                padding-left: 10px;
-            }}
-            .header {{
-                display: flex;
-                justify-content: space-between;
-                align-items: start;
-                margin-bottom: 20px;
-            }}
-            .plan-info {{
-                flex: 1;
-            }}
-            .qr-code {{
-                text-align: right;
-            }}
-            .qr-code img {{
-                width: 120px;
-                height: 120px;
-            }}
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 20px;
-            }}
-            th {{
-                background-color: #198754;
-                color: white;
-                padding: 8px;
-                text-align: left;
-                font-size: 9pt;
-            }}
-            td {{
-                padding: 6px 8px;
-                border-bottom: 1px solid #ddd;
-                font-size: 9pt;
-            }}
-            tr:nth-child(even) {{
-                background-color: #f8f9fa;
-            }}
-            .badge {{
-                display: inline-block;
-                padding: 3px 8px;
-                border-radius: 3px;
-                font-size: 8pt;
-                font-weight: bold;
-            }}
-            .badge-primary {{
-                background-color: #198754;
-                color: white;
-            }}
-            .badge-secondary {{
-                background-color: #6c757d;
-                color: white;
-            }}
-            .footer {{
-                position: fixed;
-                bottom: 1cm;
-                left: 2cm;
-                right: 2cm;
-                text-align: center;
-                font-size: 8pt;
-                color: #6c757d;
-                border-top: 1px solid #ddd;
-                padding-top: 5px;
-            }}
-            .page-break {{
-                page-break-after: always;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <div class="plan-info">
-                <h1>{plan.name}</h1>
-                <p><strong>Beschreibung:</strong><br>{beschreibung_html}</p>
-                <p><strong>Erstellt:</strong> {plan.erstellt_am.strftime("%d.%m.%Y")}</p>
-            </div>
-            <div class="qr-code">
-                <img src="data:image/png;base64,{qr_base64}" alt="QR Code">
-                <p style="font-size: 8pt; color: #6c757d;">Scan für Details</p>
-            </div>
-        </div>
-    """
+    html_template = _build_plan_pdf_html(
+        plan, tage, qr_base64, muskelgruppen_dict, beschreibung_html, plan_url
+    )
+    filename = f"plan_{plan.name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d')}.pdf"
+    redirect_url = reverse("plan_details", kwargs={"plan_id": plan_id})
+    return _generate_and_return_pdf(request, html_template, filename, redirect_url)
 
-    # Add each training day
-    for tag_nummer, uebungen in sorted(tage.items()):
-        html_template += f"""
-        <h2>{tag_nummer}</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Übung</th>
-                    <th>Muskelgruppe</th>
-                    <th>Sätze</th>
-                    <th>Wiederholungen</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
 
-        for idx, pu in enumerate(uebungen, 1):
-            muskelgruppe = muskelgruppen_dict.get(pu.uebung.muskelgruppe, pu.uebung.muskelgruppe)
+_PLAN_GROUP_PDF_CSS = """
+    @page { size: A4; margin: 2cm; }
+    body { font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4; }
+    h1 { color: #198754; font-size: 24pt; margin-bottom: 10px;
+         border-bottom: 3px solid #198754; padding-bottom: 5px; }
+    h2 { color: #0dcaf0; font-size: 16pt; margin-top: 25px; margin-bottom: 10px;
+         border-left: 4px solid #0dcaf0; padding-left: 10px; page-break-before: auto; }
+    .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px; }
+    .plan-info { flex: 1; }
+    .qr-code { text-align: right; }
+    .qr-code img { width: 120px; height: 120px; }
+    .group-overview { background-color: #f8f9fa; border-left: 4px solid #198754;
+                      padding: 15px; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background-color: #198754; color: white; padding: 8px; text-align: left; font-size: 9pt; }
+    td { padding: 6px 8px; border-bottom: 1px solid #ddd; font-size: 9pt; }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 3px;
+             font-size: 8pt; font-weight: bold; }
+    .badge-primary { background-color: #198754; color: white; }
+    .footer { position: fixed; bottom: 1cm; left: 2cm; right: 2cm; text-align: center;
+              font-size: 8pt; color: #6c757d; border-top: 1px solid #ddd; padding-top: 5px; }
+"""
 
-            html_template += f"""
-                <tr>
-                    <td>{idx}</td>
-                    <td><strong>{pu.uebung.bezeichnung}</strong></td>
-                    <td><span class="badge badge-primary">{muskelgruppe}</span></td>
-                    <td>{pu.saetze_ziel or "-"}</td>
-                    <td>{pu.wiederholungen_ziel or "-"}</td>
-                </tr>
-            """
 
-        html_template += """
-            </tbody>
-        </table>
-        """
-
-    # Footer
-    html_template += f"""
-        <div class="footer">
-            HomeGym Trainingsplan | Erstellt: {timezone.now().strftime("%d.%m.%Y %H:%M")} | {plan_url}
-        </div>
-    </body>
-    </html>
-    """
-
-    # Generate PDF
-    try:
-        result = BytesIO()
-        pdf = pisa.pisaDocument(BytesIO(html_template.encode("utf-8")), result)
-
-        if pdf.err:
-            logger.error(f"PDF generation errors: {pdf.err}")
-            messages.error(request, "Fehler bei PDF-Generierung")
-            return redirect("plan_details", plan_id=plan_id)
-
-        # Response with PDF
-        response = HttpResponse(result.getvalue(), content_type="application/pdf")
-        filename = f"plan_{plan.name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d')}.pdf"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        return response
-
-    except Exception as e:
-        logger.error(f"Plan PDF export failed: {str(e)}", exc_info=True)
-        messages.error(request, "PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.")
-        return redirect("plan_details", plan_id=plan_id)
+def _build_group_pdf_html(
+    gruppe_name: str,
+    plaene,
+    qr_base64: str,
+    muskelgruppen_dict: dict,
+    beschreibung_html: str,
+    erster_plan,
+    plans_url: str,
+) -> str:
+    """Baut das vollständige HTML-Dokument für den Gruppen-PDF-Export."""
+    parts = [
+        f'<!DOCTYPE html><html><head><meta charset="utf-8"><style>{_PLAN_GROUP_PDF_CSS}</style></head><body>',
+        '<div class="header"><div class="plan-info">',
+        f"<h1>{gruppe_name}</h1>",
+        '<div class="group-overview">',
+        f"<p><strong>Trainingsgruppe:</strong> {plaene.count()} Trainingstage</p>",
+        f"<p><strong>Beschreibung:</strong><br>{beschreibung_html}</p>",
+        f'<p><strong>Erstellt:</strong> {erster_plan.erstellt_am.strftime("%d.%m.%Y")}</p>',
+        "</div></div>",
+        '<div class="qr-code">',
+        f'<img src="data:image/png;base64,{qr_base64}" alt="QR Code">',
+        '<p style="font-size: 8pt; color: #6c757d;">Scan für Details</p>',
+        "</div></div>",
+    ]
+    for idx_plan, plan in enumerate(plaene, 1):
+        planuebungen = (
+            PlanUebung.objects.filter(plan=plan).select_related("uebung").order_by("reihenfolge")
+        )
+        tag_name = f"Tag {idx_plan}: {plan.name}"
+        parts.append(
+            f"<h2>{tag_name}</h2>"
+            "<table><thead><tr>"
+            '<th style="width:25px;">#</th>'
+            '<th style="width:30%;">Übung</th>'
+            '<th style="width:25%;">Muskelgruppe</th>'
+            '<th style="width:50px;">Sätze</th>'
+            '<th style="width:15%;">Wdh.</th>'
+            '<th style="width:50px;">Pause</th>'
+            "</tr></thead><tbody>"
+        )
+        for idx, pu in enumerate(planuebungen, 1):
+            mg = muskelgruppen_dict.get(pu.uebung.muskelgruppe, pu.uebung.muskelgruppe)
+            pause = f"{pu.pausenzeit}s" if pu.pausenzeit else "-"
+            parts.append(
+                f"<tr><td>{idx}</td><td><strong>{pu.uebung.bezeichnung}</strong></td>"
+                f'<td><span class="badge badge-primary">{mg}</span></td>'
+                f"<td>{pu.saetze_ziel or '-'}</td><td>{pu.wiederholungen_ziel or '-'}</td>"
+                f'<td style="font-size:8pt;color:#6c757d;">{pause}</td></tr>'
+            )
+        parts.append("</tbody></table>")
+    parts.append(
+        f'<div class="footer">HomeGym Trainingsgruppe | '
+        f'Erstellt: {timezone.now().strftime("%d.%m.%Y %H:%M")} | {plans_url}</div>'
+        "</body></html>"
+    )
+    return "".join(parts)
 
 
 @login_required
@@ -831,218 +811,29 @@ def export_plan_group_pdf(request: HttpRequest, gruppe_id: int) -> HttpResponse:
         messages.error(request, "PDF Export nicht verfügbar - Pakete fehlen")
         return redirect("training_select_plan")
 
-    # Get all plans in this group
     plaene = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).order_by(
         "gruppe_reihenfolge", "name"
     )
-
     if not plaene.exists():
         messages.error(request, "Keine Pläne in dieser Gruppe gefunden")
         return redirect("training_select_plan")
 
-    # Generate QR code for plans overview
-    plans_url = request.build_absolute_uri("/training/select/")
-    qr = qrcode.QRCode(version=1, box_size=10, border=2)
-    qr.add_data(plans_url)
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white")
-
-    buffer = BytesIO()
-    qr_img.save(buffer, format="PNG")
-    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-    # Group description (from first plan)
     erster_plan = plaene.first()
     gruppe_name = erster_plan.gruppe_name or "Trainingsgruppe"
     gruppen_beschreibung = erster_plan.beschreibung or f"{gruppe_name} - Wochenplan"
     beschreibung_html = gruppen_beschreibung.replace("\n", "<br>")
-
     muskelgruppen_dict = dict(MUSKELGRUPPEN)
 
-    # HTML template
-    html_template = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            @page {{
-                size: A4;
-                margin: 2cm;
-            }}
-            body {{
-                font-family: Arial, sans-serif;
-                font-size: 10pt;
-                line-height: 1.4;
-            }}
-            h1 {{
-                color: #198754;
-                font-size: 24pt;
-                margin-bottom: 10px;
-                border-bottom: 3px solid #198754;
-                padding-bottom: 5px;
-            }}
-            h2 {{
-                color: #0dcaf0;
-                font-size: 16pt;
-                margin-top: 25px;
-                margin-bottom: 10px;
-                border-left: 4px solid #0dcaf0;
-                padding-left: 10px;
-                page-break-before: auto;
-            }}
-            .header {{
-                display: flex;
-                justify-content: space-between;
-                align-items: start;
-                margin-bottom: 30px;
-            }}
-            .plan-info {{
-                flex: 1;
-            }}
-            .qr-code {{
-                text-align: right;
-            }}
-            .qr-code img {{
-                width: 120px;
-                height: 120px;
-            }}
-            .group-overview {{
-                background-color: #f8f9fa;
-                border-left: 4px solid #198754;
-                padding: 15px;
-                margin-bottom: 20px;
-            }}
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 20px;
-            }}
-            th {{
-                background-color: #198754;
-                color: white;
-                padding: 8px;
-                text-align: left;
-                font-size: 9pt;
-            }}
-            td {{
-                padding: 6px 8px;
-                border-bottom: 1px solid #ddd;
-                font-size: 9pt;
-            }}
-            tr:nth-child(even) {{
-                background-color: #f8f9fa;
-            }}
-            .badge {{
-                display: inline-block;
-                padding: 3px 8px;
-                border-radius: 3px;
-                font-size: 8pt;
-                font-weight: bold;
-            }}
-            .badge-primary {{
-                background-color: #198754;
-                color: white;
-            }}
-            .footer {{
-                position: fixed;
-                bottom: 1cm;
-                left: 2cm;
-                right: 2cm;
-                text-align: center;
-                font-size: 8pt;
-                color: #6c757d;
-                border-top: 1px solid #ddd;
-                padding-top: 5px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <div class="plan-info">
-                <h1>{gruppe_name}</h1>
-                <div class="group-overview">
-                    <p><strong>Trainingsgruppe:</strong> {plaene.count()} Trainingstage</p>
-                    <p><strong>Beschreibung:</strong><br>{beschreibung_html}</p>
-                    <p><strong>Erstellt:</strong> {erster_plan.erstellt_am.strftime("%d.%m.%Y")}</p>
-                </div>
-            </div>
-            <div class="qr-code">
-                <img src="data:image/png;base64,{qr_base64}" alt="QR Code">
-                <p style="font-size: 8pt; color: #6c757d;">Scan für Details</p>
-            </div>
-        </div>
-    """
-
-    # Add each plan (training day)
-    for idx_plan, plan in enumerate(plaene, 1):
-        planuebungen = (
-            PlanUebung.objects.filter(plan=plan).select_related("uebung").order_by("reihenfolge")
-        )
-
-        tag_name = f"Tag {idx_plan}: {plan.name}"
-
-        html_template += f"""
-        <h2>{tag_name}</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 25px;">#</th>
-                    <th style="width: 30%;">Übung</th>
-                    <th style="width: 25%;">Muskelgruppe</th>
-                    <th style="width: 50px;">Sätze</th>
-                    <th style="width: 15%;">Wdh.</th>
-                    <th style="width: 50px;">Pause</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
-
-        for idx, pu in enumerate(planuebungen, 1):
-            muskelgruppe = muskelgruppen_dict.get(pu.uebung.muskelgruppe, pu.uebung.muskelgruppe)
-            pause = f"{pu.pausenzeit}s" if pu.pausenzeit else "-"
-
-            html_template += f"""
-                <tr>
-                    <td>{idx}</td>
-                    <td><strong>{pu.uebung.bezeichnung}</strong></td>
-                    <td><span class="badge badge-primary">{muskelgruppe}</span></td>
-                    <td>{pu.saetze_ziel or "-"}</td>
-                    <td>{pu.wiederholungen_ziel or "-"}</td>
-                    <td style="font-size: 8pt; color: #6c757d;">{pause}</td>
-                </tr>
-            """
-
-        html_template += """
-            </tbody>
-        </table>
-        """
-
-    # Footer
-    html_template += f"""
-        <div class="footer">
-            HomeGym Trainingsgruppe | Erstellt: {timezone.now().strftime("%d.%m.%Y %H:%M")} | {plans_url}
-        </div>
-    </body>
-    </html>
-    """
-
-    # Generate PDF
-    try:
-        result = BytesIO()
-        pdf = pisa.pisaDocument(BytesIO(html_template.encode("utf-8")), result)
-
-        if pdf.err:
-            logger.error(f"PDF generation errors: {pdf.err}")
-            messages.error(request, "Fehler bei PDF-Generierung")
-            return redirect("training_select_plan")
-
-        response = HttpResponse(result.getvalue(), content_type="application/pdf")
-        filename = f"gruppe_{gruppe_name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d')}.pdf"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        return response
-
-    except Exception as e:
-        logger.error(f"Group PDF export failed: {str(e)}", exc_info=True)
-        messages.error(request, "PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.")
-        return redirect("training_select_plan")
+    plans_url = request.build_absolute_uri("/training/select/")
+    qr_base64 = _generate_qr_code_base64(plans_url)
+    html_template = _build_group_pdf_html(
+        gruppe_name,
+        plaene,
+        qr_base64,
+        muskelgruppen_dict,
+        beschreibung_html,
+        erster_plan,
+        plans_url,
+    )
+    filename = f"gruppe_{gruppe_name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d')}.pdf"
+    return _generate_and_return_pdf(request, html_template, filename, "training_select_plan")

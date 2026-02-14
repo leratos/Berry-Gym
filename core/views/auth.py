@@ -25,6 +25,78 @@ from ..models import InviteCode, WaitlistEntry
 logger = logging.getLogger(__name__)
 
 
+def _validate_invite_code(code_str: str) -> str | None:
+    """Prüft Einladungscode. Gibt Fehlermeldung zurück oder None wenn OK."""
+    if not code_str:
+        return "Einladungscode fehlt."
+    if not InviteCode.objects.filter(code=code_str, used_count__lt=F("max_uses")).exists():
+        return "Ungültiger oder aufgebrauchter Code."
+    return None
+
+
+def _validate_registration_fields(username: str, email: str, pass1: str, pass2: str) -> list[str]:
+    """Validiert Pflichtfelder für Registrierung. Gibt Liste von Fehlermeldungen zurück."""
+    errors: list[str] = []
+    if not username:
+        errors.append("Benutzername fehlt.")
+    elif User.objects.filter(username=username).exists():
+        errors.append("Benutzername vergeben.")
+
+    if not email:
+        errors.append("E-Mail fehlt.")
+    elif User.objects.filter(email=email).exists():
+        errors.append("E-Mail bereits registriert.")
+
+    if not pass1 or pass1 != pass2:
+        errors.append("Passwörter ungültig oder nicht identisch.")
+    elif len(pass1) < 8:
+        errors.append("Passwort zu kurz (min. 8 Zeichen).")
+
+    return errors
+
+
+def _handle_update_profile(user, new_username: str, new_email: str) -> list[str]:
+    """Aktualisiert Username/E-Mail. Gibt Fehlerliste zurück (leer = Erfolg + gespeichert)."""
+    errors: list[str] = []
+    if new_username and new_username != user.username:
+        if User.objects.filter(username=new_username).exists():
+            errors.append("Dieser Benutzername ist bereits vergeben.")
+        elif len(new_username) < 3:
+            errors.append("Benutzername muss mindestens 3 Zeichen haben.")
+        else:
+            user.username = new_username
+
+    if new_email and new_email != user.email:
+        if User.objects.filter(email=new_email).exists():
+            errors.append("Diese E-Mail ist bereits registriert.")
+        else:
+            user.email = new_email
+
+    if not errors:
+        user.save()
+    return errors
+
+
+def _handle_change_password(
+    user, current_password: str, new_password: str, confirm_password: str
+) -> list[str]:
+    """Ändert Passwort. Gibt Fehlerliste zurück (leer = Erfolg + gespeichert)."""
+    from django.contrib.auth.hashers import check_password
+
+    if not current_password or not new_password or not confirm_password:
+        return ["❌ Bitte alle Felder ausfüllen."]
+    if not check_password(current_password, user.password):
+        return ["❌ Aktuelles Passwort ist falsch. Bitte nochmal versuchen."]
+    if len(new_password) < 8:
+        return ["❌ Neues Passwort muss mindestens 8 Zeichen haben."]
+    if new_password != confirm_password:
+        return ["❌ Die neuen Passwörter stimmen nicht überein. Bitte überprüfen!"]
+
+    user.set_password(new_password)
+    user.save()
+    return []
+
+
 def send_welcome_email(user: User) -> None:
     """Sendet Willkommens-E-Mail nach erfolgreicher Registrierung"""
     subject = "🏋️ Willkommen bei HomeGym!"
@@ -124,27 +196,10 @@ def register(request: HttpRequest) -> HttpResponse:
         pass2 = request.POST.get("password2")
 
         errors = []
-        if not code_str:
-            errors.append("Einladungscode fehlt.")
-        elif not InviteCode.objects.filter(code=code_str, used_count__lt=F("max_uses")).exists():
-            errors.append("Ungültiger oder aufgebrauchter Code.")
-
-        from django.contrib.auth.models import User
-
-        if not username:
-            errors.append("Benutzername fehlt.")
-        elif User.objects.filter(username=username).exists():
-            errors.append("Benutzername vergeben.")
-
-        if not email:
-            errors.append("E-Mail fehlt.")
-        elif User.objects.filter(email=email).exists():
-            errors.append("E-Mail bereits registriert.")
-
-        if not pass1 or pass1 != pass2:
-            errors.append("Passwörter ungültig oder nicht identisch.")
-        elif len(pass1) < 8:
-            errors.append("Passwort zu kurz (min. 8 Zeichen).")
+        code_error = _validate_invite_code(code_str)
+        if code_error:
+            errors.append(code_error)
+        errors.extend(_validate_registration_fields(username, email, pass1, pass2))
 
         if errors:
             for e in errors:
@@ -160,7 +215,6 @@ def register(request: HttpRequest) -> HttpResponse:
             entry.status = "registered"
             entry.save()
 
-        # Willkommens-E-Mail senden
         send_welcome_email(user)
 
         user = authenticate(username=username, password=pass1)
@@ -232,67 +286,33 @@ def feedback_detail(request: HttpRequest, feedback_id: int) -> HttpResponse:
 @login_required
 def profile(request: HttpRequest) -> HttpResponse:
     """Profil-Seite zum Bearbeiten von Benutzerdaten"""
-    from django.contrib.auth import update_session_auth_hash
-    from django.contrib.auth.hashers import check_password
-
     if request.method == "POST":
+        from django.contrib.auth import update_session_auth_hash
+
         action = request.POST.get("action")
         user = request.user
 
         if action == "update_profile":
             new_username = request.POST.get("username", "").strip()
             new_email = request.POST.get("email", "").strip().lower()
-
-            errors = []
-
-            # Username validieren
-            if new_username and new_username != user.username:
-                from django.contrib.auth.models import User
-
-                if User.objects.filter(username=new_username).exists():
-                    errors.append("Dieser Benutzername ist bereits vergeben.")
-                elif len(new_username) < 3:
-                    errors.append("Benutzername muss mindestens 3 Zeichen haben.")
-                else:
-                    user.username = new_username
-
-            # E-Mail validieren
-            if new_email and new_email != user.email:
-                from django.contrib.auth.models import User
-
-                if User.objects.filter(email=new_email).exists():
-                    errors.append("Diese E-Mail ist bereits registriert.")
-                else:
-                    user.email = new_email
-
+            errors = _handle_update_profile(user, new_username, new_email)
             if errors:
                 for error in errors:
                     messages.error(request, error)
             else:
-                user.save()
                 messages.success(request, "✅ Profil erfolgreich aktualisiert!")
 
         elif action == "change_password":
-            current_password = request.POST.get("current_password")
-            new_password = request.POST.get("new_password")
-            confirm_password = request.POST.get("confirm_password")
-
-            if not current_password or not new_password or not confirm_password:
-                messages.error(request, "❌ Bitte alle Felder ausfüllen.")
-            elif not check_password(current_password, user.password):
-                messages.error(
-                    request, "❌ Aktuelles Passwort ist falsch. Bitte nochmal versuchen."
-                )
-            elif len(new_password) < 8:
-                messages.error(request, "❌ Neues Passwort muss mindestens 8 Zeichen haben.")
-            elif new_password != confirm_password:
-                messages.error(
-                    request, "❌ Die neuen Passwörter stimmen nicht überein. Bitte überprüfen!"
-                )
+            errors = _handle_change_password(
+                user,
+                request.POST.get("current_password"),
+                request.POST.get("new_password"),
+                request.POST.get("confirm_password"),
+            )
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
             else:
-                user.set_password(new_password)
-                user.save()
-                # Session aktualisieren ohne neu einzuloggen (behält Messages!)
                 update_session_auth_hash(request, user)
                 messages.success(
                     request, "✅ Passwort erfolgreich geändert! Du bleibst eingeloggt."
