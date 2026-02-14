@@ -84,6 +84,7 @@ class TestGetTemplateDetail:
         return next(iter(data))
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         c = Client()
         key = self._first_template_key()
         url = reverse("get_template_detail", args=[key])
@@ -91,12 +92,14 @@ class TestGetTemplateDetail:
         assert resp.status_code == 302
 
     def test_valid_key_returns_200(self):
+        """Bekannter Template-Key → 200 mit Detailstruktur."""
         key = self._first_template_key()
         url = reverse("get_template_detail", args=[key])
         resp = self.client.get(url)
         assert resp.status_code == 200
 
     def test_response_contains_days(self):
+        """Antwort enthält days_adapted als Liste."""
         key = self._first_template_key()
         url = reverse("get_template_detail", args=[key])
         resp = self.client.get(url)
@@ -105,6 +108,7 @@ class TestGetTemplateDetail:
         assert isinstance(data["days_adapted"], list)
 
     def test_invalid_key_returns_404(self):
+        """Unbekannter Template-Key → 404."""
         url = reverse("get_template_detail", args=["nicht-existent-xyz"])
         resp = self.client.get(url)
         assert resp.status_code == 404
@@ -135,6 +139,7 @@ class TestCreatePlanFromTemplate:
         return next(iter(data))
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         c = Client()
         key = self._first_template_key()
         url = reverse("create_plan_from_template", args=[key])
@@ -142,6 +147,7 @@ class TestCreatePlanFromTemplate:
         assert resp.status_code == 302
 
     def test_get_returns_405(self):
+        """GET auf Create-Endpoint → 405 Method Not Allowed."""
         key = self._first_template_key()
         url = reverse("create_plan_from_template", args=[key])
         resp = self.client.get(url)
@@ -159,6 +165,7 @@ class TestCreatePlanFromTemplate:
         assert Plan.objects.filter(user=self.user).count() > before
 
     def test_invalid_key_returns_404(self):
+        """Unbekannter Template-Key beim Erstellen → 404."""
         url = reverse("create_plan_from_template", args=["nicht-existent-xyz"])
         resp = self.client.post(url)
         assert resp.status_code == 404
@@ -180,6 +187,7 @@ class TestMlTrainModel:
         self.url = reverse("ml_train_model")
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         c = Client()
         resp = c.post(self.url, content_type="application/json", data=json.dumps({}))
         assert resp.status_code == 302
@@ -273,6 +281,7 @@ class TestMlPredictWeight:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         uebung = UebungFactory()
         c = Client()
         url = reverse("ml_predict_weight", args=[uebung.id])
@@ -280,6 +289,7 @@ class TestMlPredictWeight:
         assert resp.status_code == 302
 
     def test_nonexistent_uebung_returns_404(self):
+        """Nicht-existierende Übung → 404."""
         url = reverse("ml_predict_weight", args=[99999])
         with patch.dict(
             "sys.modules",
@@ -357,6 +367,7 @@ class TestMlModelInfo:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         uebung = UebungFactory()
         c = Client()
         url = reverse("ml_model_info", args=[uebung.id])
@@ -415,6 +426,7 @@ class TestMlDashboard:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         c = Client()
         resp = c.get(reverse("ml_dashboard"))
         assert resp.status_code == 302

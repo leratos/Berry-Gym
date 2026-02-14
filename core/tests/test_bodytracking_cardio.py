@@ -48,15 +48,18 @@ class TestAddKoerperwert:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         c = Client()
         resp = c.get(reverse("add_koerperwert"))
         assert resp.status_code == 302
 
     def test_get_shows_form(self):
+        """GET zeigt das Formular zum Hinzufügen."""
         resp = self.client.get(reverse("add_koerperwert"))
         assert resp.status_code == 200
 
     def test_post_creates_entry_and_redirects(self):
+        """POST mit validen Daten erstellt Eintrag und leitet weiter."""
         resp = self.client.post(
             reverse("add_koerperwert"),
             data={
@@ -70,6 +73,7 @@ class TestAddKoerperwert:
         assert KoerperWerte.objects.filter(user=self.user).exists()
 
     def test_post_with_optional_fields(self):
+        """POST mit optionalen Feldern (KFA, Muskelmasse, Notiz) funktioniert."""
         resp = self.client.post(
             reverse("add_koerperwert"),
             data={
@@ -91,17 +95,20 @@ class TestEditKoerperwert:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         wert = KoerperWerteFactory(user=self.user)
         c = Client()
         resp = c.get(reverse("edit_koerperwert", args=[wert.id]))
         assert resp.status_code == 302
 
     def test_get_shows_form(self):
+        """GET zeigt das Bearbeitungsformular."""
         wert = KoerperWerteFactory(user=self.user)
         resp = self.client.get(reverse("edit_koerperwert", args=[wert.id]))
         assert resp.status_code == 200
 
     def test_post_updates_entry(self):
+        """POST mit neuem Gewicht aktualisiert den Datenbankwert."""
         wert = KoerperWerteFactory(user=self.user, gewicht=80)
         resp = self.client.post(
             reverse("edit_koerperwert", args=[wert.id]),
@@ -112,6 +119,7 @@ class TestEditKoerperwert:
         assert float(wert.gewicht) == 77.0
 
     def test_other_user_cannot_edit(self):
+        """Fremde Einträge können nicht bearbeitet werden → 404."""
         other = UserFactory()
         wert = KoerperWerteFactory(user=other)
         resp = self.client.get(reverse("edit_koerperwert", args=[wert.id]))
@@ -126,12 +134,14 @@ class TestDeleteKoerperwert:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         wert = KoerperWerteFactory(user=self.user)
         c = Client()
         resp = c.post(reverse("delete_koerperwert", args=[wert.id]))
         assert resp.status_code == 302
 
     def test_delete_own_entry(self):
+        """Eigenen Eintrag löschen → Redirect, Eintrag nicht mehr in DB."""
         wert = KoerperWerteFactory(user=self.user)
         resp = self.client.post(reverse("delete_koerperwert", args=[wert.id]))
         assert resp.status_code == 302
@@ -140,6 +150,7 @@ class TestDeleteKoerperwert:
         assert not KoerperWerte.objects.filter(id=wert.id).exists()
 
     def test_cannot_delete_other_users_entry(self):
+        """Fremden Eintrag löschen → 404."""
         other = UserFactory()
         wert = KoerperWerteFactory(user=other)
         resp = self.client.post(reverse("delete_koerperwert", args=[wert.id]))
@@ -154,11 +165,13 @@ class TestProgressPhotos:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         c = Client()
         resp = c.get(reverse("progress_photos"))
         assert resp.status_code == 302
 
     def test_progress_photos_loads(self):
+        """Fortschrittsfotos-Seite rendert ohne Fehler."""
         resp = self.client.get(reverse("progress_photos"))
         assert resp.status_code == 200
 
@@ -184,16 +197,19 @@ class TestCardioList:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         c = Client()
         resp = c.get(reverse("cardio_list"))
         assert resp.status_code == 302
 
     def test_empty_list(self):
+        """Leere Cardio-Liste → total_einheiten == 0."""
         resp = self.client.get(reverse("cardio_list"))
         assert resp.status_code == 200
         assert resp.context["total_einheiten"] == 0
 
     def test_with_entries_default_30_days(self):
+        """Standard-Ansicht zeigt Einheiten der letzten 30 Tage."""
         CardioEinheitFactory(user=self.user)
         resp = self.client.get(reverse("cardio_list"))
         assert resp.status_code == 200
@@ -221,16 +237,19 @@ class TestCardioAdd:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         c = Client()
         resp = c.get(reverse("cardio_add"))
         assert resp.status_code == 302
 
     def test_get_shows_form(self):
+        """GET zeigt das Formular mit verfügbaren Aktivitäten im Context."""
         resp = self.client.get(reverse("cardio_add"))
         assert resp.status_code == 200
         assert "aktivitaeten" in resp.context
 
     def test_post_creates_entry(self):
+        """POST mit validen Daten erstellt Cardio-Eintrag und leitet weiter."""
         resp = self.client.post(
             reverse("cardio_add"),
             data={
@@ -310,12 +329,14 @@ class TestCardioDelete:
         self.client.force_login(self.user)
 
     def test_login_required(self):
+        """Unauthentifizierter Zugriff → Redirect zur Login-Seite."""
         cardio = CardioEinheitFactory(user=self.user)
         c = Client()
         resp = c.post(reverse("cardio_delete", args=[cardio.id]))
         assert resp.status_code == 302
 
     def test_delete_own_entry(self):
+        """Eigenen Eintrag löschen → Redirect, Eintrag nicht mehr in DB."""
         cardio = CardioEinheitFactory(user=self.user)
         resp = self.client.post(reverse("cardio_delete", args=[cardio.id]))
         assert resp.status_code == 302
@@ -324,6 +345,7 @@ class TestCardioDelete:
         assert not CardioEinheit.objects.filter(id=cardio.id).exists()
 
     def test_cannot_delete_others_entry(self):
+        """Fremden Eintrag löschen → 404."""
         other = UserFactory()
         cardio = CardioEinheitFactory(user=other)
         resp = self.client.post(reverse("cardio_delete", args=[cardio.id]))
