@@ -47,6 +47,49 @@ def add_koerperwert(request: HttpRequest) -> HttpResponse:
     return render(request, "core/add_koerperwert.html", context)
 
 
+def _val_or_none(val):
+    """Gibt val zurück oder None wenn val falsy."""
+    return val or None
+
+
+def _float_or_none(val) -> float | None:
+    """Gibt float(val) zurück oder None wenn val falsy."""
+    return float(val) if val else None
+
+
+def _compute_weight_change(werte) -> float:
+    """Berechnet Gewichtsveränderung zwischen erstem und letztem Eintrag."""
+    if werte.count() <= 1:
+        return 0
+    return round(float(werte.last().gewicht - werte.first().gewicht), 1)
+
+
+def _prepare_body_chart_data(werte) -> dict:
+    """Baut alle Chart-Datenserien aus einem KoerperWerte-QuerySet auf.
+
+    Returns:
+        Dict mit labels_json, gewicht_json, bmi_json, ffmi_json,
+        kfa_json, muskel_json, aktuelles_gewicht, aenderung.
+    """
+    labels = [w.datum.strftime("%d.%m.%y") for w in werte]
+    gewicht_data = [float(w.gewicht) for w in werte]
+    bmi_data = [_val_or_none(w.bmi) for w in werte]
+    ffmi_data = [_val_or_none(w.ffmi) for w in werte]
+    kfa_data = [_float_or_none(w.koerperfett_prozent) for w in werte]
+    muskel_data = [_float_or_none(w.muskelmasse_kg) for w in werte]
+
+    return {
+        "aktuelles_gewicht": werte.last().gewicht,
+        "aenderung": _compute_weight_change(werte),
+        "labels_json": json.dumps(labels),
+        "gewicht_json": json.dumps(gewicht_data),
+        "bmi_json": json.dumps(bmi_data),
+        "ffmi_json": json.dumps(ffmi_data),
+        "kfa_json": json.dumps(kfa_data),
+        "muskel_json": json.dumps(muskel_data),
+    }
+
+
 @login_required
 def body_stats(request: HttpRequest) -> HttpResponse:
     """Zeigt Körperwerte-Verlauf mit Graphen."""
@@ -55,37 +98,7 @@ def body_stats(request: HttpRequest) -> HttpResponse:
     if not werte.exists():
         return render(request, "core/body_stats.html", {"no_data": True})
 
-    # Daten für Charts vorbereiten
-    labels = [w.datum.strftime("%d.%m.%y") for w in werte]
-    gewicht_data = [float(w.gewicht) for w in werte]
-
-    # BMI & FFMI
-    bmi_data = [w.bmi if w.bmi else None for w in werte]
-    ffmi_data = [w.ffmi if w.ffmi else None for w in werte]
-
-    # Körperfett
-    kfa_data = [float(w.koerperfett_prozent) if w.koerperfett_prozent else None for w in werte]
-
-    # Muskelmasse
-    muskel_data = [float(w.muskelmasse_kg) if w.muskelmasse_kg else None for w in werte]
-
-    # Berechne aktuelle Werte und Änderung
-    aktuelles_gewicht = werte.last().gewicht if werte else None
-    gewicht_aenderung = (
-        round(float(werte.last().gewicht - werte.first().gewicht), 1) if werte.count() > 1 else 0
-    )
-
-    context = {
-        "werte": werte,
-        "aktuelles_gewicht": aktuelles_gewicht,
-        "aenderung": gewicht_aenderung,
-        "labels_json": json.dumps(labels),
-        "gewicht_json": json.dumps(gewicht_data),
-        "bmi_json": json.dumps(bmi_data),
-        "ffmi_json": json.dumps(ffmi_data),
-        "kfa_json": json.dumps(kfa_data),
-        "muskel_json": json.dumps(muskel_data),
-    }
+    context = {"werte": werte, **_prepare_body_chart_data(werte)}
     return render(request, "core/body_stats.html", context)
 
 

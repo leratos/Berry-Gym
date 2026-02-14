@@ -29,6 +29,34 @@ from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Ue
 logger = logging.getLogger(__name__)
 
 
+def _range_or_none(value: float | None, lo: float, hi: float) -> float | None:
+    """Gibt value zurück wenn im Bereich [lo, hi], sonst None."""
+    return value if value is not None and lo <= value <= hi else None
+
+
+def _extract_deload_params(
+    plan_data: dict,
+) -> tuple[int | None, float | None, float | None]:
+    """Extrahiert Deload-Parameter aus KI-Plan-Daten.
+
+    Returns:
+        (cycle_length, volume_multiplier, rpe_target) – je None wenn nicht vorhanden.
+    """
+    deload_weeks = plan_data.get("deload_weeks") or []
+    cycle_length = max(2, min(12, deload_weeks[0])) if deload_weeks else None
+
+    macrocycle = plan_data.get("macrocycle") or {}
+    deload_week_data = [w for w in (macrocycle.get("weeks") or []) if w.get("is_deload")]
+    volume_mult = None
+    rpe_target = None
+    if deload_week_data:
+        first = deload_week_data[0]
+        volume_mult = _range_or_none(first.get("volume_multiplier"), 0.5, 1.0)
+        rpe_target = _range_or_none(first.get("intensity_target_rpe"), 5.0, 9.0)
+
+    return cycle_length, volume_mult, rpe_target
+
+
 def _apply_mesocycle_from_plan(user: User, plan_data: dict[str, Any], plan_ids: list[int]) -> None:
     """
     Setzt Mesozyklus-Tracking auf dem UserProfile basierend auf KI-Plan-Daten.
@@ -47,31 +75,16 @@ def _apply_mesocycle_from_plan(user: User, plan_data: dict[str, Any], plan_ids: 
     except Plan.DoesNotExist:
         return
 
-    # Zykluslänge aus deload_weeks ableiten
-    deload_weeks = plan_data.get("deload_weeks") or []
-    if deload_weeks and len(deload_weeks) >= 1:
-        # Erste Deload-Woche = Zykluslänge (z.B. [4, 8, 12] → cycle_length = 4)
-        profile.cycle_length = max(2, min(12, deload_weeks[0]))
-
-    # Deload-Parameter aus Makrozyklus extrahieren
-    macrocycle = plan_data.get("macrocycle") or {}
-    weeks = macrocycle.get("weeks") or []
-    deload_week_data = [w for w in weeks if w.get("is_deload")]
-    if deload_week_data:
-        first_deload = deload_week_data[0]
-        volume_mult = first_deload.get("volume_multiplier")
-        rpe_target = first_deload.get("intensity_target_rpe")
-        if volume_mult and 0.5 <= volume_mult <= 1.0:
-            profile.deload_volume_factor = volume_mult
-        if rpe_target and 5.0 <= rpe_target <= 9.0:
-            profile.deload_rpe_target = rpe_target
-
-    # Gewichts-Faktor: Deload-Wochen haben typisch "Volumen -20%, Intensität -10%"
-    # Wenn volume_multiplier 0.8 → weight_factor ~0.9
+    cycle_length, volume_mult, rpe_target = _extract_deload_params(plan_data)
+    if cycle_length is not None:
+        profile.cycle_length = cycle_length
+    if volume_mult is not None:
+        profile.deload_volume_factor = volume_mult
+    if rpe_target is not None:
+        profile.deload_rpe_target = rpe_target
     if profile.deload_volume_factor < 1.0:
         profile.deload_weight_factor = round(1.0 - (1.0 - profile.deload_volume_factor) * 0.5, 2)
 
-    # Zyklus-Start zurücksetzen (wird beim ersten Training neu gesetzt)
     profile.cycle_start_date = None
     profile.save()
 
@@ -90,22 +103,28 @@ def _apply_mesocycle_from_plan(user: User, plan_data: dict[str, Any], plan_ids: 
 PRIORITAET_ORDER = {"hoch": 0, "mittel": 1, "niedrig": 2, "info": 3}
 
 
-def _get_muscle_balance_empfehlung(letzte_30_tage_saetze) -> list:
-    """Analysiert Muskelgruppen-Balance (RPE-gewichtet) und gibt Empfehlungen zurück."""
-    muskelgruppen_stats = {}
+def _build_muskelgruppe_stats(saetze) -> dict:
+    """Baut Stats-Dict pro Muskelgruppe (RPE-gewichtete eff. Wdh + Satz-Anzahl)."""
+    stats = {}
     for gruppe_key, gruppe_name in MUSKELGRUPPEN:
+        gruppe_saetze = saetze.filter(uebung__muskelgruppe=gruppe_key)
         effektive_wdh = sum(
             s.wiederholungen * (float(s.rpe) / 10.0)
-            for s in letzte_30_tage_saetze.filter(uebung__muskelgruppe=gruppe_key)
+            for s in gruppe_saetze
             if s.wiederholungen and s.rpe
         )
-        saetze_anzahl = letzte_30_tage_saetze.filter(uebung__muskelgruppe=gruppe_key).count()
         if effektive_wdh > 0:
-            muskelgruppen_stats[gruppe_key] = {
+            stats[gruppe_key] = {
                 "name": gruppe_name,
                 "effektive_wdh": effektive_wdh,
-                "saetze": saetze_anzahl,
+                "saetze": gruppe_saetze.count(),
             }
+    return stats
+
+
+def _get_muscle_balance_empfehlung(letzte_30_tage_saetze) -> list:
+    """Analysiert Muskelgruppen-Balance (RPE-gewichtet) und gibt Empfehlungen zurück."""
+    muskelgruppen_stats = _build_muskelgruppe_stats(letzte_30_tage_saetze)
 
     if not muskelgruppen_stats:
         return []
@@ -194,6 +213,18 @@ def _get_push_pull_empfehlung(letzte_30_tage_saetze) -> list:
     return []
 
 
+def _is_stagnating(max_gewichte: list[float]) -> bool:
+    """Gibt True zurück wenn kein Fortschritt und konstantes Gewicht."""
+    if len(max_gewichte) < 4:
+        return False
+    erste = max_gewichte[:2]
+    letzte = max_gewichte[-2:]
+    avg_erste = sum(erste) / len(erste)
+    avg_letzte = sum(letzte) / len(letzte)
+    fortschritt = ((avg_letzte - avg_erste) / avg_erste * 100) if avg_erste > 0 else 0
+    return fortschritt < 2.5 and len(set(max_gewichte)) == 1
+
+
 def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
     """Erkennt stagnierende Übungen (kein Fortschritt in 60 Tagen)."""
     uebung_trainings: dict = defaultdict(list)
@@ -216,13 +247,7 @@ def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
         if len(max_gewichte) < 4:
             continue
 
-        erste = max_gewichte[:2]
-        letzte = max_gewichte[-2:]
-        avg_erste = sum(erste) / len(erste)
-        avg_letzte = sum(letzte) / len(letzte)
-        fortschritt = ((avg_letzte - avg_erste) / avg_erste * 100) if avg_erste > 0 else 0
-
-        if fortschritt < 2.5 and len(set(max_gewichte)) == 1:
+        if _is_stagnating(max_gewichte):
             uebung = Uebung.objects.get(id=uebung_id)
             empfehlungen.append(
                 {
@@ -345,6 +370,96 @@ def workout_recommendations(request: HttpRequest) -> HttpResponse:
     return render(request, "core/workout_recommendations.html", context)
 
 
+_VALID_PLAN_TYPES = ["2er-split", "3er-split", "4er-split", "ganzkörper", "push-pull-legs"]
+_VALID_PERIODIZATIONS = ["linear", "wellenfoermig", "block"]
+_VALID_PROFILES = ["kraft", "hypertrophie", "definition"]
+
+
+def _handle_save_cached_plan(user: User, data: dict) -> JsonResponse:
+    """Speichert einen gecachten KI-Plan direkt in die DB."""
+    from ai_coach.plan_generator import PlanGenerator
+
+    generator = PlanGenerator(user_id=user.id, plan_type="3er-split")
+    plan_data = data["plan_data"]
+    plan_ids = generator._save_plan_to_db(plan_data)
+    _apply_mesocycle_from_plan(user, plan_data, plan_ids)
+    return JsonResponse(
+        {
+            "success": True,
+            "plan_ids": plan_ids,
+            "plan_name": plan_data.get("plan_name", ""),
+            "sessions": len(plan_data.get("sessions", [])),
+            "message": f"Plan '{plan_data.get('plan_name', '')}' erfolgreich gespeichert!",
+        }
+    )
+
+
+def _validate_plan_gen_params(
+    data: dict,
+) -> tuple[str, int, int, str, str, bool] | JsonResponse:
+    """Validiert und normalisiert Parameter für die Plan-Generierung.
+
+    Returns:
+        (plan_type, sets_per_session, analysis_days, periodization,
+         target_profile, preview_only) bei Erfolg, sonst JsonResponse mit Fehler.
+    """
+    plan_type = data.get("plan_type", "3er-split")
+    sets_per_session = int(data.get("sets_per_session", 18))
+    analysis_days = int(data.get("analysis_days", 30))
+    periodization = data.get("periodization", "linear")
+    target_profile = data.get("target_profile", "hypertrophie")
+    preview_only = data.get("previewOnly", False)
+
+    if plan_type not in _VALID_PLAN_TYPES:
+        return JsonResponse(
+            {"error": f'Ungültiger Plan-Typ. Erlaubt: {", ".join(_VALID_PLAN_TYPES)}'}, status=400
+        )
+    if sets_per_session < 10 or sets_per_session > 30:
+        return JsonResponse({"error": "Sätze pro Session muss zwischen 10-30 liegen"}, status=400)
+    if periodization not in _VALID_PERIODIZATIONS:
+        periodization = "linear"
+    if target_profile not in _VALID_PROFILES:
+        target_profile = "hypertrophie"
+
+    return plan_type, sets_per_session, analysis_days, periodization, target_profile, preview_only
+
+
+def _execute_plan_generation(
+    user: User, generator, preview_only: bool, use_openrouter: bool
+) -> JsonResponse:
+    """Führt die Plan-Generierung aus und gibt die JsonResponse zurück."""
+    cost = 0.003 if use_openrouter else 0.0
+    model = "OpenRouter 70B" if use_openrouter else "Ollama 8B"
+
+    if preview_only:
+        result = generator.generate(save_to_db=False)
+        return JsonResponse(
+            {
+                "success": True,
+                "preview": True,
+                "plan_data": result.get("plan_data", {}),
+                "cost": cost,
+                "model": model,
+            }
+        )
+
+    result = generator.generate(save_to_db=True)
+    if result.get("success") and result.get("plan_ids"):
+        _apply_mesocycle_from_plan(user, result.get("plan_data", {}), result.get("plan_ids", []))
+    plan_name = result.get("plan_data", {}).get("plan_name", "")
+    return JsonResponse(
+        {
+            "success": True,
+            "plan_ids": result.get("plan_ids", []),
+            "plan_name": plan_name,
+            "sessions": len(result.get("plan_data", {}).get("sessions", [])),
+            "cost": cost,
+            "model": model,
+            "message": f"Plan '{plan_name}' erfolgreich erstellt!",
+        }
+    )
+
+
 @login_required
 def generate_plan_api(request: HttpRequest) -> JsonResponse:
     """
@@ -361,68 +476,21 @@ def generate_plan_api(request: HttpRequest) -> JsonResponse:
 
         # Check ob wir einen gecachten Plan speichern sollen
         if data.get("saveCachedPlan") and data.get("plan_data"):
-            # Direkt den gecachten Plan speichern ohne neu zu generieren
-            from ai_coach.plan_generator import PlanGenerator
+            return _handle_save_cached_plan(request.user, data)
 
-            generator = PlanGenerator(
-                user_id=request.user.id,
-                plan_type="3er-split",  # Dummy, wird nicht genutzt
-            )
-
-            plan_data = data["plan_data"]
-
-            # Plan in DB speichern
-            plan_ids = generator._save_plan_to_db(plan_data)
-
-            # Mesozyklus-Tracking aus KI-Plan-Daten setzen
-            _apply_mesocycle_from_plan(request.user, plan_data, plan_ids)
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "plan_ids": plan_ids,
-                    "plan_name": plan_data.get("plan_name", ""),
-                    "sessions": len(plan_data.get("sessions", [])),
-                    "message": f"Plan '{plan_data.get('plan_name', '')}' erfolgreich gespeichert!",
-                }
-            )
-
-        plan_type = data.get("plan_type", "3er-split")
-        sets_per_session = int(data.get("sets_per_session", 18))
-        analysis_days = int(data.get("analysis_days", 30))
-        periodization = data.get("periodization", "linear")
-        target_profile = data.get("target_profile", "hypertrophie")
-        preview_only = data.get("previewOnly", False)
-
-        # Validierung
-        valid_plan_types = ["2er-split", "3er-split", "4er-split", "ganzkörper", "push-pull-legs"]
-        if plan_type not in valid_plan_types:
-            return JsonResponse(
-                {"error": f'Ungültiger Plan-Typ. Erlaubt: {", ".join(valid_plan_types)}'},
-                status=400,
-            )
-
-        if sets_per_session < 10 or sets_per_session > 30:
-            return JsonResponse(
-                {"error": "Sätze pro Session muss zwischen 10-30 liegen"}, status=400
-            )
-
-        valid_periodizations = ["linear", "wellenfoermig", "block"]
-        if periodization not in valid_periodizations:
-            periodization = "linear"
-
-        valid_profiles = ["kraft", "hypertrophie", "definition"]
-        if target_profile not in valid_profiles:
-            target_profile = "hypertrophie"
+        params = _validate_plan_gen_params(data)
+        if isinstance(params, JsonResponse):
+            return params
+        plan_type, sets_per_session, analysis_days, periodization, target_profile, preview_only = (
+            params
+        )
 
         # Plan Generator importieren (korrekter Package-Import)
         from ai_coach.plan_generator import PlanGenerator
 
-        # Auf dem Server (DEBUG=False) immer OpenRouter verwenden (keine lokale GPU)
         use_openrouter = (
             not settings.DEBUG or os.getenv("USE_OPENROUTER", "False").lower() == "true"
         )
-
         generator = PlanGenerator(
             user_id=request.user.id,
             plan_type=plan_type,
@@ -433,40 +501,7 @@ def generate_plan_api(request: HttpRequest) -> JsonResponse:
             use_openrouter=use_openrouter,
             fallback_to_openrouter=True,
         )
-
-        if preview_only:
-            # Generiere Plan ohne zu speichern für Vorschau
-            result = generator.generate(save_to_db=False)
-            return JsonResponse(
-                {
-                    "success": True,
-                    "preview": True,
-                    "plan_data": result.get("plan_data", {}),
-                    "cost": 0.003 if use_openrouter else 0.0,
-                    "model": "OpenRouter 70B" if use_openrouter else "Ollama 8B",
-                }
-            )
-        else:
-            # Generiere und speichere Plan
-            result = generator.generate(save_to_db=True)
-
-            # Mesozyklus-Tracking aus KI-Plan-Daten setzen
-            if result.get("success") and result.get("plan_ids"):
-                _apply_mesocycle_from_plan(
-                    request.user, result.get("plan_data", {}), result.get("plan_ids", [])
-                )
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "plan_ids": result.get("plan_ids", []),
-                    "plan_name": result.get("plan_data", {}).get("plan_name", ""),
-                    "sessions": len(result.get("plan_data", {}).get("sessions", [])),
-                    "cost": 0.003 if use_openrouter else 0.0,
-                    "model": "OpenRouter 70B" if use_openrouter else "Ollama 8B",
-                    "message": f"Plan '{result.get('plan_data', {}).get('plan_name', '')}' erfolgreich erstellt!",
-                }
-            )
+        return _execute_plan_generation(request.user, generator, preview_only, use_openrouter)
 
     except Exception as e:
         logger.error(f"Generate Plan API Error: {e}", exc_info=True)
@@ -574,6 +609,78 @@ def optimize_plan_api(request: HttpRequest) -> JsonResponse:
         )
 
 
+def _apply_replace_exercise(plan: Plan, opt: dict) -> str | None:
+    old_name = opt.get("old_exercise", "")
+    new_name = opt.get("new_exercise", "")
+    old_pu = PlanUebung.objects.filter(
+        plan=plan, uebung__bezeichnung__icontains=old_name.split("(")[0].strip()
+    ).first()
+    if not old_pu:
+        return f"Übung '{old_name}' nicht im Plan gefunden"
+    new_uebung = Uebung.objects.filter(
+        bezeichnung__icontains=new_name.split("(")[0].strip()
+    ).first()
+    if not new_uebung:
+        return f"Übung '{new_name}' nicht gefunden"
+    old_pu.uebung = new_uebung
+    old_pu.save()
+    return None
+
+
+def _apply_adjust_volume(plan: Plan, opt: dict) -> str | None:
+    exercise_name = opt.get("exercise", "")
+    plan_pu = PlanUebung.objects.filter(
+        plan=plan, uebung__bezeichnung__icontains=exercise_name.split("(")[0].strip()
+    ).first()
+    if not plan_pu:
+        return f"Übung '{exercise_name}' nicht im Plan gefunden"
+    if opt.get("new_sets"):
+        plan_pu.saetze_ziel = opt["new_sets"]
+    if opt.get("new_reps"):
+        plan_pu.wiederholungen_ziel = opt["new_reps"]
+    plan_pu.save()
+    return None
+
+
+def _apply_add_exercise(plan: Plan, opt: dict) -> str | None:
+    exercise_name = opt.get("exercise", "")
+    uebung = Uebung.objects.filter(
+        bezeichnung__icontains=exercise_name.split("(")[0].strip()
+    ).first()
+    if not uebung:
+        return f"Übung '{exercise_name}' nicht gefunden"
+    max_r = (
+        PlanUebung.objects.filter(plan=plan).aggregate(Max("reihenfolge"))["reihenfolge__max"] or 0
+    )
+    PlanUebung.objects.create(
+        plan=plan,
+        uebung=uebung,
+        reihenfolge=max_r + 1,
+        saetze_ziel=opt.get("sets", 3),
+        wiederholungen_ziel=opt.get("reps", "8-12"),
+    )
+    return None
+
+
+_OPT_HANDLERS = {
+    "replace_exercise": _apply_replace_exercise,
+    "adjust_volume": _apply_adjust_volume,
+    "add_exercise": _apply_add_exercise,
+}
+
+
+def _apply_single_optimization(plan: Plan, opt: dict) -> str | None:
+    """Wendet eine einzelne Optimierung auf den Plan an.
+
+    Returns:
+        Fehlermeldung als String wenn fehlgeschlagen, None bei Erfolg/No-op.
+    """
+    handler = _OPT_HANDLERS.get(opt.get("type"))
+    if handler is None:
+        return None  # "deload_recommended" und unbekannte Typen: No-op
+    return handler(plan, opt)
+
+
 @login_required
 def apply_optimizations_api(request: HttpRequest) -> JsonResponse:
     """
@@ -620,96 +727,13 @@ def apply_optimizations_api(request: HttpRequest) -> JsonResponse:
 
         for opt in optimizations:
             try:
-                opt_type = opt.get("type")
-
-                if opt_type == "replace_exercise":
-                    # Finde die zu ersetzende Übung
-                    old_exercise_name = opt.get("old_exercise")
-                    new_exercise_name = opt.get("new_exercise")
-
-                    # Hole alte PlanUebung
-                    old_plan_uebung = PlanUebung.objects.filter(
-                        plan=plan,
-                        uebung__bezeichnung__icontains=old_exercise_name.split("(")[0].strip(),
-                    ).first()
-
-                    if not old_plan_uebung:
-                        errors.append(f"Übung '{old_exercise_name}' nicht im Plan gefunden")
-                        continue
-
-                    # Finde neue Übung
-                    new_uebung = Uebung.objects.filter(
-                        bezeichnung__icontains=new_exercise_name.split("(")[0].strip()
-                    ).first()
-
-                    if not new_uebung:
-                        errors.append(f"Übung '{new_exercise_name}' nicht gefunden")
-                        continue
-
-                    # Ersetze Übung (behalte Sets/Reps/Reihenfolge)
-                    old_plan_uebung.uebung = new_uebung
-                    old_plan_uebung.save()
+                error = _apply_single_optimization(plan, opt)
+                if error:
+                    errors.append(error)
+                else:
                     applied_count += 1
-
-                elif opt_type == "adjust_volume":
-                    # Finde Übung und ändere Sets/Reps
-                    exercise_name = opt.get("exercise")
-                    new_sets = opt.get("new_sets")
-                    new_reps = opt.get("new_reps")
-
-                    plan_uebung = PlanUebung.objects.filter(
-                        plan=plan,
-                        uebung__bezeichnung__icontains=exercise_name.split("(")[0].strip(),
-                    ).first()
-
-                    if not plan_uebung:
-                        errors.append(f"Übung '{exercise_name}' nicht im Plan gefunden")
-                        continue
-
-                    if new_sets:
-                        plan_uebung.saetze_ziel = new_sets
-                    if new_reps:
-                        plan_uebung.wiederholungen_ziel = new_reps
-                    plan_uebung.save()
-                    applied_count += 1
-
-                elif opt_type == "add_exercise":
-                    # Füge neue Übung hinzu
-                    exercise_name = opt.get("exercise")
-                    sets = opt.get("sets", 3)
-                    reps = opt.get("reps", "8-12")
-
-                    # Finde Übung
-                    uebung = Uebung.objects.filter(
-                        bezeichnung__icontains=exercise_name.split("(")[0].strip()
-                    ).first()
-
-                    if not uebung:
-                        errors.append(f"Übung '{exercise_name}' nicht gefunden")
-                        continue
-
-                    # Füge am Ende des Plans hinzu
-                    max_reihenfolge = (
-                        PlanUebung.objects.filter(plan=plan).aggregate(Max("reihenfolge"))[
-                            "reihenfolge__max"
-                        ]
-                        or 0
-                    )
-
-                    PlanUebung.objects.create(
-                        plan=plan,
-                        uebung=uebung,
-                        reihenfolge=max_reihenfolge + 1,
-                        saetze_ziel=sets,
-                        wiederholungen_ziel=reps,
-                    )
-                    applied_count += 1
-
-                elif opt_type == "deload_recommended":
-                    # Keine direkte Aktion - nur Info
-                    pass
-
             except Exception as e:
+                opt_type = opt.get("type", "?")
                 logger.error(f"Optimization error for {opt_type}: {e}", exc_info=True)
                 errors.append(f"{opt_type}: Fehler beim Anwenden")
 
