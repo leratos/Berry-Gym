@@ -336,7 +336,7 @@ sudo supervisorctl restart homegym
 
 ## 🔒 Sicherheit Checkliste
 - [x] `DEBUG = False` in Production
-- [x] `SECRET_KEY` als Umgebungsvariable
+- [x] `DJANGO_SECRET_KEY` als Umgebungsvariable (Plesk) – oder `SECRET_KEY` in .env
 - [x] HTTPS aktiviert (Let's Encrypt)
 - [x] `ALLOWED_HOSTS` konfiguriert
 - [x] Firewall-Regeln (nur 80/443 offen)
