@@ -272,25 +272,16 @@ class TestCardioAdd:
         )
         assert resp.status_code == 302
 
-    def test_post_invalid_dauer(self):
-        """Ungültige Dauer → Redirect zurück."""
+    @pytest.mark.parametrize(
+        "dauer_wert",
+        ["abc", "-10", "0", "-99"],
+        ids=["text", "negativ", "null", "grossnegativ"],
+    )
+    def test_post_ungueltige_dauer_redirects(self, dauer_wert):
+        """Ungültige Dauer (Text, negativ, null) → Redirect zurück."""
         resp = self.client.post(
             reverse("cardio_add"),
-            data={
-                "aktivitaet": "LAUFEN",
-                "dauer_minuten": "abc",
-            },
-        )
-        assert resp.status_code == 302
-
-    def test_post_negative_dauer(self):
-        """Negative Dauer → Validierungsfehler."""
-        resp = self.client.post(
-            reverse("cardio_add"),
-            data={
-                "aktivitaet": "LAUFEN",
-                "dauer_minuten": "-10",
-            },
+            data={"aktivitaet": "LAUFEN", "dauer_minuten": dauer_wert},
         )
         assert resp.status_code == 302
 
