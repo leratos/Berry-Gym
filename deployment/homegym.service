@@ -50,6 +50,10 @@ ExecStart=/path/to/your/project/venv/bin/gunicorn \
     --error-logfile /path/to/your/project/logs/gunicorn-error.log \
     --log-level info \
     config.wsgi:application
+# Hinweis zu --timeout 180:
+# LLM-Calls an OpenRouter (70B-Modelle) dauern 60-120s.
+# Gunicorn-Timeout MUSS höher sein als der längste API-Call.
+# Nginx proxy_read_timeout muss ebenfalls auf 180s gesetzt sein.
 
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
