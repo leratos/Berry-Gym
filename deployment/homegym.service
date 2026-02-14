@@ -20,7 +20,7 @@ After=network.target mysql.service
 Requires=mysql.service
 
 [Service]
-Type=notify
+Type=simple
 User=your_username          # ANPASSEN: Linux User
 Group=your_group            # ANPASSEN: Linux Group (z.B. www-data, psaserv)
 
@@ -45,7 +45,7 @@ ExecStartPre=/bin/mkdir -p /path/to/your/project/logs
 ExecStart=/path/to/your/project/venv/bin/gunicorn \
     --workers 4 \
     --bind unix:/path/to/your/project/homegym.sock \
-    --timeout 120 \
+    --timeout 180 \
     --access-logfile /path/to/your/project/logs/gunicorn-access.log \
     --error-logfile /path/to/your/project/logs/gunicorn-error.log \
     --log-level info \
