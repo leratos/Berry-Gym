@@ -63,7 +63,7 @@ Bugs gefunden: `toggle_favorit` hatte kein `@login_required` (Security-Fix)
 ## 🔄 WEEK 3 – REFACTORING & QUALITY (IN PROGRESS)
 
 **Ziel:** 38% → 50% Coverage
-**Aktuell:** 47% Coverage, 406 Tests
+**Aktuell:** 47% Coverage, 408 Tests
 
 ### ✅ Abgeschlossene Phasen
 
@@ -76,18 +76,11 @@ Bugs gefunden: `toggle_favorit` hatte kein `@login_required` (Security-Fix)
 | 3.3    | View-Signaturen annotiert (HttpRequest→HttpResponse), mypy.ini erstellt      |
 | 3.4.1  | CC-Reduktion Grade D/E/F (CC>20): dashboard 74→<10, export_pdf 57→<10 u.a.  |
 | 3.4.2  | CC-Reduktion Grade C (CC 11–20): 26 Funktionen in 10 Dateien, alle CC < 11  |
+| 3.5    | Test Quality: 53 Docstrings ergänzt, parametrize eingeführt, 4 Imports bereinigt |
 
 Bugs gefunden: `delete_training` hatte keinen POST-Guard (GET löschte Daten)
 
 ### ⏳ Offene Phasen
-
-#### Phase 3.5 – Test Quality ← NÄCHSTE PHASE
-
-**Ist-Stand (2026-02-14):** 411 Tests, alle in Klassen, 53 ohne Docstring
-
-- Docstrings für alle Test-Funktionen (53 fehlen in 6 Dateien)
-- `@pytest.mark.parametrize` für ähnliche Tests
-- Edge Cases aus Coverage-Gaps ergänzen
 
 ---
 
@@ -95,7 +88,7 @@ Bugs gefunden: `delete_training` hatte keinen POST-Guard (GET löschte Daten)
 
 **Ziel:** 50% → 60% Coverage, schnellere Ladezeiten
 
-### Phase 4.1 – N+1 Query Detection & Fix 🔥
+#### Phase 4.1 – N+1 Query Detection & Fix 🔥 ← NÄCHSTE PHASE
 
 **Tools:** django-debug-toolbar, nplusone
 **Kritische Views:** dashboard, plan_details, training_session, stats_exercise
@@ -212,4 +205,4 @@ Aktuell: "Eingeschränkte wissenschaftliche Basis" – zu vage für Public Launc
 ---
 
 **Last Updated:** 2026-02-14
-**Nächste Phase:** 3.5 – Test Quality
+**Nächste Phase:** 4.1 – N+1 Query Detection & Fix
