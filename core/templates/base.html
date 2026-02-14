@@ -47,16 +47,16 @@
     <!-- Haupt-Content -->
     {% block content %}{% endblock %}
 
-    <!-- Page-spezifische Scripts (vor Footer) -->
-    {% block extra_scripts %}{% endblock %}
-
     <!-- Global Footer (Disclaimer + Links + Push + Offline) -->
     {% include 'core/includes/global_footer.html' %}
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS (muss VOR page-spezifischen Scripts stehen – sonst TDZ bei bootstrap.Modal()) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Theme Toggle -->
     <script src="{% static 'core/js/theme-toggle.js' %}"></script>
+
+    <!-- Page-spezifische Scripts -->
+    {% block extra_scripts %}{% endblock %}
 
 </body>
 </html>
