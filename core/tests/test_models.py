@@ -5,11 +5,7 @@ Diese Tests prüfen die grundlegende Funktionalität der Django Models.
 Fokus: Business Logic, Properties, Validators.
 """
 
-from datetime import date, timedelta
 from decimal import Decimal
-
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError
 
 import pytest
 
@@ -109,8 +105,6 @@ class TestTrainingseinheitModel:
 
     def test_training_string_representation(self):
         """Test: __str__ zeigt Datum korrekt."""
-        from datetime import datetime
-
         training = TrainingseinheitFactory()
 
         str_repr = str(training)
@@ -164,26 +158,19 @@ class TestSatzModel:
 class TestCardioEinheitModel:
     """Tests für das CardioEinheit Model."""
 
-    def test_ermuedungs_punkte_leicht(self):
-        """Test: Leichte Intensität gibt 0.1 Punkte/Min."""
-        cardio = CardioEinheitFactory(intensitaet="LEICHT", dauer_minuten=30)
-
-        # 30 Min × 0.1 = 3.0 Punkte
-        assert cardio.ermuedungs_punkte == pytest.approx(3.0, abs=0.1)
-
-    def test_ermuedungs_punkte_moderat(self):
-        """Test: Moderate Intensität gibt 0.2 Punkte/Min."""
-        cardio = CardioEinheitFactory(intensitaet="MODERAT", dauer_minuten=45)
-
-        # 45 Min × 0.2 = 9.0 Punkte
-        assert cardio.ermuedungs_punkte == pytest.approx(9.0, abs=0.1)
-
-    def test_ermuedungs_punkte_intensiv(self):
-        """Test: Intensive Intensität gibt 0.4 Punkte/Min."""
-        cardio = CardioEinheitFactory(intensitaet="INTENSIV", dauer_minuten=20)
-
-        # 20 Min × 0.4 = 8.0 Punkte
-        assert cardio.ermuedungs_punkte == pytest.approx(8.0, abs=0.1)
+    @pytest.mark.parametrize(
+        "intensitaet, dauer_minuten, expected_punkte",
+        [
+            ("LEICHT", 30, 3.0),  # 30 Min × 0.1 = 3.0
+            ("MODERAT", 45, 9.0),  # 45 Min × 0.2 = 9.0
+            ("INTENSIV", 20, 8.0),  # 20 Min × 0.4 = 8.0
+        ],
+        ids=["leicht", "moderat", "intensiv"],
+    )
+    def test_ermuedungs_punkte(self, intensitaet, dauer_minuten, expected_punkte):
+        """Ermüdungspunkte werden korrekt nach Intensität und Dauer berechnet."""
+        cardio = CardioEinheitFactory(intensitaet=intensitaet, dauer_minuten=dauer_minuten)
+        assert cardio.ermuedungs_punkte == pytest.approx(expected_punkte, abs=0.1)
 
     def test_cardio_string_representation(self):
         """Test: __str__ zeigt Aktivität und Dauer."""
