@@ -161,10 +161,7 @@ class TestDashboardCache:
 class TestGlobalUebungenCache:
     def test_first_call_populates_cache(self):
         """_get_global_uebungen() befüllt den Cache beim ersten Aufruf."""
-        from core.views.exercise_library import (
-            _GLOBAL_UEBUNGEN_CACHE_KEY,
-            _get_global_uebungen,
-        )
+        from core.views.exercise_library import _GLOBAL_UEBUNGEN_CACHE_KEY, _get_global_uebungen
 
         assert cache.get(_GLOBAL_UEBUNGEN_CACHE_KEY) is None
         result = _get_global_uebungen()
@@ -175,10 +172,7 @@ class TestGlobalUebungenCache:
 
     def test_second_call_uses_cache_not_db(self):
         """_get_global_uebungen() trifft beim zweiten Aufruf den Cache."""
-        from core.views.exercise_library import (
-            _GLOBAL_UEBUNGEN_CACHE_KEY,
-            _get_global_uebungen,
-        )
+        from core.views.exercise_library import _GLOBAL_UEBUNGEN_CACHE_KEY, _get_global_uebungen
 
         # Erster Aufruf: befüllt den Cache
         _get_global_uebungen()
