@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load source_tags %}
 
 {% block title %}HomeGym Dashboard{% endblock %}
 
@@ -227,6 +228,7 @@
                 <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="Wie wird das berechnet?">
                     <i class="bi bi-question-circle text-muted"></i>
                 </a>
+                {% source_tooltip "fatigue_index" %}
             </h6>
             <span class="badge bg-{{ form_color }} px-3 py-2" style="font-size: 1rem;">{{ form_rating }}</span>
         </div>

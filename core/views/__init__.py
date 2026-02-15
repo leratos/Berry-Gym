@@ -47,6 +47,9 @@ from .body_tracking import (
 # Cardio views
 from .cardio import cardio_add, cardio_delete, cardio_list
 
+# Scientific sources
+from .sources import sources_list
+
 # Config & static views
 from .config import (
     datenschutz,
@@ -251,4 +254,5 @@ __all__ = [
     "api_unshare_group_with_user",
     "api_get_plan_shares",
     "api_get_group_shares",
+    "sources_list",
 ]
