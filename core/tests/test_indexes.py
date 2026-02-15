@@ -4,6 +4,12 @@ Tests für Phase 4.2 – Database Indexes.
 Strategie: Prüft über Django's connection.introspection ob die definierten
 Indexes tatsächlich in der Datenbank angelegt wurden. Das stellt sicher, dass
 Migrations nicht vergessen wurden und die Index-Namen stabil bleiben.
+
+Hinweis: Diese Tests laufen in Dev/CI gegen SQLite.
+Production läuft MariaDB – die Indexes sind identisch (standard SQL), aber
+connection.introspection kann zwischen Backends unterschiedliche Ergebnisse
+liefern. Solange Migrations sauber durchlaufen, sind die Indexes in Production
+garantiert vorhanden.
 """
 
 from django.db import connection
