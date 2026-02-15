@@ -143,6 +143,68 @@ class TestDashboard:
         response = client.get(self.URL)
         assert response.context["streak"] == 0
 
+    def test_keine_offene_session_bei_neuem_user(self, client):
+        """Neuer User ohne Trainings: offene_session ist None."""
+        user = UserFactory()
+        client.force_login(user)
+        response = client.get(self.URL)
+        assert response.context["offene_session"] is None
+        assert response.context["offene_sessions_anzahl"] == 0
+
+    def test_offene_session_wird_angezeigt(self, client):
+        """Training mit abgeschlossen=False erscheint als offene_session."""
+        user = UserFactory()
+        client.force_login(user)
+        offen = TrainingseinheitFactory(user=user, abgeschlossen=False)
+        response = client.get(self.URL)
+        assert response.context["offene_session"] is not None
+        assert response.context["offene_session"]["id"] == offen.id
+        assert response.context["offene_sessions_anzahl"] == 1
+
+    def test_abgeschlossene_session_nicht_in_offene(self, client):
+        """Abgeschlossene Trainings erscheinen nicht als offene_session."""
+        user = UserFactory()
+        client.force_login(user)
+        TrainingseinheitFactory(user=user, abgeschlossen=True)
+        response = client.get(self.URL)
+        assert response.context["offene_session"] is None
+
+    def test_mehrere_offene_sessions_zeigt_neueste(self, client):
+        """Bei mehreren offenen Sessions wird die neueste angezeigt."""
+        user = UserFactory()
+        client.force_login(user)
+        from django.utils import timezone
+        import datetime
+
+        alt = TrainingseinheitFactory(user=user, abgeschlossen=False)
+        # Datum manuell auf älter setzen
+        alt.datum = timezone.now() - datetime.timedelta(days=3)
+        alt.save(update_fields=["datum"])
+
+        neu = TrainingseinheitFactory(user=user, abgeschlossen=False)
+
+        response = client.get(self.URL)
+        assert response.context["offene_session"]["id"] == neu.id
+        assert response.context["offene_sessions_anzahl"] == 2
+
+    def test_offene_session_isoliert_nach_user(self, client):
+        """Offene Session eines anderen Users erscheint nicht."""
+        user_a = UserFactory()
+        user_b = UserFactory()
+        client.force_login(user_a)
+        TrainingseinheitFactory(user=user_b, abgeschlossen=False)
+        response = client.get(self.URL)
+        assert response.context["offene_session"] is None
+
+    def test_letztes_training_nur_abgeschlossene(self, client):
+        """letztes_training zeigt nur abgeschlossene Trainings."""
+        user = UserFactory()
+        client.force_login(user)
+        abg = TrainingseinheitFactory(user=user, abgeschlossen=True)
+        TrainingseinheitFactory(user=user, abgeschlossen=False)
+        response = client.get(self.URL)
+        assert response.context["letztes_training"].id == abg.id
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Training List Tests
