@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square)
 ![Database](https://img.shields.io/badge/Database-MariaDB%20%7C%20SQLite-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
-![Version](https://img.shields.io/badge/Version-0.9.0-brightgreen?style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.9.1-brightgreen?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-Ready-purple?style=flat-square)
 
 ![CI/CD](https://github.com/leratos/Berry-Gym/actions/workflows/ci.yml/badge.svg)
@@ -49,6 +49,8 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit
   - **Undo-Funktion**: Gelöschte Sätze innerhalb 5 Sekunden wiederherstellen (v0.7.7)
   - **Keyboard-Shortcuts**: Enter=Save, Esc=Close, N=New Set, S=Add Set (v0.7.7)
   - **Übungssuche mit Autocomplete**: Fuzzy-Matching & Score-basiertes Ranking (v0.7.7)
+  - **Training fortsetzen**: Gelber "Fortsetzen"-Button im Dashboard bei offener (nicht abgeschlossener) Session – direkt zurück zum laufenden Training ohne Navigation (v0.9.1)
+  - Bei mehreren vergessenen Sessions: Warnung mit Link zur History zum Aufräumen
 
 - **Custom Übungen erstellen** (v0.7.8)
   - Eigene Übungen definieren mit Muskelgruppe, Bewegungstyp & Equipment
@@ -374,6 +376,7 @@ python ai_coach/secrets_manager.py get OPENROUTER_API_KEY
 - Performance Form-Index (0-100)
 - AI Performance-Warnungen (Plateau, Rückschritt, Stagnation)
 - Streak Counter & Wochenstatistiken
+- **"Fortsetzen"-Button** bei offener Training-Session (v0.9.1)
 
 ### Training Session
 - Übungssuche mit Autocomplete
@@ -457,9 +460,18 @@ Fitness/
 │   ├── urls.py                 # URL Routing
 │   └── wsgi.py                 # WSGI Server Config
 ├── core/                       # Haupt-App
-│   ├── models.py               # Datenmodelle (Übungen, Trainings, Pläne, Custom Übungen)
-│   ├── views.py                # Business Logic + API Endpoints
-│   ├── admin.py                # Django Admin Interface
+│   ├── models/                 # Datenmodelle (aufgeteilt nach Domäne)
+│   │   ├── training.py         # Trainingseinheit, Satz (inkl. abgeschlossen-Flag)
+│   │   ├── exercise.py         # Übungen, Custom Übungen
+│   │   ├── plan.py             # Trainingspläne, Gruppen
+│   │   ├── body_tracking.py    # Körperwerte
+│   │   ├── cardio.py           # Cardio-Einheiten
+│   │   └── ...
+│   ├── views/                  # Modulare Views
+│   │   ├── training_session.py # Training-Logging, Training abschließen
+│   │   ├── training_stats.py   # Dashboard, Statistiken (mit Caching)
+│   │   └── ...
+│   ├── migrations/             # Datenbank-Migrationen (61+)
 │   ├── templates/              # HTML Templates (Bootstrap 5)
 │   │   ├── core/               # App Templates
 │   │   │   ├── dashboard.html         # Dashboard mit AI Widget
@@ -487,10 +499,8 @@ Fitness/
 │   │   └── plan_templates.json     # Beispiel-Pläne
 │   ├── utils/                  # Utility Module
 │   │   └── advanced_stats.py         # Erweiterte Analyse-Funktionen (587 Zeilen)
-│   ├── views/                  # Modulare Views
-│   │   └── export.py                 # CSV & PDF Export (975 Zeilen)
 │   ├── management/commands/    # Custom Management Commands
-│   └── migrations/             # Datenbank Migrationen (53+)
+│   └── migrations/             # Datenbank Migrationen (61+)
 ├── deployment/                 # Production Configs (Templates)
 │   ├── homegym.service         # Systemd Service (Gunicorn)
 │   └── homegym.nginx           # Nginx Reverse Proxy
@@ -531,19 +541,23 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - **Backend:** Django 5.1.15, Python 3.12
 - **Frontend:** Bootstrap 5.3, Chart.js, Vanilla JavaScript
 - **Database:** MariaDB (Production), SQLite (Development)
+- **Caching:** Django Cache Framework (5-min Dashboard, 30-min Übungsliste, unbegrenzt Plan-Templates)
 - **AI:** Ollama (lokal), OpenRouter (Cloud Fallback)
 - **Server:** Gunicorn, Nginx
 - **PWA:** Service Worker, Manifest.json
 - **PDF Generation:** xhtml2pdf 0.2.16, matplotlib 3.10.8, cairosvg 2.7.1, Pillow 12.1.0
+- **Load Testing:** Locust 2.43.3 (3 Szenarien, SLO-Auswertung, siehe docs/LOAD_TESTING.md)
 
-### Projekt-Statistiken (Version 0.9.0)
-- **Lines of Code:** ~19,500+
-- **Python Files:** 65+
-- **Templates:** 30+ HTML/Django
+### Projekt-Statistiken (Version 0.9.1)
+- **Lines of Code:** ~20,000+
+- **Python Files:** 70+
+- **Templates:** 55+ HTML/Django
 - **Exercise Library:** 200+ Übungen mit anatomischen Daten + 1RM Standards + Custom Übungen
 - **Muscle Groups:** 19 (anatomisch korrekt)
 - **PDF Report:** 7+ Seiten mit 4 Charts + 5 erweiterte Analysen
 - **1RM Standards:** 4 Levels pro Übung (körpergewicht-skaliert)
+- **Migrationen:** 61+
+- **Tests:** 447 passed, 4 skipped
 - **Development Time:** 14+ Monate
 
 ---
@@ -554,7 +568,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - `Uebung`: 200+ Übungen + Custom Übungen (Bezeichnung, Muskelgruppe, Equipment, 1RM Standards, created_by)
 - `Plan`: User-spezifische Trainingspläne
 - `PlanUebung`: M2M Junction mit Reihenfolge, Sätze, Wdh
-- `Trainingseinheit`: Einzelnes Training (Datum, Dauer, Kommentar)
+- `Trainingseinheit`: Einzelnes Training (Datum, Dauer, Kommentar, `abgeschlossen`-Flag)
 - `Satz`: Einzelner Satz (Gewicht, Wdh, RPE, Notiz)
 - `Koerperwerte`: Körperdaten (Gewicht, KFA, Muskelmasse)
 - `Equipment`: User-Equipment für personalisierte Pläne
@@ -564,7 +578,10 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 ## 🔮 Roadmap & Known Limitations
 
-### Aktuell verfügbar (v0.9.0)
+### Aktuell verfügbar (v0.9.1)
+- ✅ **Training fortsetzen**: Schnellzugriff auf offene Sessions direkt im Dashboard (v0.9.1)
+- ✅ **Performance-Optimierung**: N+1-Query-Fixes, Caching-Strategie (Dashboard 5min, Übungen 30min, Templates unbegrenzt) (v0.9.1)
+- ✅ **Load Testing**: Locust-Setup mit SLO-Auswertung, Baseline-Messung dokumentiert (v0.9.1)
 - ✅ **1RM Kraftstandards**: 4 Leistungsstufen pro Übung (Anfänger → Elite), körpergewicht-skaliert
 - ✅ **Advanced Training Statistics**: Plateau-Analyse, Konsistenz-Metriken, RPE-Qualität, Ermüdungs-Index
 - ✅ **CSV-Export**: Alle Trainingsdaten als Download
@@ -704,7 +721,7 @@ Dieses Projekt ist unter der [MIT License](LICENSE) lizenziert.
 ## 📧 Support
 
 - **Issues:** [GitHub Issues](https://github.com/leratos/Berry-Gym/issues)
-- **Dokumentation:** [ROADMAP.md](ROADMAP.md), [AI_COACH_CONCEPT.md](docs/AI_COACH_CONCEPT.md), [Docs Index](docs/README.md)
+- **Dokumentation:** [ROADMAP.md](ROADMAP.md), [AI_COACH_CONCEPT.md](docs/AI_COACH_CONCEPT.md), [Docs Index](docs/README.md), [Load Testing](docs/LOAD_TESTING.md)
 - **Deployment:** [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ---

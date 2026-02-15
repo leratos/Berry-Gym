@@ -601,14 +601,27 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     # ----------------------------------------------------------------
     # Immer frisch: Model-Instanzen + settings-basierte Werte
     # ----------------------------------------------------------------
-    letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
+    letztes_training = Trainingseinheit.objects.filter(
+        user=request.user, abgeschlossen=True
+    ).first()
     letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
     use_openrouter = not settings.DEBUG or os.getenv("USE_OPENROUTER", "False").lower() == "true"
+
+    # Offene (nicht abgeschlossene) Sessions – neueste zuerst
+    offene_sessions = list(
+        Trainingseinheit.objects.filter(user=request.user, abgeschlossen=False)
+        .order_by("-datum")
+        .values("id", "datum", "plan__name")
+    )
+    offene_session = offene_sessions[0] if offene_sessions else None
+    offene_sessions_anzahl = len(offene_sessions)
 
     context = {
         "letztes_training": letztes_training,
         "letzter_koerperwert": letzter_koerperwert,
         "use_openrouter": use_openrouter,
+        "offene_session": offene_session,
+        "offene_sessions_anzahl": offene_sessions_anzahl,
         **computed,
     }
     _add_plan_group_context(request.user, context)
