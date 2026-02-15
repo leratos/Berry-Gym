@@ -306,7 +306,9 @@ class ApiUser(AuthenticatedUser):
             name="/api/last-set/[id]/ [AJAX]",
             catch_response=True,
         ) as resp:
-            if resp.status_code not in (200, 404):
+            if resp.status_code in (200, 404):
+                resp.success()
+            else:
                 resp.failure(f"Last-Set {uebung_id}: {resp.status_code}")
 
     @task(2)
@@ -318,7 +320,9 @@ class ApiUser(AuthenticatedUser):
             name="/api/exercise/[id]/ [Detail]",
             catch_response=True,
         ) as resp:
-            if resp.status_code not in (200, 404):
+            if resp.status_code in (200, 404):
+                resp.success()
+            else:
                 resp.failure(f"Exercise-API {uebung_id}: {resp.status_code}")
 
     @task(1)
@@ -330,7 +334,10 @@ class ApiUser(AuthenticatedUser):
             name="/api/ml/model-info/[id]/ [lesend]",
             catch_response=True,
         ) as resp:
-            if resp.status_code not in (200, 404):
+            # 404 = kein ML-Modell für diese Übung – erwartetes Verhalten
+            if resp.status_code in (200, 404):
+                resp.success()
+            else:
                 resp.failure(f"ML-Model-Info {uebung_id}: {resp.status_code}")
 
 
