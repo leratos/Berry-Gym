@@ -108,6 +108,7 @@ class TrainingseinheitFactory(DjangoModelFactory):
     dauer_minuten = factory.Faker("random_int", min=30, max=120)
     kommentar = factory.Faker("sentence", locale="de_DE")
     ist_deload = False
+    abgeschlossen = True
 
     @factory.lazy_attribute
     def datum(self):

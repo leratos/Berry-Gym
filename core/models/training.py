@@ -25,6 +25,11 @@ class Trainingseinheit(models.Model):
         verbose_name="Deload-Training",
         help_text="Deload-Trainings werden nicht in Statistiken (1RM, Volumen-Trends, Plateaus) eingerechnet",
     )
+    abgeschlossen = models.BooleanField(
+        default=False,
+        verbose_name="Abgeschlossen",
+        help_text="Wird auf True gesetzt wenn der User das Training explizit abgeschlossen hat",
+    )
 
     def __str__(self):
         return f"Training vom {self.datum.strftime('%d.%m.%Y %H:%M')}"
@@ -37,6 +42,7 @@ class Trainingseinheit(models.Model):
             models.Index(fields=["datum"]),
             models.Index(fields=["user", "datum"], name="training_user_datum_idx"),
             models.Index(fields=["user", "ist_deload"], name="training_user_deload_idx"),
+            models.Index(fields=["user", "abgeschlossen"], name="training_user_done_idx"),
         ]
 
 

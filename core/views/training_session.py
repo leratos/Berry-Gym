@@ -709,6 +709,7 @@ def _save_training_post(request, training) -> bool:
         training.kommentar = kommentar
 
     if not has_error:
+        training.abgeschlossen = True
         training.save()
         return True
     return False
