@@ -117,6 +117,42 @@ else:
     }
 
 
+# ==================================
+# CACHE CONFIGURATION
+# ==================================
+# Dev: LocMemCache (Django Default – pro Worker, kein externer Service)
+# Production: FileBasedCache (multi-worker-safe, kein Redis nötig)
+#
+# Deployment: Cache-Verzeichnis anlegen und Gunicorn-Rechte setzen:
+#   mkdir -p /var/cache/berry-gym && chown www-data:www-data /var/cache/berry-gym
+#
+# .env Variablen:
+#   CACHE_BACKEND=django.core.cache.backends.filebased.FileBasedCache
+#   CACHE_LOCATION=/var/cache/berry-gym
+
+_cache_backend = os.getenv("CACHE_BACKEND")
+
+if _cache_backend:
+    CACHES = {
+        "default": {
+            "BACKEND": _cache_backend,
+            "LOCATION": os.getenv("CACHE_LOCATION", "/var/cache/berry-gym"),
+            "TIMEOUT": 300,  # 5 Minuten Default
+            "OPTIONS": {
+                "MAX_ENTRIES": 1000,
+            },
+        }
+    }
+else:
+    # Development: LocMemCache (Django Default)
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "berry-gym-dev",
+        }
+    }
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 

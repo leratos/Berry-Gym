@@ -297,6 +297,48 @@ class PlanGenerator:
         split_gruppe_id = uuid.uuid4() if is_split else None
         split_gruppe_name = plan_json["plan_name"] if is_split else ""
 
+        # ---------------------------------------------------------------
+        # Batch-Lookup: alle Übungsnamen aus plan_json auf einmal laden.
+        # Verhindert N+1 (vorher: 1 DB-Query pro Übung).
+        # ---------------------------------------------------------------
+        from django.db.models.functions import Lower
+
+        all_ex_names = {
+            ex["exercise_name"]
+            for session in plan_json["sessions"]
+            for ex in session.get("exercises", [])
+        }
+
+        # Query 1: exakter Match
+        uebungen_exakt: dict[str, Uebung] = {
+            u.bezeichnung: u for u in Uebung.objects.filter(bezeichnung__in=all_ex_names)
+        }
+
+        # Query 2 (nur wenn nötig): case-insensitiver + gestrippter Fallback
+        # für LLM-Abweichungen wie "bankdrücken" statt "Bankdrücken"
+        uebungen_fallback: dict[str, Uebung] = {}
+        unmatched_names = {name for name in all_ex_names if name not in uebungen_exakt}
+        if unmatched_names:
+            normalized_unmatched = {name.strip().lower() for name in unmatched_names}
+            for u in Uebung.objects.annotate(lower_name=Lower("bezeichnung")).filter(
+                lower_name__in=normalized_unmatched
+            ):
+                uebungen_fallback[u.lower_name] = u
+
+        def _find_uebung(name: str) -> Uebung | None:
+            """Exakter Match, sonst case-insensitiver Strip-Fallback (kein extra DB-Hit)."""
+            exact = uebungen_exakt.get(name)
+            if exact:
+                return exact
+            normalized = name.strip().lower()
+            fuzzy = uebungen_fallback.get(normalized)
+            if fuzzy:
+                print(f"      ℹ️  Fuzzy-Match: '{name}' → '{fuzzy.bezeichnung}'")
+            return fuzzy
+
+        # Übungen die nicht gefunden werden – für abschließende Warnung sammeln
+        not_found: list[str] = []
+
         # Für jede Session einen separaten Plan erstellen
         for session_index, session in enumerate(plan_json["sessions"], start=1):
             day_name = session["day_name"]
@@ -327,11 +369,10 @@ class PlanGenerator:
             for exercise_data in session["exercises"]:
                 ex_name = exercise_data["exercise_name"]
 
-                # Übung finden
-                try:
-                    uebung = Uebung.objects.get(bezeichnung=ex_name)
-                except Uebung.DoesNotExist:
+                uebung = _find_uebung(ex_name)
+                if uebung is None:
                     print(f"      ⚠️ Übung '{ex_name}' nicht gefunden - überspringe")
+                    not_found.append(ex_name)
                     continue
 
                 # PlanUebung erstellen
@@ -355,6 +396,12 @@ class PlanGenerator:
                     print(f"        💡 {notes}")
 
             print()  # Leerzeile zwischen Sessions
+
+        if not_found:
+            print(
+                f"   ⚠️  {len(not_found)} Übung(en) nicht in DB gefunden "
+                f"(auch nach Fuzzy-Match): {', '.join(not_found)}"
+            )
 
         return plan_ids
 

@@ -25,8 +25,8 @@
 |----------|-------------------------|---------------|----------------|
 | Week 1   | Foundation & Safety     | 30%           | ✅ COMPLETE     |
 | Week 2   | Testing & Views         | 40%           | ✅ COMPLETE     |
-| Week 3   | Refactoring & Quality   | 50%           | 🔄 IN PROGRESS  |
-| Week 4   | Performance             | 60%           | ⏳ Planned      |
+| Week 3   | Refactoring & Quality   | 50%           | ✅ COMPLETE     |
+| Week 4   | Performance             | 60%           | 🔄 IN PROGRESS  |
 | Week 5-6 | Advanced & Polish       | 75%           | ⏳ Planned      |
 | Week 7   | Pre-Launch Prep         | 80%+          | ⏳ Planned      |
 | Week 8   | 🚀 PUBLIC LAUNCH        | —             | 🎯 Goal         |
@@ -88,11 +88,10 @@ Bugs gefunden: `delete_training` hatte keinen POST-Guard (GET löschte Daten)
 
 **Ziel:** 50% → 60% Coverage, schnellere Ladezeiten
 
-#### Phase 4.1 – N+1 Query Detection & Fix 🔥 ← NÄCHSTE PHASE
+#### ✅ Phase 4.1 – N+1 Query Detection & Fix
 
-**Tools:** django-debug-toolbar, nplusone
-**Kritische Views:** dashboard, plan_details, training_session, stats_exercise
-**Vorgehen:** select_related / prefetch_related, Query-Count-Tests
+**Abgeschlossen:** 2026-02-14 · Branch: `feature/phase-4-1-n-plus-one-queries`
+**Ergebnis:** 8 N+1-Stellen eliminiert, 6 neue Query-Count-Tests, 414 Tests grün
 
 ### Phase 4.2 – Database Indexes
 
@@ -123,20 +122,55 @@ Aktuell: "Eingeschränkte wissenschaftliche Basis" – zu vage für Public Launc
 **Literatur:** Schoenfeld (2016), Israetel (2020), Helms (2018), NSCA Guidelines, Kraemer & Ratamess (2004)
 **Integration:** Management Command `load_training_sources`, UI-Tooltips, aktualisierte Disclaimer-Texte
 
-### Phase 5.2 – AI/ML Testing
+### Phase 5.2 – KI-Plangenerator Optimierung 🤖
+
+Aktuell produziert der Plangenerator pläne, die sich in der Praxis schwer unterscheiden lassen:
+
+**Problem 1 – Plan-Namen:** Alle generierten Pläne bekommen denselben oder sehr ähnlichen Namen
+(z.B. "Mein Trainingsplan – Push"). Wer 3 Pläne generiert hat, kann sie kaum auseinanderhalten.
+
+**Problem 2 – Split-Typ:** Der Generator wählt standardmäßig immer Push/Pull/Legs, unabhängig von
+Trainingshäufigkeit, Erfahrung oder Zielen des Users.
+
+**Geplante Fixes:**
+
+*Eindeutige Plan-Namen:*
+- Prompt-Erweiterung: LLM soll Namen aus Ziel + Erfahrungsgrad + Fokus kombinieren
+  (z.B. "Kraft-Aufbau Intermediate – Brust/Rücken-Fokus")
+- Fallback in `plan_generator.py`: Falls `plan_name` generisch → automatisch
+  Timestamp + Ziel anhängen (`{plan_name} – {datum}`)
+- Tag-Namen ebenfalls spezifischer: "Push A", "Pull A" statt nur "Push"
+
+*Kontextbasierter Split:*
+- Mapping: Trainingshäufigkeit → empfohlener Split-Typ
+  - 2–3x/Woche → Fullbody oder Upper/Lower
+  - 4x/Woche → Upper/Lower oder PPL
+  - 5–6x/Woche → PPL oder 4er-Split
+- User-Eingabe im Generator-Formular: Häufigkeit als Pflichtfeld
+- Prompt-Anpassung: Split-Typ-Wahl begründen (LLM erklärt warum dieser Split)
+
+**Betroffene Dateien:** `ai_coach/plan_generator.py`, `ai_coach/prompt_builder.py`,
+`core/views/ai_recommendations.py` (Formular), ggf. UI für Plangenerator
+
+**Akzeptanzkriterien:**
+- Zwei hintereinander generierte Pläne für denselben User haben unterschiedliche Namen
+- Bei 3x/Woche wird kein PPL-Plan generiert
+- Bestehende Tests bleiben grün
+
+### Phase 5.3 – AI/ML Testing
 
 - test_ml_models.py, test_ai_coach.py, test_plan_generator.py
 - Externe API-Calls (Ollama/OpenRouter) mit Fixtures mocken
 
-### Phase 5.3 – Charts & Statistics Testing
+### Phase 5.4 – Charts & Statistics Testing
 
 - Chart-Datenkorrektheit, Edge Cases (leere Daten, Einzelpunkt)
 
-### Phase 5.4 – API Endpoints Testing
+### Phase 5.5 – API Endpoints Testing
 
 - Plan Sharing API, Stats API, Auth
 
-### Phase 5.5 – Helper/Utils Testing
+### Phase 5.6 – Helper/Utils Testing
 
 - Ziel: 90%+ Coverage für helpers/, utils/
 
@@ -204,5 +238,5 @@ Aktuell: "Eingeschränkte wissenschaftliche Basis" – zu vage für Public Launc
 
 ---
 
-**Last Updated:** 2026-02-14
-**Nächste Phase:** 4.1 – N+1 Query Detection & Fix
+**Last Updated:** 2026-02-15
+**Nächste Phase:** 4.2 – Database Indexes

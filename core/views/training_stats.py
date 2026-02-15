@@ -21,6 +21,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db.models import Avg, Count, DecimalField, F, Max, Prefetch, Q, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -38,6 +39,10 @@ from ..models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# TTL für gecachte Dashboard-Berechnungen (pro User)
+# Wird invalidiert wenn der User ein neues Training speichert (signals.py)
+DASHBOARD_CACHE_TTL = 300  # 5 Minuten
 
 
 # ---------------------------------------------------------------------------
@@ -545,51 +550,67 @@ def _add_plan_group_context(user, context: dict) -> None:
 
 @login_required
 def dashboard(request: HttpRequest) -> HttpResponse:
-    letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
-    letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
     heute = timezone.now()
 
-    trainings_diese_woche = _count_trainings_this_week(request.user, heute)
-    streak = _calculate_streak(request.user, heute)
-    favoriten = _get_favoriten(request.user)
-    gesamt_trainings = Trainingseinheit.objects.filter(user=request.user).count()
-    gesamt_saetze = Satz.objects.filter(
-        einheit__user=request.user, ist_aufwaermsatz=False, einheit__ist_deload=False
-    ).count()
+    # ----------------------------------------------------------------
+    # Cached block: teure Berechnungen (Streak, Volumen, Fatigue, etc.)
+    # Cache-Key ist user-spezifisch; wird in signals.py invalidiert
+    # wenn der User ein neues Training speichert.
+    # ----------------------------------------------------------------
+    cache_key = f"dashboard_computed_{request.user.id}"
+    computed = cache.get(cache_key)
 
-    form_index, form_rating, form_color, form_factors = _calculate_form_index(
-        request.user, heute, trainings_diese_woche, streak, gesamt_trainings
-    )
-    weekly_volumes = _calculate_weekly_volumes(request.user, heute)
-    fatigue_data = _calculate_fatigue_index(request.user, heute, weekly_volumes, gesamt_trainings)
-    motivation_quote = _get_motivation_quote(form_index, fatigue_data["fatigue_index"])
-    training_heatmap_json = _get_training_heatmap(request.user, heute)
+    if computed is None:
+        trainings_diese_woche = _count_trainings_this_week(request.user, heute)
+        streak = _calculate_streak(request.user, heute)
+        favoriten = list(_get_favoriten(request.user))  # list() → pickleable
+        gesamt_trainings = Trainingseinheit.objects.filter(user=request.user).count()
+        gesamt_saetze = Satz.objects.filter(
+            einheit__user=request.user, ist_aufwaermsatz=False, einheit__ist_deload=False
+        ).count()
+        form_index, form_rating, form_color, form_factors = _calculate_form_index(
+            request.user, heute, trainings_diese_woche, streak, gesamt_trainings
+        )
+        weekly_volumes = _calculate_weekly_volumes(request.user, heute)
+        fatigue_data = _calculate_fatigue_index(
+            request.user, heute, weekly_volumes, gesamt_trainings
+        )
+        motivation_quote = _get_motivation_quote(form_index, fatigue_data["fatigue_index"])
+        training_heatmap_json = _get_training_heatmap(request.user, heute)
+        performance_warnings = _get_performance_warnings(
+            request.user, heute, favoriten, gesamt_trainings
+        )
+        computed = {
+            "trainings_diese_woche": trainings_diese_woche,
+            "streak": streak,
+            "favoriten": favoriten,
+            "gesamt_trainings": gesamt_trainings,
+            "gesamt_saetze": gesamt_saetze,
+            "form_index": form_index,
+            "form_rating": form_rating,
+            "form_color": form_color,
+            "form_factors": form_factors,
+            "weekly_volumes": weekly_volumes,
+            **fatigue_data,
+            "motivation_quote": motivation_quote,
+            "training_heatmap_json": training_heatmap_json,
+            "performance_warnings": performance_warnings,
+        }
+        cache.set(cache_key, computed, timeout=DASHBOARD_CACHE_TTL)
 
+    # ----------------------------------------------------------------
+    # Immer frisch: Model-Instanzen + settings-basierte Werte
+    # ----------------------------------------------------------------
+    letztes_training = Trainingseinheit.objects.filter(user=request.user).first()
+    letzter_koerperwert = KoerperWerte.objects.filter(user=request.user).first()
     use_openrouter = not settings.DEBUG or os.getenv("USE_OPENROUTER", "False").lower() == "true"
-    performance_warnings = _get_performance_warnings(
-        request.user, heute, favoriten, gesamt_trainings
-    )
 
     context = {
         "letztes_training": letztes_training,
         "letzter_koerperwert": letzter_koerperwert,
-        "trainings_diese_woche": trainings_diese_woche,
         "use_openrouter": use_openrouter,
-        "streak": streak,
-        "favoriten": favoriten,
-        "gesamt_trainings": gesamt_trainings,
-        "gesamt_saetze": gesamt_saetze,
-        "form_index": form_index,
-        "form_rating": form_rating,
-        "form_color": form_color,
-        "form_factors": form_factors,
-        "weekly_volumes": weekly_volumes,
-        **fatigue_data,
-        "motivation_quote": motivation_quote,
-        "training_heatmap_json": training_heatmap_json,
-        "performance_warnings": performance_warnings,
+        **computed,
     }
-
     _add_plan_group_context(request.user, context)
     return render(request, "core/dashboard.html", context)
 
