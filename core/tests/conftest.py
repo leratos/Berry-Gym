@@ -4,7 +4,7 @@ Pytest Configuration und Shared Fixtures.
 Diese Datei definiert Fixtures die in allen Tests verfügbar sind.
 """
 
-from django.contrib.auth.models import User
+from django.core.cache import cache
 
 import pytest
 
@@ -74,3 +74,17 @@ def enable_db_access_for_all_tests(db):
     Spart @pytest.mark.django_db Dekorator.
     """
     pass
+
+
+@pytest.fixture(autouse=True)
+def clear_cache_between_tests():
+    """Cache vor und nach jedem Test leeren.
+
+    Verhindert Cache-Pollution zwischen Tests: SQLite recycelt IDs nach
+    DB-Rollback, sodass neue Test-Objekte dieselbe ID wie vorherige bekommen
+    können – ohne dieses Fixture würden gecachte Werte vom Vorgänger-Test
+    fälschlicherweise zurückgegeben.
+    """
+    cache.clear()
+    yield
+    cache.clear()

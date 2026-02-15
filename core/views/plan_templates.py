@@ -13,6 +13,7 @@ import os
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.http import HttpRequest, JsonResponse
 
 from ..helpers.exercises import find_substitute_exercise
@@ -34,11 +35,23 @@ _EQUIPMENT_NAME_MAPPING: dict[str, str | None] = {
 _MASCHINE_KEYWORDS = ["beinpresse", "leg curl", "leg extension", "maschine", "smith"]
 
 
+_PLAN_TEMPLATES_CACHE_KEY = "plan_templates_json"
+
+
 def _load_templates() -> dict:
-    """Lädt plan_templates.json und gibt den Inhalt zurück."""
+    """Lädt plan_templates.json – gecacht (indefinit, da sich die Datei nie zur Laufzeit ändert).
+
+    Cache-Invalidierung: automatisch beim Server-Neustart (LocMemCache Dev)
+    oder via `cache.delete('plan_templates_json')` bei Deployments (FileBasedCache Prod).
+    """
+    cached = cache.get(_PLAN_TEMPLATES_CACHE_KEY)
+    if cached is not None:
+        return cached
     path = os.path.join(os.path.dirname(__file__), "..", "fixtures", "plan_templates.json")
     with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+    cache.set(_PLAN_TEMPLATES_CACHE_KEY, data, timeout=None)  # indefinit
+    return data
 
 
 def _check_equipment_available(template_equip_name: str, user_equipment_set: set[str]) -> bool:
