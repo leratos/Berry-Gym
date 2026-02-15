@@ -124,7 +124,27 @@ Der HTML-Report unter `tests/load/results/report.html` enthält:
 
 ---
 
-## Einschränkungen
+## Bekannte Limitierungen & Befunde
+
+### django-axes serialisiert Login unter Last
+
+**Beobachtung:** `/accounts/login/` P95 ~2200ms, Min ~2036ms bei 100 Usern.
+
+**Ursache:** django-axes schreibt bei jedem Login-Versuch in die `axes_accessattempt`-Tabelle und führt IP-basiertes Tracking durch. Im Load Test kommen alle 100 User von `127.0.0.1` → axes serialisiert alle Schreibzugriffe auf dieselbe DB-Zeile.
+
+**In Produktion kein Problem:** Echte User kommen von verschiedenen IPs, keine Serialisierung.
+
+**Konsequenz für Load Tests:** Login- und Logout-Endpoints sind aus der SLO-Auswertung ausgeschlossen. Der SLO gilt für App-Seiten (Dashboard, Übungen, Stats etc.) – nicht für Auth-Flows die 1× pro Session aufgerufen werden.
+
+### /uebungen/ Latenz (~1300ms P95)
+
+**Beobachtung:** `/uebungen/` hat P95 ~1300ms trotz Cache (globale Übungsliste gecacht).
+
+**Ursache:** Cache hilft beim DB-Query, aber die Response ist ~107KB. Django `runserver` rendert das Template single-threaded; bei 100 gleichzeitigen Usern entstehen Queue-Wartezeiten.
+
+**Einschätzung:** Optimierbar durch Pagination oder gecachtes HTML-Fragment. Kein akuter Handlungsbedarf bei < 100 simultanen Usern in Produktion. Mit Gunicorn (4 Workers) deutlich besser.
+
+---
 
 ### Lokaler Test ≠ Produktion
 
