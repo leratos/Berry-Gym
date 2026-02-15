@@ -416,26 +416,27 @@ python manage.py runserver 0.0.0.0:8000
 gunicorn --workers 9 --bind 127.0.0.1:8002 --timeout 60 config.wsgi:application
 ```
 
-2. **Redis für Caching & Sessions:**
+2. **FileBasedCache einrichten (kein Redis nötig):**
 ```bash
-# Redis installieren (falls nicht vorhanden)
-sudo apt-get install redis-server
-pip install redis django-redis
+# Cache-Verzeichnis anlegen und Gunicorn-Rechte setzen
+sudo mkdir -p /var/cache/berry-gym
+sudo chown www-data:www-data /var/cache/berry-gym
+sudo chmod 750 /var/cache/berry-gym
 
-# In config/settings.py:
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
-    }
-}
+# In .env auf dem Server hinzufügen:
+CACHE_BACKEND=django.core.cache.backends.filebased.FileBasedCache
+CACHE_LOCATION=/var/cache/berry-gym
+```
 
-# Sessions in Redis speichern (schneller als DB)
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'default'
+**Gecachte Inhalte (Phase 4.3):**
+- Dashboard-Berechnungen pro User (Streak, Volumen, Fatigue) → 5 min TTL
+  - Automatische Invalidierung wenn User ein Training speichert
+- Plan-Templates JSON → indefinit (bis Server-Neustart)
+
+**Hinweis:** Bei Deployment nach `python manage.py migrate` den Cache manuell löschen:
+```bash
+# Falls gecachte Daten durch ein Update veraltet sind:
+rm -rf /var/cache/berry-gym/*
 ```
 
 3. **MariaDB Optimierungen:**
