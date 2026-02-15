@@ -154,7 +154,14 @@ def _get_muscle_balance_empfehlung(letzte_30_tage_saetze) -> list:
 
 
 def _get_push_pull_empfehlung(letzte_30_tage_saetze) -> list:
-    """Analysiert Push/Pull-Balance und gibt Empfehlung zurück."""
+    """Analysiert Push/Pull-Balance und gibt Empfehlung zurück.
+
+    Konvention (angelehnt an Schultergesundheits-Empfehlungen der Sportmedizin):
+    - Push >> Pull (ratio > 1.5): Risiko für Schulterimpingements, Empfehlung: mehr Zugübungen.
+    - Pull >= Push (ratio <= 1.0): gilt als neutral bis positiv für Schultergesundheit.
+      → KEIN Warning bei zu viel Pull – das ist die häufig empfohlene Richtung.
+    - Keine Push-Sätze (ratio = 999): gesonderte Meldung.
+    """
     push_gruppen = ["BRUST", "SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS"]
     pull_gruppen = ["RUECKEN_LAT", "RUECKEN_TRAPEZ", "BIZEPS"]
 
@@ -175,41 +182,28 @@ def _get_push_pull_empfehlung(letzte_30_tage_saetze) -> list:
 
     ratio = push_effektiv / pull_effektiv if pull_effektiv > 0 else 999
 
+    # Nur warnen wenn Push deutlich überwiegt (schadet der Schultergesundheit)
+    # Mehr Pull als Push ist kein Problem – im Gegenteil, oft empfohlen.
     if ratio > 1.5:
         return [
             {
                 "typ": "balance",
                 "prioritaet": "mittel",
-                "titel": "Push/Pull Unbalance",
+                "titel": "Zu viel Push, zu wenig Pull",
                 "beschreibung": (
                     f"Dein Push-Training ({push_saetze} Sätze, {int(push_effektiv)} eff. Wdh) ist "
-                    f"{ratio:.1f}x intensiver als dein Pull-Training ({pull_saetze} Sätze, "
-                    f"{int(pull_effektiv)} eff. Wdh). Dies kann zu Haltungsschäden führen."
+                    f"{ratio:.1f}× intensiver als dein Pull-Training ({pull_saetze} Sätze, "
+                    f"{int(pull_effektiv)} eff. Wdh). Langfristig erhöht das das Risiko für "
+                    f"Schulterimpingements und Haltungsprobleme."
                 ),
-                "empfehlung": "Mehr Zugübungen (Rücken, Bizeps) trainieren",
+                "empfehlung": "Mehr Zugübungen (Rücken, Bizeps) einbauen für 1:1 oder besser 1:2 Push:Pull",
                 "uebungen": [
                     {"id": u.id, "name": u.bezeichnung}
                     for u in Uebung.objects.filter(muskelgruppe__in=pull_gruppen)[:3]
                 ],
             }
         ]
-    if ratio < 0.67:
-        return [
-            {
-                "typ": "balance",
-                "prioritaet": "mittel",
-                "titel": "Push/Pull Unbalance",
-                "beschreibung": (
-                    f"Dein Pull-Training ({pull_saetze} Sätze, {int(pull_effektiv)} eff. Wdh) ist "
-                    f"intensiver als dein Push-Training ({push_saetze} Sätze, {int(push_effektiv)} eff. Wdh)."
-                ),
-                "empfehlung": "Mehr Druckübungen (Brust, Schultern, Trizeps) einbauen",
-                "uebungen": [
-                    {"id": u.id, "name": u.bezeichnung}
-                    for u in Uebung.objects.filter(muskelgruppe__in=push_gruppen)[:3]
-                ],
-            }
-        ]
+    # Pull >= Push: kein Problem, keine Empfehlung nötig
     return []
 
 

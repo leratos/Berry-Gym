@@ -305,7 +305,12 @@ def uebung_detail(request: HttpRequest, uebung_id: int) -> HttpResponse:
 
 
 def _compute_1rm_for_satz(satz, gewichts_typ: str) -> tuple[float, float, float]:
-    """Berechnet (effektives_gewicht, one_rep_max, volumen_beitrag) für einen Satz."""
+    """Berechnet (effektives_gewicht, one_rep_max, volumen_beitrag) für einen Satz.
+
+    Formel: Epley (1985) – effektives_gewicht × (1 + Wdh/30)
+    Hinweis: Bei > 10 Wdh. überschätzt Epley den 1RM systematisch.
+    Für konsistente Progression über Zeit bleibt die Formel dennoch vergleichbar.
+    """
     effektives_gewicht = float(satz.gewicht) if satz.gewicht else 0.0
     if gewichts_typ == "PRO_SEITE":
         effektives_gewicht *= 2

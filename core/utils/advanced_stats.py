@@ -39,28 +39,34 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
         if uebung_saetze.count() < 2:
             continue
 
-        # Finde letzten PR (höchstes Gewicht)
-        max_gewicht_satz = (
-            uebung_saetze.filter(gewicht__isnull=False)
-            .order_by("-gewicht", "-einheit__datum")
-            .first()
-        )
+        # PR auf Basis des geschätzten 1RM (Epley-Formel: Gewicht × (1 + Wdh/30))
+        # Korrekte Methode: Roh-Gewicht allein ignoriert Rep-Steigerungen als Fortschritt.
+        # Wer 80kg × 8 → 80kg × 12 steigert (1RM: 101 → 112 kg) hat echten Fortschritt.
+        bester_1rm = 0.0
+        bester_1rm_satz = None
 
-        if not max_gewicht_satz:
+        for satz in uebung_saetze.filter(gewicht__isnull=False):
+            wdh = satz.wiederholungen or 1
+            einzel_1rm = float(satz.gewicht) * (1 + wdh / 30.0)
+            if einzel_1rm > bester_1rm:
+                bester_1rm = einzel_1rm
+                bester_1rm_satz = satz
+
+        if not bester_1rm_satz:
             continue
 
-        letzter_pr = float(max_gewicht_satz.gewicht)
-        pr_datum = max_gewicht_satz.einheit.datum
+        letzter_pr = round(bester_1rm, 1)
+        pr_datum = bester_1rm_satz.einheit.datum
         tage_seit_pr = (heute.date() - pr_datum.date()).days
 
-        # Berechne durchschnittliche Progression pro Monat
-        erster_satz = uebung_saetze.filter(gewicht__isnull=False).first()
+        # Berechne durchschnittliche Progression pro Monat (auf 1RM-Basis)
+        erster_satz = uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum").first()
         if erster_satz and erster_satz.gewicht:
-            erstes_gewicht = float(erster_satz.gewicht)
+            erstes_1rm = float(erster_satz.gewicht) * (1 + (erster_satz.wiederholungen or 1) / 30.0)
             tage_gesamt = (pr_datum.date() - erster_satz.einheit.datum.date()).days
 
             if tage_gesamt > 0:
-                gewichtsdiff = letzter_pr - erstes_gewicht
+                gewichtsdiff = letzter_pr - erstes_1rm
                 progression_pro_monat = round((gewichtsdiff / tage_gesamt) * 30, 2)
             else:
                 progression_pro_monat = 0
@@ -101,14 +107,16 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
             status_label = "❌ Langzeit-Plateau"
             status_farbe = "danger"
 
-        # Prüfe auf Regression (aktuelle Leistung < letzter PR)
+        # Prüfe auf Regression: aktueller 1RM (letzte 4 Wochen) vs. bester je 1RM
         letzte_4_wochen = uebung_saetze.filter(
             einheit__datum__gte=vier_wochen, gewicht__isnull=False
         )
 
         if letzte_4_wochen.exists():
-            aktuelles_max = max((float(s.gewicht) for s in letzte_4_wochen))
-            if aktuelles_max < letzter_pr * 0.9:  # >10% Rückgang
+            aktueller_1rm = max(
+                float(s.gewicht) * (1 + (s.wiederholungen or 1) / 30.0) for s in letzte_4_wochen
+            )
+            if aktueller_1rm < letzter_pr * 0.9:  # >10% Rückgang im 1RM
                 status = "regression"
                 status_label = "⚠️ Rückschritt"
                 status_farbe = "danger"
@@ -232,8 +240,13 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     """
     Calculates fatigue index and deload recommendations.
 
+    HINWEIS: Die Gewichtungen (40/30/30) und Schwellwerte sind praxisbasierte
+    Heuristiken, keine direkt aus Studien abgeleiteten Werte.
+    Deload-Empfehlungen orientieren sich an Israetel et al. (2019) "Scientific
+    Principles of Hypertrophy Training" – konkrete Zahlen variieren individuell.
+
     Returns dict with:
-    - fatigue_index: Score 0-100 (higher = more fatigue)
+    - fatigue_index: Score 0-100 (higher = more fatigue) [Heuristischer Score]
     - volumen_spike: Boolean if volume increased >20%
     - rpe_steigend: Boolean if RPE trending up
     - deload_empfohlen: Boolean if deload recommended
@@ -428,9 +441,13 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
                 }
             )
 
-        # Standards aus DB holen und skalieren
+        # Allometrische Skalierung (Jaric, 2002; Batterham & George, 1997)
+        # Kraft skaliert NICHT linear mit Körpergewicht (lineares Modell ist ein bekannter Fehler).
+        # Exponent 2/3 (≈ 0.667) ist der wissenschaftlich belegte Standard für
+        # absolute Kraftleistung relativ zur Körpermasse.
+        # Formel: skalierter_standard = basis_standard × (user_kg / 80.0) ^ (2/3)
         gewicht_float = float(user_gewicht) if user_gewicht else 80.0
-        scaling_factor = gewicht_float / 80.0
+        scaling_factor = (gewicht_float / 80.0) ** (2 / 3)
 
         standards = {
             "beginner": round(float(uebung_obj.standard_beginner) * scaling_factor, 1),
@@ -522,7 +539,9 @@ def calculate_rpe_quality_analysis(alle_saetze):
     - bewertung: Overall training quality rating
     - empfehlungen: List of recommendations
     """
-    rpe_saetze = alle_saetze.filter(rpe__isnull=False)
+    # Aufwärmsätze explizit ausschließen: niedrige RPE ist beim Aufwärmen intentional,
+    # nicht Junk Volume. Warmup-Sätze würden die Analyse systematisch verfälschen.
+    rpe_saetze = alle_saetze.filter(rpe__isnull=False, ist_aufwaermsatz=False)
     gesamt = rpe_saetze.count()
 
     if gesamt == 0:
