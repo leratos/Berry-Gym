@@ -681,7 +681,12 @@ def delete_training(request: HttpRequest, training_id: int) -> HttpResponse:
 def _compute_1rm_and_weight(satz, uebung) -> tuple[float, float]:
     """Return (estimated_1rm, effective_weight) for a single set.
 
-    Uses the Epley formula: weight * (1 + reps/30).
+    Formel: Epley (1985) – weight × (1 + reps/30)
+    Genauigkeit:
+    - 1–6 Wdh.: gute Schätzung (±5%)
+    - 7–10 Wdh.: akzeptabel (±8%)
+    - > 10 Wdh.: systematische Überschätzung – Brzycki-Formel wäre dort genauer.
+    Für relative Vergleiche (Progression über Zeit) ist die Formel trotzdem konsistent.
     For time-based exercises the 'reps' value is used directly as a proxy.
     """
     effektives_gewicht = float(satz.gewicht)
