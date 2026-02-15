@@ -14,10 +14,7 @@ from django.urls import reverse
 
 import pytest
 
-from core.utils.advanced_stats import (
-    calculate_plateau_analysis,
-    calculate_rpe_quality_analysis,
-)
+from core.utils.advanced_stats import calculate_plateau_analysis, calculate_rpe_quality_analysis
 
 from .factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
 
