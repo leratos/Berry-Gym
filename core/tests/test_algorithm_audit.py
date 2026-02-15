@@ -9,6 +9,7 @@ Testet explizit die korrigierten Algorithmen:
 """
 
 from decimal import Decimal
+
 from django.urls import reverse
 
 import pytest
