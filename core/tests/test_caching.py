@@ -150,3 +150,44 @@ class TestDashboardCache:
         assert (
             cache.get(key_b) is None
         ), "User B hat einen Cache-Eintrag obwohl er nie das Dashboard aufgerufen hat."
+
+
+# ---------------------------------------------------------------------------
+# Global Exercise List Cache
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestGlobalUebungenCache:
+    def test_first_call_populates_cache(self):
+        """_get_global_uebungen() befüllt den Cache beim ersten Aufruf."""
+        from core.views.exercise_library import (
+            _GLOBAL_UEBUNGEN_CACHE_KEY,
+            _get_global_uebungen,
+        )
+
+        assert cache.get(_GLOBAL_UEBUNGEN_CACHE_KEY) is None
+        result = _get_global_uebungen()
+        assert isinstance(result, list)
+        cached = cache.get(_GLOBAL_UEBUNGEN_CACHE_KEY)
+        assert cached is not None, "Cache wurde nach erstem Aufruf nicht befüllt."
+        assert cached == result
+
+    def test_second_call_uses_cache_not_db(self):
+        """_get_global_uebungen() trifft beim zweiten Aufruf den Cache."""
+        from core.views.exercise_library import (
+            _GLOBAL_UEBUNGEN_CACHE_KEY,
+            _get_global_uebungen,
+        )
+
+        # Erster Aufruf: befüllt den Cache
+        _get_global_uebungen()
+
+        # Sentinel einsetzen: wenn Cache genutzt wird, kommt dieser zurück
+        sentinel = ["__sentinel__"]
+        cache.set(_GLOBAL_UEBUNGEN_CACHE_KEY, sentinel, timeout=60)
+        result = _get_global_uebungen()
+
+        assert result == sentinel, (
+            "_get_global_uebungen() liest nicht aus dem Cache – " "DB-Query bei jedem Aufruf!"
+        )
