@@ -91,3 +91,55 @@ markers = [
     "unit: marks tests as unit tests",
     "requires_ollama: marks tests that require Ollama running",
 ]
+
+[tool.flake8]
+max-line-length = 100
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "migrations",
+    "staticfiles",
+    "media",
+    "htmlcov",
+    "build",
+    "dist",
+    "*.egg-info",
+    "core/tests",
+    "ai_coach/test_*.py",
+    "core/views_old.py",
+]
+ignore = [
+    "E203",  # Whitespace before ':' (Black-kompatibel)
+    "E266",  # Too many leading '#' for block comment
+    "E501",  # Line too long (handled by Black)
+    "W503",  # Line break before binary operator
+    "W504",  # Line break after binary operator
+    "E402",  # Module level import not at top of file
+]
+per-file-ignores = [
+    "__init__.py:F401,F403",
+    "settings.py:E501",
+    # Komplexe Views – Phase 2.2 Refactoring in Arbeit
+    "core/views/training_session.py:C901",
+    "core/views/training_stats.py:C901",
+    "core/views/ai_recommendations.py:C901",
+    "core/views/exercise_management.py:C901",
+    "core/views/export.py:C901",
+    "core/views/plan_templates.py:C901",
+    "core/utils/advanced_stats.py:C901",
+    "core/chart_generator.py:C901",
+    "core/helpers/exercises.py:C901",
+    "core/management/commands/*.py:C901",
+    # AI Coach (extern generierter Code)
+    "ai_coach/llm_client.py:C901",
+    "ai_coach/plan_generator.py:C901",
+    "ai_coach/assign_equipment_prod.py:F541,E226",
+    "ai_coach/db_client.py:F541,E226",
+    "ai_coach/find_production_user.py:F541,E226",
+    "ai_coach/raw_mysql_test.py:F541,E226,E722",
+    "ai_coach/test_db.py:F541,E226,E722",
+    "ai_coach/test_smart_retry.py:F541,C901",
+    "ai_coach/secrets_manager.py:F811",
+]
+max-complexity = 15
