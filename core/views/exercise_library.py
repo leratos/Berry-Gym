@@ -15,6 +15,7 @@ import re
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db.models import Avg, Max, Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -23,6 +24,33 @@ from django.utils import timezone
 from ..models import BEWEGUNGS_TYP, GEWICHTS_TYP, MUSKELGRUPPEN, Satz, Uebung
 
 logger = logging.getLogger(__name__)
+
+# Cache-TTL für globale Übungsliste (is_custom=False) – selten geändert
+_GLOBAL_UEBUNGEN_CACHE_KEY = "global_uebungen_list"
+_GLOBAL_UEBUNGEN_TTL = 60 * 30  # 30 Minuten
+
+
+def _get_global_uebungen() -> list:
+    """Gibt alle globalen Übungen (is_custom=False) als gecachte Liste zurück.
+
+    Gecacht für 30 Minuten – diese Daten ändern sich nur bei Admin-Eingriffen,
+    nicht durch User-Aktionen. Beim nächsten Request nach TTL-Ablauf wird die
+    Liste automatisch neu aus der DB geladen.
+
+    Returns:
+        list: Uebung-Instanzen mit prefetchtem 'equipment'.
+    """
+    cached = cache.get(_GLOBAL_UEBUNGEN_CACHE_KEY)
+    if cached is not None:
+        return cached
+    uebungen = list(
+        Uebung.objects.filter(is_custom=False)
+        .prefetch_related("equipment", "favoriten")
+        .order_by("muskelgruppe", "bezeichnung")
+    )
+    cache.set(_GLOBAL_UEBUNGEN_CACHE_KEY, uebungen, timeout=_GLOBAL_UEBUNGEN_TTL)
+    return uebungen
+
 
 # ---------------------------------------------------------------------------
 # Hilfstext → Muskelgruppen-Code Mapping (shared across views)
@@ -81,26 +109,30 @@ def uebungen_auswahl(request: HttpRequest) -> HttpResponse:
     # Equipment-Filter: Nur Übungen mit verfügbarem Equipment
     user_equipment_ids = request.user.verfuegbares_equipment.values_list("id", flat=True)
 
-    # Include both global exercises and user's custom exercises
-    base_queryset = Uebung.objects.filter(
-        Q(is_custom=False) | Q(created_by=request.user)
-    ).prefetch_related("equipment", "favoriten")
+    # Globale Übungen aus Cache, custom Übungen immer frisch
+    global_uebungen = _get_global_uebungen()
+    custom_uebungen = list(
+        Uebung.objects.filter(created_by=request.user)
+        .prefetch_related("equipment", "favoriten")
+        .order_by("muskelgruppe", "bezeichnung")
+    )
+    all_uebungen = global_uebungen + custom_uebungen
 
     if user_equipment_ids:
         # Filter: Übungen die ALLE ihre benötigten Equipment haben ODER keine Equipment-Anforderungen
         uebungen = []
-        for uebung in base_queryset.order_by("muskelgruppe", "bezeichnung"):
-            required_eq_ids = set(uebung.equipment.values_list("id", flat=True))
+        user_eq_set = set(user_equipment_ids)
+        for uebung in all_uebungen:
+            # .all() nutzt Prefetch-Cache; .values_list() würde neuen DB-Hit auslösen
+            required_eq_ids = {eq.id for eq in uebung.equipment.all()}
             # Verfügbar wenn: keine Equipment nötig ODER alle benötigten Equipment verfügbar
-            if not required_eq_ids or required_eq_ids.issubset(set(user_equipment_ids)):
+            if not required_eq_ids or required_eq_ids.issubset(user_eq_set):
                 uebungen.append(uebung)
     else:
         # Keine Equipment ausgewählt: Nur Übungen ohne Equipment-Anforderung
-        uebungen = (
-            base_queryset.filter(equipment__isnull=True)
-            .distinct()
-            .order_by("muskelgruppe", "bezeichnung")
-        )
+        # WICHTIG: u.equipment.all() nutzt Prefetch-Cache → kein DB-Hit pro Übung
+        # u.equipment.exists() würde den Prefetch umgehen → N+1-Problem
+        uebungen = [u for u in all_uebungen if not u.equipment.all()]
 
     # Gruppiere nach Muskelgruppen
     uebungen_nach_gruppe = {}
