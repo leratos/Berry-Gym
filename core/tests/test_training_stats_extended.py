@@ -173,8 +173,9 @@ class TestDashboard:
         """Bei mehreren offenen Sessions wird die neueste angezeigt."""
         user = UserFactory()
         client.force_login(user)
-        from django.utils import timezone
         import datetime
+
+        from django.utils import timezone
 
         alt = TrainingseinheitFactory(user=user, abgeschlossen=False)
         # Datum manuell auf älter setzen
