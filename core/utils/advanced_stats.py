@@ -190,11 +190,22 @@ def calculate_consistency_metrics(alle_trainings):
         wochen_geprueft += 1
 
     # Adherence Rate: % der Wochen mit Training
+    # WICHTIG: Zähler (wochen_mit_training) und Nenner (wochen_gesamt) müssen
+    # dieselbe Einheit verwenden – beide basieren auf ISO-Kalenderwochen.
+    # Vorher: wochen_gesamt = days // 7 (Ganzzahl-Division) vs. Django-Kalenderwochen
+    # → führte zu Adherence > 100% wenn Trainings Wochengrenzen überbrücken.
     erste_training = alle_trainings.order_by("datum").first()
     if erste_training:
-        wochen_gesamt = max(1, ((heute - erste_training.datum).days // 7))
+        erste_datum = erste_training.datum.date()
+        heute_datum = heute.date()
+        # Montag der Startwoche und Montag der aktuellen Woche
+        erste_woche_montag = erste_datum - timedelta(days=erste_datum.weekday())
+        heute_woche_montag = heute_datum - timedelta(days=heute_datum.weekday())
+        # Anzahl Kalenderwochen inklusiv Start- und Endwoche
+        wochen_gesamt = max(1, ((heute_woche_montag - erste_woche_montag).days // 7) + 1)
         wochen_mit_training = alle_trainings.dates("datum", "week").count()
-        adherence_rate = round((wochen_mit_training / wochen_gesamt) * 100, 1)
+        # min(100.0) als Sicherheitsnetz (darf nie über 100% liegen)
+        adherence_rate = min(100.0, round((wochen_mit_training / wochen_gesamt) * 100, 1))
     else:
         adherence_rate = 0
 

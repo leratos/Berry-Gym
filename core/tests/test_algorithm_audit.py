@@ -9,6 +9,7 @@ Testet explizit die korrigierten Algorithmen:
 """
 
 from decimal import Decimal
+from datetime import timedelta
 
 from django.urls import reverse
 
@@ -329,3 +330,98 @@ class TestAllometricScaling:
             f"Allometrischer Exponent stimmt nicht. "
             f"Erwartet: {expected_allometric:.3f}, Erhalten: {actual_ratio:.3f}"
         )
+
+
+@pytest.mark.django_db
+class TestAdherenceRateNeverExceedsHundred:
+    """
+    Regression: adherence_rate darf nie > 100% sein.
+
+    Bug: wochen_gesamt verwendete `days // 7` (Ganzzahl-Division),
+    wochen_mit_training zählte Django-Kalenderwochen (ISO-Wochen).
+    Trainings die eine Wochengrenzen überbrücken erzeugten Nenner < Zähler.
+
+    Beispiel-Szenario das den Bug auslöste:
+    - Erstes Training: Donnerstag (vor 3 Tagen)
+    - Zweites Training: heute (Sonntag, neue Kalenderwoche)
+    - days = 3 → days // 7 = 0 → max(1, 0) = 1 Woche (Nenner)
+    - Django dates("datum", "week") = 2 Kalenderwochen (Zähler)
+    → Ergebnis: 2/1 * 100 = 200%
+    """
+
+    def test_adherence_never_exceeds_100_percent(self):
+        """
+        Trainings über Wochengrenzen dürfen nicht zu > 100% führen.
+        Wir erstellen Trainings die definitiv mehr Kalenderwochen
+        als die `days // 7`-Formel ergeben würde.
+        """
+        from django.utils import timezone
+
+        from core.utils.advanced_stats import calculate_consistency_metrics
+
+        user = UserFactory()
+
+        # Trainings in 5 verschiedenen Kalenderwochen über 8 Wochen
+        heute = timezone.now()
+        offsets = [0, 7, 14, 21, 28]  # 5 Wochen, alle Montage
+        for offset in offsets:
+            datum = heute - timedelta(days=offset)
+            TrainingseinheitFactory(user=user, datum=datum, abgeschlossen=True)
+
+        from core.models import Trainingseinheit
+
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = calculate_consistency_metrics(alle_trainings)
+
+        assert result is not None
+        assert (
+            result["adherence_rate"] <= 100.0
+        ), f"adherence_rate über 100%: {result['adherence_rate']}%"
+
+    def test_adherence_cross_week_boundary(self):
+        """
+        Spezifisches Szenario: 2 Trainings, nur 3 Tage auseinander,
+        aber in verschiedenen ISO-Kalenderwochen (z.B. Do → So).
+        Das Ergebnis muss ≤ 100% sein.
+        """
+        from django.utils import timezone
+
+        from core.utils.advanced_stats import calculate_consistency_metrics
+
+        user = UserFactory()
+        heute = timezone.now()
+
+        # Montag der aktuellen Woche
+        montag_heute = heute - timedelta(days=heute.weekday())
+        # Donnerstag der Vorwoche (= 4 Tage vor diesem Montag)
+        donnerstag_vorwoche = montag_heute - timedelta(days=4)
+
+        TrainingseinheitFactory(user=user, datum=donnerstag_vorwoche, abgeschlossen=True)
+        TrainingseinheitFactory(user=user, datum=heute, abgeschlossen=True)
+
+        from core.models import Trainingseinheit
+
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = calculate_consistency_metrics(alle_trainings)
+
+        assert result is not None
+        assert (
+            result["adherence_rate"] <= 100.0
+        ), f"Wochengrenzfall: adherence_rate = {result['adherence_rate']}% (>100% ist ein Bug)"
+
+    def test_adherence_single_training_returns_valid_value(self):
+        """Ein einziges Training darf keine Division-by-Zero oder > 100% erzeugen."""
+        from django.utils import timezone
+
+        from core.utils.advanced_stats import calculate_consistency_metrics
+
+        user = UserFactory()
+        TrainingseinheitFactory(user=user, datum=timezone.now(), abgeschlossen=True)
+
+        from core.models import Trainingseinheit
+
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = calculate_consistency_metrics(alle_trainings)
+
+        assert result is not None
+        assert 0.0 <= result["adherence_rate"] <= 100.0
