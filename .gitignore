@@ -137,3 +137,7 @@ htmlcov/
 .pytest_cache/
 .tox/
 docs/journal.txt
+
+# Locust Load Test Reports
+tests/load/results/*.html
+tests/load/results/*.csv
