@@ -114,8 +114,16 @@ class AuthenticatedUser(HttpUser):
                 response.failure(f"Login unexpected status: {response.status_code}")
 
     def on_stop(self) -> None:
-        """Ausloggen."""
-        self.client.get("/accounts/logout/", name="/accounts/logout/")
+        """Logout via POST (Django 5.x: GET auf /accounts/logout/ gibt 405)."""
+        csrftoken = get_csrf_from_cookie(self)
+        if csrftoken:
+            self.client.post(
+                "/accounts/logout/",
+                data={"csrfmiddlewaretoken": csrftoken},
+                headers={"Referer": f"{self.host}/"},
+                name="/accounts/logout/ [POST]",
+            )
+        # Kein csrftoken → Session einfach verwerfen, kein Logout-Request
 
 
 # ---------------------------------------------------------------------------
