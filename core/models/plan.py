@@ -48,6 +48,9 @@ class Plan(models.Model):
     class Meta:
         verbose_name = "Trainingsplan"
         verbose_name_plural = "Trainingspläne"
+        indexes = [
+            models.Index(fields=["user", "is_public"], name="plan_user_public_idx"),
+        ]
 
 
 class PlanUebung(models.Model):
@@ -76,3 +79,6 @@ class PlanUebung(models.Model):
         verbose_name = "Plan-Übung"
         verbose_name_plural = "Plan-Übungen"
         ordering = ["reihenfolge"]
+        indexes = [
+            models.Index(fields=["plan", "trainingstag"], name="planuebung_plan_tag_idx"),
+        ]

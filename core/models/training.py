@@ -35,6 +35,8 @@ class Trainingseinheit(models.Model):
         ordering = ["-datum"]
         indexes = [
             models.Index(fields=["datum"]),
+            models.Index(fields=["user", "datum"], name="training_user_datum_idx"),
+            models.Index(fields=["user", "ist_deload"], name="training_user_deload_idx"),
         ]
 
 
@@ -66,4 +68,5 @@ class Satz(models.Model):
         ordering = ["einheit", "satz_nr"]
         indexes = [
             models.Index(fields=["uebung", "einheit"]),
+            models.Index(fields=["einheit", "ist_aufwaermsatz"], name="satz_einheit_warmup_idx"),
         ]
