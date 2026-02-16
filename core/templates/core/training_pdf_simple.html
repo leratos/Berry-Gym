@@ -487,13 +487,13 @@
                 <td>{{ gruppe.saetze }}</td>
                 <td>
                     {% if gruppe.status == 'optimal' %}
-                    <span class="badge badge-success">OPTIMAL</span>
+                    <span class="badge badge-success">{{ gruppe.status_label }}</span>
                     {% elif gruppe.status == 'untertrainiert' %}
-                    <span class="badge badge-warning">UNTERTRAINIERT</span>
+                    <span class="badge badge-warning">{{ gruppe.status_label }}</span>
                     {% elif gruppe.status == 'uebertrainiert' %}
-                    <span class="badge badge-danger">ÜBERTRAINIERT</span>
+                    <span class="badge badge-danger">{{ gruppe.status_label }}</span>
                     {% else %}
-                    <span class="badge badge-info">NICHT TRAINIERT</span>
+                    <span class="badge badge-info">{{ gruppe.status_label }}</span>
                     {% endif %}
                 </td>
                 <td style="font-size: 8px;">{{ gruppe.erklaerung }}</td>
@@ -727,7 +727,8 @@
         <p style="font-size: 9px; margin: 0;"><strong>Was ist der Ermüdungs-Index?</strong>
         Der Ermüdungs-Index (0-100) schätzt deine aktuelle Gesamtbelastung anhand von Trainingsvolumen, Intensität (RPE) und Frequenz.
         Ein hoher Wert bedeutet, dass sich Ermüdung aufbaut und eine <strong>Deload-Woche</strong> sinnvoll sein könnte.
-        Beim Deload trainierst du mit reduziertem Gewicht (~50-60%) und weniger Sätzen, damit sich Muskeln, Gelenke und Nervensystem vollständig erholen können.</p>
+        Beim Deload trainierst du mit reduziertem Gewicht (~50-60%) und weniger Sätzen, damit sich Muskeln, Gelenke und Nervensystem vollständig erholen können.
+        <em>Hinweis: Dieser Wert basiert auf einer Heuristik (Volumen 40 %, RPE 30 %, Frequenz 30 %) und ist eine Annäherung – keine medizinische Diagnose.</em></p>
     </div>
 
     {% if fatigue_analysis %}
@@ -754,7 +755,7 @@
 
     <div class="recommendation-box">
         <p><strong>Empfehlung:</strong> {{ fatigue_analysis.empfehlung }}</p>
-        <p><strong>Nächste geplante Deload-Woche:</strong> {{ fatigue_analysis.naechste_deload }}</p>
+        <p><strong>Geschätzte Deload-Woche (Heuristik):</strong> {{ fatigue_analysis.naechste_deload }}</p>
     </div>
     {% else %}
     <div class="info-box warning">

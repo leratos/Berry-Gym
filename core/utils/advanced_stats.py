@@ -428,9 +428,13 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
             continue
 
         # 6-Monats-Entwicklung (Format für Template: Liste von Dicts)
+        # Bugfix: Formel war `30 * (5 - i)`, so dass der letzte Slot (i=5)
+        # monat_start = heute, monat_ende = heute + 30 ergab → Zukunft, keine Daten.
+        # Fix: `30 * (6 - i)` → letzter Slot = heute-30 bis heute (aktueller Monat korrekt befüllt).
+        # Monatslabel vom Ende-Datum (nicht Start), damit der aktuelle Monat korrekt beschriftet wird.
         entwicklung_liste = []
         for i in range(6):
-            monat_start = heute - timedelta(days=30 * (5 - i))
+            monat_start = heute - timedelta(days=30 * (6 - i))
             monat_ende = monat_start + timedelta(days=30)
             monat_saetze = uebung_saetze.filter(
                 einheit__datum__gte=monat_start, einheit__datum__lt=monat_ende
@@ -444,7 +448,8 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
                     if estimated_1rm > monat_best_1rm:
                         monat_best_1rm = estimated_1rm
 
-            monat_name = monat_start.strftime("%b")
+            # Label vom Ende-Datum, damit der aktuelle Monat korrekt angezeigt wird
+            monat_name = monat_ende.strftime("%b")
             entwicklung_liste.append(
                 {
                     "monat": monat_name,

@@ -425,3 +425,60 @@ class TestAdherenceRateNeverExceedsHundred:
 
         assert result is not None
         assert 0.0 <= result["adherence_rate"] <= 100.0
+
+
+@pytest.mark.django_db
+class TestOneRMMonthWindowFix:
+    """Regression: 1RM-Monatsentwicklung darf aktuellen Monat nicht als leer zeigen.
+
+    Bug: Formel `30 * (5 - i)` ergab für den letzten Slot i=5:
+         monat_start = heute, monat_ende = heute + 30 → Zukunft, keine Daten.
+    Fix: `30 * (6 - i)` → letzter Slot = heute-30 bis heute.
+    """
+
+    def test_current_month_pr_shows_in_last_slot(self):
+        """Ein PR von heute muss im letzten 1RM-Entwicklungs-Eintrag erscheinen."""
+        from datetime import date
+
+        from core.models import Satz
+        from core.utils.advanced_stats import calculate_1rm_standards
+
+        user = UserFactory()
+        uebung = UebungFactory(
+            bezeichnung="Bugfix-Testübung",
+            standard_beginner=Decimal("60.0"),
+            standard_intermediate=Decimal("100.0"),
+            standard_advanced=Decimal("140.0"),
+            standard_elite=Decimal("180.0"),
+        )
+        einheit = TrainingseinheitFactory(user=user, datum=date.today(), abgeschlossen=True)
+        SatzFactory(
+            einheit=einheit,
+            uebung=uebung,
+            gewicht=Decimal("80.0"),
+            wiederholungen=5,
+            ist_aufwaermsatz=False,
+        )
+
+        alle_saetze = Satz.objects.filter(einheit__user=user)
+        top_uebungen = [{"uebung__bezeichnung": uebung.bezeichnung}]
+
+        result = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None)
+
+        assert len(result) == 1, "Kein Ergebnis für Übung mit Standards"
+        entwicklung = result[0]["1rm_entwicklung"]
+        assert len(entwicklung) == 6, "Entwicklungsliste muss 6 Einträge haben"
+
+        # Letzter Slot muss den heutigen PR enthalten (nicht None)
+        letzter_slot = entwicklung[-1]
+        assert letzter_slot["1rm"] is not None, (
+            f"Letzter Slot '{letzter_slot['monat']}' sollte heutigen PR enthalten, ist aber None. "
+            f"Bug: Monats-Fenster schaut in die Zukunft statt in die letzten 30 Tage."
+        )
+        # Letzter Slot sollte aktuellen Monatsnamen tragen
+        import calendar
+
+        erwarteter_monat = calendar.month_abbr[date.today().month]
+        assert (
+            letzter_slot["monat"] == erwarteter_monat
+        ), f"Letzter Slot zeigt '{letzter_slot['monat']}', erwartet '{erwarteter_monat}'"
