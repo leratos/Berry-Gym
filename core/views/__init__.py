@@ -47,9 +47,6 @@ from .body_tracking import (
 # Cardio views
 from .cardio import cardio_add, cardio_delete, cardio_list
 
-# Scientific sources
-from .sources import sources_list
-
 # Config & static views
 from .config import (
     datenschutz,
@@ -115,6 +112,9 @@ from .plan_management import (
 
 # Plan templates views
 from .plan_templates import create_plan_from_template, get_plan_templates, get_template_detail
+
+# Scientific sources
+from .sources import sources_list
 
 # Training session views
 from .training_session import (

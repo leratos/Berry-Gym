@@ -8,8 +8,8 @@ Testet explizit die korrigierten Algorithmen:
 4. 1RM-Skalierung: allometrisch, nicht linear
 """
 
-from decimal import Decimal
 from datetime import timedelta
+from decimal import Decimal
 
 from django.urls import reverse
 
