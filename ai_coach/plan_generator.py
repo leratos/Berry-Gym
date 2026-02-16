@@ -53,6 +53,29 @@ class PlanGenerator:
         self.use_openrouter = use_openrouter
         self.fallback_to_openrouter = fallback_to_openrouter
 
+    def _get_max_tokens(self) -> int:
+        """
+        Gibt plan-typ-spezifisches max_tokens zurück.
+
+        Grundlage: ~700 Tokens pro Session (Übungen + Metadaten) +
+        ~500 Tokens für Makrozyklus/Periodisierungs-Header.
+        Puffer: +20% für Varianz in Übungsanzahl und Notizen.
+
+        Hardcodiertes 4000 für alle Typen war falsch:
+        - 2er-Split: ~1400 Tokens → 4000 verschwendet Geld
+        - PPL (6 Sessions): ~4700 Tokens → 4000 schneidet den Plan ab
+        """
+        token_map = {
+            "ganzkörper": 2000,  # 2-3 Sessions × ~500 + Header
+            "2er-split": 2200,  # 2 Sessions × ~700 + Header
+            "upper-lower": 2200,  # Alias für 2er-Split
+            "3er-split": 3000,  # 3 Sessions × ~700 + Header
+            "4er-split": 3800,  # 4 Sessions × ~700 + Header
+            "ppl": 4500,  # bis 6 Sessions × ~650 + Header
+            "push-pull-legs": 4500,  # Alias für ppl
+        }
+        return token_map.get(self.plan_type, 3500)
+
     def generate(self, save_to_db: bool = True) -> dict:
         """
         Generiert Trainingsplan und speichert in Django DB
@@ -146,7 +169,7 @@ class PlanGenerator:
             fallback_to_openrouter=self.fallback_to_openrouter,
         )
         llm_result = llm_client.generate_training_plan(
-            messages=messages, max_tokens=4000, timeout=120
+            messages=messages, max_tokens=self._get_max_tokens(), timeout=120
         )
 
         # Extrahiere JSON aus Result-Dict
@@ -187,7 +210,7 @@ class PlanGenerator:
                     fallback_to_openrouter=False,
                 )
                 llm_result = llm_client_or.generate_training_plan(
-                    messages=messages, max_tokens=4000, timeout=120
+                    messages=messages, max_tokens=self._get_max_tokens(), timeout=120
                 )
                 plan_json = (
                     llm_result.get("response") if isinstance(llm_result, dict) else llm_result

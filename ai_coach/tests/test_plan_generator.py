@@ -455,3 +455,62 @@ class TestSmartRetry:
         assert names == ["Fliegende (Kurzhantel)", "Seitheben (Kurzhantel)"]
         # Nur 1 LLM-Call – alle Halluzinationen auf einmal
         mock_client.generate_training_plan.assert_called_once()
+
+
+class TestDynamicMaxTokens:
+    """_get_max_tokens() gibt plan-typ-spezifische Werte zurück."""
+
+    def test_ppl_gets_more_tokens_than_2er_split(self):
+        """PPL hat bis zu 6 Sessions – braucht deutlich mehr Tokens als 2er-Split."""
+        ppl = PlanGenerator(user_id=1, plan_type="ppl")
+        split2 = PlanGenerator(user_id=1, plan_type="2er-split")
+
+        assert ppl._get_max_tokens() > split2._get_max_tokens(), (
+            f"PPL ({ppl._get_max_tokens()}) muss mehr Tokens bekommen als 2er-Split "
+            f"({split2._get_max_tokens()})"
+        )
+
+    def test_unknown_plan_type_returns_safe_default(self):
+        """Unbekannter plan_type fällt auf sicheren Default zurück (kein KeyError)."""
+        gen = PlanGenerator(user_id=1, plan_type="irgendwas-unbekanntes")
+        tokens = gen._get_max_tokens()
+
+        assert tokens >= 2000, f"Default muss mindestens 2000 sein, war: {tokens}"
+        assert tokens <= 5000, f"Default sollte unter 5000 bleiben, war: {tokens}"
+
+    def test_aliases_have_same_token_count(self):
+        """ppl und push-pull-legs sind Aliase → gleiche Token-Anzahl."""
+        ppl = PlanGenerator(user_id=1, plan_type="ppl")
+        ppl_alias = PlanGenerator(user_id=1, plan_type="push-pull-legs")
+
+        assert (
+            ppl._get_max_tokens() == ppl_alias._get_max_tokens()
+        ), "ppl und push-pull-legs müssen gleich viele Tokens bekommen"
+
+    def test_4er_split_more_than_3er_split(self):
+        """4er-Split hat eine Session mehr → mehr Tokens."""
+        split3 = PlanGenerator(user_id=1, plan_type="3er-split")
+        split4 = PlanGenerator(user_id=1, plan_type="4er-split")
+
+        assert split4._get_max_tokens() > split3._get_max_tokens()
+
+    def test_no_plan_type_hardcodes_4000(self):
+        """Kein Plan-Typ darf mehr als 5000 Tokens bekommen (Kostenschutz)."""
+        plan_types = [
+            "ganzkörper",
+            "2er-split",
+            "upper-lower",
+            "3er-split",
+            "4er-split",
+            "ppl",
+            "push-pull-legs",
+        ]
+        for pt in plan_types:
+            gen = PlanGenerator(user_id=1, plan_type=pt)
+            tokens = gen._get_max_tokens()
+            assert (
+                tokens <= 5000
+            ), f"Plan-Typ '{pt}' hat {tokens} Tokens – das ist zu hoch (max 5000)"
+            assert (
+                tokens >= 1500
+            ), f"Plan-Typ '{pt}' hat nur {tokens} Tokens – zu niedrig (min 1500)"
