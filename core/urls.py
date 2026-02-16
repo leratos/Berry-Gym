@@ -95,6 +95,8 @@ urlpatterns = [
     path("equipment/", views.equipment_management, name="equipment_management"),
     # Help Pages
     path("help/metriken/", views.metriken_help, name="metriken_help"),
+    # Wissenschaftliche Quellen (öffentlich)
+    path("quellen/", views.sources_list, name="sources_list"),
     path("equipment/toggle/<int:equipment_id>/", views.toggle_equipment, name="toggle_equipment"),
     path(
         "api/exercise/<int:exercise_id>/alternatives/",

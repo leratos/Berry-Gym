@@ -15,6 +15,7 @@ from .models import (
     Satz,
     ScientificDisclaimer,
     Trainingseinheit,
+    TrainingSource,
     Uebung,
     UebungTag,
     UserProfile,
@@ -511,3 +512,69 @@ class ScientificDisclaimerAdmin(admin.ModelAdmin):
         if obj:
             return self.readonly_fields + ("category",)
         return self.readonly_fields
+
+
+# --- WISSENSCHAFTLICHE QUELLEN ---
+@admin.register(TrainingSource)
+class TrainingSourceAdmin(admin.ModelAdmin):
+    list_display = (
+        "citation_short",
+        "category",
+        "journal",
+        "doi_link",
+        "applies_to_display",
+        "is_active",
+    )
+    list_filter = ("category", "is_active", "year")
+    search_fields = ("title", "authors", "journal", "doi")
+    ordering = ("category", "year")
+    readonly_fields = ("created_at", "updated_at", "citation_short")
+
+    fieldsets = (
+        (
+            "Bibliografische Angaben",
+            {"fields": ("category", "title", "authors", "year", "journal")},
+        ),
+        (
+            "Verlinkung",
+            {"fields": ("doi", "url"), "description": "DOI ohne https://doi.org/ Prefix."},
+        ),
+        (
+            "Inhalt",
+            {"fields": ("key_findings", "applies_to")},
+        ),
+        (
+            "Status",
+            {"fields": ("is_active", "created_at", "updated_at")},
+        ),
+    )
+
+    def doi_link(self, obj):
+        if obj.doi:
+            return format_html(
+                '<a href="https://doi.org/{}" target="_blank">{}</a>',
+                obj.doi,
+                obj.doi[:30] + "..." if len(obj.doi) > 30 else obj.doi,
+            )
+        if obj.url:
+            return format_html('<a href="{}" target="_blank">Link</a>', obj.url)
+        return "-"
+
+    doi_link.short_description = "DOI / URL"
+
+    def applies_to_display(self, obj):
+        if obj.applies_to:
+            return ", ".join(obj.applies_to)
+        return "-"
+
+    applies_to_display.short_description = "Anwendungsbereiche"
+
+    actions = ["reload_from_fixtures"]
+
+    def reload_from_fixtures(self, request, queryset):
+        from django.core.management import call_command
+
+        call_command("load_training_sources")
+        self.message_user(request, "Quellen aus Fixtures neu geladen.")
+
+    reload_from_fixtures.short_description = "Quellen neu laden (load_training_sources)"

@@ -113,6 +113,9 @@ from .plan_management import (
 # Plan templates views
 from .plan_templates import create_plan_from_template, get_plan_templates, get_template_detail
 
+# Scientific sources
+from .sources import sources_list
+
 # Training session views
 from .training_session import (
     add_set,
@@ -251,4 +254,5 @@ __all__ = [
     "api_unshare_group_with_user",
     "api_get_plan_shares",
     "api_get_group_shares",
+    "sources_list",
 ]
