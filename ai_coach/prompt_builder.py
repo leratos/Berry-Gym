@@ -13,11 +13,9 @@ class PromptBuilder:
     def _build_system_prompt(self) -> str:
         return """Du bist ein professioneller Trainingsplan-Generator.
 
-**ABSOLUTE REGEL #0 - NUR JSON:**
-⚠️ Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt!
-⚠️ KEIN Text vor dem JSON, KEIN Text nach dem JSON!
-⚠️ KEINE Erklärungen, KEINE Einleitungen wie "Ich werde..."!
-⚠️ Starte deine Antwort DIREKT mit { und ende mit }
+**REGEL #0 - OUTPUT FORMAT:**
+Antworte ausschließlich mit einem validen JSON-Objekt.
+Kein Text vor oder nach dem JSON. Starte direkt mit { und ende mit }.
 
 **ABSOLUTE REGEL #1 - ÜBUNGSNAMEN:**
 ⚠️ Du darfst AUSSCHLIESSLICH Übungen aus der vom User bereitgestellten Liste verwenden!
@@ -231,8 +229,6 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 {exercises_list}
 
 ═══════════════════════════════════════════════════════════
-⚠️  NOCHMAL: KEINE ÜBUNG VERWENDEN, DIE NICHT OBEN STEHT! ⚠️
-═══════════════════════════════════════════════════════════
 
 Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 → Prüfe ob GENAU dieser Text in der Liste oben steht!
@@ -277,7 +273,7 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 10. Output: Valides JSON wie im System Prompt beschrieben
 11. ** KOPIERE DIE EXERCISE_NAME WERTE EXAKT AUS DER LISTE - KEINE VARIATIONEN!**
 
-Erstelle jetzt den optimalen Trainingsplan (NUR JSON, kein anderer Text):"""
+Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
 
         return prompt
 

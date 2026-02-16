@@ -6,7 +6,10 @@ Fokus:
 - Fuzzy-Match: case-insensitiv + strip-whitespace findet Übungen
 - Not-found: fehlerhafte Namen werden still übersprungen (kein Crash)
 - Korrekte Plan/PlanUebung-Erstellung
+- LLM-Client: JSON-Mode und Reasoning-Off für Gemini 2.5 Flash
 """
+
+from unittest.mock import MagicMock, patch
 
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -222,3 +225,82 @@ class TestSavePlanToDbSplitPlan:
 
         namen = sorted(p.name for p in plans)
         assert namen == ["PPL-Plan - Legs", "PPL-Plan - Pull", "PPL-Plan - Push"]
+
+
+class TestOpenRouterGeminiConfig:
+    """
+    Stellt sicher dass _generate_with_openrouter die Gemini-2.5-Flash-spezifischen
+    Parameter korrekt setzt: JSON-Mode und Reasoning-Off (kein Thinking-Overhead).
+    """
+
+    def _make_mock_response(self, content: str = '{"plan_name": "Test", "sessions": []}'):
+        """Minimal-Mock für OpenAI chat.completions.create Response."""
+        mock_choice = MagicMock()
+        mock_choice.message.content = content
+
+        mock_usage = MagicMock()
+        mock_usage.total_tokens = 100
+        mock_usage.prompt_tokens = 80
+        mock_usage.completion_tokens = 20
+
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+        mock_resp.usage = mock_usage
+        return mock_resp
+
+    def test_json_mode_is_set(self):
+        """response_format muss {"type": "json_object"} sein – kein Markdown-Wrapping."""
+        from ai_coach.llm_client import LLMClient
+
+        client = LLMClient(use_openrouter=True)
+
+        with patch.object(client, "_get_openrouter_client") as mock_get_client:
+            mock_openai = MagicMock()
+            mock_openai.chat.completions.create.return_value = self._make_mock_response()
+            mock_get_client.return_value = mock_openai
+
+            client.generate_training_plan([{"role": "user", "content": "Test"}], max_tokens=100)
+
+            call_kwargs = mock_openai.chat.completions.create.call_args.kwargs
+            assert call_kwargs.get("response_format") == {
+                "type": "json_object"
+            }, "response_format muss json_object sein – verhindert Markdown-Wrapping"
+
+    def test_reasoning_effort_none_is_set(self):
+        """extra_body.reasoning.effort muss 'none' sein – deaktiviert Thinking-Tokens."""
+        from ai_coach.llm_client import LLMClient
+
+        client = LLMClient(use_openrouter=True)
+
+        with patch.object(client, "_get_openrouter_client") as mock_get_client:
+            mock_openai = MagicMock()
+            mock_openai.chat.completions.create.return_value = self._make_mock_response()
+            mock_get_client.return_value = mock_openai
+
+            client.generate_training_plan([{"role": "user", "content": "Test"}], max_tokens=100)
+
+            call_kwargs = mock_openai.chat.completions.create.call_args.kwargs
+            extra_body = call_kwargs.get("extra_body", {})
+            assert (
+                extra_body.get("reasoning", {}).get("effort") == "none"
+            ), "reasoning.effort=none muss gesetzt sein – verhindert versteckte Thinking-Tokens"
+
+    def test_default_model_is_gemini_2_5_flash(self):
+        """Standard-Modell muss google/gemini-2.5-flash sein (nicht Llama 3.1 70B)."""
+        from ai_coach import ai_config
+        from ai_coach.llm_client import LLMClient
+
+        client = LLMClient(use_openrouter=True)
+
+        with patch.object(client, "_get_openrouter_client") as mock_get_client:
+            mock_openai = MagicMock()
+            mock_openai.chat.completions.create.return_value = self._make_mock_response()
+            mock_get_client.return_value = mock_openai
+
+            client.generate_training_plan([{"role": "user", "content": "Test"}], max_tokens=100)
+
+            call_kwargs = mock_openai.chat.completions.create.call_args.kwargs
+            assert call_kwargs.get("model") == ai_config.OPENROUTER_MODEL
+            assert "gemini-2.5-flash" in call_kwargs.get(
+                "model", ""
+            ), f"Erwartet Gemini 2.5 Flash, gefunden: {call_kwargs.get('model')}"
