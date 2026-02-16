@@ -109,6 +109,9 @@ urlpatterns = [
     path("api/live-guidance/", views.live_guidance_api, name="live_guidance_api"),
     # AI Plan Generator API
     path("api/generate-plan/", views.generate_plan_api, name="generate_plan_api"),
+    path(
+        "api/generate-plan/stream/", views.generate_plan_stream_api, name="generate_plan_stream_api"
+    ),
     # AI Plan Optimization API
     path("api/analyze-plan/", views.analyze_plan_api, name="analyze_plan_api"),
     path("api/optimize-plan/", views.optimize_plan_api, name="optimize_plan_api"),

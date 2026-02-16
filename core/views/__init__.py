@@ -8,6 +8,7 @@ from .ai_recommendations import (
     analyze_plan_api,
     apply_optimizations_api,
     generate_plan_api,
+    generate_plan_stream_api,
     live_guidance_api,
     optimize_plan_api,
     workout_recommendations,
@@ -209,6 +210,7 @@ __all__ = [
     # AI recommendations
     "workout_recommendations",
     "generate_plan_api",
+    "generate_plan_stream_api",
     "analyze_plan_api",
     "optimize_plan_api",
     "apply_optimizations_api",

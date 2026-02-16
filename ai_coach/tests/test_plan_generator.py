@@ -6,7 +6,10 @@ Fokus:
 - Fuzzy-Match: case-insensitiv + strip-whitespace findet Übungen
 - Not-found: fehlerhafte Namen werden still übersprungen (kein Crash)
 - Korrekte Plan/PlanUebung-Erstellung
+- LLM-Client: JSON-Mode und Reasoning-Off für Gemini 2.5 Flash
 """
+
+from unittest.mock import MagicMock, patch
 
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -222,3 +225,345 @@ class TestSavePlanToDbSplitPlan:
 
         namen = sorted(p.name for p in plans)
         assert namen == ["PPL-Plan - Legs", "PPL-Plan - Pull", "PPL-Plan - Push"]
+
+
+class TestOpenRouterGeminiConfig:
+    """
+    Stellt sicher dass _generate_with_openrouter die Gemini-2.5-Flash-spezifischen
+    Parameter korrekt setzt: JSON-Mode und Reasoning-Off (kein Thinking-Overhead).
+    """
+
+    def _make_mock_response(self, content: str = '{"plan_name": "Test", "sessions": []}'):
+        """Minimal-Mock für OpenAI chat.completions.create Response."""
+        mock_choice = MagicMock()
+        mock_choice.message.content = content
+
+        mock_usage = MagicMock()
+        mock_usage.total_tokens = 100
+        mock_usage.prompt_tokens = 80
+        mock_usage.completion_tokens = 20
+
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+        mock_resp.usage = mock_usage
+        return mock_resp
+
+    def test_json_mode_is_set(self):
+        """response_format muss {"type": "json_object"} sein – kein Markdown-Wrapping."""
+        from ai_coach.llm_client import LLMClient
+
+        client = LLMClient(use_openrouter=True)
+
+        with patch.object(client, "_get_openrouter_client") as mock_get_client:
+            mock_openai = MagicMock()
+            mock_openai.chat.completions.create.return_value = self._make_mock_response()
+            mock_get_client.return_value = mock_openai
+
+            client.generate_training_plan([{"role": "user", "content": "Test"}], max_tokens=100)
+
+            call_kwargs = mock_openai.chat.completions.create.call_args.kwargs
+            assert call_kwargs.get("response_format") == {
+                "type": "json_object"
+            }, "response_format muss json_object sein – verhindert Markdown-Wrapping"
+
+    def test_reasoning_effort_none_is_set(self):
+        """extra_body.reasoning.effort muss 'none' sein – deaktiviert Thinking-Tokens."""
+        from ai_coach.llm_client import LLMClient
+
+        client = LLMClient(use_openrouter=True)
+
+        with patch.object(client, "_get_openrouter_client") as mock_get_client:
+            mock_openai = MagicMock()
+            mock_openai.chat.completions.create.return_value = self._make_mock_response()
+            mock_get_client.return_value = mock_openai
+
+            client.generate_training_plan([{"role": "user", "content": "Test"}], max_tokens=100)
+
+            call_kwargs = mock_openai.chat.completions.create.call_args.kwargs
+            extra_body = call_kwargs.get("extra_body", {})
+            assert (
+                extra_body.get("reasoning", {}).get("effort") == "none"
+            ), "reasoning.effort=none muss gesetzt sein – verhindert versteckte Thinking-Tokens"
+
+    def test_default_model_is_gemini_2_5_flash(self):
+        """Standard-Modell muss google/gemini-2.5-flash sein (nicht Llama 3.1 70B)."""
+        from ai_coach import ai_config
+        from ai_coach.llm_client import LLMClient
+
+        client = LLMClient(use_openrouter=True)
+
+        with patch.object(client, "_get_openrouter_client") as mock_get_client:
+            mock_openai = MagicMock()
+            mock_openai.chat.completions.create.return_value = self._make_mock_response()
+            mock_get_client.return_value = mock_openai
+
+            client.generate_training_plan([{"role": "user", "content": "Test"}], max_tokens=100)
+
+            call_kwargs = mock_openai.chat.completions.create.call_args.kwargs
+            assert call_kwargs.get("model") == ai_config.OPENROUTER_MODEL
+            assert "gemini-2.5-flash" in call_kwargs.get(
+                "model", ""
+            ), f"Erwartet Gemini 2.5 Flash, gefunden: {call_kwargs.get('model')}"
+
+
+@pytest.mark.django_db
+class TestSmartRetry:
+    """
+    _fix_invalid_exercises() soll halluzinierte Übungen korrekt ersetzen.
+
+    Wichtigster Fix: generate_training_plan() gibt {"response": {...}} zurück –
+    der Code muss result["response"] auspacken, nicht result direkt als replacements
+    verwenden.
+    """
+
+    def _make_llm_client_mock(self, replacements: dict):
+        """
+        Erstellt einen gemockten LLMClient der generate_training_plan() mit
+        {"response": replacements, ...} beantwortet.
+        """
+        mock_client = MagicMock()
+        mock_client.generate_training_plan.return_value = {
+            "response": replacements,
+            "cost": 0.001,
+            "model": "google/gemini-2.5-flash",
+        }
+        return mock_client
+
+    def test_hallucinated_exercise_is_replaced(self):
+        """
+        Halluzinierte Übung wird korrekt durch valide Alternative ersetzt.
+        Prüft insbesondere: result["response"] wird ausgepackt, nicht result selbst.
+        """
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test-Plan",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [
+                        {"exercise_name": "Cable Fly (Halluziniert)", "sets": 3, "reps": "10-12"},
+                        {"exercise_name": "Bankdrücken (Langhantel)", "sets": 4, "reps": "6-8"},
+                    ],
+                }
+            ],
+        }
+
+        errors = [
+            "Session 1, Übung 1: 'Cable Fly (Halluziniert)' nicht verfügbar "
+            "(Equipment fehlt oder Übung existiert nicht)"
+        ]
+        available = ["Bankdrücken (Langhantel)", "Fliegende (Kurzhantel)", "Kniebeuge (Langhantel)"]
+
+        mock_client = self._make_llm_client_mock(
+            {"Cable Fly (Halluziniert)": "Fliegende (Kurzhantel)"}
+        )
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=available,
+            llm_client=mock_client,
+        )
+
+        exercises = result["sessions"][0]["exercises"]
+        names = [ex["exercise_name"] for ex in exercises]
+
+        assert "Fliegende (Kurzhantel)" in names, "Ersetzte Übung muss im Plan sein"
+        assert (
+            "Cable Fly (Halluziniert)" not in names
+        ), "Halluzinierte Übung darf nicht mehr im Plan sein"
+        assert "Bankdrücken (Langhantel)" in names, "Valide Übungen dürfen nicht verändert werden"
+        mock_client.generate_training_plan.assert_called_once()
+
+    def test_no_invalid_exercises_means_no_retry(self):
+        """
+        Wenn keine 'nicht verfügbar'-Fehler in der Fehlerliste sind,
+        wird generate_training_plan() gar nicht aufgerufen.
+        """
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test-Plan",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [
+                        {"exercise_name": "Bankdrücken (Langhantel)", "sets": 4, "reps": "6-8"}
+                    ],
+                }
+            ],
+        }
+
+        # Fehler der kein "nicht verfügbar" enthält (z.B. Duplikat)
+        errors = ["Session 1: Doppelte Übungen gefunden: Bankdrücken (Langhantel)"]
+
+        mock_client = MagicMock()
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=["Bankdrücken (Langhantel)"],
+            llm_client=mock_client,
+        )
+
+        mock_client.generate_training_plan.assert_not_called()
+        # Plan bleibt unverändert
+        assert result == plan_json
+
+    def test_multiple_hallucinations_all_replaced(self):
+        """Mehrere halluzinierte Übungen werden in einem Retry alle ersetzt."""
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [
+                        {"exercise_name": "Fake Übung A", "sets": 3, "reps": "10-12"},
+                        {"exercise_name": "Fake Übung B", "sets": 3, "reps": "10-12"},
+                    ],
+                }
+            ],
+        }
+
+        errors = [
+            "Session 1, Übung 1: 'Fake Übung A' nicht verfügbar (Equipment fehlt oder Übung existiert nicht)",
+            "Session 1, Übung 2: 'Fake Übung B' nicht verfügbar (Equipment fehlt oder Übung existiert nicht)",
+        ]
+        available = ["Fliegende (Kurzhantel)", "Seitheben (Kurzhantel)"]
+
+        mock_client = self._make_llm_client_mock(
+            {
+                "Fake Übung A": "Fliegende (Kurzhantel)",
+                "Fake Übung B": "Seitheben (Kurzhantel)",
+            }
+        )
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=available,
+            llm_client=mock_client,
+        )
+
+        names = [ex["exercise_name"] for ex in result["sessions"][0]["exercises"]]
+        assert names == ["Fliegende (Kurzhantel)", "Seitheben (Kurzhantel)"]
+        # Nur 1 LLM-Call – alle Halluzinationen auf einmal
+        mock_client.generate_training_plan.assert_called_once()
+
+
+class TestDynamicMaxTokens:
+    """_get_max_tokens() gibt plan-typ-spezifische Werte zurück."""
+
+    def test_ppl_gets_more_tokens_than_2er_split(self):
+        """PPL hat bis zu 6 Sessions – braucht deutlich mehr Tokens als 2er-Split."""
+        ppl = PlanGenerator(user_id=1, plan_type="ppl")
+        split2 = PlanGenerator(user_id=1, plan_type="2er-split")
+
+        assert ppl._get_max_tokens() > split2._get_max_tokens(), (
+            f"PPL ({ppl._get_max_tokens()}) muss mehr Tokens bekommen als 2er-Split "
+            f"({split2._get_max_tokens()})"
+        )
+
+    def test_unknown_plan_type_returns_safe_default(self):
+        """Unbekannter plan_type fällt auf sicheren Default zurück (kein KeyError)."""
+        gen = PlanGenerator(user_id=1, plan_type="irgendwas-unbekanntes")
+        tokens = gen._get_max_tokens()
+
+        assert tokens >= 2000, f"Default muss mindestens 2000 sein, war: {tokens}"
+        assert tokens <= 5000, f"Default sollte unter 5000 bleiben, war: {tokens}"
+
+    def test_aliases_have_same_token_count(self):
+        """ppl und push-pull-legs sind Aliase → gleiche Token-Anzahl."""
+        ppl = PlanGenerator(user_id=1, plan_type="ppl")
+        ppl_alias = PlanGenerator(user_id=1, plan_type="push-pull-legs")
+
+        assert (
+            ppl._get_max_tokens() == ppl_alias._get_max_tokens()
+        ), "ppl und push-pull-legs müssen gleich viele Tokens bekommen"
+
+    def test_4er_split_more_than_3er_split(self):
+        """4er-Split hat eine Session mehr → mehr Tokens."""
+        split3 = PlanGenerator(user_id=1, plan_type="3er-split")
+        split4 = PlanGenerator(user_id=1, plan_type="4er-split")
+
+        assert split4._get_max_tokens() > split3._get_max_tokens()
+
+    def test_no_plan_type_hardcodes_4000(self):
+        """Kein Plan-Typ darf mehr als 5000 Tokens bekommen (Kostenschutz)."""
+        plan_types = [
+            "ganzkörper",
+            "2er-split",
+            "upper-lower",
+            "3er-split",
+            "4er-split",
+            "ppl",
+            "push-pull-legs",
+        ]
+        for pt in plan_types:
+            gen = PlanGenerator(user_id=1, plan_type=pt)
+            tokens = gen._get_max_tokens()
+            assert (
+                tokens <= 5000
+            ), f"Plan-Typ '{pt}' hat {tokens} Tokens – das ist zu hoch (max 5000)"
+            assert (
+                tokens >= 1500
+            ), f"Plan-Typ '{pt}' hat nur {tokens} Tokens – zu niedrig (min 1500)"
+
+
+class TestProgressCallback:
+    """progress_callback wird an den richtigen Stellen aufgerufen."""
+
+    def test_callback_is_invoked_on_generate(self):
+        """
+        _progress() leitet Aufrufe an den übergebenen callback weiter.
+        Ohne callback: keine Exception (no-op).
+        """
+        calls = []
+
+        def callback(percent: int, step: str):
+            calls.append((percent, step))
+
+        gen = PlanGenerator(user_id=1, progress_callback=callback)
+        gen._progress(35, "Test-Schritt")
+
+        assert calls == [(35, "Test-Schritt")]
+
+    def test_no_callback_is_noop(self):
+        """Kein callback übergeben → _progress() löst keine Exception aus."""
+        gen = PlanGenerator(user_id=1)  # kein progress_callback
+        gen._progress(50, "Kein Callback vorhanden")  # darf nicht crashen
+
+    def test_callback_receives_all_progress_stages(self):
+        """Alle 6 definierten Stages (5, 20, 35, 70, 82, 90) werden gemeldet."""
+        received = []
+
+        def cb(percent, step):
+            received.append(percent)
+
+        gen = PlanGenerator(user_id=1, progress_callback=cb)
+
+        # Alle definierten Stufen direkt aufrufen
+        for percent, step in [
+            (5, "Analysiere Trainingsdaten..."),
+            (20, "Erstelle personalisierten Prompt..."),
+            (35, "KI generiert Plan (kann 15–20s dauern)..."),
+            (70, "Antwort erhalten – validiere Plan..."),
+            (82, "Korrigiere halluzinierte Übungen..."),
+            (90, "Speichere Plan in Datenbank..."),
+        ]:
+            gen._progress(percent, step)
+
+        assert received == [
+            5,
+            20,
+            35,
+            70,
+            82,
+            90,
+        ], f"Nicht alle Progress-Stufen wurden gemeldet. Erhalten: {received}"
