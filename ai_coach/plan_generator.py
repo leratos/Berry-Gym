@@ -409,8 +409,10 @@ class PlanGenerator:
         self, plan_json: dict, errors: list, available_exercises: list, llm_client
     ) -> dict:
         """
-        Smart Retry: Ersetzt fehlerhafte Übungen durch valide Alternativen
-        Nutzt LLM um passende Ersatz-Übungen aus verfügbaren Optionen zu wählen
+        Smart Retry: Ersetzt halluzinierte Übungen durch valide Alternativen.
+
+        Nutzt generate_training_plan() über die öffentliche API – nie direkt
+        _generate_with_openrouter() aufrufen (internes Detail, gibt Wrapper-Dict zurück).
 
         Args:
             plan_json: Der generierte Plan mit Fehlern
@@ -419,15 +421,13 @@ class PlanGenerator:
             llm_client: LLM Client für Korrektur-Request
 
         Returns:
-            Korrigierter Plan
+            Korrigierter Plan (unverändert wenn kein Retry nötig oder Korrektur fehlschlägt)
         """
-        import json
         import re
 
         # Fehlerhafte Übungen aus Errors extrahieren
         invalid_exercises = []
         for error in errors:
-            # Pattern: "Session X, Übung Y: 'ÜBUNGSNAME' nicht verfügbar"
             match = re.search(r"'([^']+)' nicht verfügbar", error)
             if match:
                 invalid_exercises.append(match.group(1))
@@ -436,121 +436,62 @@ class PlanGenerator:
             print("   ℹ️ Keine automatisch korrigierbaren Fehler gefunden")
             return plan_json
 
-        print(f"   🔍 Gefundene fehlerhafte Übungen: {len(invalid_exercises)}")
+        print(f"   🔍 Gefundene halluzinierte Übungen: {len(invalid_exercises)}")
         for ex in invalid_exercises:
             print(f"      ❌ {ex}")
 
-        # Kurzer Prompt für Korrektur
-        # available_exercises ist eine Liste von Strings (Übungsnamen)
         exercise_list = "\n".join([f"- {ex}" for ex in available_exercises])
 
         correction_prompt = f"""Du hast folgende NICHT-EXISTIERENDE Übungen verwendet:
 {chr(10).join(f'- {ex}' for ex in invalid_exercises)}
 
-⚠️ DIESE ÜBUNGEN EXISTIEREN NICHT IN DER DATENBANK!
+Diese Übungen sind nicht in der Datenbank – sie wurden halluziniert.
 
 Wähle für JEDE fehlerhafte Übung GENAU EINE passende Alternative aus der VERFÜGBAREN Liste.
-Die Alternative sollte:
-1. Die gleiche Muskelgruppe trainieren
-2. Ähnlichen Bewegungstyp haben
-3. Mit dem verfügbaren Equipment machbar sein
+Die Alternative sollte dieselbe Muskelgruppe trainieren und ähnlichen Bewegungstyp haben.
 
 VERFÜGBARE ÜBUNGEN (NUR DIESE VERWENDEN!):
 {exercise_list}
 
-Antworte NUR mit einem JSON-Objekt in diesem Format:
-{{
-  "Fehlerhafte Übung 1": "Ersatz Übung aus Liste",
-  "Fehlerhafte Übung 2": "Ersatz Übung aus Liste"
-}}
-
+Antworte mit einem JSON-Objekt: Schlüssel = fehlerhafte Übung, Wert = Ersatz aus obiger Liste.
 Beispiel:
 {{
-  "Leg Press (Kurzhantel)": "Bulgarian Split Squat (Kurzhantel)",
-  "Cable Fly": "Fliegende (Kurzhantel)"
+  "Cable Fly": "Fliegende (Kurzhantel)",
+  "Leg Press (Maschine)": "Kniebeuge (Langhantel, Back Squat)"
 }}
 
-⚠️ KRITISCH: Verwende EXAKT die Übungsnamen aus der Liste oben! Keine Variationen!"""
+Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
 
         messages = [
-            {
-                "role": "system",
-                "content": "Du bist ein Fitness-Experte. Antworte nur mit validem JSON.",
-            },
+            {"role": "system", "content": "Du bist ein Fitness-Experte."},
             {"role": "user", "content": correction_prompt},
         ]
 
         print("\n   🤖 Sende Korrektur-Request an LLM...")
 
         try:
-            # LLM Call für Korrektur (mit Ollama oder OpenRouter)
-            if hasattr(llm_client, "_generate_with_openrouter") and llm_client.use_openrouter:
-                response = llm_client._generate_with_openrouter(messages, max_tokens=500)
-            else:
-                # Fallback zu lokalem Ollama
-                response = llm_client._generate_with_ollama(messages, max_tokens=500, timeout=60)
+            result = llm_client.generate_training_plan(messages=messages, max_tokens=500)
 
-            # Debug: Zeige Response-Typ und Struktur
-            print(f"   🔍 Response-Typ: {type(response)}")
+            # generate_training_plan() gibt immer {"response": <dict>, ...} zurück
+            replacements = result.get("response", {})
 
-            # Response kann String oder Dict sein
-            if isinstance(response, dict):
-                # Ollama gibt bereits ein Dict zurück - direkt verwenden!
-                replacements = response
-                print(f"   ✓ Ersetzungen erhalten (direkt als Dict): {len(replacements)}")
-            else:
-                # OpenRouter gibt String zurück - muss geparst werden
-                response_text = response
+            if not isinstance(replacements, dict) or not replacements:
+                print("   ⚠️ Leere oder ungültige Replacements-Response")
+                return plan_json
 
-                # Debug
-                print("   📝 LLM Response:")
-                print(f"   {response_text}")
-
-                # JSON parsen
-                response_clean = response_text.strip()
-                if response_clean.startswith("```json"):
-                    response_clean = response_clean.split("```json")[1].split("```")[0].strip()
-                elif response_clean.startswith("```"):
-                    response_clean = response_clean.split("```")[1].split("```")[0].strip()
-
-                # Versuche JSON zu finden wenn Response Text enthält
-                import re
-
-                json_match = re.search(r"\{[^}]+\}", response_clean, re.DOTALL)
-                if json_match:
-                    response_clean = json_match.group(0)
-
-                replacements = json.loads(response_clean)
-
-            print(f"   ✓ Ersetzungen erhalten: {len(replacements)}")
+            print(f"   ✓ {len(replacements)} Ersetzungen erhalten:")
             for old, new in replacements.items():
                 print(f"      {old} → {new}")
 
-            # Übungen im Plan ersetzen
+            # Übungen im Plan ersetzen (nur exakter Match)
             replaced_count = 0
             for session in plan_json["sessions"]:
                 for exercise in session["exercises"]:
-                    exercise_name = exercise["exercise_name"]
-
-                    # Exakte Übereinstimmung oder teilweise Übereinstimmung
-                    if exercise_name in replacements:
-                        old_name = exercise_name
-                        new_name = replacements[old_name]
-                        exercise["exercise_name"] = new_name
+                    ex_name = exercise["exercise_name"]
+                    if ex_name in replacements:
+                        exercise["exercise_name"] = replacements[ex_name]
                         replaced_count += 1
-                        print(f"   ✓ Ersetzt: {old_name} → {new_name}")
-                    else:
-                        # Versuche teilweise Übereinstimmung (ohne Klammern)
-                        for old, new in replacements.items():
-                            # Entferne Klammern für Vergleich
-                            exercise_base = exercise_name.split("(")[0].strip()
-                            old_base = old.split("(")[0].strip()
-
-                            if exercise_base == old_base or exercise_name == old:
-                                exercise["exercise_name"] = new
-                                replaced_count += 1
-                                print(f"   ✓ Ersetzt (partial match): {exercise_name} → {new}")
-                                break
+                        print(f"   ✓ Ersetzt: {ex_name} → {replacements[ex_name]}")
 
             print(f"\n   ✅ {replaced_count} Übungen korrigiert")
             return plan_json

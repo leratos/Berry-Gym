@@ -304,3 +304,154 @@ class TestOpenRouterGeminiConfig:
             assert "gemini-2.5-flash" in call_kwargs.get(
                 "model", ""
             ), f"Erwartet Gemini 2.5 Flash, gefunden: {call_kwargs.get('model')}"
+
+
+@pytest.mark.django_db
+class TestSmartRetry:
+    """
+    _fix_invalid_exercises() soll halluzinierte Übungen korrekt ersetzen.
+
+    Wichtigster Fix: generate_training_plan() gibt {"response": {...}} zurück –
+    der Code muss result["response"] auspacken, nicht result direkt als replacements
+    verwenden.
+    """
+
+    def _make_llm_client_mock(self, replacements: dict):
+        """
+        Erstellt einen gemockten LLMClient der generate_training_plan() mit
+        {"response": replacements, ...} beantwortet.
+        """
+        mock_client = MagicMock()
+        mock_client.generate_training_plan.return_value = {
+            "response": replacements,
+            "cost": 0.001,
+            "model": "google/gemini-2.5-flash",
+        }
+        return mock_client
+
+    def test_hallucinated_exercise_is_replaced(self):
+        """
+        Halluzinierte Übung wird korrekt durch valide Alternative ersetzt.
+        Prüft insbesondere: result["response"] wird ausgepackt, nicht result selbst.
+        """
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test-Plan",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [
+                        {"exercise_name": "Cable Fly (Halluziniert)", "sets": 3, "reps": "10-12"},
+                        {"exercise_name": "Bankdrücken (Langhantel)", "sets": 4, "reps": "6-8"},
+                    ],
+                }
+            ],
+        }
+
+        errors = [
+            "Session 1, Übung 1: 'Cable Fly (Halluziniert)' nicht verfügbar "
+            "(Equipment fehlt oder Übung existiert nicht)"
+        ]
+        available = ["Bankdrücken (Langhantel)", "Fliegende (Kurzhantel)", "Kniebeuge (Langhantel)"]
+
+        mock_client = self._make_llm_client_mock(
+            {"Cable Fly (Halluziniert)": "Fliegende (Kurzhantel)"}
+        )
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=available,
+            llm_client=mock_client,
+        )
+
+        exercises = result["sessions"][0]["exercises"]
+        names = [ex["exercise_name"] for ex in exercises]
+
+        assert "Fliegende (Kurzhantel)" in names, "Ersetzte Übung muss im Plan sein"
+        assert (
+            "Cable Fly (Halluziniert)" not in names
+        ), "Halluzinierte Übung darf nicht mehr im Plan sein"
+        assert "Bankdrücken (Langhantel)" in names, "Valide Übungen dürfen nicht verändert werden"
+        mock_client.generate_training_plan.assert_called_once()
+
+    def test_no_invalid_exercises_means_no_retry(self):
+        """
+        Wenn keine 'nicht verfügbar'-Fehler in der Fehlerliste sind,
+        wird generate_training_plan() gar nicht aufgerufen.
+        """
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test-Plan",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [
+                        {"exercise_name": "Bankdrücken (Langhantel)", "sets": 4, "reps": "6-8"}
+                    ],
+                }
+            ],
+        }
+
+        # Fehler der kein "nicht verfügbar" enthält (z.B. Duplikat)
+        errors = ["Session 1: Doppelte Übungen gefunden: Bankdrücken (Langhantel)"]
+
+        mock_client = MagicMock()
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=["Bankdrücken (Langhantel)"],
+            llm_client=mock_client,
+        )
+
+        mock_client.generate_training_plan.assert_not_called()
+        # Plan bleibt unverändert
+        assert result == plan_json
+
+    def test_multiple_hallucinations_all_replaced(self):
+        """Mehrere halluzinierte Übungen werden in einem Retry alle ersetzt."""
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [
+                        {"exercise_name": "Fake Übung A", "sets": 3, "reps": "10-12"},
+                        {"exercise_name": "Fake Übung B", "sets": 3, "reps": "10-12"},
+                    ],
+                }
+            ],
+        }
+
+        errors = [
+            "Session 1, Übung 1: 'Fake Übung A' nicht verfügbar (Equipment fehlt oder Übung existiert nicht)",
+            "Session 1, Übung 2: 'Fake Übung B' nicht verfügbar (Equipment fehlt oder Übung existiert nicht)",
+        ]
+        available = ["Fliegende (Kurzhantel)", "Seitheben (Kurzhantel)"]
+
+        mock_client = self._make_llm_client_mock(
+            {
+                "Fake Übung A": "Fliegende (Kurzhantel)",
+                "Fake Übung B": "Seitheben (Kurzhantel)",
+            }
+        )
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=available,
+            llm_client=mock_client,
+        )
+
+        names = [ex["exercise_name"] for ex in result["sessions"][0]["exercises"]]
+        assert names == ["Fliegende (Kurzhantel)", "Seitheben (Kurzhantel)"]
+        # Nur 1 LLM-Call – alle Halluzinationen auf einmal
+        mock_client.generate_training_plan.assert_called_once()
