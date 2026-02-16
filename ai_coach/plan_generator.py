@@ -30,6 +30,7 @@ class PlanGenerator:
         target_profile: str = "hypertrophie",
         use_openrouter: bool = False,
         fallback_to_openrouter: bool = True,
+        progress_callback=None,
     ):
         """
         Args:
@@ -42,6 +43,7 @@ class PlanGenerator:
             target_profile: Zielprofil (kraft, hypertrophie, definition)
             use_openrouter: True = nutze nur OpenRouter (skip Ollama)
             fallback_to_openrouter: True = Fallback zu OpenRouter bei Ollama-Fehler
+            progress_callback: Optional callable(percent: int, step: str) für SSE-Streaming
         """
         self.user_id = user_id
         self.analysis_days = analysis_days
@@ -52,6 +54,12 @@ class PlanGenerator:
         self.target_profile = target_profile
         self.use_openrouter = use_openrouter
         self.fallback_to_openrouter = fallback_to_openrouter
+        self._progress_callback = progress_callback
+
+    def _progress(self, percent: int, step: str) -> None:
+        """Sendet Fortschrittsupdate – no-op wenn kein Callback gesetzt."""
+        if self._progress_callback:
+            self._progress_callback(percent, step)
 
     def _get_max_tokens(self) -> int:
         """
@@ -124,6 +132,7 @@ class PlanGenerator:
         # 1. Trainingshistorie analysieren
         print("\n📊 SCHRITT 1: Trainingshistorie analysieren")
         print("-" * 60)
+        self._progress(5, "Analysiere Trainingsdaten...")
 
         analyzer = TrainingAnalyzer(user_id=self.user_id, days=self.analysis_days)
         analysis_data = analyzer.analyze()
@@ -146,6 +155,7 @@ class PlanGenerator:
         # 3. Prompts erstellen
         print("\n🤖 SCHRITT 3: LLM Prompts erstellen")
         print("-" * 60)
+        self._progress(20, "Erstelle personalisierten Prompt...")
 
         messages = builder.build_messages(
             analysis_data=analysis_data,
@@ -162,6 +172,7 @@ class PlanGenerator:
         # 4. LLM Call - Trainingsplan generieren
         print("\n🧠 SCHRITT 4: Trainingsplan mit Llama generieren")
         print("-" * 60)
+        self._progress(35, "KI generiert Plan (kann 15–20s dauern)...")
 
         llm_client = LLMClient(
             temperature=self.llm_temperature,
@@ -224,6 +235,7 @@ class PlanGenerator:
         # 5. Validierung mit Smart Retry
         print("\n✅ SCHRITT 5: Plan validieren")
         print("-" * 60)
+        self._progress(70, "Antwort erhalten – validiere Plan...")
 
         valid, errors = llm_client.validate_plan(plan_json, available_exercises)
 
@@ -235,6 +247,7 @@ class PlanGenerator:
             # Smart Retry: Fehlerhafte Übungen durch LLM ersetzen lassen
             print("\n🔄 SCHRITT 5b: Fehlerhafte Übungen korrigieren (Smart Retry)")
             print("-" * 60)
+            self._progress(82, "Korrigiere halluzinierte Übungen...")
 
             plan_json = self._fix_invalid_exercises(
                 plan_json=plan_json,
@@ -267,6 +280,7 @@ class PlanGenerator:
         if save_to_db:
             print("\n💾 SCHRITT 6: Plan in Datenbank speichern")
             print("-" * 60)
+            self._progress(90, "Speichere Plan in Datenbank...")
 
             plan_ids = self._save_plan_to_db(plan_json)
 

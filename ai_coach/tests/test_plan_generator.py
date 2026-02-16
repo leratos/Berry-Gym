@@ -514,3 +514,56 @@ class TestDynamicMaxTokens:
             assert (
                 tokens >= 1500
             ), f"Plan-Typ '{pt}' hat nur {tokens} Tokens – zu niedrig (min 1500)"
+
+
+class TestProgressCallback:
+    """progress_callback wird an den richtigen Stellen aufgerufen."""
+
+    def test_callback_is_invoked_on_generate(self):
+        """
+        _progress() leitet Aufrufe an den übergebenen callback weiter.
+        Ohne callback: keine Exception (no-op).
+        """
+        calls = []
+
+        def callback(percent: int, step: str):
+            calls.append((percent, step))
+
+        gen = PlanGenerator(user_id=1, progress_callback=callback)
+        gen._progress(35, "Test-Schritt")
+
+        assert calls == [(35, "Test-Schritt")]
+
+    def test_no_callback_is_noop(self):
+        """Kein callback übergeben → _progress() löst keine Exception aus."""
+        gen = PlanGenerator(user_id=1)  # kein progress_callback
+        gen._progress(50, "Kein Callback vorhanden")  # darf nicht crashen
+
+    def test_callback_receives_all_progress_stages(self):
+        """Alle 6 definierten Stages (5, 20, 35, 70, 82, 90) werden gemeldet."""
+        received = []
+
+        def cb(percent, step):
+            received.append(percent)
+
+        gen = PlanGenerator(user_id=1, progress_callback=cb)
+
+        # Alle definierten Stufen direkt aufrufen
+        for percent, step in [
+            (5, "Analysiere Trainingsdaten..."),
+            (20, "Erstelle personalisierten Prompt..."),
+            (35, "KI generiert Plan (kann 15–20s dauern)..."),
+            (70, "Antwort erhalten – validiere Plan..."),
+            (82, "Korrigiere halluzinierte Übungen..."),
+            (90, "Speichere Plan in Datenbank..."),
+        ]:
+            gen._progress(percent, step)
+
+        assert received == [
+            5,
+            20,
+            35,
+            70,
+            82,
+            90,
+        ], f"Nicht alle Progress-Stufen wurden gemeldet. Erhalten: {received}"
