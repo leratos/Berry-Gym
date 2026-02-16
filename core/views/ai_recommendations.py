@@ -157,8 +157,10 @@ def _get_push_pull_empfehlung(letzte_30_tage_saetze) -> list:
     """Analysiert Push/Pull-Balance und gibt Empfehlung zurück.
 
     Konvention (angelehnt an Schultergesundheits-Empfehlungen der Sportmedizin):
-    - Push >> Pull (ratio > 1.5): Risiko für Schulterimpingements, Empfehlung: mehr Zugübungen.
-    - Pull >= Push (ratio <= 1.0): gilt als neutral bis positiv für Schultergesundheit.
+    - Push >> Pull (ratio > 2.0): deutliches Ungleichgewicht, Risiko für Schulterimpingements.
+      Threshold 2.0 statt 1.5: bis 2:1 gilt als tolerable Varianz im Alltag (viele Push-Übungen
+      enthalten auch Schulter-Stabilisierung; erst ab 2.0 klares Ungleichgewicht).
+    - Pull >= Push (ratio <= 1.0): neutral bis positiv für Schultergesundheit.
       → KEIN Warning bei zu viel Pull – das ist die häufig empfohlene Richtung.
     - Keine Push-Sätze (ratio = 999): gesonderte Meldung.
     """
@@ -182,9 +184,10 @@ def _get_push_pull_empfehlung(letzte_30_tage_saetze) -> list:
 
     ratio = push_effektiv / pull_effektiv if pull_effektiv > 0 else 999
 
-    # Nur warnen wenn Push deutlich überwiegt (schadet der Schultergesundheit)
+    # Nur warnen wenn Push deutlich überwiegt (schadet der Schultergesundheit).
+    # Threshold 2.0: bis 2:1 gilt als tolerable Varianz; erst darüber klares Risiko.
     # Mehr Pull als Push ist kein Problem – im Gegenteil, oft empfohlen.
-    if ratio > 1.5:
+    if ratio > 2.0:
         return [
             {
                 "typ": "balance",

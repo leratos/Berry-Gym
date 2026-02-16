@@ -190,11 +190,22 @@ def calculate_consistency_metrics(alle_trainings):
         wochen_geprueft += 1
 
     # Adherence Rate: % der Wochen mit Training
+    # WICHTIG: Zähler (wochen_mit_training) und Nenner (wochen_gesamt) müssen
+    # dieselbe Einheit verwenden – beide basieren auf ISO-Kalenderwochen.
+    # Vorher: wochen_gesamt = days // 7 (Ganzzahl-Division) vs. Django-Kalenderwochen
+    # → führte zu Adherence > 100% wenn Trainings Wochengrenzen überbrücken.
     erste_training = alle_trainings.order_by("datum").first()
     if erste_training:
-        wochen_gesamt = max(1, ((heute - erste_training.datum).days // 7))
+        erste_datum = erste_training.datum.date()
+        heute_datum = heute.date()
+        # Montag der Startwoche und Montag der aktuellen Woche
+        erste_woche_montag = erste_datum - timedelta(days=erste_datum.weekday())
+        heute_woche_montag = heute_datum - timedelta(days=heute_datum.weekday())
+        # Anzahl Kalenderwochen inklusiv Start- und Endwoche
+        wochen_gesamt = max(1, ((heute_woche_montag - erste_woche_montag).days // 7) + 1)
         wochen_mit_training = alle_trainings.dates("datum", "week").count()
-        adherence_rate = round((wochen_mit_training / wochen_gesamt) * 100, 1)
+        # min(100.0) als Sicherheitsnetz (darf nie über 100% liegen)
+        adherence_rate = min(100.0, round((wochen_mit_training / wochen_gesamt) * 100, 1))
     else:
         adherence_rate = 0
 
@@ -417,9 +428,13 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
             continue
 
         # 6-Monats-Entwicklung (Format für Template: Liste von Dicts)
+        # Bugfix: Formel war `30 * (5 - i)`, so dass der letzte Slot (i=5)
+        # monat_start = heute, monat_ende = heute + 30 ergab → Zukunft, keine Daten.
+        # Fix: `30 * (6 - i)` → letzter Slot = heute-30 bis heute (aktueller Monat korrekt befüllt).
+        # Monatslabel vom Ende-Datum (nicht Start), damit der aktuelle Monat korrekt beschriftet wird.
         entwicklung_liste = []
         for i in range(6):
-            monat_start = heute - timedelta(days=30 * (5 - i))
+            monat_start = heute - timedelta(days=30 * (6 - i))
             monat_ende = monat_start + timedelta(days=30)
             monat_saetze = uebung_saetze.filter(
                 einheit__datum__gte=monat_start, einheit__datum__lt=monat_ende
@@ -433,7 +448,8 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
                     if estimated_1rm > monat_best_1rm:
                         monat_best_1rm = estimated_1rm
 
-            monat_name = monat_start.strftime("%b")
+            # Label vom Ende-Datum, damit der aktuelle Monat korrekt angezeigt wird
+            monat_name = monat_ende.strftime("%b")
             entwicklung_liste.append(
                 {
                     "monat": monat_name,

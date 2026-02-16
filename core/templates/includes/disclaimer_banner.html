@@ -36,6 +36,15 @@ Requires: core.context_processors.disclaimers in settings.py
                     data-disclaimer-id="{{ disclaimer.id }}">
                 Verstanden
             </button>
+            <a href="{% url 'sources_list' %}" class="btn btn-sm btn-outline-secondary ms-2">
+                <i class="bi bi-journal-bookmark me-1"></i>Alle Quellen
+            </a>
+        </div>
+        {% else %}
+        <div class="disclaimer-actions">
+            <a href="{% url 'sources_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-journal-bookmark me-1"></i>Alle Quellen
+            </a>
         </div>
         {% endif %}
     </div>
