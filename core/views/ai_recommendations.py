@@ -829,3 +829,139 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
             {"error": "Feedback konnte nicht gespeichert werden. Bitte später erneut versuchen."},
             status=500,
         )
+
+
+@login_required
+def generate_plan_stream_api(request: HttpRequest) -> HttpResponse:
+    """
+    Server-Sent Events Endpoint für KI-Plan-Generierung mit Echtzeit-Progress.
+
+    GET  /api/generate-plan/stream/?plan_type=3er-split&sets_per_session=18&...
+
+    Schickt SSE-Events:
+      data: {"progress": 35, "step": "KI generiert Plan...", "done": false}
+
+    Letztes Event bei Erfolg:
+      data: {"progress": 100, "done": true, "success": true,
+             "preview": true, "plan_data": {...}, "cost": 0.003}
+
+    Letztes Event bei Fehler:
+      data: {"done": true, "success": false, "error": "..."}
+
+    Warum GET statt POST: SSE-Streams müssen per GET aufgebaut werden.
+    Parameter kommen als Query-String. CSRF wird über Cookie-basierte
+    Session-Auth (login_required) abgesichert.
+    """
+    if request.method != "GET":
+        return HttpResponse("GET required", status=405)
+
+    import threading
+
+    from django.http import StreamingHttpResponse
+
+    # Parameter aus Query-String lesen
+    data = {
+        "plan_type": request.GET.get("plan_type", "3er-split"),
+        "sets_per_session": request.GET.get("sets_per_session", "18"),
+        "analysis_days": request.GET.get("analysis_days", "30"),
+        "periodization": request.GET.get("periodization", "linear"),
+        "target_profile": request.GET.get("target_profile", "hypertrophie"),
+        "previewOnly": True,  # Stream gibt immer Preview zurück; User bestätigt danach
+    }
+
+    params = _validate_plan_gen_params(data)
+    if isinstance(params, JsonResponse):
+        # Validierungsfehler als SSE-Error-Event zurückgeben
+        error_msg = json.loads(params.content).get("error", "Ungültige Parameter")
+
+        def error_stream():
+            yield f'data: {json.dumps({"done": True, "success": False, "error": error_msg})}\n\n'
+
+        return StreamingHttpResponse(error_stream(), content_type="text/event-stream")
+
+    plan_type, sets_per_session, analysis_days, periodization, target_profile, _ = params
+
+    use_openrouter = not settings.DEBUG or os.getenv("USE_OPENROUTER", "False").lower() == "true"
+
+    # Thread-sichere Queue für Events zwischen Generator-Thread und SSE-Stream
+    import queue
+
+    event_queue: queue.Queue = queue.Queue()
+
+    def progress_callback(percent: int, step: str) -> None:
+        """Wird vom PlanGenerator aufgerufen und packt Event in Queue."""
+        event_queue.put({"progress": percent, "step": step, "done": False})
+
+    def run_generator():
+        """Läuft in separatem Thread – blockiert nicht den SSE-Stream."""
+        try:
+            from ai_coach.plan_generator import PlanGenerator
+
+            generator = PlanGenerator(
+                user_id=request.user.id,
+                plan_type=plan_type,
+                analysis_days=analysis_days,
+                sets_per_session=sets_per_session,
+                periodization=periodization,
+                target_profile=target_profile,
+                use_openrouter=use_openrouter,
+                fallback_to_openrouter=True,
+                progress_callback=progress_callback,
+            )
+            result = generator.generate(save_to_db=False)
+
+            if result.get("success"):
+                event_queue.put(
+                    {
+                        "progress": 100,
+                        "done": True,
+                        "success": True,
+                        "preview": True,
+                        "plan_data": result.get("plan_data", {}),
+                        "cost": 0.003 if use_openrouter else 0.0,
+                        "model": "Gemini 2.5 Flash" if use_openrouter else "Ollama",
+                    }
+                )
+            else:
+                errors = result.get("errors") or ["Generierung fehlgeschlagen"]
+                event_queue.put(
+                    {
+                        "done": True,
+                        "success": False,
+                        "error": errors[0] if errors else "Unbekannter Fehler",
+                    }
+                )
+        except Exception as exc:
+            logger.error(f"Stream Generator Error: {exc}", exc_info=True)
+            event_queue.put(
+                {
+                    "done": True,
+                    "success": False,
+                    "error": "Plan-Generierung fehlgeschlagen. Bitte erneut versuchen.",
+                }
+            )
+
+    # Generator im Hintergrund starten
+    thread = threading.Thread(target=run_generator, daemon=True)
+    thread.start()
+
+    def event_stream():
+        """Yield SSE-Events aus der Queue bis done=True empfangen wird."""
+        # Initiales Event sofort senden (zeigt dem Browser: Verbindung steht)
+        yield f'data: {json.dumps({"progress": 0, "step": "Starte Plan-Generierung...", "done": False})}\n\n'
+
+        while True:
+            try:
+                event = event_queue.get(timeout=180)  # max 3 Minuten warten
+                yield f"data: {json.dumps(event)}\n\n"
+                if event.get("done"):
+                    break
+            except queue.Empty:
+                # Timeout – informiere Client
+                yield f'data: {json.dumps({"done": True, "success": False, "error": "Timeout – bitte erneut versuchen."})}\n\n'
+                break
+
+    response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"  # nginx: Buffering deaktivieren
+    return response

@@ -13,12 +13,6 @@ class PromptBuilder:
     def _build_system_prompt(self) -> str:
         return """Du bist ein professioneller Trainingsplan-Generator.
 
-**ABSOLUTE REGEL #0 - NUR JSON:**
-⚠️ Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt!
-⚠️ KEIN Text vor dem JSON, KEIN Text nach dem JSON!
-⚠️ KEINE Erklärungen, KEINE Einleitungen wie "Ich werde..."!
-⚠️ Starte deine Antwort DIREKT mit { und ende mit }
-
 **ABSOLUTE REGEL #1 - ÜBUNGSNAMEN:**
 ⚠️ Du darfst AUSSCHLIESSLICH Übungen aus der vom User bereitgestellten Liste verwenden!
 ⚠️ Der "exercise_name" MUSS **EXAKT BUCHSTABE-FÜR-BUCHSTABE** aus der verfügbaren Übungsliste kopiert werden!
@@ -48,28 +42,28 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 {
   "plan_name": "Beschreibender Name (z.B. '3er-Split: Push/Pull/Legs - Woche 1-4')",
   "plan_description": "Kurze Beschreibung und Ziele",
+  "duration_weeks": 12,
+  "periodization": "linear | wellenfoermig | block",
+  "target_profile": "kraft | hypertrophie | definition",
+  "deload_weeks": [4, 8, 12],
+  "macrocycle": {
     "duration_weeks": 12,
-    "periodization": "linear | wellenfoermig | block",
-    "target_profile": "kraft | hypertrophie | definition",
-    "deload_weeks": [4,8,12],
-    "macrocycle": {
-        "duration_weeks": 12,
-        "weeks": [
-            {"week": 1, "focus": "Volumenaufbau", "volume_multiplier": 1.0, "intensity_target_rpe": 7.8, "notes": "Baseline"},
-            {"week": 4, "focus": "Deload", "is_deload": true, "volume_multiplier": 0.8, "intensity_target_rpe": 6.8, "notes": "Volumen -20%, Intensität -10%"}
-        ]
-    },
-    "microcycle_template": {
-        "rep_range": "6-12",
-        "rpe_range": "7-8.5",
-        "set_progression": "+1 Satz pro Hauptübung in Nicht-Deload-Wochen, nach Deload reset",
-        "deload_rules": "Woche 4/8/12: Volumen 80%, Intensität 90%"
-    },
-    "progression_strategy": {
-        "auto_load": "Wenn RPE < Ziel -0.5 zweimal → +2.5-5% Gewicht. Wenn RPE > Ziel +0.5 → -5% Gewicht oder 1 Satz weniger.",
-        "volume": "Nutze das Satzbudget voll aus, +1 Satz in Nicht-Deload-Wochen",
-        "after_deload": "Starte mit Basisvolumen, Woche nach Deload Re-Akklimatisierung"
-    },
+    "weeks": [
+      {"week": 1, "focus": "Volumenaufbau", "volume_multiplier": 1.0, "intensity_target_rpe": 7.8, "notes": "Baseline"},
+      {"week": 4, "focus": "Deload", "is_deload": true, "volume_multiplier": 0.8, "intensity_target_rpe": 6.8, "notes": "Volumen -20%, Intensität -10%"}
+    ]
+  },
+  "microcycle_template": {
+    "rep_range": "6-12",
+    "rpe_range": "7-8.5",
+    "set_progression": "+1 Satz pro Hauptübung in Nicht-Deload-Wochen, nach Deload reset",
+    "deload_rules": "Woche 4/8/12: Volumen 80%, Intensität 90%"
+  },
+  "progression_strategy": {
+    "auto_load": "Wenn RPE < Ziel -0.5 zweimal → +2.5-5% Gewicht. Wenn RPE > Ziel +0.5 → -5% Gewicht oder 1 Satz weniger.",
+    "volume": "Nutze das Satzbudget voll aus, +1 Satz auf Hauptübungen in Nicht-Deload-Wochen",
+    "after_deload": "Starte mit Basisvolumen, Woche nach Deload Re-Akklimatisierung"
+  },
   "sessions": [
     {
       "day_name": "Push (Brust/Schultern/Trizeps)",
@@ -85,9 +79,9 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         }
       ]
     }
-    ],
-    "weekly_structure": "Beschreibung des Wochenplans",
-    "progression_notes": "Wie soll der User progressiv steigern"
+  ],
+  "weekly_structure": "Beschreibung des Wochenplans",
+  "progression_notes": "Wie soll der User progressiv steigern"
 }
 ```
 
@@ -104,7 +98,6 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 - Bei Kraft-Fokus: +30s, bei Definition-Fokus: -30s
 
 **Weitere Anforderungen:**
-- Antworte NUR mit dem JSON-Objekt, kein zusätzlicher Text!
 - Berücksichtige die Schwachstellen und Trainingsziele
 - Achte auf realistische Satz/Wdh-Vorgaben basierend auf Historie"""
 
@@ -166,6 +159,9 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             for ex in available_exercises
             if any(kw in ex for kw in ["Bankdrücken", "Kniebeuge", "Kreuzheben"])
         ][:3]
+        # Fallback: erste 3 verfügbare Übungen wenn keine Standard-Compounds vorhanden
+        if not example_exercises:
+            example_exercises = available_exercises[:3]
         examples_str = "\n".join([f'  "{ex}"' for ex in example_exercises])
 
         # Satzbudget als Range (Flexibilität für LLM)
@@ -176,7 +172,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         coach_rules = """**🏥 COACH-SICHERHEITSREGELN (MUST):**
 - Wenn Bankdrücken ODER Schulterdrücken im Push-Tag: KEINE Front Raises (Überlastung vordere Schulter)
 - Kreuzheben (conventional): max. 3 Sätze ODER max. 15 Gesamtwiederholungen pro Woche
-- Pro Woche 2-4 Sätze hintere Schulter / Scapula-Hygiene (Face Pulls, Reverse Flys, etc.)
+- Pro Woche 2-4 Sätze hintere Schulter / Scapula-Hygiene (wähle aus verfügbarer Übungsliste)
 - Kein Lower-Back-Overkill: Vermeide Kreuzheben + RDL + schwere Squats am selben Tag"""
 
         # Build prompt
@@ -231,8 +227,6 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 {exercises_list}
 
 ═══════════════════════════════════════════════════════════
-⚠️  NOCHMAL: KEINE ÜBUNG VERWENDEN, DIE NICHT OBEN STEHT! ⚠️
-═══════════════════════════════════════════════════════════
 
 Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 → Prüfe ob GENAU dieser Text in der Liste oben steht!
@@ -274,10 +268,8 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 7. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
 8. ** DUPLIKATE**: ❌ KEINE doppelten Übungen INNERHALB einer Session! ✅ ABER gleiche Übungen in verschiedenen Sessions sind ERWÜNSCHT (für Progression über 4 Wochen)!
 9. Periodisierung: Fülle periodization, deload_weeks, macrocycle, microcycle_template, progression_strategy gemäß Defaults oben aus (12 Wochen!)
-10. Output: Valides JSON wie im System Prompt beschrieben
-11. ** KOPIERE DIE EXERCISE_NAME WERTE EXAKT AUS DER LISTE - KEINE VARIATIONEN!**
 
-Erstelle jetzt den optimalen Trainingsplan (NUR JSON, kein anderer Text):"""
+Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
 
         return prompt
 

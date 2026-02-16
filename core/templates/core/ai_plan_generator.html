@@ -210,7 +210,7 @@
 </div>
 
 <script>
-    // AI Plan Generator Logic
+    // AI Plan Generator – SSE-basierter Echtzeit-Progress
     (function() {
         const aiPlanForm = document.getElementById('aiPlanForm');
         const generateBtn = document.getElementById('generateBtn');
@@ -221,24 +221,21 @@
         const successText = document.getElementById('successText');
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
-        const costDisplay = document.getElementById('costDisplay');
         const planPreviewContainer = document.getElementById('planPreviewContainer');
         const planPreviewContent = document.getElementById('planPreviewContent');
         const confirmSaveBtn = document.getElementById('confirmSaveBtn');
         const cancelPreviewBtn = document.getElementById('cancelPreviewBtn');
 
-        // Bei lokalem Ollama: keine Vorschau (zu langsam für doppelte Generierung)
         const useOpenRouter = {{ use_openrouter|yesno:"true,false" }};
-        const skipPreview = !useOpenRouter;  // Lokal = keine Vorschau
+        const skipPreview = !useOpenRouter;
 
         let currentPlanData = null;
+        let activeEventSource = null;
 
-        // Update Sätze Value
         window.updateSetsValue = function(value) {
             document.getElementById('setsValue').textContent = value;
         };
 
-        // Cancel Preview
         cancelPreviewBtn.addEventListener('click', function() {
             planPreviewContainer.style.display = 'none';
             aiPlanForm.style.display = 'block';
@@ -246,23 +243,15 @@
             currentPlanData = null;
         });
 
-        // Confirm Save
         confirmSaveBtn.addEventListener('click', async function() {
             if (!currentPlanData) return;
 
             confirmSaveBtn.disabled = true;
             cancelPreviewBtn.disabled = true;
             progressContainer.style.display = 'block';
-            progressBar.style.width = '0%';
-            progressBar.classList.add('progress-bar-animated');
-            stepIndicator.innerHTML = '<i class="bi bi-hourglass-split"></i> Speichere Plan...';
+            setProgress(50, '💾 Speichere Plan...');
 
             try {
-                // Simuliere Progress
-                progressBar.style.width = '50%';
-                progressBar.textContent = '50%';
-
-                // Save plan to database
                 const response = await fetch('{% url "generate_plan_api" %}', {
                     method: 'POST',
                     headers: {
@@ -271,25 +260,17 @@
                     },
                     body: JSON.stringify(currentPlanData)
                 });
-
                 const data = await response.json();
-
-                progressBar.style.width = '100%';
-                progressBar.textContent = '100%';
+                setProgress(100, '✅ Gespeichert!');
                 progressBar.classList.remove('progress-bar-animated');
-                stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Gespeichert!';
 
                 if (data.success) {
                     setTimeout(() => {
                         progressContainer.style.display = 'none';
                         successMessage.style.display = 'block';
-                        successText.innerHTML = `
-                            ${data.message || 'Plan erfolgreich gespeichert!'}<br>
-                            <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt
-                        `;
+                        successText.innerHTML = `${data.message || 'Plan erfolgreich gespeichert!'}<br>
+                            <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt`;
                         planPreviewContainer.style.display = 'none';
-
-                        // Redirect nach 2 Sekunden
                         setTimeout(() => {
                             if (data.plan_ids && data.plan_ids.length > 0) {
                                 window.location.href = `/plan/${data.plan_ids[0]}/`;
@@ -299,63 +280,139 @@
                         }, 2000);
                     }, 500);
                 } else {
-                    progressContainer.style.display = 'none';
-                    errorMessage.style.display = 'block';
-                    errorText.textContent = data.error || 'Fehler beim Speichern';
+                    showError(data.error || 'Fehler beim Speichern');
                     confirmSaveBtn.disabled = false;
                     cancelPreviewBtn.disabled = false;
                 }
-            } catch (error) {
-                console.error('Save Error:', error);
-                errorMessage.style.display = 'block';
-                errorText.textContent = 'Netzwerkfehler beim Speichern';
+            } catch (err) {
+                showError('Netzwerkfehler beim Speichern');
                 confirmSaveBtn.disabled = false;
                 cancelPreviewBtn.disabled = false;
             }
         });
 
-        // Form Submit - Generate Preview
-        aiPlanForm.addEventListener('submit', async function(e) {
+        aiPlanForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            // Reset UI
+            // Cleanup falls noch ein alter Stream offen ist
+            if (activeEventSource) {
+                activeEventSource.close();
+                activeEventSource = null;
+            }
+
             successMessage.style.display = 'none';
             errorMessage.style.display = 'none';
             planPreviewContainer.style.display = 'none';
             progressContainer.style.display = 'block';
+            progressBar.classList.add('progress-bar-animated');
             generateBtn.disabled = true;
 
-            // Form Data - Bei lokalem Ollama direkt speichern (keine Vorschau)
-            const formData = {
-                plan_type: document.getElementById('planType').value,
-                sets_per_session: parseInt(document.getElementById('setsPerSession').value),
-                analysis_days: parseInt(document.getElementById('analysisDays').value),
-                periodization: document.getElementById('periodization').value,
-                target_profile: document.getElementById('targetProfile').value,
-                previewOnly: !skipPreview  // false bei Ollama = direkt speichern
+            const planType = document.getElementById('planType').value;
+            const setsPerSession = document.getElementById('setsPerSession').value;
+            const analysisDays = document.getElementById('analysisDays').value;
+            const periodization = document.getElementById('periodization').value;
+            const targetProfile = document.getElementById('targetProfile').value;
+
+            if (skipPreview) {
+                // Lokal (Ollama): klassischer POST, kein SSE
+                runDirectPost({
+                    plan_type: planType,
+                    sets_per_session: parseInt(setsPerSession),
+                    analysis_days: parseInt(analysisDays),
+                    periodization: periodization,
+                    target_profile: targetProfile,
+                    previewOnly: false,
+                });
+                return;
+            }
+
+            // OpenRouter: Echtzeit-Progress via SSE
+            const params = new URLSearchParams({
+                plan_type: planType,
+                sets_per_session: setsPerSession,
+                analysis_days: analysisDays,
+                periodization: periodization,
+                target_profile: targetProfile,
+            });
+
+            setProgress(0, '🚀 Starte Plan-Generierung...');
+
+            const es = new EventSource(`{% url "generate_plan_stream_api" %}?${params}`);
+            activeEventSource = es;
+
+            es.onmessage = function(event) {
+                let data;
+                try {
+                    data = JSON.parse(event.data);
+                } catch(e) {
+                    return;
+                }
+
+                if (!data.done) {
+                    setProgress(data.progress || 0, data.step || '...');
+                    return;
+                }
+
+                // Stream fertig
+                es.close();
+                activeEventSource = null;
+
+                if (data.success && data.preview) {
+                    setProgress(100, '✅ Vorschau bereit!');
+                    progressBar.classList.remove('progress-bar-animated');
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        aiPlanForm.style.display = 'none';
+                        planPreviewContainer.style.display = 'block';
+                        currentPlanData = {
+                            plan_data: data.plan_data,
+                            saveCachedPlan: true,
+                        };
+                        renderPreview(data.plan_data);
+                    }, 400);
+                } else if (data.success && !data.preview) {
+                    // Direktspeicherung (Fallback ohne Preview)
+                    setProgress(100, '✅ Plan erstellt!');
+                    progressBar.classList.remove('progress-bar-animated');
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        successMessage.style.display = 'block';
+                        successText.innerHTML = `Plan erfolgreich erstellt!`;
+                        setTimeout(() => window.location.reload(), 2000);
+                    }, 400);
+                } else {
+                    progressContainer.style.display = 'none';
+                    showError(data.error || 'Fehler bei der Plan-Generierung');
+                    generateBtn.disabled = false;
+                }
             };
 
+            es.onerror = function() {
+                es.close();
+                activeEventSource = null;
+                progressContainer.style.display = 'none';
+                showError('Verbindung unterbrochen. Bitte erneut versuchen.');
+                generateBtn.disabled = false;
+            };
+        });
+
+        async function runDirectPost(formData) {
+            // Fake-Progress für lokale Ollama-Anfragen (kein SSE)
+            const steps = [
+                { progress: 25, text: '📊 Analysiere Trainingshistorie...' },
+                { progress: 50, text: '🤖 KI erstellt Plan...' },
+                { progress: 75, text: '✅ Validiere Übungen...' },
+                { progress: 90, text: '💾 Speichere Plan...' },
+            ];
+            let stepIdx = 0;
+            const interval = setInterval(() => {
+                if (stepIdx < steps.length) {
+                    const s = steps[stepIdx++];
+                    setProgress(s.progress, s.text);
+                }
+            }, 1500);
+
             try {
-                // Simulated Progress Steps
-                const steps = [
-                    { progress: 25, text: '📊 Analysiere Trainingshistorie...' },
-                    { progress: 50, text: '🤖 KI erstellt personalisierten Plan...' },
-                    { progress: 75, text: '✅ Validiere Übungen...' },
-                    { progress: 95, text: '👁️ Bereite Vorschau vor...' }
-                ];
-
-                let currentStep = 0;
-                const progressInterval = setInterval(() => {
-                    if (currentStep < steps.length) {
-                        const step = steps[currentStep];
-                        progressBar.style.width = step.progress + '%';
-                        progressBar.textContent = step.progress + '%';
-                        stepIndicator.innerHTML = step.text;
-                        currentStep++;
-                    }
-                }, 1500);
-
-                // API Call
                 const response = await fetch('{% url "generate_plan_api" %}', {
                     method: 'POST',
                     headers: {
@@ -364,47 +421,17 @@
                     },
                     body: JSON.stringify(formData)
                 });
-
-                clearInterval(progressInterval);
-
+                clearInterval(interval);
                 const data = await response.json();
 
-                if (data.success && data.preview) {
-                    // Show Preview (nur bei OpenRouter)
-                    progressBar.style.width = '100%';
-                    progressBar.textContent = '100%';
+                if (data.success) {
+                    setProgress(100, '✅ Gespeichert!');
                     progressBar.classList.remove('progress-bar-animated');
-                    stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Vorschau bereit!';
-
-                    setTimeout(() => {
-                        progressContainer.style.display = 'none';
-                        aiPlanForm.style.display = 'none';
-                        planPreviewContainer.style.display = 'block';
-
-                        // Cache den generierten Plan für späteres Speichern
-                        currentPlanData = {
-                            plan_data: data.plan_data,  // Der generierte Plan
-                            saveCachedPlan: true        // Signal an API: speichere diesen Plan
-                        };
-
-                        renderPreview(data.plan_data);
-                    }, 500);
-                } else if (data.success && skipPreview) {
-                    // Direkt gespeichert (bei lokalem Ollama)
-                    progressBar.style.width = '100%';
-                    progressBar.textContent = '100%';
-                    progressBar.classList.remove('progress-bar-animated');
-                    stepIndicator.innerHTML = '<i class="bi bi-check-circle"></i> Gespeichert!';
-
                     setTimeout(() => {
                         progressContainer.style.display = 'none';
                         successMessage.style.display = 'block';
-                        successText.innerHTML = `
-                            ${data.message || 'Plan erfolgreich erstellt!'}<br>
-                            <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt
-                        `;
-
-                        // Redirect nach 2 Sekunden
+                        successText.innerHTML = `${data.message || 'Plan gespeichert!'}<br>
+                            <strong>${data.sessions || 'Mehrere'} Trainingstage</strong> erstellt`;
                         setTimeout(() => {
                             if (data.plan_ids && data.plan_ids.length > 0) {
                                 window.location.href = `/plan/${data.plan_ids[0]}/`;
@@ -414,22 +441,29 @@
                         }, 2000);
                     }, 500);
                 } else {
-                    // Error
                     progressContainer.style.display = 'none';
-                    errorMessage.style.display = 'block';
-                    errorText.textContent = data.error || 'Fehler bei der Plan-Generierung';
+                    showError(data.error || 'Fehler bei der Plan-Generierung');
                     generateBtn.disabled = false;
                 }
-            } catch (error) {
-                console.error('Plan Generation Error:', error);
+            } catch(err) {
+                clearInterval(interval);
                 progressContainer.style.display = 'none';
-                errorMessage.style.display = 'block';
-                errorText.textContent = 'Netzwerkfehler. Bitte versuche es erneut.';
+                showError('Netzwerkfehler. Bitte erneut versuchen.');
                 generateBtn.disabled = false;
             }
-        });
+        }
 
-        // Render Preview
+        function setProgress(percent, text) {
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+            stepIndicator.innerHTML = text;
+        }
+
+        function showError(msg) {
+            errorMessage.style.display = 'block';
+            errorText.textContent = msg;
+        }
+
         function renderPreview(planData) {
             if (!planData || !planData.sessions) {
                 planPreviewContent.innerHTML = '<p class="text-muted">Keine Daten verfügbar</p>';
@@ -440,7 +474,6 @@
                 <strong>${planData.plan_name || 'Trainingsplan'}</strong>
             </div>`;
 
-            // Beschreibung mit Periodisierung
             if (planData.beschreibung) {
                 html += `<div class="card bg-dark border-secondary mb-3">
                     <div class="card-body">
@@ -450,7 +483,6 @@
                 </div>`;
             }
 
-            // Sessions
             planData.sessions.forEach((session, idx) => {
                 html += `<div class="card bg-dark border-secondary mb-3">
                     <div class="card-header bg-secondary">
@@ -460,10 +492,12 @@
                         <ul class="list-unstyled mb-0">`;
 
                 session.exercises.forEach(ex => {
-                    const restInfo = ex.rest_seconds ? `<span class="badge bg-warning text-dark ms-2"><i class="bi bi-stopwatch"></i> ${ex.rest_seconds}s</span>` : '';
+                    const restInfo = ex.rest_seconds
+                        ? `<span class="badge bg-warning text-dark ms-2"><i class="bi bi-stopwatch"></i> ${ex.rest_seconds}s</span>`
+                        : '';
                     html += `<li class="mb-2">
                         <i class="bi bi-check-circle text-success"></i>
-                        <strong>${ex.exercise_name}</strong> -
+                        <strong>${ex.exercise_name}</strong> –
                         ${ex.sets} Sätze × ${ex.reps} Wdh
                         ${ex.rpe_target ? `@ RPE ${ex.rpe_target}` : ''}
                         ${restInfo}
@@ -471,9 +505,7 @@
                     </li>`;
                 });
 
-                html += `</ul>
-                    </div>
-                </div>`;
+                html += `</ul></div></div>`;
             });
 
             planPreviewContent.innerHTML = html;

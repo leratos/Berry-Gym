@@ -40,6 +40,11 @@ DEFAULT_USER_ID = int(os.getenv("DEFAULT_USER_ID", 1))
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
+# OpenRouter Configuration
+# Gemini 2.5 Flash: $0.30/M input, $2.50/M output, nativer JSON-Mode,
+# Thinking deaktivierbar via reasoning.effort="none" → keine versteckten Reasoning-Tokens
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
+
 
 def validate_config():
     """
