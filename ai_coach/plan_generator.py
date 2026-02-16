@@ -24,7 +24,7 @@ class PlanGenerator:
         user_id: int,
         analysis_days: int = 30,
         plan_type: str = "3er-split",
-        llm_temperature: float = 0.7,
+        llm_temperature: float = 0.3,
         sets_per_session: int = 18,
         periodization: str = "linear",
         target_profile: str = "hypertrophie",
@@ -36,7 +36,7 @@ class PlanGenerator:
             user_id: Django User ID
             analysis_days: Wie viele Tage zurück analysieren
             plan_type: Art des Plans (3er-split, ppl, upper-lower, fullbody)
-            llm_temperature: LLM Kreativität (0.0-1.0)
+            llm_temperature: LLM Kreativität (0.0-1.0, Default 0.3 für zuverlässiges JSON)
             sets_per_session: Ziel-Satzanzahl pro Trainingstag (18 = ca. 1h)
             periodization: Periodisierungsmodell (linear, wellenfoermig, block)
             target_profile: Zielprofil (kraft, hypertrophie, definition)
