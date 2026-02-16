@@ -383,9 +383,7 @@ Output Format (JSON):
             "reason": "Volumen um 25% gestiegen. Deload-Woche empfohlen."
         }
     ]
-}
-
-Gib NUR das JSON zurück, keine Markdown-Formatierung."""
+}"""
 
         user_prompt = f"""Aktueller Plan:
 {json.dumps(plan_structure, indent=2, ensure_ascii=False)}
@@ -411,8 +409,7 @@ Bitte analysiere und schlage Optimierungen vor."""
             # Nutze LLMClient mit Fallback-Logik (Ollama → OpenRouter)
             from ai_coach.llm_client import LLMClient
 
-            # Client mit Fallback initialisieren
-            client = LLMClient(temperature=0.3, fallback_to_openrouter=True)
+            client = LLMClient(temperature=0.3, use_openrouter=True)
 
             # generate_training_plan nutzt automatisch Ollama oder OpenRouter
             result = client.generate_training_plan(messages=messages, max_tokens=2000)

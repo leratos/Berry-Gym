@@ -394,9 +394,6 @@ class LLMClient:
 
         # Sessions validieren
         if "sessions" in plan_json:
-            # Session-übergreifender Duplikat-Check
-            all_exercises_across_sessions = []
-
             for i, session in enumerate(plan_json["sessions"]):
                 if "exercises" not in session:
                     errors.append(f"Session {i + 1}: Keine Übungen definiert")
@@ -414,10 +411,6 @@ class LLMClient:
                     errors.append(
                         f"Session {i + 1}: Doppelte Übungen gefunden: {', '.join(unique_dupes)}"
                     )
-
-                # Für Session-übergreifenden Check
-                for ex_name in session_exercises:
-                    all_exercises_across_sessions.append((ex_name, i + 1))
 
                 # Übungen validieren
                 for j, exercise in enumerate(session["exercises"]):
@@ -437,17 +430,6 @@ class LLMClient:
                             errors.append(
                                 f"Session {i + 1}, Übung {j + 1} ('{ex_name}'): Fehlendes Feld '{field}'"
                             )
-
-            # Duplikat-Check ÜBER alle Sessions hinweg
-            seen_exercises = {}
-            for ex_name, session_num in all_exercises_across_sessions:
-                if ex_name in seen_exercises:
-                    errors.append(
-                        f"Übung '{ex_name}' kommt mehrfach vor "
-                        f"(Session {seen_exercises[ex_name]} und Session {session_num})"
-                    )
-                else:
-                    seen_exercises[ex_name] = session_num
 
         valid = len(errors) == 0
 
