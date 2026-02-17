@@ -261,7 +261,7 @@ cp .env.example .env
 # 5. Datenbank initialisieren
 python manage.py migrate
 
-# 6. Übungen hinzufügen (98 vordefinierte Übungen)
+# 6. Übungen hinzufügen (113 vordefinierte Übungen)
 python manage.py loaddata core/fixtures/initial_exercises.json
 
 # 7. Superuser erstellen
@@ -552,12 +552,12 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - **Lines of Code:** ~20,000+
 - **Python Files:** 70+
 - **Templates:** 55+ HTML/Django
-- **Exercise Library:** 200+ Übungen mit anatomischen Daten + 1RM Standards + Custom Übungen
+- **Exercise Library:** 113 vordefinierte Übungen + Custom Übungen (mit 1RM Standards & anatomischen Daten)
 - **Muscle Groups:** 19 (anatomisch korrekt)
 - **PDF Report:** 7+ Seiten mit 4 Charts + 5 erweiterte Analysen
 - **1RM Standards:** 4 Levels pro Übung (körpergewicht-skaliert)
 - **Migrationen:** 61+
-- **Tests:** 447 passed, 4 skipped
+- **Tests:** 541 passed, 53% Coverage (Phase 5.3 abgeschlossen)
 - **Development Time:** 14+ Monate
 
 ---
@@ -565,7 +565,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 ## 📊 Datenbank Schema
 
 **Core Models:**
-- `Uebung`: 200+ Übungen + Custom Übungen (Bezeichnung, Muskelgruppe, Equipment, 1RM Standards, created_by)
+- `Uebung`: 113 vordefinierte Übungen + Custom Übungen (Bezeichnung, Muskelgruppe, Equipment, 1RM Standards, created_by)
 - `Plan`: User-spezifische Trainingspläne
 - `PlanUebung`: M2M Junction mit Reihenfolge, Sätze, Wdh
 - `Trainingseinheit`: Einzelnes Training (Datum, Dauer, Kommentar, `abgeschlossen`-Flag)
@@ -580,8 +580,14 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 ### Aktuell verfügbar (v0.9.1)
 - ✅ **Training fortsetzen**: Schnellzugriff auf offene Sessions direkt im Dashboard (v0.9.1)
-- ✅ **Performance-Optimierung**: N+1-Query-Fixes, Caching-Strategie (Dashboard 5min, Übungen 30min, Templates unbegrenzt) (v0.9.1)
+- ✅ **Performance-Optimierung**: N+1-Query-Fixes, Database Indexes, Caching-Strategie (v0.9.1)
+  - Phase 4.1: N+1 Query Elimination (8 Stellen behoben, 414 Tests)
+  - Phase 4.2: Database Indexes (Compound Indexes auf Training/Plan, MariaDB-kompatibel)
+  - Phase 4.3: Caching Strategy (FileBasedCache, 5min Dashboard, 30min Übungen, unbegrenzt Templates)
 - ✅ **Load Testing**: Locust-Setup mit SLO-Auswertung, Baseline-Messung dokumentiert (v0.9.1)
+- ✅ **AI/ML Testing Framework**: Phase 5.3 abgeschlossen (541 Tests, 53% Coverage)
+  - test_koerpergewicht_support.py, test_ml_trainer.py, test_plan_generator.py
+  - Körpergewicht-Skalierung für 1RM Standards (0.0-1.0 Faktor)
 - ✅ **1RM Kraftstandards**: 4 Leistungsstufen pro Übung (Anfänger → Elite), körpergewicht-skaliert
 - ✅ **Advanced Training Statistics**: Plateau-Analyse, Konsistenz-Metriken, RPE-Qualität, Ermüdungs-Index
 - ✅ **CSV-Export**: Alle Trainingsdaten als Download
@@ -595,7 +601,20 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - ✅ Keyboard-Shortcuts, Undo-Funktion, Autocomplete
 - ✅ Security Improvements (31+ Alerts behoben)
 
+### In Entwicklung (Week 5-6)
+- 🔄 **Phase 5.4 – Charts & Statistics Testing** (nächste Phase)
+  - Chart-Datenkorrektheit & Edge Cases
+  - Robuste Visualisierungen ohne Crashes
+- 🔄 **Phase 5.1 – Scientific Source System** (geplant)
+  - TrainingSource Model mit DOI, Key Findings
+  - Integration in UI-Tooltips & Disclaimers
+- 🔄 **Phase 5.2 – KI-Plangenerator Optimierung** (geplant)
+  - Eindeutige Plan-Namen (Datum + Ziel)
+  - Kontextbasierter Split-Typ (Frequenz → PPL/Upper-Lower/Fullbody)
+
 ### Geplant (siehe ROADMAP.md)
+- 🔜 Phase 5.5 – API Endpoints Testing
+- 🔜 Phase 5.6 – Helper/Utils Testing
 - 🔜 Onboarding-Tour & Feature-Discovery
 - 🔜 Gewichtsempfehlungen UI-Polish
 - 🔜 Notizen-System erweitern (Übungs- & Trainingstag-Notizen)
