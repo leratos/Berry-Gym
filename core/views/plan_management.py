@@ -592,7 +592,9 @@ def _apply_gruppe_selection(
                 current_week = int(request.POST.get("current_week", "0"))
                 if 1 <= current_week <= cycle_length:
                     from datetime import timedelta
+
                     from django.utils import timezone
+
                     weeks_back = current_week - 1
                     profile.cycle_start_date = (timezone.now() - timedelta(weeks=weeks_back)).date()
             except (ValueError, TypeError):
