@@ -153,6 +153,20 @@ def export_uebungen(request: HttpRequest) -> HttpResponse:
                     "bewegungstyp": uebung.bewegungstyp,
                     "gewichts_typ": uebung.gewichts_typ,
                     "koerpergewicht_faktor": float(uebung.koerpergewicht_faktor),
+                    "standard_beginner": (
+                        float(uebung.standard_beginner) if uebung.standard_beginner else None
+                    ),
+                    "standard_intermediate": (
+                        float(uebung.standard_intermediate)
+                        if uebung.standard_intermediate
+                        else None
+                    ),
+                    "standard_advanced": (
+                        float(uebung.standard_advanced) if uebung.standard_advanced else None
+                    ),
+                    "standard_elite": (
+                        float(uebung.standard_elite) if uebung.standard_elite else None
+                    ),
                     "equipment": [eq.get_name_display() for eq in uebung.equipment.all()],
                     "beschreibung": uebung.beschreibung if uebung.beschreibung else "",
                 }
@@ -185,6 +199,10 @@ def export_uebungen(request: HttpRequest) -> HttpResponse:
                 "Bewegungstyp",
                 "Gewichtstyp",
                 "Körpergewicht-Faktor",
+                "1RM Anfänger (80kg)",
+                "1RM Fortgeschritten (80kg)",
+                "1RM Erfahren (80kg)",
+                "1RM Elite (80kg)",
                 "Equipment",
                 "Beschreibung",
             ]
@@ -201,6 +219,10 @@ def export_uebungen(request: HttpRequest) -> HttpResponse:
                     uebung.bewegungstyp,
                     uebung.gewichts_typ,
                     float(uebung.koerpergewicht_faktor),
+                    float(uebung.standard_beginner) if uebung.standard_beginner else "",
+                    float(uebung.standard_intermediate) if uebung.standard_intermediate else "",
+                    float(uebung.standard_advanced) if uebung.standard_advanced else "",
+                    float(uebung.standard_elite) if uebung.standard_elite else "",
                     ", ".join([eq.get_name_display() for eq in uebung.equipment.all()]),
                     uebung.beschreibung if uebung.beschreibung else "",
                 ]
@@ -276,6 +298,10 @@ def _save_or_count_uebung(
         "bewegungstyp": ex_data.get("bewegungstyp", "COMPOUND"),
         "gewichts_typ": ex_data.get("gewichts_typ", "FREI"),
         "koerpergewicht_faktor": float(ex_data.get("koerpergewicht_faktor", 1.0)),
+        "standard_beginner": ex_data.get("standard_beginner"),
+        "standard_intermediate": ex_data.get("standard_intermediate"),
+        "standard_advanced": ex_data.get("standard_advanced"),
+        "standard_elite": ex_data.get("standard_elite"),
         "beschreibung": ex_data.get("beschreibung", ""),
     }
 
