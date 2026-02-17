@@ -67,6 +67,7 @@
                                      data-muscle="{{ uebung.muskelgruppe_label }}" data-pattern="{{ uebung.bewegungstyp }}"
                                      data-reihenfolge="{{ uebung.reihenfolge|default:'9999' }}"
                                      data-saetze="{{ uebung.saetze|default:'3' }}" data-wdh="{{ uebung.wdh|default:'8-12' }}"
+                                     data-pausenzeit="{{ uebung.pausenzeit|default:'120' }}"
                                      data-superset="{{ uebung.superset_gruppe|default:'0' }}"
                                      onclick="toggleExercise(this)">
                                     <div class="card-body p-2">
@@ -162,13 +163,14 @@
                 id: card.dataset.id, name: card.dataset.name, muscle: card.dataset.muscle,
                 reihenfolge: parseInt(card.dataset.reihenfolge) || 9999,
                 saetze: card.dataset.saetze || 3, wdh: card.dataset.wdh || '8-12',
+                pausenzeit: parseInt(card.dataset.pausenzeit) || 120,
                 supersetGroup: parseInt(card.dataset.superset) || 0
             });
         });
         planExercises.sort((a, b) => a.reihenfolge - b.reihenfolge);
         selectedExercises = planExercises.map(ex => ({
             id: ex.id, name: ex.name, muscle: ex.muscle,
-            saetze: ex.saetze, wdh: ex.wdh, supersetGroup: ex.supersetGroup
+            saetze: ex.saetze, wdh: ex.wdh, pausenzeit: ex.pausenzeit, supersetGroup: ex.supersetGroup
         }));
         updateSelectedList();
         analyzeBalance();
@@ -183,7 +185,7 @@
             selectedExercises = selectedExercises.filter(e => e.id != id);
         } else {
             card.classList.add('selected'); icon.style.display = 'block';
-            selectedExercises.push({ id, name: card.dataset.name, muscle: card.dataset.muscle, saetze: card.dataset.saetze || 3, wdh: card.dataset.wdh || '8-12', supersetGroup: 0 });
+            selectedExercises.push({ id, name: card.dataset.name, muscle: card.dataset.muscle, saetze: card.dataset.saetze || 3, wdh: card.dataset.wdh || '8-12', pausenzeit: parseInt(card.dataset.pausenzeit) || 120, supersetGroup: 0 });
         }
         updateSelectedList(); analyzeBalance();
     }
@@ -235,6 +237,15 @@
                             <div class="row g-2 mt-1">
                                 <div class="col-6"><input type="number" name="saetze_${ex.id}" class="form-control form-control-sm" placeholder="Sätze" value="${ex.saetze||3}" min="1" max="10" onchange="updateExerciseData(${ex.id},'saetze',this.value)"></div>
                                 <div class="col-6"><input type="text" name="wdh_${ex.id}" class="form-control form-control-sm" placeholder="Wdh." value="${ex.wdh||'8-12'}" onchange="updateExerciseData(${ex.id},'wdh',this.value)"></div>
+                                <div class="col-12 mt-1">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-dark text-muted border-secondary"><i class="bi bi-stopwatch"></i></span>
+                                        <input type="number" name="pause_${ex.id}" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                            placeholder="Pause (s)" value="${ex.pausenzeit||120}" min="30" max="600" step="15"
+                                            onchange="updateExerciseData(${ex.id},'pausenzeit',parseInt(this.value))">
+                                        <span class="input-group-text bg-dark text-muted border-secondary">s</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="mt-2">
                                 <label class="text-muted small">Superset:</label>

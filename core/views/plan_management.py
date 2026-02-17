@@ -108,6 +108,7 @@ def edit_plan(request: HttpRequest, plan_id: int) -> HttpResponse:
             saetze = request.POST.get(f"saetze_{uebung_id}", 3)
             wdh = request.POST.get(f"wdh_{uebung_id}", "8-12")
             superset_gruppe = request.POST.get(f"superset_gruppe_{uebung_id}", 0)
+            pausenzeit = int(request.POST.get(f"pause_{uebung_id}", 120))
 
             PlanUebung.objects.create(
                 plan=plan,
@@ -116,6 +117,7 @@ def edit_plan(request: HttpRequest, plan_id: int) -> HttpResponse:
                 saetze_ziel=saetze,
                 wiederholungen_ziel=wdh,
                 superset_gruppe=int(superset_gruppe),
+                pausenzeit=pausenzeit,
             )
 
         messages.success(request, f'Trainingsplan "{plan.name}" erfolgreich aktualisiert!')
@@ -131,6 +133,7 @@ def edit_plan(request: HttpRequest, plan_id: int) -> HttpResponse:
             "saetze": pu.saetze_ziel,
             "wdh": pu.wiederholungen_ziel,
             "superset_gruppe": pu.superset_gruppe,
+            "pausenzeit": pu.pausenzeit,
         }
 
     plan_uebung_ids = list(plan_uebungen_details.keys())
