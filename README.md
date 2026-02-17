@@ -585,6 +585,17 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
   - Phase 4.2: Database Indexes (Compound Indexes auf Training/Plan, MariaDB-kompatibel)
   - Phase 4.3: Caching Strategy (FileBasedCache, 5min Dashboard, 30min Übungen, unbegrenzt Templates)
 - ✅ **Load Testing**: Locust-Setup mit SLO-Auswertung, Baseline-Messung dokumentiert (v0.9.1)
+- ✅ **Scientific Source System**: Phase 5.1 abgeschlossen (2026-02-16)
+  - TrainingSource Model mit DOI, Key Findings
+  - Integration in UI-Tooltips & Disclaimers
+  - Management Command für Quellen-Import
+- ✅ **KI-Plangenerator Optimierung**: Phase 5.2 abgeschlossen (2026-02-16/17)
+  - Eindeutige Plan-Namen (Datum + Ziel)
+  - Kontextbasierter Split-Typ (Frequenz → PPL/Upper-Lower/Fullbody)
+  - LLM Upgrade: Gemini 2.5 Flash
+  - Server-Sent Events (Streaming)
+  - Weakness Coverage Validation
+  - Körpergewicht Support
 - ✅ **AI/ML Testing Framework**: Phase 5.3 abgeschlossen (541 Tests, 53% Coverage)
   - test_koerpergewicht_support.py, test_ml_trainer.py, test_plan_generator.py
   - Körpergewicht-Skalierung für 1RM Standards (0.0-1.0 Faktor)
@@ -605,12 +616,6 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - 🔄 **Phase 5.4 – Charts & Statistics Testing** (nächste Phase)
   - Chart-Datenkorrektheit & Edge Cases
   - Robuste Visualisierungen ohne Crashes
-- 🔄 **Phase 5.1 – Scientific Source System** (geplant)
-  - TrainingSource Model mit DOI, Key Findings
-  - Integration in UI-Tooltips & Disclaimers
-- 🔄 **Phase 5.2 – KI-Plangenerator Optimierung** (geplant)
-  - Eindeutige Plan-Namen (Datum + Ziel)
-  - Kontextbasierter Split-Typ (Frequenz → PPL/Upper-Lower/Fullbody)
 
 ### Geplant (siehe ROADMAP.md)
 - 🔜 Phase 5.5 – API Endpoints Testing
