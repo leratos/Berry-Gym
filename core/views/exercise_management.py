@@ -63,6 +63,7 @@ def equipment_management(request: HttpRequest) -> HttpResponse:
                 "RUDERMASCHINE",
                 "ADDUKTOREN_MASCHINE",
                 "ABDUKTOREN_MASCHINE",
+                "BRUSTPRESSE_MASCHINE",
             ],
             "color": "warning",
         },
