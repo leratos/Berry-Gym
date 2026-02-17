@@ -10,7 +10,7 @@
 ![PWA](https://img.shields.io/badge/PWA-Ready-purple?style=flat-square)
 
 ![CI/CD](https://github.com/leratos/Berry-Gym/actions/workflows/ci.yml/badge.svg)
-[![codecov](https://codecov.io/gh/leratos/Berry-Gym/branch/NewStruc/graph/badge.svg)](https://codecov.io/gh/leratos/Berry-Gym)
+[![codecov](https://codecov.io/gh/leratos/Berry-Gym/branch/main/graph/badge.svg)](https://codecov.io/gh/leratos/Berry-Gym)
 
 **Ein intelligentes Trainingstagebuch für HomeGym-Enthusiasten mit KI-gestütztem Coach, 1RM Kraftstandards, Advanced Analytics & AI Performance-Analyse**
 
