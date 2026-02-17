@@ -800,14 +800,10 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
 
     avg_rpe = saetze.aggregate(Avg("rpe"))["rpe__avg"]
 
-    # Bei reinen Körpergewicht-Übungen (kein Zusatzgewicht je verwendet):
-    # Wdh-Verlauf als primäre Chart-Metrik anzeigen
-    show_reps_chart = (
-        is_kg_uebung
-        and bool(wdh_history)
-        and best_weight
-        == round(user_koerpergewicht * (getattr(uebung, "koerpergewicht_faktor", 1.0) or 1.0), 1)
-    )
+    # Wdh-Verlauf als primäre Chart-Metrik wenn KG-Übung UND ausschließlich
+    # ohne Zusatzgewicht trainiert. Sobald irgendein Satz Zusatz hat → 1RM-Chart.
+    hat_zusatzgewicht = saetze.filter(gewicht__gt=0).exists()
+    show_reps_chart = is_kg_uebung and bool(wdh_history) and not hat_zusatzgewicht
 
     context = {
         "uebung": uebung,
