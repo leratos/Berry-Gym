@@ -391,10 +391,26 @@ Du hast {len(available_exercises)} verfügbare Übungen.
      * Trizeps Übung 1: 3 Sätze
      * Trizeps Übung 2: 2 Sätze
      = 18 Sätze total, 6 Übungen
+   - Beispiel Pull-Tag (18 Sätze):
+     * Klimmzüge (vertikaler Zug): 4 Sätze
+     * Langhantelrudern ODER Einarmiges Rudern (1 horizontales Ruder – NICHT beides!): 3 Sätze
+     * Oberer Rücken / Scapula (z.B. Face Pulls): 3 Sätze
+     * Bizeps Übung 1: 3 Sätze
+     * Bizeps Übung 2: 2 Sätze
+     * Hintere Schulter oder Rücken Isolation: 3 Sätze
+     = 18 Sätze total, 6 Übungen
+   - Beispiel Legs-Tag (18 Sätze):
+     * Kniebeuge (Hauptübung Quad): 4 Sätze
+     * RDL oder Beinbeuger (Hamstrings): 3 Sätze
+     * Split Squat oder Ausfallschritt (einbeinig): 3 Sätze
+     * Wadenheben (PFLICHT – immer dabei!): 3 Sätze
+     * Adduktoren oder Hüftbeuger: 3 Sätze
+     * Core/Bauch: 2 Sätze
+     = 18 Sätze total, 6 Übungen
 4. ** MINDESTENS 2 ÜBUNGEN PRO HAUPTMUSKELGRUPPE**:
-   - Push-Tag: 2x Brust, 2x Schultern, 2x Trizeps
-   - Pull-Tag: 2x Rücken, 2x Latissimus, 1-2x Bizeps
-   - Leg-Tag: 2x Quadrizeps, 2x Hamstrings, 1x Waden/Po
+   - Push-Tag: 2x Brust, 2x Schultern, 1-2x Trizeps
+   - Pull-Tag: 1x vertikaler Zug (Klimmzüge/Latzug) + NUR 1x horizontales Ruder + 1-2x Bizeps + 1x Scapula/hintere Schulter
+   - Leg-Tag: 1x Quad-Dominant, 1x Hinge/Hamstrings, 1x einbeinig, 1x WADEN (PFLICHT), 1x Adduktoren/Core
    - Verschiedene Winkel/Bewegungen für vollständige Entwicklung
 5. Compound Movements (Langhantel-Kniebeuge, Bankdrücken, Kreuzheben) priorisieren als erste Übung
 6. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
