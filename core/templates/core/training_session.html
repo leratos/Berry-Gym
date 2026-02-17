@@ -498,8 +498,9 @@
 
                 <div class="row g-2">
                     <div class="col-6">
-                        <label class="form-label text-secondary">Gewicht (kg)</label>
+                        <label class="form-label text-secondary" id="gewichtLabel">Gewicht (kg)</label>
                         <input type="number" step="0.5" name="gewicht" id="gewichtInput" class="form-control border-secondary" required placeholder="0.0">
+                        <div id="kgHint" class="form-text text-info" style="display:none; font-size:0.75rem;"></div>
                     </div>
                     <div class="col-6">
                         <label class="form-label text-secondary">Wdh. / Sek.</label>
@@ -625,7 +626,9 @@
             {
                 id: "{{ uebung.id }}",
                 name: "{{ uebung.bezeichnung|escapejs }}",
-                muscleKey: "{{ uebung.muskelgruppe|escapejs }}"
+                muscleKey: "{{ uebung.muskelgruppe|escapejs }}",
+                gewichtsTyp: "{{ uebung.gewichts_typ }}",
+                kgFaktor: {{ uebung.koerpergewicht_faktor }}
             },
             {% endfor %}
         ];
@@ -641,6 +644,8 @@
         const muscleFilter = document.getElementById('muscleFilter');
         const uebungSelect = document.getElementById('uebungSelect');
         const gewichtInput = document.getElementById('gewichtInput');
+        const gewichtLabel = document.getElementById('gewichtLabel');
+        const kgHint = document.getElementById('kgHint');
         const wdhInput = document.getElementById('wdhInput');
         const rpeInput = document.getElementById('rpeInput');
         const supersetInput = document.getElementById('supersetInput');
@@ -648,6 +653,26 @@
         const notizInput = document.getElementById('notizInput');
         const progressionHint = document.getElementById('progressionHint');
         const progressionText = document.getElementById('progressionText');
+
+        // ===== KÖRPERGEWICHT-ÜBUNGEN: Label + Hint dynamisch anpassen =====
+        function updateGewichtLabel(uebungId) {
+            const ex = allExercises.find(e => String(e.id) === String(uebungId));
+            if (ex && ex.gewichtsTyp === 'KOERPERGEWICHT') {
+                gewichtLabel.textContent = 'Zusatzgewicht (kg)';
+                gewichtInput.placeholder = '0';
+                if (ex.kgFaktor > 0) {
+                    const pct = Math.round(ex.kgFaktor * 100);
+                    kgHint.textContent = `Körpergewicht-Übung · ca. ${pct}% KG wirkt als Last`;
+                } else {
+                    kgHint.textContent = 'Körpergewicht-Übung · isometrisch (kein Heben)';
+                }
+                kgHint.style.display = 'block';
+            } else {
+                gewichtLabel.textContent = 'Gewicht (kg)';
+                gewichtInput.placeholder = '0.0';
+                kgHint.style.display = 'none';
+            }
+        }
         const exerciseSearchInput = document.getElementById('exerciseSearchInput');
 
         // URL Basis für POST
@@ -666,6 +691,9 @@
 
                     // Ghosting laden
                     loadGhosting(exercise.id);
+
+                    // Label für Körpergewichtsübungen anpassen
+                    updateGewichtLabel(exercise.id);
 
                     // Suchfeld leeren
                     exerciseSearchInput.value = '';
@@ -703,6 +731,7 @@
 
         // Ghosting Trigger
         uebungSelect.addEventListener('change', function() {
+            updateGewichtLabel(this.value);
             if(this.value && setForm.action.includes('add_set')) fetchGhostData(this.value);
         });
 
@@ -746,6 +775,8 @@
                 muscleFilter.value = exData.muscleKey;
                 updateExerciseDropdown(exData.muscleKey, uebungId);
             }
+            // Label für Körpergewichtsübungen anpassen
+            updateGewichtLabel(uebungId);
 
             // Felder sperren: Übung darf beim Bearbeiten nicht geändert werden (Datenkonsistenz)
             muscleFilter.disabled = true;
@@ -822,19 +853,27 @@
                 const res = await fetch(`/api/last-set/${id}/${zielParam}`);
                 const data = await res.json();
                 if (data.success) {
-                    gewichtInput.value = data.gewicht;
+                    // Bei Körpergewichts-Übungen: kein Zusatzgewicht vorausfüllen wenn 0
+                    const ex = allExercises.find(e => String(e.id) === String(id));
+                    const isKg = ex && ex.gewichtsTyp === 'KOERPERGEWICHT';
+                    if (isKg && parseFloat(data.gewicht) === 0) {
+                        gewichtInput.value = '';  // leer lassen statt 0
+                    } else {
+                        gewichtInput.value = data.gewicht;
+                    }
                     wdhInput.value = data.wiederholungen;
                     if(data.rpe) rpeInput.value = data.rpe;
 
                     // Progressive Overload Hinweis anzeigen
                     if (data.progression_hint) {
-                        progressionText.innerText = data.progression_hint;
-
-                        // Vergleich mit letztem Mal anzeigen
-                        if (data.letztes_gewicht !== data.gewicht || data.letzte_wdh !== data.wiederholungen) {
-                            progressionText.innerText += ` (Letztes Mal: ${data.letztes_gewicht}kg × ${data.letzte_wdh})`;
+                        let hint = data.progression_hint;
+                        // Bei KG-Übungen mit Gewicht=0: Hinweis auf Wdh-Steigerung statt kg
+                        if (isKg && parseFloat(data.letztes_gewicht) === 0) {
+                            hint = `Körpergewicht-Übung: Ziel +1–2 Wdh. (Letztes Mal: ${data.letzte_wdh} Wdh.)`;
+                        } else if (data.letztes_gewicht !== data.gewicht || data.letzte_wdh !== data.wiederholungen) {
+                            hint += ` (Letztes Mal: ${data.letztes_gewicht}kg × ${data.letzte_wdh})`;
                         }
-
+                        progressionText.innerText = hint;
                         progressionHint.style.display = 'block';
                     }
                 }

@@ -10,6 +10,7 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
@@ -211,10 +212,13 @@ def ml_dashboard(request: HttpRequest) -> HttpResponse:
         .order_by("-trained_at")
     )
 
+    # Qualitätsschwellen: R² ≥ 0.5 und ≥ 15 Samples
+    _unreliable_q = Q(accuracy_score__lt=0) | Q(accuracy_score__lt=0.5) | Q(training_samples__lt=15)
     context = {
         "ml_models": models,
         "total_models": models.count(),
-        "ready_models": models.filter(status="READY").count(),
+        "ready_models": models.filter(status="READY").exclude(_unreliable_q).count(),
+        "unreliable_models": models.filter(status="READY").filter(_unreliable_q).count(),
         "needs_training": models.filter(status="OUTDATED").count(),
     }
 

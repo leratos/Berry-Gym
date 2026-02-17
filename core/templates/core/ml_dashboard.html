@@ -60,25 +60,34 @@
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card bg-primary text-white">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-check-circle"></i> Einsatzbereit</h5>
+                    <h5 class="card-title"><i class="bi bi-check-circle"></i> Zuverlässig</h5>
                     <h2 class="mb-0">{{ ready_models }}</h2>
-                    <small>Ready Models</small>
+                    <small>R² ≥ 0.5, ≥ 15 Sätze</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> Unzuverlässig</h5>
+                    <h2 class="mb-0">{{ unreliable_models }}</h2>
+                    <small>Zu wenig Daten oder R² &lt; 0.5</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
             <div class="card bg-info text-white">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-cpu"></i> Total Modelle</h5>
+                    <h5 class="card-title"><i class="bi bi-cpu"></i> Total</h5>
                     <h2 class="mb-0">{{ total_models }}</h2>
                     <small>Trainierte Modelle</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card bg-warning text-dark">
                 <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-arrow-repeat"></i> Neu trainieren</h5>
@@ -128,10 +137,24 @@
                                 <small class="text-muted">{{ model.get_model_type_display }}</small>
                             </td>
                             <td>
-                                {% if model.status == 'READY' %}<span class="badge bg-success">● Ready</span>
-                                {% elif model.status == 'TRAINING' %}<span class="badge bg-warning">● Training</span>
-                                {% elif model.status == 'OUTDATED' %}<span class="badge bg-secondary">● Veraltet</span>
-                                {% else %}<span class="badge bg-danger">● Error</span>{% endif %}
+                                {# Status: READY aber schlechte Metriken → Warnung #}
+                                {% if model.status == 'READY' %}
+                                    {% if model.accuracy_score is not None and model.accuracy_score < 0 %}
+                                        <span class="badge bg-danger" title="R² < 0: Modell schlechter als einfacher Durchschnitt. Mehr Trainingsdaten nötig.">⚠ Unzuverlässig</span>
+                                    {% elif model.training_samples < 15 %}
+                                        <span class="badge bg-warning text-dark" title="Zu wenig Daten ({{ model.training_samples }} Sätze). Mindestens 30 empfohlen.">📊 Wenig Daten</span>
+                                    {% elif model.accuracy_score is not None and model.accuracy_score < 0.5 %}
+                                        <span class="badge bg-warning text-dark" title="R² = {{ model.accuracy_score|floatformat:2 }}: Vorhersagen ungenau. Mehr Daten sammeln.">⚠ Ungenau</span>
+                                    {% else %}
+                                        <span class="badge bg-success">● Ready</span>
+                                    {% endif %}
+                                {% elif model.status == 'TRAINING' %}
+                                    <span class="badge bg-warning">● Training</span>
+                                {% elif model.status == 'OUTDATED' %}
+                                    <span class="badge bg-secondary">● Veraltet</span>
+                                {% else %}
+                                    <span class="badge bg-danger">● Error</span>
+                                {% endif %}
                             </td>
                             <td>{{ model.training_samples }}</td>
                             <td>{% if model.accuracy_score %}{{ model.accuracy_score|floatformat:3 }}{% else %}-{% endif %}</td>

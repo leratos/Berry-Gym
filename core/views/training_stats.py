@@ -678,7 +678,19 @@ def delete_training(request: HttpRequest, training_id: int) -> HttpResponse:
 # ---------------------------------------------------------------------------
 
 
-def _compute_1rm_and_weight(satz, uebung) -> tuple[float, float]:
+def _get_user_koerpergewicht(user) -> float:
+    """Gibt das letzte erfasste Körpergewicht des Users zurück.
+
+    Fallback: 80 kg wenn keine KoerperWerte vorhanden.
+    Der Wert wird innerhalb eines Requests gecacht (über Closure/Arg).
+    """
+    eintrag = KoerperWerte.objects.filter(user=user).order_by("-datum").first()
+    if eintrag and eintrag.gewicht:
+        return float(eintrag.gewicht)
+    return 80.0  # Trainings-Durchschnitt als Fallback
+
+
+def _compute_1rm_and_weight(satz, uebung, user_koerpergewicht: float = 80.0) -> tuple[float, float]:
     """Return (estimated_1rm, effective_weight) for a single set.
 
     Formel: Epley (1985) – weight × (1 + reps/30)
@@ -687,12 +699,20 @@ def _compute_1rm_and_weight(satz, uebung) -> tuple[float, float]:
     - 7–10 Wdh.: akzeptabel (±8%)
     - > 10 Wdh.: systematische Überschätzung – Brzycki-Formel wäre dort genauer.
     Für relative Vergleiche (Progression über Zeit) ist die Formel trotzdem konsistent.
-    For time-based exercises the 'reps' value is used directly as a proxy.
+
+    Körpergewichts-Übungen (KOERPERGEWICHT):
+        effektives_gewicht = (user_koerpergewicht * koerpergewicht_faktor) + zusatzgewicht
+        Beispiel Dips (Faktor 0.70, 80kg User, 0kg Zusatz): 80 * 0.70 = 56 kg effektiv
     """
-    effektives_gewicht = float(satz.gewicht)
+    zusatzgewicht = float(satz.gewicht)
+
     if uebung.gewichts_typ == "PRO_SEITE":
-        effektives_gewicht *= 2
-    # KOERPERGEWICHT: only additional weight counted in V1 (no body weight lookup)
+        effektives_gewicht = zusatzgewicht * 2
+    elif uebung.gewichts_typ == "KOERPERGEWICHT":
+        faktor = getattr(uebung, "koerpergewicht_faktor", 1.0) or 1.0
+        effektives_gewicht = (user_koerpergewicht * faktor) + zusatzgewicht
+    else:
+        effektives_gewicht = zusatzgewicht
 
     if uebung.gewichts_typ == "ZEIT":
         return float(satz.wiederholungen), effektives_gewicht
@@ -750,13 +770,19 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
     if not saetze.exists():
         return render(request, "core/stats_exercise.html", {"uebung": uebung, "no_data": True})
 
+    # Körpergewicht einmalig laden (für KOERPERGEWICHT-Übungen)
+    user_koerpergewicht = _get_user_koerpergewicht(request.user)
+    is_kg_uebung = uebung.gewichts_typ == "KOERPERGEWICHT"
+
     # Best 1RM per day + overall records
     history_data: dict[str, float] = {}
+    wdh_history: dict[str, int] = {}  # Wdh-Verlauf für KG-Übungen
     personal_record = 0.0
     best_weight = 0.0
+    best_reps = 0
 
     for satz in saetze:
-        one_rm, eff_weight = _compute_1rm_and_weight(satz, uebung)
+        one_rm, eff_weight = _compute_1rm_and_weight(satz, uebung, user_koerpergewicht)
         datum_str = satz.einheit.datum.strftime("%d.%m.%Y")
         if datum_str not in history_data or one_rm > history_data[datum_str]:
             history_data[datum_str] = round(one_rm, 1)
@@ -764,15 +790,36 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
             personal_record = round(one_rm, 1)
         if eff_weight > best_weight:
             best_weight = eff_weight
+        # Wdh-Verlauf für KG-Übungen ohne Zusatzgewicht
+        if is_kg_uebung and float(satz.gewicht) == 0:
+            wdh = satz.wiederholungen
+            if datum_str not in wdh_history or wdh > wdh_history[datum_str]:
+                wdh_history[datum_str] = wdh
+            if wdh > best_reps:
+                best_reps = wdh
 
     avg_rpe = saetze.aggregate(Avg("rpe"))["rpe__avg"]
+
+    # Bei reinen Körpergewicht-Übungen (kein Zusatzgewicht je verwendet):
+    # Wdh-Verlauf als primäre Chart-Metrik anzeigen
+    show_reps_chart = (
+        is_kg_uebung
+        and bool(wdh_history)
+        and best_weight
+        == round(user_koerpergewicht * (getattr(uebung, "koerpergewicht_faktor", 1.0) or 1.0), 1)
+    )
 
     context = {
         "uebung": uebung,
         "labels_json": json.dumps(list(history_data.keys())),
         "data_json": json.dumps(list(history_data.values())),
+        "wdh_labels_json": json.dumps(list(wdh_history.keys())),
+        "wdh_data_json": json.dumps(list(wdh_history.values())),
+        "show_reps_chart": show_reps_chart,
         "personal_record": personal_record,
         "best_weight": best_weight,
+        "best_reps": best_reps,
+        "user_koerpergewicht": user_koerpergewicht,
         "avg_rpe": round(avg_rpe, 1) if avg_rpe else None,
         "rpe_trend": _calc_rpe_trend(saetze, avg_rpe),
     }
