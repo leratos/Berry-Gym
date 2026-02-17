@@ -152,8 +152,9 @@ def export_uebungen(request: HttpRequest) -> HttpResponse:
                     "hilfsmuskeln": uebung.hilfsmuskeln if uebung.hilfsmuskeln else [],
                     "bewegungstyp": uebung.bewegungstyp,
                     "gewichts_typ": uebung.gewichts_typ,
+                    "koerpergewicht_faktor": float(uebung.koerpergewicht_faktor),
                     "equipment": [eq.get_name_display() for eq in uebung.equipment.all()],
-                    "beschreibung": uebung.beschreibung if hasattr(uebung, "beschreibung") else "",
+                    "beschreibung": uebung.beschreibung if uebung.beschreibung else "",
                 }
             )
 
@@ -183,7 +184,9 @@ def export_uebungen(request: HttpRequest) -> HttpResponse:
                 "Hilfsmuskeln",
                 "Bewegungstyp",
                 "Gewichtstyp",
+                "Körpergewicht-Faktor",
                 "Equipment",
+                "Beschreibung",
             ]
         )
 
@@ -197,7 +200,9 @@ def export_uebungen(request: HttpRequest) -> HttpResponse:
                     ", ".join(uebung.hilfsmuskeln) if uebung.hilfsmuskeln else "",
                     uebung.bewegungstyp,
                     uebung.gewichts_typ,
+                    float(uebung.koerpergewicht_faktor),
                     ", ".join([eq.get_name_display() for eq in uebung.equipment.all()]),
+                    uebung.beschreibung if uebung.beschreibung else "",
                 ]
             )
 
@@ -270,6 +275,8 @@ def _save_or_count_uebung(
         "hilfsmuskeln": ex_data.get("hilfsmuskeln", []),
         "bewegungstyp": ex_data.get("bewegungstyp", "COMPOUND"),
         "gewichts_typ": ex_data.get("gewichts_typ", "FREI"),
+        "koerpergewicht_faktor": float(ex_data.get("koerpergewicht_faktor", 1.0)),
+        "beschreibung": ex_data.get("beschreibung", ""),
     }
 
     if dry_run:
