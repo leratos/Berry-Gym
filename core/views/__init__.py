@@ -8,6 +8,7 @@ from .ai_recommendations import (
     analyze_plan_api,
     apply_optimizations_api,
     generate_plan_api,
+    generate_plan_stream_api,
     live_guidance_api,
     optimize_plan_api,
     workout_recommendations,
@@ -113,6 +114,9 @@ from .plan_management import (
 # Plan templates views
 from .plan_templates import create_plan_from_template, get_plan_templates, get_template_detail
 
+# Scientific sources
+from .sources import sources_list
+
 # Training session views
 from .training_session import (
     add_set,
@@ -206,6 +210,7 @@ __all__ = [
     # AI recommendations
     "workout_recommendations",
     "generate_plan_api",
+    "generate_plan_stream_api",
     "analyze_plan_api",
     "optimize_plan_api",
     "apply_optimizations_api",
@@ -251,4 +256,5 @@ __all__ = [
     "api_unshare_group_with_user",
     "api_get_plan_shares",
     "api_get_group_shares",
+    "sources_list",
 ]

@@ -226,16 +226,25 @@ def _collect_push_pull(muskelgruppen_stats: list[dict]) -> dict:
         )
     elif pull > 0:
         ratio = round(push / pull, 2)
-        if 0.9 <= ratio <= 1.1:
+        if 0.8 <= ratio <= 1.2:
             bewertung, empfehlung = "Ausgewogen", "Perfekt! Push/Pull-Verhältnis ist ausgeglichen."
-        elif ratio > 1.1:
+        elif ratio > 2.0:
+            # Erst ab 2:1 ist das Ungleichgewicht klinisch relevant (Schulterimpingement-Risiko)
             bewertung = "Zu viel Push"
             empfehlung = (
                 f"Ratio {ratio}:1 - Mehr Pull-Training (Rücken, Bizeps) für Schultergesundheit!"
             )
+        elif ratio > 1.2:
+            # 1.2–2.0: leichtes Push-Übergewicht, aber noch tolerabel
+            bewertung = "Leicht Push-betont"
+            empfehlung = (
+                f"Ratio {ratio}:1 - Leicht Push-betont, aber noch im tolerierbaren Bereich. "
+                "Mittelfristig mehr Pull-Übungen einbauen."
+            )
         else:
-            bewertung = "Zu viel Pull"
-            empfehlung = f"Ratio {ratio}:1 - Mehr Push-Training (Brust, Schultern) für Balance!"
+            # ratio < 0.8: mehr Pull als Push – kein Problem, im Gegenteil empfohlen
+            bewertung = "Pull-betont (gut)"
+            empfehlung = f"Ratio {ratio}:1 - Pull überwiegt leicht. Das ist positiv für Schultergesundheit und Haltung."
     else:
         ratio, bewertung, empfehlung = (
             0,

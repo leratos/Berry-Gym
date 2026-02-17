@@ -47,6 +47,9 @@ from .social import InviteCode, WaitlistEntry  # noqa: F401
 # Training
 from .training import Satz, Trainingseinheit  # noqa: F401
 
+# Scientific Sources
+from .training_source import TrainingSource  # noqa: F401
+
 # User Profile
 from .user_profile import UserProfile  # noqa: F401
 
@@ -76,6 +79,7 @@ __all__ = [
     "Satz",
     "ScientificDisclaimer",
     "Trainingseinheit",
+    "TrainingSource",
     "Uebung",
     "UebungTag",
     "UserProfile",

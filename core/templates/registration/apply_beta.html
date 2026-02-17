@@ -1,0 +1,401 @@
+{% load static %}
+<!doctype html>
+<html lang="de" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Beta-Bewerbung - HomeGym</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .beta-container {
+            max-width: 700px;
+            margin: 2rem auto;
+        }
+        .beta-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 2rem;
+        }
+        .feature-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            background: rgba(13, 110, 253, 0.1);
+            border: 1px solid rgba(13, 110, 253, 0.3);
+            border-radius: 6px;
+            margin: 0.25rem;
+            font-size: 0.85rem;
+        }
+        .feature-section {
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 2rem;
+        }
+        .feature-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        /* Lightbox Styles */
+        .screenshot-thumb {
+            cursor: zoom-in;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .screenshot-thumb:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(13, 110, 253, 0.3);
+        }
+        .lightbox-img {
+            max-height: 85vh;
+            max-width: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="beta-container">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="display-4 fw-bold mb-2">
+                    <i class="bi bi-rocket-takeoff text-primary"></i> HomeGym Beta
+                </h1>
+                <p class="lead text-muted">KI-gestütztes Trainingstracking für ambitionierte Athleten</p>
+            </div>
+
+            <!-- Was ist HomeGym? -->
+            <div class="beta-card mb-4">
+                <h3 class="mb-3"><i class="bi bi-info-circle text-info"></i> Was ist HomeGym?</h3>
+                <p>HomeGym ist ein <strong>Open-Source Fitness-Tracker</strong> mit intelligenten KI-Features:</p>
+                <div class="mt-3">
+                    <span class="feature-badge"><i class="bi bi-robot"></i> KI-Trainingsplan-Generator</span>
+                    <span class="feature-badge"><i class="bi bi-graph-up"></i> Intelligente Analysen</span>
+                    <span class="feature-badge"><i class="bi bi-cloud-slash"></i> Offline-Funktionalität</span>
+                    <span class="feature-badge"><i class="bi bi-shield-check"></i> Datenschutzfreundlich</span>
+                    <span class="feature-badge"><i class="bi bi-code-slash"></i> Open-Source</span>
+                </div>
+            </div>
+
+            <!-- Features mit Screenshots -->
+            <div class="beta-card mb-4">
+                <h3 class="mb-4"><i class="bi bi-stars text-warning"></i> Was dich erwartet</h3>
+
+                <!-- Feature 1: Dashboard & Metriken -->
+                <div class="feature-section mb-5">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <h5 class="fw-bold"><i class="bi bi-speedometer2"></i> Intelligentes Dashboard</h5>
+                            <p class="text-muted">
+                                Behalte alle wichtigen Kennzahlen im Blick: <strong>Performance Form-Index</strong> zeigt deine aktuelle Trainingsform,
+                                der <strong>Ermüdungs-Index</strong> warnt vor Übertraining, und detaillierte <strong>Volumen-Analysen</strong>
+                                helfen dir, progressive Overload richtig zu steuern.
+                            </p>
+                            <ul class="small">
+                                <li>📊 Echtzeit-Performance-Tracking</li>
+                                <li>⚠️ Automatische Übertrainings-Warnung</li>
+                                <li>📈 Visualisierte Fortschrittskurven</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- 2 Screenshots nebeneinander -->
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="bg-dark border border-secondary rounded p-1 text-center">
+                                        <img src="{% static 'core/images/beta/dashboard_stats.png' %}"
+                                             alt="Dashboard Stats"
+                                             class="img-fluid rounded screenshot-thumb"
+                                             style="max-height: 260px; object-fit: contain;">
+                                        <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">Stats & Performance</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="bg-dark border border-secondary rounded p-1 text-center">
+                                        <img src="{% static 'core/images/beta/dashboard_vitals.png' %}"
+                                             alt="Körperwerte & Ermüdung"
+                                             class="img-fluid rounded screenshot-thumb"
+                                             style="max-height: 260px; object-fit: contain;">
+                                        <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">Körperwerte & Ermüdung</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 2: KI-Trainingspläne -->
+                <div class="feature-section mb-5">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 order-md-2 mb-3 mb-md-0">
+                            <h5 class="fw-bold"><i class="bi bi-robot"></i> KI-Trainingsplan-Generator</h5>
+                            <p class="text-muted">
+                                Lass dir maßgeschneiderte Trainingspläne von unserer KI erstellen. Wähle zwischen klassischen Splits
+                                (<strong>Push/Pull/Legs</strong>, <strong>Upper/Lower</strong>) oder Ganzkörper-Training. Die KI berücksichtigt
+                                dein verfügbares Equipment, deine Ziele (Kraft, Hypertrophie, Ausdauer) und passt Periodisierung automatisch an.
+                            </p>
+                            <ul class="small">
+                                <li>🎯 Personalisiert nach Zielen & Equipment</li>
+                                <li>🔄 Intelligente Periodisierung (Linear, Wellenförmig, Block)</li>
+                                <li>💪 Automatische Progressionsempfehlungen</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6 order-md-1">
+                            <div class="bg-dark border border-secondary rounded p-2 text-center">
+                                <img src="{% static 'core/images/beta/ai_plan.png' %}"
+                                     alt="KI-Plan-Generator"
+                                     class="img-fluid rounded screenshot-thumb"
+                                     style="max-height: 280px; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 3: Live-Tracking -->
+                <div class="feature-section mb-5">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <h5 class="fw-bold"><i class="bi bi-play-circle"></i> Live-Tracking im Training</h5>
+                            <p class="text-muted">
+                                Tracke deine Sätze in Echtzeit während des Trainings. Die App zeigt dir automatisch <strong>empfohlene Gewichte</strong>
+                                basierend auf deinem letzten Training, berechnet dein <strong>geschätztes 1RM</strong> und gibt dir nach jedem Satz
+                                <strong>RPE-basiertes Feedback</strong> (Rate of Perceived Exertion).
+                            </p>
+                            <ul class="small">
+                                <li>⏱️ Automatische Pausentimer</li>
+                                <li>💡 Intelligente Gewichtsempfehlungen</li>
+                                <li>📱 Offline-fähig (PWA)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="bg-dark border border-secondary rounded p-2 text-center">
+                                <img src="{% static 'core/images/beta/live_tracking.png' %}"
+                                     alt="Live-Training-Session"
+                                     class="img-fluid rounded screenshot-thumb"
+                                     style="max-height: 280px; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 4: Analysen & Statistiken -->
+                <div class="feature-section mb-5">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 order-md-2 mb-3 mb-md-0">
+                            <h5 class="fw-bold"><i class="bi bi-bar-chart-line"></i> Detaillierte Analysen</h5>
+                            <p class="text-muted">
+                                Visualisiere deinen Fortschritt mit interaktiven Charts. Sieh auf einen Blick, wie sich deine <strong>Kraftwerte</strong>,
+                                dein <strong>Trainingsvolumen</strong> und deine <strong>Körperwerte</strong> über Wochen und Monate entwickeln.
+                                Filtere nach Muskelgruppen oder einzelnen Übungen.
+                            </p>
+                            <ul class="small">
+                                <li>📊 Interaktive Fortschritts-Charts (Chart.js)</li>
+                                <li>🔍 Filter nach Übungen & Muskelgruppen</li>
+                                <li>📸 Fortschrittsfotos mit Timeline</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6 order-md-1">
+                            <div class="bg-dark border border-secondary rounded p-2 text-center">
+                                <img src="{% static 'core/images/beta/analytics.png' %}"
+                                     alt="Analyse-Dashboard"
+                                     class="img-fluid rounded screenshot-thumb"
+                                     style="max-height: 280px; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 5: Equipment & Flexibilität -->
+                <div class="feature-section">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <h5 class="fw-bold"><i class="bi bi-tools"></i> Equipment-basierte Übungsauswahl</h5>
+                            <p class="text-muted">
+                                Definiere einmalig dein verfügbares Equipment (Langhantel, Kurzhanteln, Bänder, Körpergewicht, etc.) und die App
+                                schlägt dir automatisch nur <strong>passende Übungen</strong> vor. Perfekt für Home-Gym-Athleten mit begrenztem Equipment!
+                            </p>
+                            <ul class="small">
+                                <li>🏋️ 100+ Übungen mit Equipment-Tags</li>
+                                <li>🔄 Alternative Übungen bei fehlendem Equipment</li>
+                                <li>🏠 Home-Gym & Studio-Mode</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="bg-dark border border-secondary rounded p-2 text-center">
+                                <img src="{% static 'core/images/beta/equipment.png' %}"
+                                     alt="Equipment-Verwaltung"
+                                     class="img-fluid rounded screenshot-thumb"
+                                     style="max-height: 280px; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warum Beta-Phase? -->
+            <div class="beta-card mb-4">
+                <h3 class="mb-3"><i class="bi bi-question-circle text-warning"></i> Warum Einladung nötig?</h3>
+                <p>HomeGym befindet sich in einer <strong>offenen Beta-Phase</strong>. Um Qualität, Serverstabilität und gezielte Weiterentwicklung sicherzustellen, ist die Registrierung derzeit nur mit Einladung möglich.</p>
+                <ul class="mt-2">
+                    <li>✅ Schutz vor Spam & Bots</li>
+                    <li>✅ Begrenzte Server-Ressourcen</li>
+                    <li>✅ Hochwertiges Feedback von aktiven Nutzern</li>
+                    <li>✅ Kontrolliertes Wachstum</li>
+                </ul>
+            </div>
+
+            <!-- Bewerbungsformular -->
+            <div class="beta-card">
+                <h3 class="mb-3"><i class="bi bi-pen text-success"></i> Beta-Zugang beantragen</h3>
+
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-Mail-Adresse *</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                        <div class="form-text">Du erhältst deinen Einladungscode hier</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Warum möchtest du HomeGym nutzen? *</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" required
+                                  placeholder="z.B. Ich trainiere seit 2 Jahren und suche einen intelligenten Tracker..."></textarea>
+                        <div class="form-text">2-3 Sätze reichen</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="experience" class="form-label">Trainingserfahrung *</label>
+                        <select class="form-select" id="experience" name="experience" required>
+                            <option value="">Bitte wählen...</option>
+                            <option value="beginner">Anfänger (< 1 Jahr Training)</option>
+                            <option value="intermediate">Fortgeschritten (1-3 Jahre)</option>
+                            <option value="advanced">Erfahren (> 3 Jahre)</option>
+                            <option value="returning">Wiedereinstieg nach Pause</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Was interessiert dich? (Mehrfachauswahl)</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="interests" value="ai_plans" id="int1">
+                            <label class="form-check-label" for="int1">
+                                KI-Trainingspläne
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="interests" value="tracking" id="int2">
+                            <label class="form-check-label" for="int2">
+                                Trainingstracking
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="interests" value="analytics" id="int3">
+                            <label class="form-check-label" for="int3">
+                                Analyse & Statistiken
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="interests" value="opensource" id="int4">
+                            <label class="form-check-label" for="int4">
+                                Open-Source / Entwicklung
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="github_username" class="form-label">GitHub Username (optional)</label>
+                        <input type="text" class="form-control" id="github_username" name="github_username"
+                               placeholder="z.B. leratos">
+                        <div class="form-text">Für Community-Features & Contributions</div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-clock"></i> <strong>Was passiert jetzt?</strong><br>
+                        Nach deiner Bewerbung wirst du innerhalb von <strong>48 Stunden</strong> automatisch approved und erhältst deinen Einladungscode per E-Mail.
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-send"></i> Bewerbung absenden
+                    </button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        Hast du bereits einen Code?
+                        <a href="{% url 'register' %}" class="text-decoration-none">Jetzt registrieren</a>
+                    </small>
+                    <br>
+                    <small class="text-muted">
+                        Account vorhanden?
+                        <a href="{% url 'login' %}" class="text-decoration-none">Zum Login</a>
+                    </small>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-4">
+                <small class="text-muted">
+                    <a href="{% url 'impressum' %}" class="text-muted text-decoration-none">Impressum</a>
+                    <span class="mx-1">·</span>
+                    <a href="{% url 'datenschutz' %}" class="text-muted text-decoration-none">Datenschutz</a>
+                    <span class="mx-2">|</span>
+                    <i class="bi bi-github"></i>
+                    <a href="https://github.com/leratos/Fitness" target="_blank" class="text-decoration-none text-muted">
+                        Open-Source auf GitHub
+                    </a>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header border-secondary py-2">
+                    <h6 class="modal-title text-muted" id="lightboxTitle">Screenshot</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                </div>
+                <div class="modal-body text-center p-2">
+                    <img src="" alt="" id="lightboxImage" class="lightbox-img rounded">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Lightbox Funktionalität
+        document.addEventListener('DOMContentLoaded', function() {
+            const lightboxModal = new bootstrap.Modal(document.getElementById('lightboxModal'));
+            const lightboxImage = document.getElementById('lightboxImage');
+            const lightboxTitle = document.getElementById('lightboxTitle');
+
+            // Alle Screenshot-Thumbnails klickbar machen
+            document.querySelectorAll('.screenshot-thumb').forEach(img => {
+                img.addEventListener('click', function() {
+                    lightboxImage.src = this.src;
+                    lightboxImage.alt = this.alt;
+                    lightboxTitle.textContent = this.alt || 'Screenshot';
+                    lightboxModal.show();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

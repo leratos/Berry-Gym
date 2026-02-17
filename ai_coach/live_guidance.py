@@ -3,7 +3,6 @@ Live Guidance - KI-Coach während dem Training
 Gibt kontextbasierte Tipps und beantwortet Fragen in Echtzeit
 """
 
-import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -12,6 +11,7 @@ from django.utils import timezone
 
 # Django Setup
 sys.path.insert(0, str(Path(__file__).parent))
+from . import ai_config
 from .db_client import DatabaseClient
 
 
@@ -313,7 +313,7 @@ FOKUS:
                     api_key=get_openrouter_key(), base_url="https://openrouter.ai/api/v1"
                 )
 
-                model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-70b-instruct")
+                model = ai_config.OPENROUTER_MODEL
 
                 response = client.chat.completions.create(
                     model=model,

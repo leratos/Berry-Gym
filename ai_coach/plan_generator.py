@@ -24,24 +24,26 @@ class PlanGenerator:
         user_id: int,
         analysis_days: int = 30,
         plan_type: str = "3er-split",
-        llm_temperature: float = 0.7,
+        llm_temperature: float = 0.3,
         sets_per_session: int = 18,
         periodization: str = "linear",
         target_profile: str = "hypertrophie",
         use_openrouter: bool = False,
         fallback_to_openrouter: bool = True,
+        progress_callback=None,
     ):
         """
         Args:
             user_id: Django User ID
             analysis_days: Wie viele Tage zurück analysieren
             plan_type: Art des Plans (3er-split, ppl, upper-lower, fullbody)
-            llm_temperature: LLM Kreativität (0.0-1.0)
+            llm_temperature: LLM Kreativität (0.0-1.0, Default 0.3 für zuverlässiges JSON)
             sets_per_session: Ziel-Satzanzahl pro Trainingstag (18 = ca. 1h)
             periodization: Periodisierungsmodell (linear, wellenfoermig, block)
             target_profile: Zielprofil (kraft, hypertrophie, definition)
             use_openrouter: True = nutze nur OpenRouter (skip Ollama)
             fallback_to_openrouter: True = Fallback zu OpenRouter bei Ollama-Fehler
+            progress_callback: Optional callable(percent: int, step: str) für SSE-Streaming
         """
         self.user_id = user_id
         self.analysis_days = analysis_days
@@ -52,6 +54,35 @@ class PlanGenerator:
         self.target_profile = target_profile
         self.use_openrouter = use_openrouter
         self.fallback_to_openrouter = fallback_to_openrouter
+        self._progress_callback = progress_callback
+
+    def _progress(self, percent: int, step: str) -> None:
+        """Sendet Fortschrittsupdate – no-op wenn kein Callback gesetzt."""
+        if self._progress_callback:
+            self._progress_callback(percent, step)
+
+    def _get_max_tokens(self) -> int:
+        """
+        Gibt plan-typ-spezifisches max_tokens zurück.
+
+        Grundlage: ~700 Tokens pro Session (Übungen + Metadaten) +
+        ~500 Tokens für Makrozyklus/Periodisierungs-Header.
+        Puffer: +20% für Varianz in Übungsanzahl und Notizen.
+
+        Hardcodiertes 4000 für alle Typen war falsch:
+        - 2er-Split: ~1400 Tokens → 4000 verschwendet Geld
+        - PPL (6 Sessions): ~4700 Tokens → 4000 schneidet den Plan ab
+        """
+        token_map = {
+            "ganzkörper": 2000,  # 2-3 Sessions × ~500 + Header
+            "2er-split": 2200,  # 2 Sessions × ~700 + Header
+            "upper-lower": 2200,  # Alias für 2er-Split
+            "3er-split": 3000,  # 3 Sessions × ~700 + Header
+            "4er-split": 3800,  # 4 Sessions × ~700 + Header
+            "ppl": 4500,  # bis 6 Sessions × ~650 + Header
+            "push-pull-legs": 4500,  # Alias für ppl
+        }
+        return token_map.get(self.plan_type, 3500)
 
     def generate(self, save_to_db: bool = True) -> dict:
         """
@@ -101,6 +132,7 @@ class PlanGenerator:
         # 1. Trainingshistorie analysieren
         print("\n📊 SCHRITT 1: Trainingshistorie analysieren")
         print("-" * 60)
+        self._progress(5, "Analysiere Trainingsdaten...")
 
         analyzer = TrainingAnalyzer(user_id=self.user_id, days=self.analysis_days)
         analysis_data = analyzer.analyze()
@@ -123,6 +155,7 @@ class PlanGenerator:
         # 3. Prompts erstellen
         print("\n🤖 SCHRITT 3: LLM Prompts erstellen")
         print("-" * 60)
+        self._progress(20, "Erstelle personalisierten Prompt...")
 
         messages = builder.build_messages(
             analysis_data=analysis_data,
@@ -139,6 +172,7 @@ class PlanGenerator:
         # 4. LLM Call - Trainingsplan generieren
         print("\n🧠 SCHRITT 4: Trainingsplan mit Llama generieren")
         print("-" * 60)
+        self._progress(35, "KI generiert Plan (kann 15–20s dauern)...")
 
         llm_client = LLMClient(
             temperature=self.llm_temperature,
@@ -146,7 +180,7 @@ class PlanGenerator:
             fallback_to_openrouter=self.fallback_to_openrouter,
         )
         llm_result = llm_client.generate_training_plan(
-            messages=messages, max_tokens=4000, timeout=120
+            messages=messages, max_tokens=self._get_max_tokens(), timeout=120
         )
 
         # Extrahiere JSON aus Result-Dict
@@ -187,7 +221,7 @@ class PlanGenerator:
                     fallback_to_openrouter=False,
                 )
                 llm_result = llm_client_or.generate_training_plan(
-                    messages=messages, max_tokens=4000, timeout=120
+                    messages=messages, max_tokens=self._get_max_tokens(), timeout=120
                 )
                 plan_json = (
                     llm_result.get("response") if isinstance(llm_result, dict) else llm_result
@@ -201,6 +235,7 @@ class PlanGenerator:
         # 5. Validierung mit Smart Retry
         print("\n✅ SCHRITT 5: Plan validieren")
         print("-" * 60)
+        self._progress(70, "Antwort erhalten – validiere Plan...")
 
         valid, errors = llm_client.validate_plan(plan_json, available_exercises)
 
@@ -212,6 +247,7 @@ class PlanGenerator:
             # Smart Retry: Fehlerhafte Übungen durch LLM ersetzen lassen
             print("\n🔄 SCHRITT 5b: Fehlerhafte Übungen korrigieren (Smart Retry)")
             print("-" * 60)
+            self._progress(82, "Korrigiere halluzinierte Übungen...")
 
             plan_json = self._fix_invalid_exercises(
                 plan_json=plan_json,
@@ -244,6 +280,7 @@ class PlanGenerator:
         if save_to_db:
             print("\n💾 SCHRITT 6: Plan in Datenbank speichern")
             print("-" * 60)
+            self._progress(90, "Speichere Plan in Datenbank...")
 
             plan_ids = self._save_plan_to_db(plan_json)
 
@@ -409,8 +446,10 @@ class PlanGenerator:
         self, plan_json: dict, errors: list, available_exercises: list, llm_client
     ) -> dict:
         """
-        Smart Retry: Ersetzt fehlerhafte Übungen durch valide Alternativen
-        Nutzt LLM um passende Ersatz-Übungen aus verfügbaren Optionen zu wählen
+        Smart Retry: Ersetzt halluzinierte Übungen durch valide Alternativen.
+
+        Nutzt generate_training_plan() über die öffentliche API – nie direkt
+        _generate_with_openrouter() aufrufen (internes Detail, gibt Wrapper-Dict zurück).
 
         Args:
             plan_json: Der generierte Plan mit Fehlern
@@ -419,15 +458,13 @@ class PlanGenerator:
             llm_client: LLM Client für Korrektur-Request
 
         Returns:
-            Korrigierter Plan
+            Korrigierter Plan (unverändert wenn kein Retry nötig oder Korrektur fehlschlägt)
         """
-        import json
         import re
 
         # Fehlerhafte Übungen aus Errors extrahieren
         invalid_exercises = []
         for error in errors:
-            # Pattern: "Session X, Übung Y: 'ÜBUNGSNAME' nicht verfügbar"
             match = re.search(r"'([^']+)' nicht verfügbar", error)
             if match:
                 invalid_exercises.append(match.group(1))
@@ -436,121 +473,62 @@ class PlanGenerator:
             print("   ℹ️ Keine automatisch korrigierbaren Fehler gefunden")
             return plan_json
 
-        print(f"   🔍 Gefundene fehlerhafte Übungen: {len(invalid_exercises)}")
+        print(f"   🔍 Gefundene halluzinierte Übungen: {len(invalid_exercises)}")
         for ex in invalid_exercises:
             print(f"      ❌ {ex}")
 
-        # Kurzer Prompt für Korrektur
-        # available_exercises ist eine Liste von Strings (Übungsnamen)
         exercise_list = "\n".join([f"- {ex}" for ex in available_exercises])
 
         correction_prompt = f"""Du hast folgende NICHT-EXISTIERENDE Übungen verwendet:
 {chr(10).join(f'- {ex}' for ex in invalid_exercises)}
 
-⚠️ DIESE ÜBUNGEN EXISTIEREN NICHT IN DER DATENBANK!
+Diese Übungen sind nicht in der Datenbank – sie wurden halluziniert.
 
 Wähle für JEDE fehlerhafte Übung GENAU EINE passende Alternative aus der VERFÜGBAREN Liste.
-Die Alternative sollte:
-1. Die gleiche Muskelgruppe trainieren
-2. Ähnlichen Bewegungstyp haben
-3. Mit dem verfügbaren Equipment machbar sein
+Die Alternative sollte dieselbe Muskelgruppe trainieren und ähnlichen Bewegungstyp haben.
 
 VERFÜGBARE ÜBUNGEN (NUR DIESE VERWENDEN!):
 {exercise_list}
 
-Antworte NUR mit einem JSON-Objekt in diesem Format:
-{{
-  "Fehlerhafte Übung 1": "Ersatz Übung aus Liste",
-  "Fehlerhafte Übung 2": "Ersatz Übung aus Liste"
-}}
-
+Antworte mit einem JSON-Objekt: Schlüssel = fehlerhafte Übung, Wert = Ersatz aus obiger Liste.
 Beispiel:
 {{
-  "Leg Press (Kurzhantel)": "Bulgarian Split Squat (Kurzhantel)",
-  "Cable Fly": "Fliegende (Kurzhantel)"
+  "Cable Fly": "Fliegende (Kurzhantel)",
+  "Leg Press (Maschine)": "Kniebeuge (Langhantel, Back Squat)"
 }}
 
-⚠️ KRITISCH: Verwende EXAKT die Übungsnamen aus der Liste oben! Keine Variationen!"""
+Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
 
         messages = [
-            {
-                "role": "system",
-                "content": "Du bist ein Fitness-Experte. Antworte nur mit validem JSON.",
-            },
+            {"role": "system", "content": "Du bist ein Fitness-Experte."},
             {"role": "user", "content": correction_prompt},
         ]
 
         print("\n   🤖 Sende Korrektur-Request an LLM...")
 
         try:
-            # LLM Call für Korrektur (mit Ollama oder OpenRouter)
-            if hasattr(llm_client, "_generate_with_openrouter") and llm_client.use_openrouter:
-                response = llm_client._generate_with_openrouter(messages, max_tokens=500)
-            else:
-                # Fallback zu lokalem Ollama
-                response = llm_client._generate_with_ollama(messages, max_tokens=500, timeout=60)
+            result = llm_client.generate_training_plan(messages=messages, max_tokens=500)
 
-            # Debug: Zeige Response-Typ und Struktur
-            print(f"   🔍 Response-Typ: {type(response)}")
+            # generate_training_plan() gibt immer {"response": <dict>, ...} zurück
+            replacements = result.get("response", {})
 
-            # Response kann String oder Dict sein
-            if isinstance(response, dict):
-                # Ollama gibt bereits ein Dict zurück - direkt verwenden!
-                replacements = response
-                print(f"   ✓ Ersetzungen erhalten (direkt als Dict): {len(replacements)}")
-            else:
-                # OpenRouter gibt String zurück - muss geparst werden
-                response_text = response
+            if not isinstance(replacements, dict) or not replacements:
+                print("   ⚠️ Leere oder ungültige Replacements-Response")
+                return plan_json
 
-                # Debug
-                print("   📝 LLM Response:")
-                print(f"   {response_text}")
-
-                # JSON parsen
-                response_clean = response_text.strip()
-                if response_clean.startswith("```json"):
-                    response_clean = response_clean.split("```json")[1].split("```")[0].strip()
-                elif response_clean.startswith("```"):
-                    response_clean = response_clean.split("```")[1].split("```")[0].strip()
-
-                # Versuche JSON zu finden wenn Response Text enthält
-                import re
-
-                json_match = re.search(r"\{[^}]+\}", response_clean, re.DOTALL)
-                if json_match:
-                    response_clean = json_match.group(0)
-
-                replacements = json.loads(response_clean)
-
-            print(f"   ✓ Ersetzungen erhalten: {len(replacements)}")
+            print(f"   ✓ {len(replacements)} Ersetzungen erhalten:")
             for old, new in replacements.items():
                 print(f"      {old} → {new}")
 
-            # Übungen im Plan ersetzen
+            # Übungen im Plan ersetzen (nur exakter Match)
             replaced_count = 0
             for session in plan_json["sessions"]:
                 for exercise in session["exercises"]:
-                    exercise_name = exercise["exercise_name"]
-
-                    # Exakte Übereinstimmung oder teilweise Übereinstimmung
-                    if exercise_name in replacements:
-                        old_name = exercise_name
-                        new_name = replacements[old_name]
-                        exercise["exercise_name"] = new_name
+                    ex_name = exercise["exercise_name"]
+                    if ex_name in replacements:
+                        exercise["exercise_name"] = replacements[ex_name]
                         replaced_count += 1
-                        print(f"   ✓ Ersetzt: {old_name} → {new_name}")
-                    else:
-                        # Versuche teilweise Übereinstimmung (ohne Klammern)
-                        for old, new in replacements.items():
-                            # Entferne Klammern für Vergleich
-                            exercise_base = exercise_name.split("(")[0].strip()
-                            old_base = old.split("(")[0].strip()
-
-                            if exercise_base == old_base or exercise_name == old:
-                                exercise["exercise_name"] = new
-                                replaced_count += 1
-                                print(f"   ✓ Ersetzt (partial match): {exercise_name} → {new}")
-                                break
+                        print(f"   ✓ Ersetzt: {ex_name} → {replacements[ex_name]}")
 
             print(f"\n   ✅ {replaced_count} Übungen korrigiert")
             return plan_json

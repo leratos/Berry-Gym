@@ -8,6 +8,7 @@ Testet explizit die korrigierten Algorithmen:
 4. 1RM-Skalierung: allometrisch, nicht linear
 """
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.urls import reverse
@@ -329,3 +330,155 @@ class TestAllometricScaling:
             f"Allometrischer Exponent stimmt nicht. "
             f"Erwartet: {expected_allometric:.3f}, Erhalten: {actual_ratio:.3f}"
         )
+
+
+@pytest.mark.django_db
+class TestAdherenceRateNeverExceedsHundred:
+    """
+    Regression: adherence_rate darf nie > 100% sein.
+
+    Bug: wochen_gesamt verwendete `days // 7` (Ganzzahl-Division),
+    wochen_mit_training zählte Django-Kalenderwochen (ISO-Wochen).
+    Trainings die eine Wochengrenzen überbrücken erzeugten Nenner < Zähler.
+
+    Beispiel-Szenario das den Bug auslöste:
+    - Erstes Training: Donnerstag (vor 3 Tagen)
+    - Zweites Training: heute (Sonntag, neue Kalenderwoche)
+    - days = 3 → days // 7 = 0 → max(1, 0) = 1 Woche (Nenner)
+    - Django dates("datum", "week") = 2 Kalenderwochen (Zähler)
+    → Ergebnis: 2/1 * 100 = 200%
+    """
+
+    def test_adherence_never_exceeds_100_percent(self):
+        """
+        Trainings über Wochengrenzen dürfen nicht zu > 100% führen.
+        Wir erstellen Trainings die definitiv mehr Kalenderwochen
+        als die `days // 7`-Formel ergeben würde.
+        """
+        from django.utils import timezone
+
+        from core.utils.advanced_stats import calculate_consistency_metrics
+
+        user = UserFactory()
+
+        # Trainings in 5 verschiedenen Kalenderwochen über 8 Wochen
+        heute = timezone.now()
+        offsets = [0, 7, 14, 21, 28]  # 5 Wochen, alle Montage
+        for offset in offsets:
+            datum = heute - timedelta(days=offset)
+            TrainingseinheitFactory(user=user, datum=datum, abgeschlossen=True)
+
+        from core.models import Trainingseinheit
+
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = calculate_consistency_metrics(alle_trainings)
+
+        assert result is not None
+        assert (
+            result["adherence_rate"] <= 100.0
+        ), f"adherence_rate über 100%: {result['adherence_rate']}%"
+
+    def test_adherence_cross_week_boundary(self):
+        """
+        Spezifisches Szenario: 2 Trainings, nur 3 Tage auseinander,
+        aber in verschiedenen ISO-Kalenderwochen (z.B. Do → So).
+        Das Ergebnis muss ≤ 100% sein.
+        """
+        from django.utils import timezone
+
+        from core.utils.advanced_stats import calculate_consistency_metrics
+
+        user = UserFactory()
+        heute = timezone.now()
+
+        # Montag der aktuellen Woche
+        montag_heute = heute - timedelta(days=heute.weekday())
+        # Donnerstag der Vorwoche (= 4 Tage vor diesem Montag)
+        donnerstag_vorwoche = montag_heute - timedelta(days=4)
+
+        TrainingseinheitFactory(user=user, datum=donnerstag_vorwoche, abgeschlossen=True)
+        TrainingseinheitFactory(user=user, datum=heute, abgeschlossen=True)
+
+        from core.models import Trainingseinheit
+
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = calculate_consistency_metrics(alle_trainings)
+
+        assert result is not None
+        assert (
+            result["adherence_rate"] <= 100.0
+        ), f"Wochengrenzfall: adherence_rate = {result['adherence_rate']}% (>100% ist ein Bug)"
+
+    def test_adherence_single_training_returns_valid_value(self):
+        """Ein einziges Training darf keine Division-by-Zero oder > 100% erzeugen."""
+        from django.utils import timezone
+
+        from core.utils.advanced_stats import calculate_consistency_metrics
+
+        user = UserFactory()
+        TrainingseinheitFactory(user=user, datum=timezone.now(), abgeschlossen=True)
+
+        from core.models import Trainingseinheit
+
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = calculate_consistency_metrics(alle_trainings)
+
+        assert result is not None
+        assert 0.0 <= result["adherence_rate"] <= 100.0
+
+
+@pytest.mark.django_db
+class TestOneRMMonthWindowFix:
+    """Regression: 1RM-Monatsentwicklung darf aktuellen Monat nicht als leer zeigen.
+
+    Bug: Formel `30 * (5 - i)` ergab für den letzten Slot i=5:
+         monat_start = heute, monat_ende = heute + 30 → Zukunft, keine Daten.
+    Fix: `30 * (6 - i)` → letzter Slot = heute-30 bis heute.
+    """
+
+    def test_current_month_pr_shows_in_last_slot(self):
+        """Ein PR von heute muss im letzten 1RM-Entwicklungs-Eintrag erscheinen."""
+        from datetime import date
+
+        from core.models import Satz
+        from core.utils.advanced_stats import calculate_1rm_standards
+
+        user = UserFactory()
+        uebung = UebungFactory(
+            bezeichnung="Bugfix-Testübung",
+            standard_beginner=Decimal("60.0"),
+            standard_intermediate=Decimal("100.0"),
+            standard_advanced=Decimal("140.0"),
+            standard_elite=Decimal("180.0"),
+        )
+        einheit = TrainingseinheitFactory(user=user, datum=date.today(), abgeschlossen=True)
+        SatzFactory(
+            einheit=einheit,
+            uebung=uebung,
+            gewicht=Decimal("80.0"),
+            wiederholungen=5,
+            ist_aufwaermsatz=False,
+        )
+
+        alle_saetze = Satz.objects.filter(einheit__user=user)
+        top_uebungen = [{"uebung__bezeichnung": uebung.bezeichnung}]
+
+        result = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None)
+
+        assert len(result) == 1, "Kein Ergebnis für Übung mit Standards"
+        entwicklung = result[0]["1rm_entwicklung"]
+        assert len(entwicklung) == 6, "Entwicklungsliste muss 6 Einträge haben"
+
+        # Letzter Slot muss den heutigen PR enthalten (nicht None)
+        letzter_slot = entwicklung[-1]
+        assert letzter_slot["1rm"] is not None, (
+            f"Letzter Slot '{letzter_slot['monat']}' sollte heutigen PR enthalten, ist aber None. "
+            f"Bug: Monats-Fenster schaut in die Zukunft statt in die letzten 30 Tage."
+        )
+        # Letzter Slot sollte aktuellen Monatsnamen tragen
+        import calendar
+
+        erwarteter_monat = calendar.month_abbr[date.today().month]
+        assert (
+            letzter_slot["monat"] == erwarteter_monat
+        ), f"Letzter Slot zeigt '{letzter_slot['monat']}', erwartet '{erwarteter_monat}'"

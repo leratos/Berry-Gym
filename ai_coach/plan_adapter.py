@@ -30,6 +30,7 @@ if __name__ == "__main__":
 
     django.setup()
 
+from django.contrib.auth.models import User
 from django.db.models import Avg
 from django.utils import timezone
 
@@ -382,9 +383,7 @@ Output Format (JSON):
             "reason": "Volumen um 25% gestiegen. Deload-Woche empfohlen."
         }
     ]
-}
-
-Gib NUR das JSON zurück, keine Markdown-Formatierung."""
+}"""
 
         user_prompt = f"""Aktueller Plan:
 {json.dumps(plan_structure, indent=2, ensure_ascii=False)}
@@ -410,8 +409,7 @@ Bitte analysiere und schlage Optimierungen vor."""
             # Nutze LLMClient mit Fallback-Logik (Ollama → OpenRouter)
             from ai_coach.llm_client import LLMClient
 
-            # Client mit Fallback initialisieren
-            client = LLMClient(temperature=0.3, fallback_to_openrouter=True)
+            client = LLMClient(temperature=0.3, use_openrouter=True)
 
             # generate_training_plan nutzt automatisch Ollama oder OpenRouter
             result = client.generate_training_plan(messages=messages, max_tokens=2000)
@@ -505,12 +503,20 @@ Bitte analysiere und schlage Optimierungen vor."""
         return summary
 
     def _get_available_exercises(self) -> Dict[str, List[str]]:
-        """Gibt alle verfügbaren Übungen gruppiert nach Muskelgruppe zurück"""
-        exercises = Uebung.objects.all().order_by("muskelgruppe", "bezeichnung")
+        """
+        Gibt verfügbare Übungen des Users gruppiert nach Muskelgruppe zurück.
+        Filtert nach User-Equipment – identisch zur Logik in prompt_builder.py.
+        """
+        user = User.objects.get(id=self.user_id)
+        user_equipment_ids = set(user.verfuegbares_equipment.values_list("id", flat=True))
 
-        grouped = defaultdict(list)
-        for ex in exercises:
-            grouped[ex.muskelgruppe].append(ex.bezeichnung)
+        grouped: Dict[str, List[str]] = defaultdict(list)
+        for uebung in Uebung.objects.prefetch_related("equipment").order_by(
+            "muskelgruppe", "bezeichnung"
+        ):
+            required_eq_ids = set(uebung.equipment.values_list("id", flat=True))
+            if not required_eq_ids or required_eq_ids.issubset(user_equipment_ids):
+                grouped[uebung.muskelgruppe].append(uebung.bezeichnung)
 
         return dict(grouped)
 

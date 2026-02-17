@@ -1,10 +1,14 @@
 """
 LLM Client - Hybrid Ollama + OpenRouter Integration
-Unterstützt lokales Llama 3.1 8B mit OpenRouter 70B Fallback
+Unterstützt lokales Llama 3.1 8B mit OpenRouter Fallback.
+
+OpenRouter-Modell: google/gemini-2.5-flash (Default)
+- JSON-Mode via response_format={"type": "json_object"}
+- Thinking deaktiviert via reasoning.effort="none" (verhindert versteckte Kosten)
+- $0.30/M Input, $2.50/M Output (vs. Llama 3.1 70B: $0.35/M, kein JSON-Mode)
 """
 
 import json
-import os
 from typing import Any, Dict, List
 
 import ollama
@@ -218,10 +222,10 @@ class LLMClient:
     def _generate_with_openrouter(
         self, messages: List[Dict[str, str]], max_tokens: int, timeout: int = 120
     ) -> Dict[str, Any]:
-        """Generiert Plan mit OpenRouter (70B Remote)"""
+        """Generiert Plan mit OpenRouter (Default: google/gemini-2.5-flash)"""
 
         client = self._get_openrouter_client()
-        model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-70b-instruct")
+        model = ai_config.OPENROUTER_MODEL
 
         print(f"\n🌐 Generiere mit OpenRouter ({model})...")
         print(f"   Temperature: {self.temperature}")
@@ -234,6 +238,11 @@ class LLMClient:
                 temperature=self.temperature,
                 max_tokens=max_tokens,
                 timeout=timeout,
+                # Strukturiertes JSON direkt vom Modell – kein Markdown-Wrapping
+                response_format={"type": "json_object"},
+                # Thinking/Reasoning deaktivieren: verhindert versteckte Reasoning-Tokens
+                # die Kosten verdoppeln würden (Gemini 2.5 Flash Thinking-Modus)
+                extra_body={"reasoning": {"effort": "none"}},
                 extra_headers={
                     "HTTP-Referer": "https://gym.last-strawberry.com",
                     "X-Title": "HomeGym AI Coach",
@@ -247,9 +256,10 @@ class LLMClient:
             prompt_tokens = response.usage.prompt_tokens
             completion_tokens = response.usage.completion_tokens
 
-            # Kosten berechnen (OpenRouter Llama 3.1 70B)
-            cost_input = (prompt_tokens / 1_000_000) * 0.60
-            cost_output = (completion_tokens / 1_000_000) * 0.80
+            # Kosten berechnen – Gemini 2.5 Flash Preise ($0.30/$2.50 per 1M Tokens)
+            # Quelle: openrouter.ai/google/gemini-2.5-flash (Stand Feb 2026)
+            cost_input = (prompt_tokens / 1_000_000) * 0.30
+            cost_output = (completion_tokens / 1_000_000) * 2.50
             total_cost = cost_input + cost_output
 
             print("✓ OpenRouter Response:")
@@ -325,6 +335,15 @@ class LLMClient:
         content = re.sub(r"}\s*{", r"},{", content)
         content = re.sub(r'"\s*{', r'",{', content)
 
+        # 4. Fehlende Kommas nach Zahlwert vor nächstem Key (Gemini 2.5 Flash Bug)
+        #    Beispiel: "rest_seconds": 90\n  "notes": → "rest_seconds": 90,\n  "notes":
+        content = re.sub(r"(\d)\n(\s+\")", r"\1,\n\2", content)
+
+        # 5. Fehlende Kommas nach String-Wert vor nächstem Key
+        #    Beispiel: "notes": "text"\n  "sets": → "notes": "text",\n  "sets":
+        #    Nur wenn die nächste Zeile ein Key ist (enthält ": "), nicht nach { oder [
+        content = re.sub(r"(?<=[^{[,])(\")\n(\s+\"[^\"]+\"\s*:)", r'",\n\2', content)
+
         # Parse JSON
         try:
             result = json.loads(content)
@@ -384,9 +403,6 @@ class LLMClient:
 
         # Sessions validieren
         if "sessions" in plan_json:
-            # Session-übergreifender Duplikat-Check
-            all_exercises_across_sessions = []
-
             for i, session in enumerate(plan_json["sessions"]):
                 if "exercises" not in session:
                     errors.append(f"Session {i + 1}: Keine Übungen definiert")
@@ -404,10 +420,6 @@ class LLMClient:
                     errors.append(
                         f"Session {i + 1}: Doppelte Übungen gefunden: {', '.join(unique_dupes)}"
                     )
-
-                # Für Session-übergreifenden Check
-                for ex_name in session_exercises:
-                    all_exercises_across_sessions.append((ex_name, i + 1))
 
                 # Übungen validieren
                 for j, exercise in enumerate(session["exercises"]):
@@ -427,17 +439,6 @@ class LLMClient:
                             errors.append(
                                 f"Session {i + 1}, Übung {j + 1} ('{ex_name}'): Fehlendes Feld '{field}'"
                             )
-
-            # Duplikat-Check ÜBER alle Sessions hinweg
-            seen_exercises = {}
-            for ex_name, session_num in all_exercises_across_sessions:
-                if ex_name in seen_exercises:
-                    errors.append(
-                        f"Übung '{ex_name}' kommt mehrfach vor "
-                        f"(Session {seen_exercises[ex_name]} und Session {session_num})"
-                    )
-                else:
-                    seen_exercises[ex_name] = session_num
 
         valid = len(errors) == 0
 
