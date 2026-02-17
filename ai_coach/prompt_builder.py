@@ -135,7 +135,9 @@ Diese Anforderung hat VORRANG vor allen anderen strukturellen Regeln!
 
 ⛔ FEHLER wenn diese Muskelgruppen im Plan FEHLEN.
 ✅ Notfalls Sätze von anderen Gruppen KÜRZEN um Platz zu schaffen.
-⚠️ ADDUKTOREN ≠ ABDUKTOREN: Adduktoren = Innenseite, Abduktoren = Außenseite!
+⚠️ ADDUKTOREN ≠ ABDUKTOREN: Adduktoren = Oberschenkel INNEN (Sumo Squats, Adduktoren-Maschine)
+⚠️ ABDUKTOREN = Oberschenkel AUSSEN (Hip Abduction) – das ist NICHT dasselbe!
+⚠️ Jede Pflicht-Schwachstelle braucht einen EIGENEN Übungsslot – nicht kombinieren!
 """
 
     def _build_system_prompt(self) -> str:
@@ -310,7 +312,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 - Kein Lower-Back-Overkill: Vermeide Kreuzheben + RDL + schwere Squats am selben Tag
 - Pull-Tag: max. 1 horizontales Ruder (Langhantelrudern ODER Einarmiges Kurzhantelrudern – NICHT beides!)
   → zweite Rückenübung muss vertikaler Zug (Klimmzüge, Latzug) oder Oberer-Rücken-Übung sein
-- Legs-Tag: PFLICHT mind. 1 Wadenübung (z.B. Wadenheben) – Waden sind Teil des Beintags!"""
+- Legs-Tag: Waden optional – nur wenn nach Pflicht-Schwachstellen noch Budget übrig ist"""
 
         # Build prompt
         exercises_list = "\n".join([f"  - {ex}" for ex in sorted(available_exercises)])
@@ -403,14 +405,14 @@ Du hast {len(available_exercises)} verfügbare Übungen.
      * Kniebeuge (Hauptübung Quad): 4 Sätze
      * RDL oder Beinbeuger (Hamstrings): 3 Sätze
      * Split Squat oder Ausfallschritt (einbeinig): 3 Sätze
-     * Wadenheben (PFLICHT – immer dabei!): 3 Sätze
-     * Adduktoren oder Hüftbeuger: 3 Sätze
-     * Core/Bauch: 2 Sätze
-     = 18 Sätze total, 6 Übungen
+     * Adduktoren/Hüftbeuger (aus Pflicht-Block falls Schwachstelle): 3 Sätze
+     * Core/Bauch (aus Pflicht-Block falls Schwachstelle): 3 Sätze
+     * Wadenheben (optional, nur wenn Budget noch nicht voll): 2 Sätze
+     = 16-18 Sätze total
 4. ** MINDESTENS 2 ÜBUNGEN PRO HAUPTMUSKELGRUPPE**:
    - Push-Tag: 2x Brust, 2x Schultern, 1-2x Trizeps
    - Pull-Tag: 1x vertikaler Zug (Klimmzüge/Latzug) + NUR 1x horizontales Ruder + 1-2x Bizeps + 1x Scapula/hintere Schulter
-   - Leg-Tag: 1x Quad-Dominant, 1x Hinge/Hamstrings, 1x einbeinig, 1x WADEN (PFLICHT), 1x Adduktoren/Core
+   - Leg-Tag: 1x Quad-Dominant, 1x Hinge/Hamstrings, 1x einbeinig, Pflicht-Schwachstellen (Adduktoren/Core/Hüftbeuger), Waden nur wenn Budget reicht
    - Verschiedene Winkel/Bewegungen für vollständige Entwicklung
 5. Compound Movements (Langhantel-Kniebeuge, Bankdrücken, Kreuzheben) priorisieren als erste Übung
 6. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
