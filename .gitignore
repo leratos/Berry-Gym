@@ -117,7 +117,6 @@ create_test_user.py
 
 # Beta
 /beta/
-apply_beta.html
 docs/BETA_SYSTEM.md
 docs/FIX_SERVICE_WORKER_SCOPE.md
 docs/OFFLINE_COMPLETE.md
