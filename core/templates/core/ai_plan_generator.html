@@ -175,6 +175,15 @@
                             <i class="bi bi-x-circle"></i> Abbrechen
                         </button>
                     </div>
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="setAsActiveCheck" checked>
+                        <label class="form-check-label text-warning" for="setAsActiveCheck">
+                            <i class="bi bi-star-fill"></i> Als aktiven Plan setzen
+                            <small class="text-muted d-block ms-0 mt-1">
+                                Ersetzt den aktuellen Wochenzyklus. Deaktivieren um den neuen Plan nur zu speichern, ohne den laufenden Zyklus zu ändern.
+                            </small>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Progress Container (initially hidden) -->
@@ -258,7 +267,10 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': '{{ csrf_token }}'
                     },
-                    body: JSON.stringify(currentPlanData)
+                    body: JSON.stringify({
+                        ...currentPlanData,
+                        set_as_active: document.getElementById('setAsActiveCheck').checked,
+                    })
                 });
                 const data = await response.json();
                 setProgress(100, '✅ Gespeichert!');

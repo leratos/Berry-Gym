@@ -102,6 +102,21 @@
 
     <div class="card card-stat border-secondary mb-4">
       <div class="card-body p-3">
+        <h6 class="mb-2"><i class="bi bi-skip-forward me-2"></i>Laufende Woche <span class="badge bg-secondary ms-1">optional</span></h6>
+        <small class="text-muted d-block mb-2">
+          Falls du mitten in einem Zyklus auf diesen Plan wechselst, gib hier deine aktuelle Woche an.
+          Leer lassen = Zyklus startet ab heute bei Woche 1.
+        </small>
+        <div class="d-flex align-items-center gap-3">
+          <input type="number" name="current_week" class="form-control" style="max-width: 100px;"
+                 min="1" max="12" placeholder="z.B. 3">
+          <small class="text-muted">Woche 1 – {{ current_cycle_length }}</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-stat border-secondary mb-4">
+      <div class="card-body p-3">
         <h6 class="mb-2"><i class="bi bi-battery-half me-2"></i>Deload-Einstellungen</h6>
         <small class="text-muted d-block mb-3">Werden automatisch in der Deload-Woche angewendet. KI-Pläne setzen diese Werte automatisch.</small>
         <div class="row g-3">

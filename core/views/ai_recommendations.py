@@ -384,7 +384,9 @@ def _handle_save_cached_plan(user: User, data: dict) -> JsonResponse:
     generator = PlanGenerator(user_id=user.id, plan_type="3er-split")
     plan_data = data["plan_data"]
     plan_ids = generator._save_plan_to_db(plan_data)
-    _apply_mesocycle_from_plan(user, plan_data, plan_ids)
+    # Nur als aktiv setzen wenn User das explizit gewählt hat (default: False)
+    if data.get("set_as_active", False):
+        _apply_mesocycle_from_plan(user, plan_data, plan_ids)
     return JsonResponse(
         {
             "success": True,
