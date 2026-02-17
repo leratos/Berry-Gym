@@ -705,7 +705,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         # Benutzerfreundliche Überschrift
         periodization_labels = {
             "linear": "Linearer Aufbau",
-            "wellenfoermig": "Wellenfoermige Periodisierung",
+            "wellenfoermig": "Wellenförmige Periodisierung",
             "block": "Blockperiodisierung",
         }
         profile_labels = {
@@ -715,8 +715,8 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         }
 
         lines = [
-            f"PLAN-UEBERSICHT: {duration}-Wochen-Plan",
-            f"{periodization_labels.get(periodization, periodization)} fuer {profile_labels.get(profile, profile)}",
+            f"PLANÜBERSICHT: {duration}-Wochen-Plan",
+            f"{periodization_labels.get(periodization, periodization)} für {profile_labels.get(profile, profile)}",
             "",
             "",
         ]
@@ -733,7 +733,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         # Progression klar formuliert
         lines.append("PROGRESSION (Wochen 1-3, 5-7, 9-11):")
         lines.append("   - Steigere das Gewicht, wenn du >12 Wdh schaffst")
-        lines.append("   - Fuege +1 Satz bei Hauptuebungen hinzu (z.B. von 3 auf 4 Saetze)")
+        lines.append("   - Füge +1 Satz bei Hauptübungen hinzu (z.B. von 3 auf 4 Sätze)")
         lines.append("   - Ziel: RPE bleibt bei 7-8.5 (noch 1-2 Wdh Reserve)")
         lines.append("")
         lines.append("")
@@ -741,7 +741,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         # Deload-Wochen klar erklären
         deload_str = ", ".join(map(str, deload_weeks)) if deload_weeks else "4, 8, 12"
         lines.append(f"DELOAD-WOCHEN ({deload_str}):")
-        lines.append("   - Reduziere das Volumen auf 80% (z.B. 4 Saetze -> 3 Saetze)")
+        lines.append("   - Reduziere das Volumen auf 80% (z.B. 4 Sätze → 3 Sätze)")
         lines.append("   - Senke das Gewicht leicht (~10%), RPE sollte bei 6-7 liegen")
         lines.append("   - Fokus auf Technik und Regeneration")
         lines.append("")
