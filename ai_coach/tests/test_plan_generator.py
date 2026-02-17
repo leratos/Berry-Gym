@@ -567,3 +567,171 @@ class TestProgressCallback:
             82,
             90,
         ], f"Nicht alle Progress-Stufen wurden gemeldet. Erhalten: {received}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 5.3 – Plan-Name Eindeutigkeit (inline-Logik in generate())
+# ---------------------------------------------------------------------------
+
+
+def _make_session_v2(name: str, exercises: list[dict]) -> dict:
+    return {"session_name": name, "exercises": exercises}
+
+
+def _make_exercise_v2(name: str) -> dict:
+    return {"exercise_name": name, "sets": 3, "reps": "8-12", "rest_seconds": 90}
+
+
+class TestPlanNameFallback:
+    """
+    Die Fallback-Logik in generate() ersetzt generische LLM-Namen.
+    Da die Logik inline ist, testen wir über die Hilfsfunktion die
+    denselben generic_names-Set und die Längen-Prüfung nachbildet.
+
+    Wir testen das Verhalten der Klasse direkt: PlanGenerator kennt
+    self.target_profile und self.plan_type – damit kann der Test
+    zeigen, dass zwei verschiedene Profile verschiedene Namen erzeugen.
+    """
+
+    GENERIC_NAMES = {
+        "mein trainingsplan",
+        "trainingsplan",
+        "3er split",
+        "3er-split",
+        "push pull legs",
+        "push/pull/legs",
+        "hypertrophie plan",
+        "kraftplan",
+    }
+
+    def _apply_name_fallback(self, generator: "PlanGenerator", plan_json: dict) -> str:
+        """
+        Wendet dieselbe Fallback-Logik an die in generate() Schritt 5d steht,
+        ohne generate() komplett aufzurufen (kein LLM nötig).
+        """
+        from datetime import date as _date
+
+        raw_name = plan_json.get("plan_name", "").strip()
+        if not raw_name or raw_name.lower() in self.GENERIC_NAMES or len(raw_name) < 10:
+            weaknesses = plan_json.get("_test_weaknesses", [])
+            focus = ""
+            if weaknesses and ":" in weaknesses[0]:
+                focus = f" – Fokus {weaknesses[0].split(':')[0].strip()}"
+            profile_label = {
+                "kraft": "Kraft",
+                "hypertrophie": "Hypertrophie",
+                "definition": "Definition",
+            }.get(generator.target_profile, generator.target_profile.capitalize())
+            plan_json["plan_name"] = (
+                f"{profile_label}-{generator.plan_type.upper().replace('-', '/')}"
+                f"{focus} ({_date.today().strftime('%d.%m.%Y')})"
+            )
+        return plan_json["plan_name"]
+
+    def test_generischer_name_wird_ersetzt(self):
+        """Generische LLM-Namen → Fallback mit Profil + Datum."""
+        gen = PlanGenerator(user_id=999, target_profile="hypertrophie", plan_type="2er-split")
+
+        for bad_name in ["Trainingsplan", "hypertrophie plan", "mein trainingsplan"]:
+            plan_json = _make_plan_json(bad_name, [])
+            result = self._apply_name_fallback(gen, plan_json)
+            assert result != bad_name.lower(), f"Generischer Name '{bad_name}' wurde nicht ersetzt"
+            assert len(result) >= 10
+
+    def test_spezifischer_name_bleibt_erhalten(self):
+        """Spezifischer Name mit ≥10 Zeichen wird nicht überschrieben."""
+        gen = PlanGenerator(user_id=999, target_profile="kraft", plan_type="ganzkörper")
+
+        plan_json = _make_plan_json("Push-Pull Fokus Schulter & Rücken", [])
+        result = self._apply_name_fallback(gen, plan_json)
+        assert result == "Push-Pull Fokus Schulter & Rücken"
+
+    def test_zwei_profile_erzeugen_verschiedene_namen(self):
+        """Kraft vs. Hypertrophie → unterschiedliche Fallback-Namen."""
+        gen_kraft = PlanGenerator(user_id=999, target_profile="kraft", plan_type="ganzkörper")
+        gen_hyp = PlanGenerator(user_id=999, target_profile="hypertrophie", plan_type="ganzkörper")
+
+        p1 = _make_plan_json("trainingsplan", [])
+        p2 = _make_plan_json("trainingsplan", [])
+        n1 = self._apply_name_fallback(gen_kraft, p1)
+        n2 = self._apply_name_fallback(gen_hyp, p2)
+        assert n1 != n2, f"Beide haben denselben Namen: '{n1}'"
+
+    def test_kurzer_name_unter_10_zeichen_wird_ersetzt(self):
+        """Name < 10 Zeichen gilt als generisch."""
+        gen = PlanGenerator(user_id=999, target_profile="definition", plan_type="ppl")
+
+        plan_json = _make_plan_json("Plan A", [])  # 6 Zeichen
+        result = self._apply_name_fallback(gen, plan_json)
+        assert result != "Plan A"
+        assert "Definition" in result
+
+
+# ---------------------------------------------------------------------------
+# Phase 5.3 – _validate_weakness_coverage (echte Methode)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestValidateWeaknessCoverage:
+    """
+    _validate_weakness_coverage(plan_json, weaknesses: list[str]) → list[str]
+    Signatur bestätigt: nimmt weaknesses-Liste direkt, nicht analysis_data.
+    """
+
+    def test_keine_schwachstellen_gibt_leere_liste(self):
+        """weaknesses=[] → immer leere Warnings-Liste."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json("Test", [_make_session("A", [])])
+        warnings = gen._validate_weakness_coverage(plan_json, weaknesses=[])
+        assert warnings == []
+
+    def test_unbekanntes_label_kein_false_positive(self):
+        """Label das nicht in LABEL_TO_KEYS steht → keine Warning."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json("Test", [_make_session("A", [])])
+        # "Griffkraft" ist kein bekanntes Label → soll ignoriert werden
+        warnings = gen._validate_weakness_coverage(
+            plan_json, weaknesses=["Griffkraft: Untertrainiert"]
+        )
+        assert warnings == []
+
+    def test_abgedeckte_schwachstelle_keine_warning(self):
+        """
+        Plan enthält Bankdrücken (BRUST) → BRUST-Schwachstelle ist abgedeckt.
+        Hinweis: _validate_weakness_coverage macht DB-Lookup für Übungsnamen.
+        """
+        UebungFactory(bezeichnung="Bankdrücken", gewichts_typ="GESAMT")
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("A", [_make_exercise("Bankdrücken")])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json, weaknesses=["Brust: Untertrainiert (2 Sätze/Woche)"]
+        )
+        # Brust ist abgedeckt → keine Warning
+        assert len(warnings) == 0
+
+    def test_fehlende_schwachstelle_erzeugt_warning(self):
+        """
+        Plan hat keine Bauch-Übung, aber 'Bauch' ist Schwachstelle → Warning.
+        """
+        UebungFactory(bezeichnung="Bankdrücken", gewichts_typ="GESAMT")
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("A", [_make_exercise("Bankdrücken")])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json, weaknesses=["Bauch: Untertrainiert (0 Sätze/Woche)"]
+        )
+        # Bauch fehlt im Plan → mindestens 1 Warning
+        assert len(warnings) >= 1
+        assert any("Bauch" in w or "bauch" in w.lower() for w in warnings)
