@@ -289,6 +289,31 @@ class PlanGenerator:
         else:
             print("   ✓ Alle Schwachstellen im Plan abgedeckt")
 
+        # 5d. Plan-Namen Fallback: generische Namen mit Datum ergänzen
+        raw_name = plan_json.get("plan_name", "").strip()
+        generic_names = {
+            "mein trainingsplan", "trainingsplan", "3er split", "3er-split",
+            "push pull legs", "push/pull/legs", "hypertrophie plan", "kraftplan",
+        }
+        if not raw_name or raw_name.lower() in generic_names or len(raw_name) < 10:
+            from datetime import date as _date
+            from .prompt_builder import KEY_TO_DISPLAY
+            # Top-Schwachstelle für Namen
+            weaknesses = analysis_data.get("weaknesses", [])
+            focus = ""
+            if weaknesses and ":" in weaknesses[0]:
+                focus = f" – Fokus {weaknesses[0].split(':')[0].strip()}"
+            profile_label = {"kraft": "Kraft", "hypertrophie": "Hypertrophie", "definition": "Definition"}.get(
+                self.target_profile, self.target_profile.capitalize()
+            )
+            plan_json["plan_name"] = (
+                f"{profile_label}-{self.plan_type.upper().replace('-', '/')}"
+                f"{focus} ({_date.today().strftime('%d.%m.%Y')})"
+            )
+            print(f"   ℹ️  Plan-Name war generisch – ersetzt durch: '{plan_json['plan_name']}'")
+        else:
+            print(f"   ✓ Plan-Name: '{raw_name}'")
+
         # 6. In Django DB speichern
         if save_to_db:
             print("\n💾 SCHRITT 6: Plan in Datenbank speichern")

@@ -323,11 +323,34 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             "definition": "10-15 Wdh, RPE 6.5-8, kürzere Pausen, metabolische Arbeit inkl. Core/Cardio",
         }
 
+        # Für eindeutigen Plan-Namen: Top-Schwachstelle extrahieren
+        top_weakness_label = ""
+        if analysis_data["weaknesses"]:
+            first = analysis_data["weaknesses"][0]
+            if ":" in first:
+                top_weakness_label = first.split(":")[0].strip()
+
+        profile_label = {"kraft": "Kraft", "hypertrophie": "Hypertrophie", "definition": "Definition"}.get(target_profile, target_profile.capitalize())
+        split_label = plan_type.upper().replace("-", "/")
+        from datetime import date as _date
+        today_str = _date.today().strftime("%d.%m.%Y")
+        name_example = f"{profile_label}-{split_label} – Fokus {top_weakness_label} ({today_str})" if top_weakness_label else f"{profile_label}-{split_label} ({today_str})"
+
         periodization_note = {
             "linear": "Linear steigende Intensität pro Block, Deload in Woche 4/8/12 (Volumen 80%, Intensität 90%)",
             "wellenfoermig": "Wellenförmig: Heavy/Medium/Light innerhalb jedes 4-Wochen-Blocks + Deload in Woche 4/8/12",
             "block": "Blockperiodisierung: Block 1 Volumen, Block 2 Kraft, Block 3 Peaking/Definition mit Deload in Woche 4/8/12",
         }.get(periodization, "Linear mit Deload 4/8/12")
+
+        # Frequenz-basierte Split-Empfehlung
+        if freq < 2:
+            freq_split_hint = f"⚠️ {freq}x/Woche: Ganzkörper-Plan empfohlen, kein Split!"
+        elif freq <= 3:
+            freq_split_hint = f"ℹ️ {freq}x/Woche: 2er- oder 3er-Split optimal. PPL nur wenn 3x."
+        elif freq <= 4:
+            freq_split_hint = f"ℹ️ {freq}x/Woche: 3er- oder 4er-Split optimal."
+        else:
+            freq_split_hint = f"ℹ️ {freq}x/Woche: PPL oder 4er-Split optimal."
 
         prompt = f"""**TRAININGSANALYSE**
 
@@ -338,6 +361,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 - Sessions gesamt: {analysis_data['training_stats']['total_sessions']}
 - Pro Woche: {freq}x
 - Durchschnitt: {analysis_data['training_stats']['avg_duration_minutes']} Minuten
+- {freq_split_hint}
 {freq_note}
 
 **Muskelgruppen (Top 5 nach Volumen):**
@@ -375,6 +399,12 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 
 **AUFGABE:**
 {instruction}
+
+⚠️ PLAN-NAME PFLICHT: Der "plan_name" MUSS eindeutig und beschreibend sein!
+- Enthält: Ziel + Split-Typ + Hauptschwachstelle + Datum
+- Beispiel: "{name_example}"
+- KEIN generischer Name wie "Mein Trainingsplan" oder "3er Split"!
+- Jeder generierte Plan muss einen EINZIGARTIGEN Namen haben!
 
 {coach_rules}
 

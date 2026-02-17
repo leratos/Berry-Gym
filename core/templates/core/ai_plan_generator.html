@@ -77,10 +77,29 @@
 
                 <!-- Form -->
                 <form id="aiPlanForm">
+                    <!-- Trainingsfrequenz (neu – steuert Split-Empfehlung) -->
+                    <div class="mb-3">
+                        <label for="trainingFrequency" class="form-label">
+                            <i class="bi bi-calendar-check"></i> Trainingsfrequenz pro Woche
+                        </label>
+                        <select class="form-select bg-dark text-white border-secondary" id="trainingFrequency" required>
+                            <option value="">– Bitte wählen –</option>
+                            <option value="2">2x pro Woche</option>
+                            <option value="3">3x pro Woche</option>
+                            <option value="4">4x pro Woche</option>
+                            <option value="5">5x pro Woche</option>
+                            <option value="6">6x pro Woche</option>
+                        </select>
+                        <div class="form-text" id="freqHint"></div>
+                    </div>
+
                     <!-- Plan-Typ -->
                     <div class="mb-3">
                         <label for="planType" class="form-label">
                             <i class="bi bi-calendar-week"></i> Plan-Typ
+                            <span class="badge bg-info ms-1 text-dark" id="splitSuggestBadge" style="display:none;">
+                                <i class="bi bi-lightbulb"></i> Empfohlen
+                            </span>
                         </label>
                         <select class="form-select bg-dark text-white border-secondary" id="planType" name="plan_type" required>
                             <option value="3er-split" selected>3er-Split (3x/Woche)</option>
@@ -244,6 +263,29 @@
         window.updateSetsValue = function(value) {
             document.getElementById('setsValue').textContent = value;
         };
+
+        // Frequenz → Split-Empfehlung
+        const FREQ_TO_SPLIT = {
+            2: { value: 'ganzkörper', label: 'Ganzkörper empfohlen bei 2x/Woche', hint: 'Bei 2x/Woche ist Ganzkörper die effizienteste Wahl.' },
+            3: { value: '3er-split', label: '3er-Split empfohlen bei 3x/Woche', hint: 'Push/Pull/Legs oder ähnlicher 3er-Split ist ideal.' },
+            4: { value: '4er-split', label: '4er-Split empfohlen bei 4x/Woche', hint: 'Upper/Lower oder 4er-Split für optimale Frequenz.' },
+            5: { value: 'push-pull-legs', label: 'PPL empfohlen bei 5x/Woche', hint: 'Push-Pull-Legs ermöglicht hohe Trainingsfrequenz.' },
+            6: { value: 'push-pull-legs', label: 'PPL empfohlen bei 6x/Woche', hint: 'PPL 2x pro Woche für maximale Frequenz.' },
+        };
+
+        document.getElementById('trainingFrequency').addEventListener('change', function() {
+            const freq = parseInt(this.value);
+            const freqHint = document.getElementById('freqHint');
+            const badge = document.getElementById('splitSuggestBadge');
+            if (!freq) { freqHint.textContent = ''; badge.style.display = 'none'; return; }
+
+            const rec = FREQ_TO_SPLIT[freq];
+            if (rec) {
+                document.getElementById('planType').value = rec.value;
+                freqHint.innerHTML = `<i class="bi bi-lightbulb text-warning"></i> ${rec.hint}`;
+                badge.style.display = 'inline';
+            }
+        });
 
         cancelPreviewBtn.addEventListener('click', function() {
             planPreviewContainer.style.display = 'none';
