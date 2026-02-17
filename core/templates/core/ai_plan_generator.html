@@ -380,7 +380,7 @@
                             plan_data: data.plan_data,
                             saveCachedPlan: true,
                         };
-                        renderPreview(data.plan_data);
+                        renderPreview(data.plan_data, data.coverage_warnings || []);
                     }, 400);
                 } else if (data.success && !data.preview) {
                     // Direktspeicherung (Fallback ohne Preview)
@@ -476,7 +476,7 @@
             errorText.textContent = msg;
         }
 
-        function renderPreview(planData) {
+        function renderPreview(planData, coverageWarnings) {
             if (!planData || !planData.sessions) {
                 planPreviewContent.innerHTML = '<p class="text-muted">Keine Daten verfügbar</p>';
                 return;
@@ -485,6 +485,23 @@
             let html = `<div class="alert alert-info mb-3">
                 <strong>${planData.plan_name || 'Trainingsplan'}</strong>
             </div>`;
+
+            // Coverage-Warnungen anzeigen (nicht abgedeckte Schwachstellen)
+            if (coverageWarnings && coverageWarnings.length > 0) {
+                html += `<div class="alert alert-warning border-warning mb-3">
+                    <h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Schwachstellen nicht abgedeckt</h6>
+                    <ul class="mb-0 ps-3">`;
+                coverageWarnings.forEach(w => {
+                    // Entferne das führende "⚠️ Schwachstelle nicht abgedeckt: " für saubere Darstellung
+                    const text = w.replace(/^⚠️\s*Schwachstelle nicht abgedeckt:\s*/, '');
+                    html += `<li><small>${text}</small></li>`;
+                });
+                html += `</ul>
+                    <small class="text-muted d-block mt-2">
+                        <i class="bi bi-info-circle"></i> Der Plan ist trotzdem verwendbar. Generiere einen neuen Plan oder ergänze diese Übungen manuell.
+                    </small>
+                </div>`;
+            }
 
             if (planData.beschreibung) {
                 html += `<div class="card bg-dark border-secondary mb-3">

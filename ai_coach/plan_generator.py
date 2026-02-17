@@ -276,6 +276,19 @@ class PlanGenerator:
                 "analysis_data": analysis_data,
             }
 
+        # 5b. Schwachstellen-Coverage prüfen (kein Hard-Fail, nur Warnungen)
+        print("\n🎯 SCHRITT 5c: Schwachstellen-Coverage prüfen")
+        print("-" * 60)
+        coverage_warnings = self._validate_weakness_coverage(
+            plan_json, analysis_data.get("weaknesses", [])
+        )
+        if coverage_warnings:
+            print(f"   ⚠️ {len(coverage_warnings)} nicht abgedeckte Schwachstellen:")
+            for w in coverage_warnings:
+                print(f"      {w}")
+        else:
+            print("   ✓ Alle Schwachstellen im Plan abgedeckt")
+
         # 6. In Django DB speichern
         if save_to_db:
             print("\n💾 SCHRITT 6: Plan in Datenbank speichern")
@@ -309,6 +322,7 @@ class PlanGenerator:
             "plan_ids": plan_ids,
             "plan_data": plan_json,
             "analysis_data": analysis_data,
+            "coverage_warnings": coverage_warnings,
         }
 
     def _save_plan_to_db(self, plan_json: dict) -> list:
@@ -693,6 +707,90 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             "volume": f"Starte bei ~{self.sets_per_session} Sätzen pro Tag, erhöhe +1 Satz bei Hauptübung in Woche 2-3/6-7/10-11, Deload-Wochen resetten auf Basisvolumen.",
             "progression": "Steigere erst Wiederholungen innerhalb Range, dann Gewicht. Nach Deload: 1 Woche Re-Akklimatisierung.",
         }
+
+    def _validate_weakness_coverage(
+        self, plan_json: dict, weaknesses: list[str]
+    ) -> list[str]:
+        """
+        Prüft ob die identifizierten Schwachstellen im generierten Plan abgedeckt sind.
+
+        Geht durch alle Übungen im Plan, holt ihre muskelgruppe aus der DB,
+        und gleicht ab ob jede Schwachstellen-Gruppe ≥1 Übung hat.
+
+        Returns:
+            Liste von Warnungen (leer = alles abgedeckt)
+        """
+        if not weaknesses:
+            return []
+
+        # Analyzer-Label → MUSKELGRUPPEN-Key(s) Mapping
+        # Ein Label kann mehrere Keys matchen (z.B. "Rücken" → mehrere Rücken-Keys)
+        LABEL_TO_KEYS: dict[str, list[str]] = {
+            "brust": ["BRUST"],
+            "rücken": ["RUECKEN_LAT", "RUECKEN_TRAPEZ", "RUECKEN_UNTEN", "RUECKEN_OBERER"],
+            "beine": ["BEINE_QUAD", "BEINE_HAM", "PO", "WADEN", "ADDUKTOREN", "ABDUKTOREN", "HUEFTBEUGER"],
+            "schultern": ["SCHULTER_VORN", "SCHULTER_SEIT", "SCHULTER_HINT"],
+            "vordere schulter": ["SCHULTER_VORN"],
+            "seitliche schulter": ["SCHULTER_SEIT"],
+            "hintere schulter": ["SCHULTER_HINT"],
+            "bizeps": ["BIZEPS"],
+            "trizeps": ["TRIZEPS"],
+            "bauch": ["BAUCH"],
+            "unterer rücken": ["RUECKEN_UNTEN"],
+            "waden": ["WADEN"],
+            "unterarme": ["UNTERARME"],
+            "trapez": ["RUECKEN_TRAPEZ"],
+            "oberer rücken": ["RUECKEN_OBERER"],
+            "oberschenkel vorne": ["BEINE_QUAD"],
+            "oberschenkel hinten": ["BEINE_HAM"],
+            "gesäß": ["PO"],
+            "adduktoren": ["ADDUKTOREN"],
+            "abduktoren": ["ABDUKTOREN"],
+            "hüfte": ["HUEFTBEUGER", "ADDUKTOREN", "ABDUKTOREN"],
+            "hüftbeuger": ["HUEFTBEUGER"],
+        }
+
+        # Welche Muskelgruppen-Keys kommen im Plan vor? (1 DB-Query)
+        try:
+            from core.models import Uebung
+
+            all_ex_names = {
+                ex["exercise_name"]
+                for session in plan_json.get("sessions", [])
+                for ex in session.get("exercises", [])
+            }
+            plan_muscle_keys = set(
+                Uebung.objects.filter(bezeichnung__in=all_ex_names)
+                .values_list("muskelgruppe", flat=True)
+                .distinct()
+            )
+        except Exception as e:
+            print(f"   ⚠️ Coverage-Check DB-Fehler: {e}")
+            return []
+
+        warnings = []
+        # Nur echte Muskelgruppen-Schwachstellen, keine "Nicht trainiert seit X Tagen"
+        for weakness in weaknesses:
+            # Format: "Bauch: Untertrainiert (...)" → extrahiere Label vor ":"
+            if ":" not in weakness:
+                continue
+            label = weakness.split(":")[0].strip().lower()
+            target_keys = LABEL_TO_KEYS.get(label)
+            if not target_keys:
+                continue  # Unbekanntes Label – kein False Positive
+
+            covered = any(k in plan_muscle_keys for k in target_keys)
+            if not covered:
+                mg_display = weakness.split(":")[0].strip()
+                warnings.append(
+                    f"⚠️ Schwachstelle nicht abgedeckt: {mg_display} – "
+                    f"keine Übung im Plan trainiert diese Muskelgruppe"
+                )
+                print(f"   ⚠️ Coverage fehlt: {mg_display} (Keys: {target_keys})")
+            else:
+                print(f"   ✓ Coverage OK: {weakness.split(':')[0].strip()}")
+
+        return warnings
 
     def _format_macrocycle_summary(self, plan_json: dict) -> str:
         """Formatiert benutzerfreundliche Makrozyklus-Zusammenfassung mit konkreten Anweisungen"""
