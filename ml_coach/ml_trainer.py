@@ -32,11 +32,32 @@ class MLTrainer:
 
     def get_training_data(self):
         """
-        Sammelt Trainingsdaten für Übung
-        Features: [last_weight, last_reps, days_since_last, rpe, set_number]
-        Target: next_weight
+        Sammelt Trainingsdaten für Übung.
+        Features: [effective_weight, last_reps, days_since_last, rpe, set_number]
+        Target: next_effective_weight
+
+        Bei KOERPERGEWICHT-Übungen wird effective_weight =
+        (user_koerpergewicht * koerpergewicht_faktor) + zusatzgewicht berechnet.
+        Damit lernt das Modell auf sinnvollen Gewichtswerten statt reinen Nullen.
         """
-        from core.models import Satz, Trainingseinheit
+        from core.models import KoerperWerte, Satz
+
+        # Körpergewicht einmalig laden (Fallback 80 kg)
+        kg_eintrag = KoerperWerte.objects.filter(user=self.user).order_by("-datum").first()
+        user_koerpergewicht = (
+            float(kg_eintrag.gewicht) if kg_eintrag and kg_eintrag.gewicht else 80.0
+        )
+
+        is_kg_uebung = self.uebung.gewichts_typ == "KOERPERGEWICHT"
+        kg_faktor = getattr(self.uebung, "koerpergewicht_faktor", 1.0) or 1.0
+
+        def effective_weight(satz):
+            zusatz = float(satz.gewicht)
+            if is_kg_uebung:
+                return (user_koerpergewicht * kg_faktor) + zusatz
+            if self.uebung.gewichts_typ == "PRO_SEITE":
+                return zusatz * 2
+            return zusatz
 
         # Alle Sätze dieser Übung vom User (letzte 6 Monate)
         six_months_ago = timezone.now() - timedelta(days=180)
@@ -57,14 +78,12 @@ class MLTrainer:
         features = []
         targets = []
 
-        # Erstelle Trainingsbeispiele: Nutze Vorherige Sätze um nächstes Gewicht vorherzusagen
         saetze_list = list(saetze)
 
         for i in range(len(saetze_list) - 1):
             current = saetze_list[i]
             next_satz = saetze_list[i + 1]
 
-            # Features vom aktuellen Satz
             days_since_last = 0
             if i > 0:
                 prev_training = saetze_list[i - 1].einheit
@@ -75,7 +94,7 @@ class MLTrainer:
 
             features.append(
                 [
-                    float(current.gewicht),
+                    effective_weight(current),
                     float(current.wiederholungen),
                     float(days_since_last),
                     float(current.rpe or 7.0),  # Default RPE

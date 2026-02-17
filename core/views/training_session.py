@@ -292,15 +292,26 @@ def _calculate_empfohlene_pause(hint: str, plan_pausenzeit) -> int:
 
 
 def _determine_empfehlung_hint(
-    letzter_satz, ziel_wdh_min: int, ziel_wdh_max: int
+    letzter_satz, ziel_wdh_min: int, ziel_wdh_max: int, is_kg_uebung: bool = False
 ) -> tuple[float, int, str]:
     """Bestimmt Empfehlung basierend auf letztem Satz (RPE/Wdh-Progression).
+
+    Bei Körpergewichts-Übungen ohne Zusatzgewicht wird Wdh-Progression
+    empfohlen statt kg-Steigerung (da Gewicht = 0 → +2.5 wäre sinnlos).
 
     Returns:
         (empfohlenes_gewicht, empfohlene_wdh, hint)
     """
     gewicht = float(letzter_satz.gewicht)
     wdh = letzter_satz.wiederholungen
+
+    # Körpergewichts-Übung ohne Zusatzgewicht: nur Wdh-Progression
+    if is_kg_uebung and gewicht == 0:
+        if letzter_satz.wiederholungen >= ziel_wdh_max:
+            return 0.0, ziel_wdh_min, f"{ziel_wdh_max}+ Wdh → nächste Stufe (Zusatzgewicht?)"
+        if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
+            return 0.0, min(wdh + 2, ziel_wdh_max), f"RPE {letzter_satz.rpe} → +2 Wdh"
+        return 0.0, min(wdh + 1, ziel_wdh_max), f"Ziel: +1 Wdh (aktuell {wdh})"
 
     if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
         return gewicht + 2.5, wdh, f"RPE {letzter_satz.rpe} → +2.5kg"
@@ -345,8 +356,16 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
 
     ziel_wdh_min, ziel_wdh_max = _parse_ziel_wdh(ziel_wdh_str)
 
+    from core.models import Uebung as UebungModel
+
+    try:
+        uebung_obj = UebungModel.objects.get(id=uebung_id)
+        is_kg = uebung_obj.gewichts_typ == "KOERPERGEWICHT"
+    except UebungModel.DoesNotExist:
+        is_kg = False
+
     empfohlenes_gewicht, empfohlene_wdh, hint = _determine_empfehlung_hint(
-        letzter_satz, ziel_wdh_min, ziel_wdh_max
+        letzter_satz, ziel_wdh_min, ziel_wdh_max, is_kg_uebung=is_kg
     )
 
     return {
@@ -371,8 +390,13 @@ def _build_empfehlung_from_satz(letzter_satz: Any, plan_pu: Any) -> dict:
             plan_pausenzeit = plan_pu.pausenzeit
 
     ziel_wdh_min, ziel_wdh_max = _parse_ziel_wdh(ziel_wdh_str)
+    is_kg = (
+        plan_pu
+        and hasattr(plan_pu, "uebung")
+        and getattr(plan_pu.uebung, "gewichts_typ", "") == "KOERPERGEWICHT"
+    )
     empfohlenes_gewicht, empfohlene_wdh, hint = _determine_empfehlung_hint(
-        letzter_satz, ziel_wdh_min, ziel_wdh_max
+        letzter_satz, ziel_wdh_min, ziel_wdh_max, is_kg_uebung=bool(is_kg)
     )
     return {
         "gewicht": empfohlenes_gewicht,
@@ -413,10 +437,10 @@ def _get_gewichts_empfehlungen(user, training) -> dict:
         if satz.uebung_id not in letzte_saetze_map:
             letzte_saetze_map[satz.uebung_id] = satz
 
-    # Batch-Query 2: PlanUebungen auf einmal laden (pausenzeit & wdh_ziel)
+    # Batch-Query 2: PlanUebungen auf einmal laden (pausenzeit & wdh_ziel & uebung.gewichts_typ)
     plan_uebungen_map: dict[int, Any] = {}
     if training.plan:
-        for pu in training.plan.uebungen.all():
+        for pu in training.plan.uebungen.select_related("uebung").all():
             plan_uebungen_map[pu.uebung_id] = pu
 
     empfehlungen = {}

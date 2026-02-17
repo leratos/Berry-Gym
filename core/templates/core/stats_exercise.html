@@ -36,6 +36,44 @@
         </div>
     {% else %}
 
+        {% if uebung.gewichts_typ == 'KOERPERGEWICHT' %}
+        {# ── KG-Übungen: effektives Gewicht + Wdh-Rekord anzeigen ── #}
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <div class="card card-stat border-secondary text-center p-3">
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Est. 1RM (effektiv)</small>
+                    <div class="display-6 fw-bold text-success">{{ personal_record }}</div>
+                    <small class="text-muted">kg</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card card-stat border-secondary text-center p-3">
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Bestes Satz-Gewicht</small>
+                    <div class="display-6 fw-bold text-info">{{ best_weight|floatformat:1 }}</div>
+                    <small class="text-muted">kg effektiv</small>
+                </div>
+            </div>
+        </div>
+        {% if best_reps %}
+        <div class="row g-2 mb-4">
+            <div class="col-6">
+                <div class="card card-stat border-info text-center p-3">
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Wiederholungs-Rekord</small>
+                    <div class="display-6 fw-bold text-warning">{{ best_reps }}</div>
+                    <small class="text-muted">Wdh. (ohne Zusatz)</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card card-stat border-secondary text-center p-3">
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Körpergewicht-Faktor</small>
+                    <div class="display-6 fw-bold text-secondary">{{ uebung.koerpergewicht_faktor|floatformat:0 }}%</div>
+                    <small class="text-muted">von {{ user_koerpergewicht|floatformat:1 }} kg KG</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        {# ── Standard-Übungen: 1RM + Schwerster Satz ── #}
         <div class="row g-2 mb-4">
             <div class="col-6">
                 <div class="card card-stat border-secondary text-center p-3">
@@ -52,6 +90,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         {% if avg_rpe %}
         <div class="card card-stat border-secondary shadow-sm mb-4">
@@ -89,12 +128,29 @@
             </div>
         </div>
 
+        {% if show_reps_chart %}
+        <div class="card card-stat border-info shadow-sm mb-4">
+            <div class="card-header border-info">
+                <small class="text-info fw-bold"><i class="bi bi-bar-chart-fill me-1"></i> Wiederholungs-Verlauf (ohne Zusatzgewicht)</small>
+            </div>
+            <div class="card-body">
+                <canvas id="repsChart"></canvas>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="alert alert-dark border-secondary d-flex align-items-center">
             <i class="bi bi-info-circle fs-4 me-3 text-primary"></i>
             <div class="small text-muted">
-                Die Grafik zeigt dein theoretisches Maximum (1RM) basierend auf der Epley-Formel.
-                {% if uebung.gewichts_typ == 'PRO_SEITE' %}
-                <br><strong>Hinweis:</strong> Da dies eine Kurzhantel-Übung ist, wurde das Gewicht für die Rechnung verdoppelt.
+                {% if uebung.gewichts_typ == 'KOERPERGEWICHT' %}
+                    Der 1RM-Wert basiert auf dem effektiven Gewicht:
+                    <strong>{{ user_koerpergewicht|floatformat:1 }} kg KG × {{ uebung.koerpergewicht_faktor|floatformat:2 }} (Faktor) + Zusatzgewicht</strong>.
+                    {% if show_reps_chart %}Das Balkendiagramm zeigt deine Wiederholungs-Progression ohne Zusatzgewicht.{% endif %}
+                {% else %}
+                    Die Grafik zeigt dein theoretisches Maximum (1RM) basierend auf der Epley-Formel.
+                    {% if uebung.gewichts_typ == 'PRO_SEITE' %}
+                    <br><strong>Hinweis:</strong> Da dies eine Kurzhantel-Übung ist, wurde das Gewicht für die Rechnung verdoppelt.
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -107,13 +163,14 @@
 {% block extra_scripts %}
 {% if not no_data %}
 <script>
+    // Chart 1: 1RM / effektives Gewicht Verlauf (immer)
     const ctx = document.getElementById('progressionChart').getContext('2d');
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: {{ labels_json|safe }},
             datasets: [{
-                label: '1RM Stärke (kg)',
+                label: '{% if uebung.gewichts_typ == "KOERPERGEWICHT" %}Est. 1RM effektiv (kg){% else %}1RM Stärke (kg){% endif %}',
                 data: {{ data_json|safe }},
                 borderColor: '#198754',
                 backgroundColor: 'rgba(25, 135, 84, 0.1)',
@@ -140,6 +197,40 @@
             plugins: { legend: { display: false } }
         }
     });
+
+    {% if show_reps_chart %}
+    // Chart 2: Wiederholungs-Verlauf (nur bei KG-Übungen ohne Zusatzgewicht)
+    const ctx2 = document.getElementById('repsChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: {{ wdh_labels_json|safe }},
+            datasets: [{
+                label: 'Wiederholungen (max. pro Training)',
+                data: {{ wdh_data_json|safe }},
+                backgroundColor: 'rgba(13, 202, 240, 0.5)',
+                borderColor: '#0dcaf0',
+                borderWidth: 2,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#495057' },
+                    ticks: { color: '#adb5bd', stepSize: 1 }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#adb5bd' }
+                }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+    {% endif %}
 </script>
 {% endif %}
 {% endblock %}

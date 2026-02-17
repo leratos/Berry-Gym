@@ -56,6 +56,15 @@ class Uebung(models.Model):
     gewichts_typ = models.CharField(
         max_length=20, choices=GEWICHTS_TYP, default="GESAMT", verbose_name="Gewichtsart"
     )
+    koerpergewicht_faktor = models.FloatField(
+        default=1.0,
+        verbose_name="Körpergewicht-Faktor",
+        help_text=(
+            "Anteil des Körpergewichts der bei dieser Übung bewegt wird (0.0–1.0). "
+            "Nur relevant für KOERPERGEWICHT-Übungen. "
+            "Dips/Klimmzüge ≈ 0.70, Crunch ≈ 0.30, volle KG-Übung = 1.0"
+        ),
+    )
     bewegungstyp = models.CharField(
         max_length=20, choices=BEWEGUNGS_TYP, default="ISOLATION", verbose_name="Bewegungsmuster"
     )
