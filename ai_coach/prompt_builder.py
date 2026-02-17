@@ -307,7 +307,10 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 - Wenn Bankdrücken ODER Schulterdrücken im Push-Tag: KEINE Front Raises (Überlastung vordere Schulter)
 - Kreuzheben (conventional): max. 3 Sätze ODER max. 15 Gesamtwiederholungen pro Woche
 - Pro Woche 2-4 Sätze hintere Schulter / Scapula-Hygiene (wähle aus verfügbarer Übungsliste)
-- Kein Lower-Back-Overkill: Vermeide Kreuzheben + RDL + schwere Squats am selben Tag"""
+- Kein Lower-Back-Overkill: Vermeide Kreuzheben + RDL + schwere Squats am selben Tag
+- Pull-Tag: max. 1 horizontales Ruder (Langhantelrudern ODER Einarmiges Kurzhantelrudern – NICHT beides!)
+  → zweite Rückenübung muss vertikaler Zug (Klimmzüge, Latzug) oder Oberer-Rücken-Übung sein
+- Legs-Tag: PFLICHT mind. 1 Wadenübung (z.B. Wadenheben) – Waden sind Teil des Beintags!"""
 
         # Build prompt
         exercises_list = "\n".join([f"  - {ex}" for ex in sorted(available_exercises)])
