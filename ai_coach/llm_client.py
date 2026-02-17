@@ -335,12 +335,15 @@ class LLMClient:
         content = re.sub(r"}\s*{", r"},{", content)
         content = re.sub(r'"\s*{', r'",{', content)
 
-        # 4. Fehlende Kommas nach Zahlwert vor nächstem Key (Gemini 2.5 Flash Bug)
-        #    Beispiel: "rest_seconds": 90\n  "notes": → "rest_seconds": 90,\n  "notes":
+        # 4–7: Fehlende Kommas (Gemini 2.5 Flash Bug) – alle möglichen Wert-Typen abdecken.
+        # Muster: <Wert>\n<Whitespace>"<Key>": → <Wert>,\n<Whitespace>"<Key>":
+        # Fix 4: nach Zahl    "rest_seconds": 90\n  "notes":
         content = re.sub(r"(\d)\n(\s+\")", r"\1,\n\2", content)
-
-        # 5. Fehlende Kommas nach String-Wert vor nächstem Key
-        #    Beispiel: "notes": "text"\n  "sets": → "notes": "text",\n  "sets":
+        # Fix 5: nach true/false/null    "active": true\n  "sets":
+        content = re.sub(r"(true|false|null)\n(\s+\")", r"\1,\n\2", content)
+        # Fix 6: nach schließender ]    "deload_weeks": [4,8]\n  "sessions":
+        content = re.sub(r"(\])\n(\s+\")", r"\1,\n\2", content)
+        # Fix 7: nach String-Wert    "notes": "text"\n  "sets":
         #    Nur wenn die nächste Zeile ein Key ist (enthält ": "), nicht nach { oder [
         content = re.sub(r"(?<=[^{[,])(\")\n(\s+\"[^\"]+\"\s*:)", r'",\n\2', content)
 
