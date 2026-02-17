@@ -2058,6 +2058,108 @@
         "Schrägbank"
       ],
       "beschreibung": "Brust auf Schrägbank. Arme in Y-Form anheben, Schulterblätter nach unten/hinten. Sehr leicht, sauber kontrolliert."
+    },
+    {
+      "id": 112,
+      "bezeichnung": "Brustpresse (Kabelzug)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "SCHULTER_VORN",
+        "TRIZEPS"
+      ],
+      "bewegungstyp": "DRUECKEN",
+      "gewichts_typ": "PRO_SEITE",
+      "koerpergewicht_faktor": 1.0,
+      "standard_beginner": 25.0,
+      "standard_intermediate": 37.5,
+      "standard_advanced": 50.0,
+      "standard_elite": 62.5,
+      "equipment": [
+        "Kabelzug / Latzug"
+      ],
+      "beschreibung": "Kabel auf Brusthoehe. Griffe vor der Brust zusammenfuehren, Arme strecken. Schulterblaetter stabil, kontrolliert zurueck."
+    },
+    {
+      "id": 113,
+      "bezeichnung": "Brustpresse (Maschine)",
+      "muskelgruppe": "BRUST",
+      "hilfsmuskeln": [
+        "SCHULTER_VORN",
+        "TRIZEPS"
+      ],
+      "bewegungstyp": "DRUECKEN",
+      "gewichts_typ": "GESAMT",
+      "koerpergewicht_faktor": 1.0,
+      "standard_beginner": 70.0,
+      "standard_intermediate": 100.0,
+      "standard_advanced": 130.0,
+      "standard_elite": 160.0,
+      "equipment": [
+        "Brustpresse Maschine"
+      ],
+      "beschreibung": "Sitz einstellen, Griffe auf Brusthoehe. Kontrolliert nach vorne druecken, langsam zurueck. Schulterblaetter hinten/unten."
+    },
+    {
+      "id": 114,
+      "bezeichnung": "Farmers Carry",
+      "muskelgruppe": "GANZKOERPER",
+      "hilfsmuskeln": [
+        "UNTERARME",
+        "RUECKEN_TRAPEZ",
+        "BAUCH"
+      ],
+      "bewegungstyp": "ISOLATION",
+      "gewichts_typ": "PRO_SEITE",
+      "koerpergewicht_faktor": 1.0,
+      "standard_beginner": 25.0,
+      "standard_intermediate": 40.0,
+      "standard_advanced": 55.0,
+      "standard_elite": 70.0,
+      "equipment": [
+        "Kettlebell",
+        "Kurzhanteln"
+      ],
+      "beschreibung": "Schwere Gewichte seitlich halten, aufrecht gehen. Schultern zurueck, Bauch fest, gleichmaessige Schritte. Ganzkoerper-Kraft."
+    },
+    {
+      "id": 115,
+      "bezeichnung": "Pull-Through (Kabelzug)",
+      "muskelgruppe": "PO",
+      "hilfsmuskeln": [
+        "BEINE_HAM",
+        "RUECKEN_UNTEN"
+      ],
+      "bewegungstyp": "HEBEN",
+      "gewichts_typ": "GESAMT",
+      "koerpergewicht_faktor": 1.0,
+      "standard_beginner": 30.0,
+      "standard_intermediate": 50.0,
+      "standard_advanced": 70.0,
+      "standard_elite": 90.0,
+      "equipment": [
+        "Kabelzug / Latzug"
+      ],
+      "beschreibung": "Kabel von unten zwischen Beinen. Huefte nach vorn strecken, Po anspannen. Fokus auf Hueftstreckung, nicht Ruecken."
+    },
+    {
+      "id": 116,
+      "bezeichnung": "Seitstütz (Side Plank)",
+      "muskelgruppe": "BAUCH",
+      "hilfsmuskeln": [
+        "ABDUKTOREN",
+        "SCHULTER_SEIT"
+      ],
+      "bewegungstyp": "ISOLATION",
+      "gewichts_typ": "ZEIT",
+      "koerpergewicht_faktor": 0.0,
+      "standard_beginner": null,
+      "standard_intermediate": null,
+      "standard_advanced": null,
+      "standard_elite": null,
+      "equipment": [
+        "Trainingsmatte"
+      ],
+      "beschreibung": "Seitlich auf Unterarm stuetzen, Koerper gerade Linie. Huefte oben halten, Bauch/seitliche Rumpfmuskulatur anspannen. Zeit in Sekunden."
     }
   ]
 }
