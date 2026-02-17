@@ -16,6 +16,7 @@
 - Scientific Foundation: Training science sources & citations
 - Production Ready: Security, monitoring, deployment automation
 - Public Launch: Marketing-ready, professional, scalable
+- **International Expansion:** English i18n (Week 9-10) for global reach
 
 ---
 
@@ -26,10 +27,11 @@
 | Week 1   | Foundation & Safety     | 30%           | ✅ COMPLETE     |
 | Week 2   | Testing & Views         | 40%           | ✅ COMPLETE     |
 | Week 3   | Refactoring & Quality   | 50%           | ✅ COMPLETE     |
-| Week 4   | Performance             | 60%           | 🔄 IN PROGRESS  |
-| Week 5-6 | Advanced & Polish       | 75%           | ⏳ Planned      |
+| Week 4   | Performance             | 60%           | ✅ COMPLETE     |
+| Week 5-6 | Advanced & Polish       | 75%           | ✅ COMPLETE     |
 | Week 7   | Pre-Launch Prep         | 80%+          | ⏳ Planned      |
-| Week 8   | 🚀 PUBLIC LAUNCH        | —             | 🎯 Goal         |
+| Week 8   | 🚀 PUBLIC LAUNCH (DE)   | —             | 🎯 Goal         |
+| Week 9-10| Internationalization    | —             | 🌍 Expansion    |
 
 ---
 
@@ -215,7 +217,273 @@ Trainingshäufigkeit, Erfahrung oder Zielen des Users.
 
 ---
 
+## 🌍 WEEK 9-10 – INTERNATIONALIZATION (ENGLISH LAUNCH)
+
+**Ziel:** App auf Englisch verfügbar machen, internationale Expansion
+
+### Warum Englisch?
+- **Größere Zielgruppe:** 500M+ potenzielle User statt 80M (DACH)
+- **Open Source Community:** 5-10x mehr Contributors aus der ganzen Welt
+- **Marketing:** "AI-powered fitness tracker" → bessere Suchbarkeit & Reichweite
+- **Bereits vorbereitet:** Code/Comments auf Englisch, Django i18n eingebaut
+
+---
+
+### Phase 7.1 – i18n Framework Setup
+
+**Aufwand:** 2-4 Stunden
+
+**Tasks:**
+- Django i18n aktivieren in `config/settings.py`:
+  - `LANGUAGE_CODE = 'de'` (Default)
+  - `LANGUAGES = [('de', 'Deutsch'), ('en', 'English')]`
+  - `USE_I18N = True`
+  - `LOCALE_PATHS = [BASE_DIR / 'locale']`
+- `django.middleware.locale.LocaleMiddleware` einrichten
+- Language-Switcher UI in `base.html` (Dropdown in Navigation)
+- URL-Konfiguration für Sprachwechsel (`/i18n/setlang/`)
+
+**Akzeptanzkriterien:**
+- User kann zwischen DE/EN wechseln (Session-basiert)
+- Sprachwahl bleibt erhalten beim Seitenwechsel
+- Default-Sprache ist Deutsch
+
+**Betroffene Dateien:**
+- `config/settings.py`
+- `config/urls.py`
+- `core/templates/base.html`
+
+---
+
+### Phase 7.2 – Template Lokalisierung
+
+**Aufwand:** 8-12 Stunden
+
+**Tasks:**
+- `{% load i18n %}` in allen Templates (55+ Dateien)
+- `{% trans "Text" %}` für statische UI-Strings
+- `{% blocktrans %}` für dynamische Texte mit Variablen
+- `.po` Dateien erstellen:
+  - `django-admin makemessages -l de`
+  - `django-admin makemessages -l en`
+- Übersetzungen in `.po` Dateien eintragen (~200-300 Strings)
+- `django-admin compilemessages` ausführen
+
+**Kritische Bereiche:**
+- Navigation & Buttons (Dashboard, Training, Pläne, etc.)
+- Form-Labels & Validierungs-Fehler
+- Success/Error-Messages (Toasts)
+- Modal-Dialoge (Bestätigungen, Warnungen)
+- Chart-Labels & Statistik-Überschriften
+
+**Akzeptanzkriterien:**
+- Alle UI-Texte sind übersetzt (0 hardcoded deutsche Strings)
+- Umlaute funktionieren korrekt (ä, ö, ü, ß)
+- Pluralisierung funktioniert (`1 Satz` vs. `2 Sätze` / `1 set` vs. `2 sets`)
+
+**Betroffene Dateien:**
+- `core/templates/` (alle 55+ Templates)
+- `locale/de/LC_MESSAGES/django.po`
+- `locale/en/LC_MESSAGES/django.po`
+
+---
+
+### Phase 7.3 – Model & Choice Lokalisierung
+
+**Aufwand:** 4-6 Stunden
+
+**Tasks:**
+- `gettext_lazy()` für Model-Choices:
+  - `MUSKELGRUPPEN` → "Brust" / "Chest"
+  - `BEWEGUNGS_TYP` → "Compound" / "Isolation"
+  - `EQUIPMENT_CHOICES` → "Langhantel" / "Barbell"
+  - `GEWICHTS_TYP` → "Gesamt" / "Total"
+- Model `verbose_name` & `verbose_name_plural` übersetzen
+- Form-Labels & Help-Texts in `forms.py`
+- Admin-Interface Texte (falls relevant)
+
+**Akzeptanzkriterien:**
+- Alle Dropdowns zeigen übersetzte Werte
+- Admin bleibt auf Deutsch (oder auch übersetzt)
+- Datenbank-Werte bleiben unverändert (nur Display übersetzt)
+
+**Betroffene Dateien:**
+- `core/models/constants.py`
+- `core/models/*.py` (alle Model-Klassen)
+- `core/forms.py` (falls vorhanden)
+
+---
+
+### Phase 7.4 – Content Lokalisierung
+
+**Aufwand:** 6-10 Stunden
+
+**Tasks:**
+- **Übungs-Beschreibungen** (113 Übungen):
+  - Fitness-Fachbegriffe korrekt übersetzen
+  - z.B. "Schulterblätter zusammenziehen" → "Retract shoulder blades"
+  - Anatomische Begriffe: "Brust" → "Chest", "Rücken" → "Back"
+- **README_EN.md** erstellen:
+  - Feature-Übersicht
+  - Installation (englisch)
+  - Usage Examples
+- **Scientific Sources:**
+  - Meist schon auf Englisch (DOI, Journals)
+  - `TrainingSource.key_findings` übersetzen (falls auf Deutsch)
+- **Email-Templates** (falls vorhanden):
+  - Welcome Email, Password Reset, etc.
+
+**Akzeptanzkriterien:**
+- Übungs-Beschreibungen sind korrekt & verständlich
+- README_EN.md ist vollständig & professionell
+- Keine Google-Translate-Qualität (manuelle Review!)
+
+**Betroffene Dateien:**
+- `core/fixtures/initial_exercises.json` (Update mit EN-Beschreibungen)
+- `README_EN.md` (neu)
+- `core/models/training_source.py` (ggf. Übersetzungen)
+
+---
+
+### Phase 7.5 – AI Coach Lokalisierung
+
+**Aufwand:** 4-6 Stunden (optional in Phase 7, kann auch später)
+
+**Tasks:**
+- `prompt_builder.py` → Sprach-Parameter hinzufügen
+- Prompts mit `{% trans %}` oder Template-basiert
+- Plan-Generator UI: Sprache aus User-Einstellung
+- Live Guidance: Antworten in gewählter Sprache
+
+**Herausforderung:**
+- Gemini 2.5 Flash kann Deutsch & Englisch
+- Prompt-Qualität in Englisch testen
+
+**Akzeptanzkriterien:**
+- AI Coach antwortet in gewählter Sprache
+- Prompt-Qualität ist vergleichbar (DE vs. EN)
+
+**Betroffene Dateien:**
+- `ai_coach/prompt_builder.py`
+- `ai_coach/plan_generator.py`
+- `core/views/ai_recommendations.py`
+
+---
+
+### Phase 7.6 – Testing & QA
+
+**Aufwand:** 4-6 Stunden
+
+**Tasks:**
+- **Language-Switch Tests:**
+  - Sprachwechsel funktioniert auf allen Seiten
+  - Session bleibt konsistent
+- **Übersetzungs-Coverage:**
+  - Scan nach unübersetzten Strings (`grep -r "{% trans" templates/`)
+  - Prüfen: Fehlen Strings in `.po` Dateien?
+- **PDF-Report auf Englisch:**
+  - Labels, Chart-Titel, Body-Map-Beschreibungen
+- **Edge Cases:**
+  - Datum/Zeit-Formate (DE: dd.mm.yyyy, EN: mm/dd/yyyy)
+  - Zahlen-Formatierung (DE: 1.234,56 / EN: 1,234.56)
+
+**Akzeptanzkriterien:**
+- 0 hardcoded Strings auf produktiven Seiten
+- PDF-Report funktioniert in beiden Sprachen
+- Keine Layout-Breaks durch längere englische Texte
+
+**Betroffene Dateien:**
+- `core/tests/test_i18n.py` (neu)
+- `core/views/export.py` (PDF-Generierung)
+
+---
+
+### Phase 7.7 – Documentation & Launch
+
+**Aufwand:** 2-3 Stunden
+
+**Tasks:**
+- **README_EN.md** finalisieren
+- **CONTRIBUTING_EN.md** (optional, wenn viele Contributors)
+- **GitHub:** Language-Badges hinzufügen
+  - `![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN-blue)`
+- **Deployment:**
+  - `django-admin compilemessages` auf Server
+  - `.mo` Dateien committen oder Server-seitig generieren
+- **Announcement:**
+  - Reddit, HackerNews, ProductHunt
+  - "AI-powered fitness tracker with local LLM support - now in English!"
+
+**Akzeptanzkriterien:**
+- README_EN.md ist vollständig & professionell
+- GitHub-Seite zeigt beide Sprachen
+- Deployment-Prozess funktioniert
+
+**Betroffene Dateien:**
+- `README_EN.md` (neu)
+- `CONTRIBUTING_EN.md` (optional)
+- `.github/workflows/ci.yml` (ggf. `compilemessages` Step)
+
+---
+
+## 📊 PHASE 7 - AUFWANDSTABELLE
+
+| Task                      | Aufwand    | Priorität | Status    |
+|---------------------------|------------|-----------|-----------|
+| 7.1 - Framework Setup     | 2-4h       | Hoch      | ⏳ Planned |
+| 7.2 - Template i18n       | 8-12h      | Hoch      | ⏳ Planned |
+| 7.3 - Model Choices       | 4-6h       | Mittel    | ⏳ Planned |
+| 7.4 - Content (Übungen)   | 6-10h      | Hoch      | ⏳ Planned |
+| 7.5 - AI Coach (optional) | 4-6h       | Niedrig   | ⏳ Planned |
+| 7.6 - Testing & QA        | 4-6h       | Hoch      | ⏳ Planned |
+| 7.7 - Documentation       | 2-3h       | Mittel    | ⏳ Planned |
+| **TOTAL**                 | **30-47h** | **≈1-1.5 Wochen** | |
+
+---
+
+## 🎯 PHASE 7 - SUCCESS CRITERIA
+
+**Must-Have:**
+- ✅ UI vollständig auf Englisch (Templates, Forms, Messages)
+- ✅ 113 Übungs-Beschreibungen übersetzt
+- ✅ README_EN.md vorhanden & vollständig
+- ✅ Language-Switcher funktioniert
+- ✅ Tests grün in beiden Sprachen
+
+**Nice-to-Have:**
+- 🔄 AI Coach auf Englisch (kann auch später)
+- 🔄 URL-i18n (`/en/dashboard`, `/de/dashboard`)
+- 🔄 Datum/Zeit-Formate lokalisiert
+
+**Optional (Post-Launch):**
+- ⏳ Weitere Sprachen (ES, FR, IT, PT)
+- ⏳ Community-Übersetzungen (Crowdin)
+- ⏳ RTL-Support (AR, HE)
+
+---
+
+## 🚀 PHASE 7 - LAUNCH STRATEGY
+
+**Pre-Launch (T-7):**
+- Alle Übersetzungen reviewed (kein Google Translate!)
+- Native Speaker Feedback eingeholt
+- Screenshots für README_EN.md erstellt
+
+**Launch Day (T-0):**
+- README_EN.md live
+- GitHub Language-Badge
+- Social Media Announcement (Reddit, HN, ProductHunt)
+
+**Post-Launch (T+7):**
+- User-Feedback sammeln (falsche Übersetzungen?)
+- Issue-Labels: `i18n`, `translation`
+- Community-Übersetzungen erwägen
+
+---
+
 ## 📊 SUCCESS METRICS
+
+**Technical Quality (Week 1-7):**
 
 | Metrik          | Ziel      |
 |-----------------|-----------|
@@ -224,6 +492,16 @@ Trainingshäufigkeit, Erfahrung oder Zielen des Users.
 | P95 Response    | <500ms    |
 | Error Rate      | <0.1%     |
 | Uptime          | 99.9%     |
+
+**International Expansion (Week 9-10):**
+
+| Metrik                    | Ziel      |
+|---------------------------|-----------|
+| Translation Coverage      | 100%      |
+| Übungen übersetzt (EN)    | 113/113   |
+| Native Speaker Review     | ✓         |
+| README Languages          | DE + EN   |
+| GitHub Stars (6 Monate)   | 100+      |
 
 ---
 
@@ -238,5 +516,5 @@ Trainingshäufigkeit, Erfahrung oder Zielen des Users.
 
 ---
 
-**Last Updated:** 2026-02-15
-**Nächste Phase:** 4.2 – Database Indexes
+**Last Updated:** 2026-02-17
+**Nächste Phase:** 5.4 – Charts & Statistics Testing
