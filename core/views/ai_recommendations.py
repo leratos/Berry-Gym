@@ -920,6 +920,7 @@ def generate_plan_stream_api(request: HttpRequest) -> HttpResponse:
                         "success": True,
                         "preview": True,
                         "plan_data": result.get("plan_data", {}),
+                        "coverage_warnings": result.get("coverage_warnings", []),
                         "cost": 0.003 if use_openrouter else 0.0,
                         "model": "Gemini 2.5 Flash" if use_openrouter else "Ollama",
                     }
