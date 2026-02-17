@@ -513,7 +513,6 @@ Fitness/
 ├── .gitignore                  # Git Ignore Rules
 ├── requirements.txt            # Python Dependencies
 ├── manage.py                   # Django CLI
-├── ROADMAP.md                  # Feature Roadmap
 ├── CONTRIBUTING.md             # Contribution Guidelines
 ├── LICENSE                     # MIT License
 └── README.md                   # Diese Datei
@@ -617,7 +616,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
   - Chart-Datenkorrektheit & Edge Cases
   - Robuste Visualisierungen ohne Crashes
 
-### Geplant (siehe ROADMAP.md)
+### Geplant
 - 🔜 Phase 5.5 – API Endpoints Testing
 - 🔜 Phase 5.6 – Helper/Utils Testing
 - 🔜 Onboarding-Tour & Feature-Discovery
@@ -745,7 +744,7 @@ Dieses Projekt ist unter der [MIT License](LICENSE) lizenziert.
 ## 📧 Support
 
 - **Issues:** [GitHub Issues](https://github.com/leratos/Berry-Gym/issues)
-- **Dokumentation:** [ROADMAP.md](ROADMAP.md), [AI_COACH_CONCEPT.md](docs/AI_COACH_CONCEPT.md), [Docs Index](docs/README.md), [Load Testing](docs/LOAD_TESTING.md)
+- **Dokumentation:** [Project Roadmap](docs/PROJECT_ROADMAP.md), [AI_COACH_CONCEPT.md](docs/AI_COACH_CONCEPT.md), [Docs Index](docs/README.md), [Load Testing](docs/LOAD_TESTING.md)
 - **Deployment:** [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ---
