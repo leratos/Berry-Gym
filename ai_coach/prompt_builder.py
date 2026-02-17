@@ -2,13 +2,141 @@
 Prompt Builder - Erstellt strukturierte Prompts für LLM
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+
+# Mapping: Analyzer-Label (lowercase) → DB-Muskelgruppen-Keys
+# Gleiche Quelle wie plan_generator._validate_weakness_coverage
+WEAKNESS_LABEL_TO_KEYS: Dict[str, List[str]] = {
+    "brust": ["BRUST"],
+    "rücken": ["RUECKEN_LAT", "RUECKEN_TRAPEZ", "RUECKEN_UNTEN", "RUECKEN_OBERER"],
+    "beine": ["BEINE_QUAD", "BEINE_HAM", "PO", "WADEN", "ADDUKTOREN", "ABDUKTOREN", "HUEFTBEUGER"],
+    "schultern": ["SCHULTER_VORN", "SCHULTER_SEIT", "SCHULTER_HINT"],
+    "vordere schulter": ["SCHULTER_VORN"],
+    "seitliche schulter": ["SCHULTER_SEIT"],
+    "hintere schulter": ["SCHULTER_HINT"],
+    "bizeps": ["BIZEPS"],
+    "trizeps": ["TRIZEPS"],
+    "bauch": ["BAUCH"],
+    "unterer rücken": ["RUECKEN_UNTEN"],
+    "waden": ["WADEN"],
+    "unterarme": ["UNTERARME"],
+    "trapez": ["RUECKEN_TRAPEZ"],
+    "oberer rücken": ["RUECKEN_OBERER"],
+    "oberschenkel vorne": ["BEINE_QUAD"],
+    "oberschenkel hinten": ["BEINE_HAM"],
+    "gesäß": ["PO"],
+    "adduktoren": ["ADDUKTOREN"],
+    "abduktoren": ["ABDUKTOREN"],
+    "hüfte": ["HUEFTBEUGER", "ADDUKTOREN", "ABDUKTOREN"],
+    "hüftbeuger": ["HUEFTBEUGER"],
+}
+
+# Lesbare Namen für DB-Keys (für Prompt-Ausgabe)
+KEY_TO_DISPLAY: Dict[str, str] = {
+    "BAUCH": "Bauch / Core",
+    "ADDUKTOREN": "Adduktoren (Oberschenkel Innen)",
+    "ABDUKTOREN": "Abduktoren (Oberschenkel Außen)",
+    "HUEFTBEUGER": "Hüftbeuger",
+    "BEINE_QUAD": "Quadrizeps",
+    "BEINE_HAM": "Hamstrings",
+    "PO": "Gesäß",
+    "WADEN": "Waden",
+    "BRUST": "Brust",
+    "RUECKEN_LAT": "Latissimus",
+    "RUECKEN_OBERER": "Oberer Rücken",
+    "RUECKEN_TRAPEZ": "Trapez",
+    "RUECKEN_UNTEN": "Unterer Rücken",
+    "SCHULTER_VORN": "Vordere Schulter",
+    "SCHULTER_SEIT": "Seitliche Schulter",
+    "SCHULTER_HINT": "Hintere Schulter",
+    "BIZEPS": "Bizeps",
+    "TRIZEPS": "Trizeps",
+    "UNTERARME": "Unterarme",
+}
 
 
 class PromptBuilder:
 
     def __init__(self):
         self.system_prompt = self._build_system_prompt()
+
+    def _get_exercises_for_keys(
+        self, muscle_keys: List[str], available_exercises: List[str]
+    ) -> List[str]:
+        """Gibt verfügbare Übungen zurück die eine der angegebenen Muskelgruppen trainieren."""
+        try:
+            from core.models import Uebung
+            matches = list(
+                Uebung.objects.filter(
+                    muskelgruppe__in=muscle_keys,
+                    bezeichnung__in=available_exercises,
+                ).values_list("bezeichnung", flat=True).order_by("bezeichnung")
+            )
+            return matches
+        except Exception:
+            return []
+
+    def _build_weakness_block(
+        self, weaknesses: List[str], available_exercises: List[str]
+    ) -> Optional[str]:
+        """
+        Baut einen zwingenden Pflicht-Block für untertrainierte Muskelgruppen.
+        Enthält konkrete Übungen aus der verfügbaren Liste.
+        Gibt None zurück wenn keine relevanten Schwachstellen gefunden.
+        """
+        if not weaknesses:
+            return None
+
+        mandatory_items = []
+
+        for weakness in weaknesses:
+            # Format: "Bauch: Untertrainiert (nur X eff. Wdh vs. Ø Y)"
+            # Nur Muskelgruppen-Schwachstellen, keine "Nicht trainiert seit X Tagen"
+            if ":" not in weakness or "Untertrainiert" not in weakness:
+                continue
+
+            label = weakness.split(":")[0].strip()
+            label_lower = label.lower()
+            keys = WEAKNESS_LABEL_TO_KEYS.get(label_lower)
+            if not keys:
+                continue
+
+            exercises_for_group = self._get_exercises_for_keys(keys, available_exercises)
+            display_name = KEY_TO_DISPLAY.get(keys[0], label)
+
+            # Zeige max. 5 Übungen als konkrete Auswahl
+            ex_list = exercises_for_group[:5]
+            if not ex_list:
+                # Kein passendes Equipment → trotzdem Hinweis, aber ohne konkrete Übungen
+                mandatory_items.append(
+                    f"❗ {display_name.upper()} – PFLICHT: mind. 1 Übung\n"
+                    f"   (Keine passende Übung in verfügbarer Equipment-Liste – "
+                    f"trotzdem versuchen!)"
+                )
+            else:
+                ex_lines = "\n".join(f'   → "{ex}"' for ex in ex_list)
+                mandatory_items.append(
+                    f"❗ {display_name.upper()} – PFLICHT: mind. 1 Übung aus dieser Liste:\n"
+                    f"{ex_lines}"
+                )
+
+        if not mandatory_items:
+            return None
+
+        items_str = "\n\n".join(mandatory_items)
+        return f"""🚨🚨🚨 PFLICHT-ANFORDERUNG #0 – HÖCHSTE PRIORITÄT 🚨🚨🚨
+
+Folgende Muskelgruppen sind CHRONISCH UNTERTRAINIERT.
+Sie MÜSSEN im fertigen Plan mit mind. 1 Übung vertreten sein.
+Diese Anforderung hat VORRANG vor allen anderen strukturellen Regeln!
+
+{items_str}
+
+⛔ FEHLER wenn diese Muskelgruppen im Plan FEHLEN.
+✅ Notfalls Sätze von anderen Gruppen KÜRZEN um Platz zu schaffen.
+⚠️ ADDUKTOREN ≠ ABDUKTOREN: Adduktoren = Innenseite, Abduktoren = Außenseite!
+"""
 
     def _build_system_prompt(self) -> str:
         return """Du bist ein professioneller Trainingsplan-Generator.
@@ -150,7 +278,13 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             [f"{mg} ({int(data['effective_reps'])} eff.Wdh)" for mg, data in mg_sorted]
         )
 
-        # Schwachstellen
+        # Schwachstellen-Pflicht-Block (höchste Priorität)
+        weakness_block = self._build_weakness_block(
+            analysis_data["weaknesses"][:5], available_exercises
+        )
+        weakness_section = (weakness_block + "\n\n") if weakness_block else ""
+
+        # Schwachstellen für allgemeine Info-Anzeige (kompakt)
         weaknesses_str = "\n".join([f"  - {w}" for w in analysis_data["weaknesses"][:5]])
 
         # Few-shot examples mit EXAKTEN Namen aus der Liste
@@ -208,7 +342,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 - Push: {balance['push_volume']} | Pull: {balance['pull_volume']}
 - Ratio: {balance['ratio']} - {balance_note}
 
-**Schwachstellen:**
+**Schwachstellen (alle müssen abgedeckt werden – siehe Pflicht-Block unten):**
 {weaknesses_str}
 
 ═══════════════════════════════════════════════════════════
@@ -228,12 +362,7 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 
 ═══════════════════════════════════════════════════════════
 
-Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
-→ Prüfe ob GENAU dieser Text in der Liste oben steht!
-→ Falls NEIN: Verwende eine andere ähnliche Übung aus der Liste!
-→ Falls JA: Kopiere den Namen EXAKT!
-
-**Trainingsprogrammierung Defaults:**
+{weakness_section}**Trainingsprogrammierung Defaults:**
 - Makrozyklus: 12 Wochen, Periodisierung: {periodization_note}
 - Deload: Wochen 4, 8, 12 → Volumen 80%, Intensität ~90% der Vorwoche
 - Zielprofil: {target_profile} → {profile_guides.get(target_profile, profile_guides['hypertrophie'])}
@@ -245,10 +374,10 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
 {coach_rules}
 
 **Anforderungen:**
+0. 🚨 PFLICHT-SCHWACHSTELLEN: Alle im Pflicht-Block #0 genannten Muskelgruppen MÜSSEN mit mind. 1 Übung im Plan sein! Kein optionaler Hinweis – HARTE REGEL!
 1. ** VERWENDE NUR ÜBUNGEN AUS DER OBIGEN LISTE** - keine anderen!
-2. Berücksichtige die Schwachstellen und priorisiere untertrainierte Muskelgruppen
-3. Achte auf Push/Pull Balance (bei Unbalance gegensteuern)
-4. SATZ-BUDGET: {min_sets}-{max_sets} Sätze pro Trainingstag (ca. 1 Stunde Training)
+2. Push/Pull Balance beachten (bei Unbalance gegensteuern)
+3. SATZ-BUDGET: {min_sets}-{max_sets} Sätze pro Trainingstag (ca. 1 Stunde Training)
    - Nutze das KOMPLETTE Satz-Budget aus (nicht weniger!)
    - Verteile die Sätze auf 5-6 Übungen
    - Beispiel Push-Tag (18 Sätze):
@@ -259,15 +388,15 @@ Wenn du z.B. "Incline Dumbbell Press (Kurzhantel)" verwenden willst:
      * Trizeps Übung 1: 3 Sätze
      * Trizeps Übung 2: 2 Sätze
      = 18 Sätze total, 6 Übungen
-5. ** MINDESTENS 2 ÜBUNGEN PRO HAUPTMUSKELGRUPPE**:
+4. ** MINDESTENS 2 ÜBUNGEN PRO HAUPTMUSKELGRUPPE**:
    - Push-Tag: 2x Brust, 2x Schultern, 2x Trizeps
    - Pull-Tag: 2x Rücken, 2x Latissimus, 1-2x Bizeps
    - Leg-Tag: 2x Quadrizeps, 2x Hamstrings, 1x Waden/Po
    - Verschiedene Winkel/Bewegungen für vollständige Entwicklung
-6. Compound Movements (Langhantel-Kniebeuge, Bankdrücken, Kreuzheben) priorisieren als erste Übung
-7. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
-8. ** DUPLIKATE**: ❌ KEINE doppelten Übungen INNERHALB einer Session! ✅ ABER gleiche Übungen in verschiedenen Sessions sind ERWÜNSCHT (für Progression über 4 Wochen)!
-9. Periodisierung: Fülle periodization, deload_weeks, macrocycle, microcycle_template, progression_strategy gemäß Defaults oben aus (12 Wochen!)
+5. Compound Movements (Langhantel-Kniebeuge, Bankdrücken, Kreuzheben) priorisieren als erste Übung
+6. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
+7. ** DUPLIKATE**: ❌ KEINE doppelten Übungen INNERHALB einer Session! ✅ ABER gleiche Übungen in verschiedenen Sessions sind ERWÜNSCHT!
+8. Periodisierung: Fülle periodization, deload_weeks, macrocycle, microcycle_template, progression_strategy gemäß Defaults oben aus (12 Wochen!)
 
 Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
 
