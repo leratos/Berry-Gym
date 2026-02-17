@@ -53,6 +53,7 @@ matplotlib==3.10.8
 # AI Coach - LLM Integration
 # ============================================
 ollama==0.6.1
+json-repair==0.58.0
 openai==2.15.0
 keyring==25.7.0
 

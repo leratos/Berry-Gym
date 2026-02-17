@@ -322,7 +322,7 @@ class LLMClient:
         if last_brace > 0 and last_brace < len(content) - 1:
             content = content[: last_brace + 1]
 
-        # Fix für häufige JSON-Fehler
+        # Pre-Processing: häufige, sicher reparierbare Muster vorab fixen
         import re
 
         # 1. Unquotete Ranges: 8-12 → "8-12" (nach : und vor , oder } oder ])
@@ -333,45 +333,47 @@ class LLMClient:
 
         # 3. Fehlende Kommas zwischen Objekten
         content = re.sub(r"}\s*{", r"},{", content)
-        content = re.sub(r'"\s*{', r'",{', content)
 
-        # 4–7: Fehlende Kommas (Gemini 2.5 Flash Bug) – alle möglichen Wert-Typen abdecken.
-        # Muster: <Wert>\n<Whitespace>"<Key>": → <Wert>,\n<Whitespace>"<Key>":
-        # Fix 4: nach Zahl    "rest_seconds": 90\n  "notes":
-        content = re.sub(r"(\d)\n(\s+\")", r"\1,\n\2", content)
-        # Fix 5: nach true/false/null    "active": true\n  "sets":
-        content = re.sub(r"(true|false|null)\n(\s+\")", r"\1,\n\2", content)
-        # Fix 6: nach schließender ]    "deload_weeks": [4,8]\n  "sessions":
-        content = re.sub(r"(\])\n(\s+\")", r"\1,\n\2", content)
-        # Fix 7: nach String-Wert    "notes": "text"\n  "sets":
-        #    Nur wenn die nächste Zeile ein Key ist (enthält ": "), nicht nach { oder [
-        content = re.sub(r"(?<=[^{[,])(\")\n(\s+\"[^\"]+\"\s*:)", r'",\n\2', content)
-
-        # Parse JSON
+        # Versuch 1: Standard json.loads (schnell, kein Overhead)
         try:
             result = json.loads(content)
             if not isinstance(result, dict):
                 raise ValueError(f"JSON ist kein Dict sondern {type(result)}")
             return result
         except json.JSONDecodeError as e:
-            # Zeige wo genau der Fehler ist
+            # Zeige wo genau der Fehler ist – hilfreich für Debugging
             error_line = e.lineno
             error_col = e.colno
             lines = content.split("\n")
-
-            print(f"\n❌ JSON Parse Error: {e.msg}")
-            print(f"   Zeile {error_line}, Spalte {error_col}")
+            print(
+                f"\n⚠️  json.loads fehlgeschlagen: {e.msg} (Zeile {error_line}, Spalte {error_col})"
+            )
             if error_line <= len(lines):
-                error_line_content = lines[error_line - 1]
-                print(f"   Problemzeile: {error_line_content[:80]}")
-                if error_col > 0:
-                    print(f"   Position:     {' ' * (error_col - 1)}^")
+                print(f"   Problemzeile: {lines[error_line - 1][:120]}")
+            # Kontext um die Fehlerposition (50 Zeichen davor/danach)
+            char_pos = e.pos
+            snippet = content[max(0, char_pos - 60) : char_pos + 60]
+            print(f"   Kontext:      ...{snippet!r}...")
+            print("   → Versuche json-repair...")
 
-            print(f"\n   Content Länge: {len(original_content)} Zeichen")
-            print("   Erste 300 Zeichen nach Extraktion:")
-            print(content[:300])
+        # Versuch 2: json-repair – repariert fehlende Kommas, trailing commas, etc.
+        try:
+            from json_repair import repair_json
 
-            raise ValueError(f"Konnte JSON nicht parsen: {e}")
+            repaired = repair_json(content, return_objects=True)
+            if isinstance(repaired, dict) and repaired:
+                print("   ✓ json-repair erfolgreich")
+                return repaired
+            raise ValueError(f"json-repair lieferte kein gültiges Dict: {type(repaired)}")
+        except ImportError:
+            print("   ⚠️  json-repair nicht installiert – nur Regex-Fixes verfügbar")
+        except Exception as repair_err:
+            print(f"   ❌ json-repair fehlgeschlagen: {repair_err}")
+
+        print(f"\n   Content Länge: {len(original_content)} Zeichen")
+        print("   Erste 300 Zeichen nach Extraktion:")
+        print(content[:300])
+        raise ValueError("Konnte JSON nicht parsen (auch json-repair fehlgeschlagen)")
 
     def validate_plan(
         self, plan_json: Dict[str, Any], available_exercises: List[str]
