@@ -100,11 +100,14 @@
                     <h6 class="mb-0">Schnellauswahl</h6>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex flex-wrap gap-2">
+                    <div class="d-flex flex-wrap gap-2 mb-3">
                         {% for code, label in muskelgruppen %}
                         <a href="?muskelgruppe={{ code }}" class="btn btn-sm btn-outline-primary">{{ label }}</a>
                         {% endfor %}
                     </div>
+                    <a href="{% url 'uebungen_auswahl' %}" class="btn btn-primary w-100">
+                        <i class="bi bi-list-ul"></i> Alle Übungen anzeigen
+                    </a>
                 </div>
             </div>
         </div>
