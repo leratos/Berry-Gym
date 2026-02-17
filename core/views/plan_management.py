@@ -586,6 +586,18 @@ def _apply_gruppe_selection(
             if str(profile.active_plan_group) != gruppe_id:
                 profile.cycle_start_date = None
             profile.active_plan_group = gruppe_id
+
+            # Optional: laufende Woche angeben → cycle_start_date rückwärts berechnen
+            try:
+                current_week = int(request.POST.get("current_week", "0"))
+                if 1 <= current_week <= cycle_length:
+                    from datetime import timedelta
+                    from django.utils import timezone
+                    weeks_back = current_week - 1
+                    profile.cycle_start_date = (timezone.now() - timedelta(weeks=weeks_back)).date()
+            except (ValueError, TypeError):
+                pass
+
             profile.save()
             gruppe_name = (
                 Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).first().gruppe_name
