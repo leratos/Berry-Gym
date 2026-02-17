@@ -4,7 +4,6 @@ Prompt Builder - Erstellt strukturierte Prompts für LLM
 
 from typing import Any, Dict, List, Optional
 
-
 # Mapping: Analyzer-Label (lowercase) → DB-Muskelgruppen-Keys
 # Gleiche Quelle wie plan_generator._validate_weakness_coverage
 WEAKNESS_LABEL_TO_KEYS: Dict[str, List[str]] = {
@@ -67,11 +66,14 @@ class PromptBuilder:
         """Gibt verfügbare Übungen zurück die eine der angegebenen Muskelgruppen trainieren."""
         try:
             from core.models import Uebung
+
             matches = list(
                 Uebung.objects.filter(
                     muskelgruppe__in=muscle_keys,
                     bezeichnung__in=available_exercises,
-                ).values_list("bezeichnung", flat=True).order_by("bezeichnung")
+                )
+                .values_list("bezeichnung", flat=True)
+                .order_by("bezeichnung")
             )
             return matches
         except Exception:
@@ -330,11 +332,20 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             if ":" in first:
                 top_weakness_label = first.split(":")[0].strip()
 
-        profile_label = {"kraft": "Kraft", "hypertrophie": "Hypertrophie", "definition": "Definition"}.get(target_profile, target_profile.capitalize())
+        profile_label = {
+            "kraft": "Kraft",
+            "hypertrophie": "Hypertrophie",
+            "definition": "Definition",
+        }.get(target_profile, target_profile.capitalize())
         split_label = plan_type.upper().replace("-", "/")
         from datetime import date as _date
+
         today_str = _date.today().strftime("%d.%m.%Y")
-        name_example = f"{profile_label}-{split_label} – Fokus {top_weakness_label} ({today_str})" if top_weakness_label else f"{profile_label}-{split_label} ({today_str})"
+        name_example = (
+            f"{profile_label}-{split_label} – Fokus {top_weakness_label} ({today_str})"
+            if top_weakness_label
+            else f"{profile_label}-{split_label} ({today_str})"
+        )
 
         periodization_note = {
             "linear": "Linear steigende Intensität pro Block, Deload in Woche 4/8/12 (Volumen 80%, Intensität 90%)",
