@@ -286,7 +286,7 @@ Aktuell ist die App auf Deutsch. Translations sind willkommen!
 **Wo dokumentieren:**
 - Code: Docstrings + Inline-Kommentare
 - Features: README.md
-- Roadmap: ROADMAP.md
+- Roadmap: docs/PROJECT_ROADMAP.md
 - AI Coach: AI_COACH_CONCEPT.md
 
 ## 🚫 Was wir NICHT akzeptieren
