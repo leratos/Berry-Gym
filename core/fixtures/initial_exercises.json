@@ -2070,10 +2070,10 @@
       "bewegungstyp": "DRUECKEN",
       "gewichts_typ": "PRO_SEITE",
       "koerpergewicht_faktor": 1.0,
-      "standard_beginner": null,
-      "standard_intermediate": null,
-      "standard_advanced": null,
-      "standard_elite": null,
+      "standard_beginner": 25.0,
+      "standard_intermediate": 37.5,
+      "standard_advanced": 50.0,
+      "standard_elite": 62.5,
       "equipment": [
         "Kabelzug / Latzug"
       ],
@@ -2090,10 +2090,10 @@
       "bewegungstyp": "DRUECKEN",
       "gewichts_typ": "GESAMT",
       "koerpergewicht_faktor": 1.0,
-      "standard_beginner": null,
-      "standard_intermediate": null,
-      "standard_advanced": null,
-      "standard_elite": null,
+      "standard_beginner": 70.0,
+      "standard_intermediate": 100.0,
+      "standard_advanced": 130.0,
+      "standard_elite": 160.0,
       "equipment": [
         "Brustpresse Maschine"
       ],
@@ -2111,10 +2111,10 @@
       "bewegungstyp": "ISOLATION",
       "gewichts_typ": "PRO_SEITE",
       "koerpergewicht_faktor": 1.0,
-      "standard_beginner": null,
-      "standard_intermediate": null,
-      "standard_advanced": null,
-      "standard_elite": null,
+      "standard_beginner": 25.0,
+      "standard_intermediate": 40.0,
+      "standard_advanced": 55.0,
+      "standard_elite": 70.0,
       "equipment": [
         "Kettlebell",
         "Kurzhanteln"
@@ -2132,10 +2132,10 @@
       "bewegungstyp": "HEBEN",
       "gewichts_typ": "GESAMT",
       "koerpergewicht_faktor": 1.0,
-      "standard_beginner": null,
-      "standard_intermediate": null,
-      "standard_advanced": null,
-      "standard_elite": null,
+      "standard_beginner": 30.0,
+      "standard_intermediate": 50.0,
+      "standard_advanced": 70.0,
+      "standard_elite": 90.0,
       "equipment": [
         "Kabelzug / Latzug"
       ],
