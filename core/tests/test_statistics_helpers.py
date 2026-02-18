@@ -9,22 +9,16 @@ Abgedeckte Funktionen:
 - _calc_weekly_volume
 - _detect_volume_warnings
 - _build_90day_heatmap
-- _calc_muscle_balance  (inkl. bekannter Bug-Dokumentation)
+- _calc_muscle_balance
 - _build_svg_muscle_data
 - _get_week_start
-- _calculate_streak
-- _count_trainings_this_week
-
-Bekannter Bug (dokumentiert):
-- _calc_muscle_balance ignoriert Sätze ohne RPE komplett (if not satz.rpe: continue)
-  Das führt dazu dass der Muskelbalance-Chart nur RPE-bewertete Trainings zeigt.
-  Wenn Nutzer selten RPE tracken, ist der Chart faktisch leer.
 """
 
 from datetime import date, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
+
 
 # ---------------------------------------------------------------------------
 # Helpers: Mock-Satz und Mock-Trainingseinheit (kein DB nötig für reine Logik)
@@ -182,10 +176,12 @@ class TestCalcWeeklyVolume:
 
         # Zwei Trainings in KW08/2026
         t1 = make_mock_training(
-            datum=datetime(2026, 2, 16), saetze=[make_mock_satz(100, 10)]  # Mo KW08  # 1000 kg
+            datum=datetime(2026, 2, 16),  # Mo KW08
+            saetze=[make_mock_satz(100, 10)],  # 1000 kg
         )
         t2 = make_mock_training(
-            datum=datetime(2026, 2, 18), saetze=[make_mock_satz(80, 5)]  # Mi KW08  # 400 kg
+            datum=datetime(2026, 2, 18),  # Mi KW08
+            saetze=[make_mock_satz(80, 5)],  # 400 kg
         )
         labels, data = _calc_weekly_volume([t1, t2])
         assert len(labels) == 1
@@ -305,22 +301,10 @@ class TestBuild90DayHeatmap:
     def test_ergibt_genau_90_eintraege(self):
         from core.views.training_stats import _build_90day_heatmap
 
-        class FakeQuerySet:
-            def filter(self, **kwargs):
-                return []
-
-            def __iter__(self):
-                return iter([])
-
         heute = date(2026, 2, 18)
-        # Wir nutzen echte DB-Querys nicht – mocken den Queryset
-        with patch("core.views.training_stats.Trainingseinheit") as mock_te:
-            mock_te.objects.filter.return_value.filter.return_value = []
-            # Direkter Aufruf mit leerer trainings-Liste
-            # Die Funktion erwartet trainings als Queryset mit .filter()
-            mock_qs = MagicMock()
-            mock_qs.filter.return_value = []
-            result = _build_90day_heatmap(mock_qs, heute)
+        mock_qs = MagicMock()
+        mock_qs.filter.return_value = []
+        result = _build_90day_heatmap(mock_qs, heute)
         assert len(result) == 90
 
     def test_datum_format_iso(self):
@@ -346,7 +330,7 @@ class TestBuild90DayHeatmap:
 
 
 # ---------------------------------------------------------------------------
-# _calc_muscle_balance – Bug-Dokumentation
+# _calc_muscle_balance
 # ---------------------------------------------------------------------------
 
 
@@ -354,12 +338,8 @@ class TestCalcMuscleBalance:
     """
     Tests für _calc_muscle_balance.
 
-    BEKANNTER BUG: Sätze ohne RPE werden komplett ignoriert.
-    Der Code prüft `if not satz.wiederholungen or not satz.rpe: continue`
-    → Sätze mit rpe=None tragen nichts zur Muskelbalance bei.
-    → Der Chart ist für Nutzer die selten RPE tracken faktisch leer oder unvollständig.
-
-    Die Tests hier DOKUMENTIEREN dieses Verhalten ohne es als Fix zu werten.
+    Nach dem Bugfix werden Sätze ohne RPE mit Fallback-RPE 7.0 gezählt,
+    statt komplett ignoriert zu werden.
     """
 
     def test_saetze_mit_rpe_werden_gezaehlt(self):
@@ -373,23 +353,43 @@ class TestCalcMuscleBalance:
         assert "Brust" in mg_labels
         assert mg_data[0] > 0
 
-    def test_saetze_ohne_rpe_werden_ignoriert_bug(self):
+    def test_saetze_ohne_rpe_werden_mit_fallback_7_gezaehlt(self):
         """
-        BUG DOKUMENTIERT: rpe=None führt dazu dass der Satz nicht gezählt wird.
-        Ergebnis: Muskelbalance-Chart ist leer obwohl Training stattgefunden hat.
+        BUGFIX verifiziert: Sätze ohne RPE werden jetzt mit Fallback-RPE 7.0 gezählt.
+        Vorher: continue → Muskelgruppe tauchte im Chart nicht auf.
+        Jetzt: eff_wdh = wiederholungen * (7.0 / 10.0) = 7.0 für 10 Wdh.
         """
         from core.views.training_stats import _calc_muscle_balance
 
-        satz_ohne_rpe = make_mock_satz(rpe=None, muskelgruppe="BRUST", mg_display="Brust")
+        satz_ohne_rpe = make_mock_satz(
+            rpe=None, wiederholungen=10, muskelgruppe="BRUST", mg_display="Brust"
+        )
         t = make_mock_training(datum=datetime(2026, 2, 15), saetze=[satz_ohne_rpe])
         sorted_items, mg_labels, mg_data, stats_code = _calc_muscle_balance([t])
-        # BUG: Brust wird NICHT aufgeführt obwohl trainiert
-        assert "Brust" not in mg_labels, (
-            "Bug bestätigt: Sätze ohne RPE werden in _calc_muscle_balance ignoriert. "
-            "Der Muskelgruppen-Chart zeigt diese Muskelgruppe nicht an."
-        )
+        assert "Brust" in mg_labels, "Sätze ohne RPE sollen mit Fallback 7.0 gezählt werden"
+        assert mg_data[0] == pytest.approx(
+            7.0, abs=0.01
+        ), "eff_wdh = 10 Wdh * (7.0 / 10.0) = 7.0 erwartet"
 
-    def test_saetze_ohne_wiederholungen_werden_ignoriert(self):
+    def test_fallback_rpe_kleiner_als_echter_hoher_rpe(self):
+        """RPE 7.0 Fallback soll weniger wiegen als echter RPE 9.5 – korrekte Gewichtung."""
+        from core.views.training_stats import _calc_muscle_balance
+
+        satz_rpe_hoch = make_mock_satz(
+            rpe=9.5, wiederholungen=10, muskelgruppe="BRUST", mg_display="Brust"
+        )
+        satz_kein_rpe = make_mock_satz(
+            rpe=None, wiederholungen=10, muskelgruppe="TRIZEPS", mg_display="Trizeps"
+        )
+        t = make_mock_training(datum=datetime(2026, 2, 15), saetze=[satz_rpe_hoch, satz_kein_rpe])
+        _, mg_labels, mg_data, _ = _calc_muscle_balance([t])
+        # Brust (RPE 9.5) soll mehr wiegen als Trizeps (Fallback 7.0)
+        brust_idx = mg_labels.index("Brust")
+        trizeps_idx = mg_labels.index("Trizeps")
+        assert mg_data[brust_idx] > mg_data[trizeps_idx]
+
+    def test_saetze_ohne_wiederholungen_werden_weiterhin_ignoriert(self):
+        """Sätze ohne Wiederholungen sind wertlos – sollen weiterhin ignoriert werden."""
         from core.views.training_stats import _calc_muscle_balance
 
         satz = make_mock_satz(
@@ -412,7 +412,6 @@ class TestCalcMuscleBalance:
         )
         t = make_mock_training(datum=datetime(2026, 2, 15), saetze=[satz_brust, satz_ruecken])
         sorted_items, mg_labels, mg_data, stats_code = _calc_muscle_balance([t])
-        # Rücken (höheres eff_wdh) soll an erster Stelle stehen
         assert mg_labels[0] == "Rücken Lat"
 
     def test_leere_trainings(self):
@@ -451,20 +450,16 @@ class TestBuildSvgMuscleData:
     def test_intensitaet_normalisiert_auf_0_bis_1(self):
         from core.views.training_stats import _build_svg_muscle_data
 
-        # BRUST dominiert → sollte Intensität 1.0 haben
         stats = {"BRUST": 100.0, "TRIZEPS": 50.0}
         result = _build_svg_muscle_data(stats)
-        # Werte müssen zwischen 0 und 1 liegen
         for svg_id, intensity in result.items():
             assert 0.0 <= intensity <= 1.0, f"Intensität für {svg_id} außerhalb [0,1]: {intensity}"
 
     def test_maximaler_wert_normalisiert_zu_1(self):
         from core.views.training_stats import _build_svg_muscle_data
 
-        # Nur BRUST → soll Intensität 1.0 bekommen
         stats = {"BRUST": 80.0}
         result = _build_svg_muscle_data(stats)
-        # BRUST mapped auf front_chest_left und front_chest_right
         for svg_id in ["front_chest_left", "front_chest_right"]:
             if svg_id in result:
                 assert result[svg_id] == pytest.approx(1.0, abs=0.01)
@@ -474,7 +469,6 @@ class TestBuildSvgMuscleData:
 
         stats = {"UNBEKANNTE_GRUPPE": 100.0}
         result = _build_svg_muscle_data(stats)
-        # Keine SVG-IDs für unbekannte Gruppe → leeres dict
         assert result == {}
 
     def test_ueberlappende_muskelgruppen_addieren_sich(self):

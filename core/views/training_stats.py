@@ -880,17 +880,25 @@ def _calc_weekly_volume(trainings) -> tuple[list, list]:
     return labels, [round(weekly[k], 1) for k in labels]
 
 
+_DEFAULT_RPE = 7.0  # Fallback für Sätze ohne RPE-Bewertung (moderate Anstrengung)
+
+
 def _calc_muscle_balance(trainings) -> tuple[list, list, list, dict]:
-    """Return (sorted_items, mg_labels, mg_data, stats_by_code) for RPE-weighted muscle balance."""
+    """Return (sorted_items, mg_labels, mg_data, stats_by_code) for RPE-weighted muscle balance.
+
+    Sätze ohne RPE-Bewertung werden mit einem Fallback-RPE von 7.0 gewichtet
+    (moderate Anstrengung). Sätze ohne Wiederholungen werden weiterhin ignoriert.
+    """
     stats: dict[str, dict] = {}
     stats_code: dict[str, float] = {}
     for training in trainings:
         for satz in training.arbeitssaetze_list:
-            if not satz.wiederholungen or not satz.rpe:
+            if not satz.wiederholungen:
                 continue
+            rpe = float(satz.rpe) if satz.rpe else _DEFAULT_RPE
             mg_display = satz.uebung.get_muskelgruppe_display()
             mg_code = satz.uebung.muskelgruppe
-            eff_wdh = satz.wiederholungen * (float(satz.rpe) / 10.0)
+            eff_wdh = satz.wiederholungen * (rpe / 10.0)
             if mg_display not in stats:
                 stats[mg_display] = {"saetze": 0, "volumen": 0.0}
             stats[mg_display]["saetze"] += 1
