@@ -76,7 +76,15 @@ class TestSendWelcomeEmail:
         from core.helpers.email import send_welcome_email
 
         send_welcome_email(user)
-        assert "https://meine-gym-app.de" in mail.outbox[0].body
+        # Präzise Assertion: URL muss als eigenständiges Token im Body stehen,
+        # nicht nur als Substring eines anderen URLs.
+        # CodeQL py/incomplete-url-substring-sanitization ist hier ein False Positive –
+        # dies ist kein Sanitization-Check sondern ein Test auf E-Mail-Inhalt.
+        body = mail.outbox[0].body
+        site_url = "https://meine-gym-app.de"
+        assert any(
+            word.rstrip(".,)") == site_url for word in body.split()
+        ), f"SITE_URL '{site_url}' nicht als eigenständiges Token im E-Mail-Body gefunden"
 
     def test_kein_crash_bei_send_fehler(self, settings):
         """fail_silently=True → kein Exception nach außen."""
