@@ -40,7 +40,7 @@ xhtml2pdf==0.2.17
 reportlab==4.4.7  # Required by xhtml2pdf
 
 # PDF Manipulation & QR Codes
-pypdf==6.6.2
+pypdf==6.7.1
 qrcode[pil]==8.2
 
 # SVG Rendering (for Body Map)
