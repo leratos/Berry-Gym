@@ -22,7 +22,6 @@ Nicht getestet:
 
 import base64
 
-
 # ---------------------------------------------------------------------------
 # Hilfsfunktion: ist Rückgabewert ein valides base64-PNG?
 # ---------------------------------------------------------------------------
@@ -354,6 +353,7 @@ class TestGenerateBodyMapWithData:
     def test_alle_bekannten_muskelgruppen_kein_crash(self, monkeypatch):
         """Alle definierten Muskelgruppen-Keys auf einmal – kein KeyError."""
         import builtins
+
         import core.chart_generator as cg
 
         real_import = builtins.__import__
@@ -391,6 +391,7 @@ class TestGenerateBodyMapWithData:
     def test_unbekannte_muskelgruppe_kein_crash(self, monkeypatch):
         """Unbekannte Keys dürfen keinen KeyError auslösen."""
         import builtins
+
         import core.chart_generator as cg
 
         real_import = builtins.__import__

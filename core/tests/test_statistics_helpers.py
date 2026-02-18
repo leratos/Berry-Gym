@@ -19,7 +19,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers: Mock-Satz und Mock-Trainingseinheit (kein DB nötig für reine Logik)
 # ---------------------------------------------------------------------------
