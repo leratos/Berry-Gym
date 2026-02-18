@@ -10,16 +10,15 @@ This module handles:
 
 import logging
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
 from django.db.models import F
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from ..helpers.email import send_welcome_email
 from ..models import InviteCode, WaitlistEntry
 
 logger = logging.getLogger(__name__)
@@ -95,55 +94,6 @@ def _handle_change_password(
     user.set_password(new_password)
     user.save()
     return []
-
-
-def send_welcome_email(user: User) -> None:
-    """Sendet Willkommens-E-Mail nach erfolgreicher Registrierung"""
-    subject = "🏋️ Willkommen bei HomeGym!"
-
-    message = f"""Hallo {user.username}!
-
-Herzlich willkommen bei HomeGym - deiner persönlichen Fitness-App! 🎉
-
-Dein Account wurde erfolgreich erstellt und du kannst jetzt loslegen.
-
-🚀 Erste Schritte:
-1. Richte dein Equipment ein (welche Geräte hast du?)
-2. Erstelle deinen ersten Trainingsplan mit KI-Unterstützung
-3. Starte dein erstes Training und tracke deine Fortschritte
-
-💡 Tipps für Einsteiger:
-• Nutze den KI-Coach während des Trainings für Tipps
-• Trage regelmäßig deine Körperwerte ein
-• Mache Fortschrittsfotos für visuellen Vergleich
-
-📱 PWA-Installation:
-Du kannst HomeGym als App auf deinem Smartphone installieren!
-Öffne {settings.SITE_URL} im Browser und wähle "Zum Startbildschirm hinzufügen".
-
-Bei Fragen stehen wir dir gerne zur Verfügung.
-
-Viel Erfolg beim Training! 💪
-
-Dein HomeGym Team
-{settings.SITE_URL}
-
----
-Diese E-Mail wurde automatisch generiert.
-Kontakt: marcus.kohtz@signz-vision.com
-"""
-
-    try:
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=True,  # Nicht blocken wenn E-Mail fehlschlägt
-        )
-        logger.info(f"Welcome email sent to {user.email}")
-    except Exception as e:
-        logger.error(f"Failed to send welcome email to {user.email}: {e}")
 
 
 def apply_beta(request: HttpRequest) -> HttpResponse:

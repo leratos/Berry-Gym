@@ -345,6 +345,15 @@ def import_uebungen(request: HttpRequest) -> HttpResponse:
             messages.error(request, "Keine Datei ausgewählt")
             return redirect("uebungen_auswahl")
 
+        # MIME-Type und Dateiname prüfen (kein reiner Content-Type-Check – der kommt vom Client)
+        file_name = import_file.name or ""
+        if not file_name.lower().endswith(".json"):
+            messages.error(request, "Nur JSON-Dateien (.json) sind erlaubt.")
+            return redirect("uebungen_auswahl")
+        if import_file.size > 5 * 1024 * 1024:  # 5 MB Limit
+            messages.error(request, "Datei zu groß (max. 5 MB).")
+            return redirect("uebungen_auswahl")
+
         exercises, parse_error = _parse_import_file(import_file)
         if parse_error:
             messages.error(request, parse_error)
