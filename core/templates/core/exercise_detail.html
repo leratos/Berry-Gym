@@ -64,6 +64,15 @@
             </div>
             {% endif %}
 
+            {% if uebung.bild %}
+            <div class="mt-3">
+                <h6 class="text-secondary mb-2"><i class="bi bi-image me-2"></i>Übungsdarstellung</h6>
+                <div class="rounded overflow-hidden bg-dark">
+                    <img src="{{ uebung.bild.url }}" alt="{{ uebung.bezeichnung }}" class="img-fluid w-100">
+                </div>
+            </div>
+            {% endif %}
+
             {% if uebung.has_video %}
             <div class="mt-3">
                 <h6 class="text-secondary mb-2"><i class="bi bi-play-circle me-2"></i>Video-Anleitung</h6>
