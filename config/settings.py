@@ -32,12 +32,22 @@ TESTING = "test" in sys.argv or "pytest" in sys.argv[0]
 # SECURITY WARNING: keep the secret key used in production secret!
 # Primär: SECRET_KEY in .env (Standard-Setup)
 # Fallback: DJANGO_SECRET_KEY (für Plesk-Deployments die Env-Vars nutzen)
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or os.getenv(
-    "SECRET_KEY", "django-insecure-dk%lwdezcs^e(5axd0yz%fslofr&cuu7#xuign*p0ftromsf0a"
-)
+# Kein hardcoded Fallback – fehlt der Key, bricht der Start mit klarer Fehlermeldung
+_secret_key = os.getenv("DJANGO_SECRET_KEY") or os.getenv("SECRET_KEY")
+if not _secret_key:
+    if "test" in sys.argv or "pytest" in sys.modules:
+        # In Tests ist ein fester Key ok
+        _secret_key = "test-secret-key-not-for-production-use-only"
+    else:
+        raise RuntimeError(
+            "SECRET_KEY / DJANGO_SECRET_KEY nicht gesetzt. "
+            "Bitte .env konfigurieren. Siehe docs/DEPLOYMENT.md."
+        )
+SECRET_KEY = _secret_key
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True") == "True"
+# Default False – explizit auf True setzen für Development
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
@@ -407,3 +417,39 @@ AXES_LOCKOUT_TEMPLATE = None  # Nutze Standard-Error-Message
 AXES_LOCKOUT_PARAMETERS = ["username"]  # Sperre basierend auf Username
 AXES_ENABLE_ACCESS_FAILURE_LOG = True  # Fehlversuche loggen
 AXES_VERBOSE = True  # Detailliertes Logging
+
+# ==================================
+# PRODUCTION SECURITY HEADERS
+# ==================================
+# Nur in Production aktiv (DEBUG=False).
+# In Development absichtlich deaktiviert, damit runserver ohne HTTPS funktioniert.
+
+if not DEBUG:
+    # HTTPS erzwingen
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+    # HSTS: Browser merkt sich für 1 Jahr dass diese Domain HTTPS erfordert
+    SECURE_HSTS_SECONDS = 31536000  # 1 Jahr
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Cookies nur über HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    # Cookies nicht per JS zugreifbar
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
+
+    # Session-Timeout: 14 Tage (Inaktivität)
+    SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+
+    # Clickjacking-Schutz (ergänzt XFrameOptionsMiddleware)
+    X_FRAME_OPTIONS = "DENY"
+
+    # Content-Type nicht raten lassen
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+    # XSS-Filter (ältere Browser)
+    SECURE_BROWSER_XSS_FILTER = True

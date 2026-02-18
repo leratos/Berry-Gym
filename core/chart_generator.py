@@ -105,7 +105,7 @@ def _render_svg_muscle_map_png_base64(muskelgruppen_stats):
         # cairosvg nicht installiert ODER Cairo-C-Library fehlt (Windows)
         raise ImportError(f"cairosvg/cairo nicht verfügbar: {e}")
 
-    import xml.etree.ElementTree as ET
+    import defusedxml.ElementTree as ET
 
     svg_text = svg_path.read_text(encoding="utf-8")
 
