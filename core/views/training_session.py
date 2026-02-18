@@ -104,6 +104,7 @@ def training_select_plan(request: HttpRequest) -> HttpResponse:
     return render(request, "core/training_select_plan.html", context)
 
 
+@login_required
 def plan_details(request: HttpRequest, plan_id: int) -> HttpResponse:
     """Zeigt Details eines Trainingsplans mit allen Übungen."""
     # Zugriff auf: eigene Pläne, öffentliche Pläne, oder mit mir geteilte Pläne
@@ -220,6 +221,7 @@ def _create_ghost_saetze(
             )
 
 
+@login_required
 def training_start(request: HttpRequest, plan_id: Optional[int] = None) -> HttpResponse:
     """Startet Training. Wenn plan_id da ist, werden Übungen vor-angelegt."""
     training = Trainingseinheit.objects.create(user=request.user)
@@ -616,11 +618,13 @@ def _parse_set_post_data(post) -> tuple[float | None, int | None, float | None]:
     return gewicht, wiederholungen, rpe
 
 
+@login_required
 def update_set(request: HttpRequest, set_id: int) -> HttpResponse:
     """Speichert Änderungen an einem existierenden Satz."""
     try:
         logger.info(f"update_set called for set_id={set_id}, method={request.method}")
-        satz = get_object_or_404(Satz, id=set_id)
+        # Ownership-Check: Satz muss zum eingeloggten User gehören (IDOR-Fix)
+        satz = get_object_or_404(Satz, id=set_id, einheit__user=request.user)
         training_id = satz.einheit.id
 
         if request.method == "POST":
