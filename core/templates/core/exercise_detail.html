@@ -19,8 +19,8 @@
     <a class="btn btn-outline-secondary border-0" href="{% url 'uebungen_auswahl' %}">
         <i class="bi bi-arrow-left"></i> Zurück
     </a>
-    <span class="navbar-text page-title fw-bold text-truncate" style="max-width: 200px;">{{ uebung.bezeichnung }}</span>
-    <div class="d-flex align-items-center gap-2">
+    <span class="navbar-text page-title fw-bold text-center flex-grow-1 mx-2" style="font-size: 0.95rem; line-height: 1.2;">{{ uebung.bezeichnung }}</span>
+    <div class="d-flex align-items-center gap-2 flex-shrink-0">
         <button class="btn btn-sm btn-outline-warning favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}"
                 onclick="toggleFavorit({{ uebung.id }}, this);"
                 title="{% if user in uebung.favoriten.all %}Aus Favoriten entfernen{% else %}Zu Favoriten hinzufügen{% endif %}">
