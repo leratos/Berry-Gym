@@ -69,6 +69,11 @@ class UserProfile(models.Model):
         verbose_name="Letzter Counter-Reset",
         help_text="Datum des letzten täglichen Resets (UTC)",
     )
+    trainings_pro_woche = models.PositiveIntegerField(
+        default=3,
+        verbose_name="Trainings-Ziel pro Woche",
+        help_text="Wie viele Trainings pro Woche angestrebt werden (1-7)",
+    )
 
     def _reset_ai_counters_if_needed(self) -> None:
         """Setzt die täglichen KI-Zähler zurück wenn ein neuer Tag begonnen hat."""
