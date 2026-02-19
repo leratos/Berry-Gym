@@ -61,9 +61,13 @@ jobs:
           PREVIOUS_COMMIT=$(git rev-parse HEAD)
           echo "Rollback-Punkt: $PREVIOUS_COMMIT"
 
+          # Python-Pfad: Plesk-Hosting nutzt 'venv/' (nicht '.venv/')
+          PYTHON="venv/bin/python"
+          PIP="venv/bin/pip"
+
           echo "=== [2/7] Datenbank-Backup ==="
           BACKUP_FILE="backup_$(date +%Y%m%d_%H%M%S).json"
-          .venv/bin/python manage.py dumpdata \
+          $PYTHON manage.py dumpdata \
             --exclude auth.permission \
             --exclude contenttypes \
             --indent 2 \
@@ -74,11 +78,11 @@ jobs:
           git pull origin main
 
           echo "=== [4/7] Dependencies installieren ==="
-          .venv/bin/pip install -r requirements.txt --quiet
+          $PIP install -r requirements.txt --quiet
 
           echo "=== [5/7] Migrations + Static Files ==="
-          .venv/bin/python manage.py migrate --noinput
-          .venv/bin/python manage.py collectstatic --noinput --clear
+          $PYTHON manage.py migrate --noinput
+          $PYTHON manage.py collectstatic --noinput --clear
 
           echo "=== [6/7] Gunicorn neu starten ==="
           sudo systemctl restart gunicorn
@@ -93,8 +97,8 @@ jobs:
             echo "❌ Smoke Test fehlgeschlagen! HTTP Status: $HTTP_STATUS"
             echo "=== ROLLBACK auf $PREVIOUS_COMMIT ==="
             git checkout "$PREVIOUS_COMMIT"
-            .venv/bin/pip install -r requirements.txt --quiet
-            .venv/bin/python manage.py migrate --noinput
+            $PIP install -r requirements.txt --quiet
+            $PYTHON manage.py migrate --noinput
             sudo systemctl restart gunicorn
             echo "Rollback abgeschlossen."
             exit 1
