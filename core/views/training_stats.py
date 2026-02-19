@@ -63,6 +63,56 @@ def _count_trainings_this_week(user, heute) -> int:
     return Trainingseinheit.objects.filter(user=user, datum__gte=start_woche).count()
 
 
+def _get_week_overview(user, heute) -> list[dict]:
+    """Gibt Mo–So der aktuellen Woche zurück mit Training-Status.
+
+    Jeder Eintrag:
+      date        (date)  – Datum des Tages
+      label       (str)   – "Mo", "Di", …
+      is_today    (bool)
+      is_future   (bool)
+      training_id (int|None) – ID des ersten abgeschlossenen Trainings (für Link)
+      has_training (bool)
+    """
+    LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    woche_start = _get_week_start(heute).date()
+    heute_date = heute.date()
+
+    # Alle Trainings dieser Woche auf einmal laden
+    trainings = (
+        Trainingseinheit.objects.filter(
+            user=user,
+            datum__date__gte=woche_start,
+            datum__date__lte=woche_start + timedelta(days=6),
+            abgeschlossen=True,
+        )
+        .order_by("datum")
+        .values("id", "datum")
+    )
+
+    # Datum → training_id mapping (erstes Training des Tages)
+    training_map: dict = {}
+    for t in trainings:
+        d = t["datum"].date()
+        if d not in training_map:
+            training_map[d] = t["id"]
+
+    result = []
+    for i in range(7):
+        day = woche_start + timedelta(days=i)
+        result.append(
+            {
+                "date": day,
+                "label": LABELS[i],
+                "is_today": day == heute_date,
+                "is_future": day > heute_date,
+                "has_training": day in training_map,
+                "training_id": training_map.get(day),
+            }
+        )
+    return result
+
+
 def _calculate_streak(user, heute) -> int:
     """Count consecutive weeks with at least one training session."""
     streak = 0
@@ -616,12 +666,22 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     offene_session = offene_sessions[0] if offene_sessions else None
     offene_sessions_anzahl = len(offene_sessions)
 
+    # Wochenübersicht (immer frisch – ändert sich intraday)
+    week_overview = _get_week_overview(request.user, heute)
+    trainings_ziel = 3
+    try:
+        trainings_ziel = request.user.profile.trainings_pro_woche
+    except UserProfile.DoesNotExist:
+        pass
+
     context = {
         "letztes_training": letztes_training,
         "letzter_koerperwert": letzter_koerperwert,
         "use_openrouter": use_openrouter,
         "offene_session": offene_session,
         "offene_sessions_anzahl": offene_sessions_anzahl,
+        "week_overview": week_overview,
+        "trainings_ziel": trainings_ziel,
         **computed,
     }
     _add_plan_group_context(request.user, context)
