@@ -74,6 +74,12 @@ class PlanUebung(models.Model):
         verbose_name="Superset-Gruppe",
         help_text="0 = keine Gruppe, 1-9 = Gruppennummer für Supersätze",
     )
+    notiz = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Übungshinweis",
+        help_text="Technik-Hinweis oder Erinnerung die beim Training angezeigt wird",
+    )
 
     class Meta:
         verbose_name = "Plan-Übung"

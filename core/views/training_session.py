@@ -478,6 +478,13 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
     except UserProfile.DoesNotExist:
         pass
 
+    # PlanUebung-Hinweise für Template (Technik-Tipps pro Übung)
+    plan_uebung_hinweise: dict[int, str] = {}
+    if training.plan:
+        for pu in training.plan.uebungen.all():
+            if pu.notiz:
+                plan_uebung_hinweise[pu.uebung_id] = pu.notiz
+
     context = {
         "training": training,
         "uebungen": uebungen,
@@ -487,6 +494,7 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
         "plan_ziele": _get_plan_ziele(training),
         "gewichts_empfehlungen": _get_gewichts_empfehlungen(request.user, training),
         "is_deload_week": is_deload_week,
+        "plan_uebung_hinweise": plan_uebung_hinweise,
     }
     return render(request, "core/training_session.html", context)
 

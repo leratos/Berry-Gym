@@ -69,6 +69,7 @@
                                      data-saetze="{{ uebung.saetze|default:'3' }}" data-wdh="{{ uebung.wdh|default:'8-12' }}"
                                      data-pausenzeit="{{ uebung.pausenzeit|default:'120' }}"
                                      data-superset="{{ uebung.superset_gruppe|default:'0' }}"
+                                     data-notiz="{{ uebung.plan_notiz|default:'' }}"
                                      onclick="toggleExercise(this)">
                                     <div class="card-body p-2">
                                         <div class="d-flex justify-content-between align-items-start">
@@ -164,13 +165,15 @@
                 reihenfolge: parseInt(card.dataset.reihenfolge) || 9999,
                 saetze: card.dataset.saetze || 3, wdh: card.dataset.wdh || '8-12',
                 pausenzeit: parseInt(card.dataset.pausenzeit) || 120,
-                supersetGroup: parseInt(card.dataset.superset) || 0
+                supersetGroup: parseInt(card.dataset.superset) || 0,
+                notiz: card.dataset.notiz || ''
             });
         });
         planExercises.sort((a, b) => a.reihenfolge - b.reihenfolge);
         selectedExercises = planExercises.map(ex => ({
             id: ex.id, name: ex.name, muscle: ex.muscle,
-            saetze: ex.saetze, wdh: ex.wdh, pausenzeit: ex.pausenzeit, supersetGroup: ex.supersetGroup
+            saetze: ex.saetze, wdh: ex.wdh, pausenzeit: ex.pausenzeit,
+            supersetGroup: ex.supersetGroup, notiz: ex.notiz || ''
         }));
         updateSelectedList();
         analyzeBalance();
@@ -185,7 +188,7 @@
             selectedExercises = selectedExercises.filter(e => e.id != id);
         } else {
             card.classList.add('selected'); icon.style.display = 'block';
-            selectedExercises.push({ id, name: card.dataset.name, muscle: card.dataset.muscle, saetze: card.dataset.saetze || 3, wdh: card.dataset.wdh || '8-12', pausenzeit: parseInt(card.dataset.pausenzeit) || 120, supersetGroup: 0 });
+            selectedExercises.push({ id, name: card.dataset.name, muscle: card.dataset.muscle, saetze: card.dataset.saetze || 3, wdh: card.dataset.wdh || '8-12', pausenzeit: parseInt(card.dataset.pausenzeit) || 120, supersetGroup: 0, notiz: '' });
         }
         updateSelectedList(); analyzeBalance();
     }
@@ -255,6 +258,12 @@
                                     <button type="button" class="btn ${ex.supersetGroup===2?'btn-info':'btn-outline-info'}" onclick="setSupersetGroup(${ex.id},2)">S2</button>
                                     <button type="button" class="btn ${ex.supersetGroup===3?'btn-danger':'btn-outline-danger'}" onclick="setSupersetGroup(${ex.id},3)">S3</button>
                                 </div>
+                            </div>
+                            <div class="mt-2">
+                                <input type="text" name="notiz_${ex.id}" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                    placeholder="💡 Technik-Hinweis (optional)" value="${ex.notiz||''}"
+                                    onchange="updateExerciseData(${ex.id},'notiz',this.value)"
+                                    maxlength="200">
                             </div>
                         </div>
                         <div class="btn-group-vertical ms-2">
