@@ -29,10 +29,10 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit
 ### 🎯 Hauptziele
 
 - **Vollständige Privatsphäre**: Deine Trainingsdaten bleiben auf deinem Server
-- **KI ohne Cloud**: Lokale LLMs (Ollama) für 0€ Betriebskosten
 - **Smart Tracking**: Automatisches Ghosting, RPE-basierte Gewichtsvorschläge, Superset-Support
 - **Performance-Fokus**: 1RM Tracking, Volumen-Analyse, Plateau-Erkennung
 - **Professionelle Reports**: Anatomische Body-Maps mit dynamischer Farbcodierung
+- **KI-gestützt**: Gemini 2.5 Flash via OpenRouter (~0.003€ pro Plangenerierung)
 
 ---
 
@@ -105,12 +105,12 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining tracking mit
 - Priorisierung nach Severity (Danger → Warning → Info)
 
 #### 2. **Automatische Plan-Generierung** (~0.003€ pro Plan)
-```bash
-python ai_coach/plan_generator.py --user-id 1
-```
-- LLM analysiert deine Training-Historie
+
+Über die Web-Oberfläche unter `/ai/generate-plan/`:
+- **Gemini 2.5 Flash** (via OpenRouter) analysiert deine Trainings-Historie
 - Berücksichtigt dein Equipment (Hanteln, Bank, Klimmzugstange, etc.)
 - Erstellt personalisierten Split (2-6 Trainingstage/Woche)
+- Echtzeit-Fortschrittsanzeige via Server-Sent Events (Streaming)
 - Balanced Push/Pull/Legs Aufteilung
 - Science-based Volumen-Empfehlungen
 
@@ -294,10 +294,10 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 # DATABASE_HOST=localhost
 # DATABASE_PORT=3306
 
-# AI Coach (Optional)
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1:8b
-USE_OPENROUTER_FALLBACK=False
+# AI Coach (Optional – ohne Key sind KI-Funktionen deaktiviert)
+USE_OPENROUTER_FALLBACK=True
+OPENROUTER_MODEL=google/gemini-2.5-flash
+# OPENROUTER_API_KEY wird sicher via secrets_manager gespeichert (nicht in .env!)
 
 # Security (Production)
 # SECURE_SSL_REDIRECT=True
@@ -311,33 +311,21 @@ USE_OPENROUTER_FALLBACK=False
 - `ALLOWED_HOSTS` mit deiner Domain setzen
 - SSL/HTTPS aktivieren
 
-### Ollama Setup (für AI Coach)
+### AI Coach Setup (OpenRouter)
 
-```bash
-# 1. Ollama installieren (https://ollama.ai/)
-
-# 2. Llama 3.1 8B Modell downloaden
-ollama pull llama3.1:8b
-
-# 3. Server starten (läuft auf http://localhost:11434)
-ollama serve
-
-# 4. In .env konfigurieren
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1:8b
-```
-
-**Alternative: OpenRouter (Cloud LLM)**
 ```bash
 # 1. API Key bei OpenRouter holen (https://openrouter.ai/)
-
 # 2. Secure speichern mit secrets_manager
 python ai_coach/secrets_manager.py set OPENROUTER_API_KEY sk-or-v1-xxx
-
-# 3. In .env aktivieren
-USE_OPENROUTER_FALLBACK=True
-OPENROUTER_MODEL=meta-llama/llama-3.1-70b-instruct
 ```
+
+In `.env` aktivieren:
+```env
+USE_OPENROUTER_FALLBACK=True
+OPENROUTER_MODEL=google/gemini-2.5-flash
+```
+
+**Kosten:** ~0.003€ pro Plangenerierung. Ohne API Key sind KI-Funktionen deaktiviert – alle anderen Features funktionieren normal.
 
 ### Troubleshooting
 
@@ -371,12 +359,28 @@ python ai_coach/secrets_manager.py get OPENROUTER_API_KEY
 
 ## 📱 Screenshots
 
-### Dashboard
-- Training-Heatmap (90 Tage)
-- Performance Form-Index (0-100)
-- AI Performance-Warnungen (Plateau, Rückschritt, Stagnation)
-- Streak Counter & Wochenstatistiken
-- **"Fortsetzen"-Button** bei offener Training-Session (v0.9.1)
+> 🔗 **Live Demo:** [gym.last-strawberry.com](https://gym.last-strawberry.com) – Close Beta, Zugang über Bewerbung
+
+### Dashboard & Statistiken
+
+<div align="center">
+<img src="core/static/core/images/beta/dashboard_stats.png" width="45%" alt="Dashboard Statistiken" />
+<img src="core/static/core/images/beta/dashboard_vitals.png" width="45%" alt="Dashboard Vitals" />
+</div>
+
+### Analytics & Körperwerte
+
+<div align="center">
+<img src="core/static/core/images/beta/analytics.png" width="45%" alt="Analytics" />
+<img src="core/static/core/images/beta/equipment.png" width="45%" alt="Equipment" />
+</div>
+
+### KI-Funktionen
+
+<div align="center">
+<img src="core/static/core/images/beta/ai_plan.png" width="45%" alt="KI-Plangenerierung" />
+<img src="core/static/core/images/beta/live_tracking.png" width="45%" alt="Live Tracking" />
+</div>
 
 ### Training Session
 - Übungssuche mit Autocomplete
@@ -418,17 +422,11 @@ python ai_coach/secrets_manager.py get OPENROUTER_API_KEY
 
 ### AI Coach nutzen
 
-**Plan generieren:**
-```bash
-python ai_coach/plan_generator.py --user-id 1 --days-per-week 4
-```
-
-**Plan optimieren (CLI):**
-```bash
-python ai_coach/plan_adapter.py --plan-id 3 --user-id 1 --optimize
-```
-
-**Plan optimieren (Web):**
+**Plan generieren (Web):**
+1. Dashboard → „KI-Plan erstellen"
+2. Trainingstage, Ziel und Equipment angeben
+3. Echtzeit-Fortschritt via Streaming
+4. Plan wird direkt in der App gespeichert
 1. Plan bearbeiten → "Performance-Analyse"
 2. Review Warnings (kostenlos)
 3. "KI-Optimierung starten" (0.003€)
@@ -541,7 +539,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - **Frontend:** Bootstrap 5.3, Chart.js, Vanilla JavaScript
 - **Database:** MariaDB (Production), SQLite (Development)
 - **Caching:** Django Cache Framework (5-min Dashboard, 30-min Übungsliste, unbegrenzt Plan-Templates)
-- **AI:** Ollama (lokal), OpenRouter (Cloud Fallback)
+- **AI:** Google Gemini 2.5 Flash via OpenRouter (Cloud)
 - **Server:** Gunicorn, Nginx
 - **PWA:** Service Worker, Manifest.json
 - **PDF Generation:** xhtml2pdf 0.2.16, matplotlib 3.10.8, cairosvg 2.7.1, Pillow 12.1.0
@@ -556,7 +554,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - **PDF Report:** 7+ Seiten mit 4 Charts + 5 erweiterte Analysen
 - **1RM Standards:** 4 Levels pro Übung (körpergewicht-skaliert)
 - **Migrationen:** 61+
-- **Tests:** 541 passed, 53% Coverage (Phase 5.3 abgeschlossen)
+- **Tests:** 756+ passed, CI/CD grün (Phase 6.3 abgeschlossen)
 - **Development Time:** 14+ Monate
 
 ---
@@ -577,52 +575,28 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 ## 🔮 Roadmap & Known Limitations
 
-### Aktuell verfügbar (v0.9.1)
+### Aktuell verfügbar (v0.9.2 – Close Beta)
+
+- ✅ **CI/CD Pipeline**: GitHub Actions → automatischer Deploy auf Production (Phase 6.3)
+- ✅ **Security Audit**: IDOR-Fix, @login_required Guards, defusedxml, File Upload Validation (Phase 6.1)
+- ✅ **BMI/FFMI-Fix**: Körpergröße einmalig im Profil, konsistente Berechnung (Phase 6.4)
+- ✅ **Fett/Muskel kg↔%**: Live-Umrechnung beim Erfassen – Uhr (kg) und Waage (%) unterstützt (Phase 6.5)
+- ✅ **PDF-Report Körperwerte**: BMI, FFMI, KFA%, Muskelmasse% statt nicht-existierender Umfang-Felder (Phase 6.6)
 - ✅ **Training fortsetzen**: Schnellzugriff auf offene Sessions direkt im Dashboard (v0.9.1)
 - ✅ **Performance-Optimierung**: N+1-Query-Fixes, Database Indexes, Caching-Strategie (v0.9.1)
-  - Phase 4.1: N+1 Query Elimination (8 Stellen behoben, 414 Tests)
-  - Phase 4.2: Database Indexes (Compound Indexes auf Training/Plan, MariaDB-kompatibel)
-  - Phase 4.3: Caching Strategy (FileBasedCache, 5min Dashboard, 30min Übungen, unbegrenzt Templates)
-- ✅ **Load Testing**: Locust-Setup mit SLO-Auswertung, Baseline-Messung dokumentiert (v0.9.1)
-- ✅ **Scientific Source System**: Phase 5.1 abgeschlossen (2026-02-16)
-  - TrainingSource Model mit DOI, Key Findings
-  - Integration in UI-Tooltips & Disclaimers
-  - Management Command für Quellen-Import
-- ✅ **KI-Plangenerator Optimierung**: Phase 5.2 abgeschlossen (2026-02-16/17)
-  - Eindeutige Plan-Namen (Datum + Ziel)
-  - Kontextbasierter Split-Typ (Frequenz → PPL/Upper-Lower/Fullbody)
-  - LLM Upgrade: Gemini 2.5 Flash
-  - Server-Sent Events (Streaming)
-  - Weakness Coverage Validation
-  - Körpergewicht Support
-- ✅ **AI/ML Testing Framework**: Phase 5.3 abgeschlossen (541 Tests, 53% Coverage)
-  - test_koerpergewicht_support.py, test_ml_trainer.py, test_plan_generator.py
-  - Körpergewicht-Skalierung für 1RM Standards (0.0-1.0 Faktor)
-- ✅ **1RM Kraftstandards**: 4 Leistungsstufen pro Übung (Anfänger → Elite), körpergewicht-skaliert
-- ✅ **Advanced Training Statistics**: Plateau-Analyse, Konsistenz-Metriken, RPE-Qualität, Ermüdungs-Index
-- ✅ **CSV-Export**: Alle Trainingsdaten als Download
-- ✅ **Erweiterter PDF-Report**: 5 neue Analyse-Module im professionellen Report
-- ✅ Cardio Lite Tracking (9 Aktivitäten mit Ermüdungsindex)
-- ✅ Video-Support für Übungen (YouTube & Vimeo)
-- ✅ Custom Übungen erstellen
-- ✅ AI Performance-Analyse (Dashboard Widget)
-- ✅ AI Training Counter (jedes 3. Training)
-- ✅ Alternative Übungen mit Scoring
-- ✅ Keyboard-Shortcuts, Undo-Funktion, Autocomplete
-- ✅ Security Improvements (31+ Alerts behoben)
+- ✅ **Load Testing**: Locust-Setup mit SLO-Auswertung (v0.9.1)
+- ✅ **Scientific Source System**: TrainingSource Model, Management Command, UI-Tooltips (Phase 5.1)
+- ✅ **KI-Plangenerator**: Gemini 2.5 Flash, SSE Streaming, Weakness Coverage Validation (Phase 5.2)
+- ✅ **1RM Kraftstandards**: 4 Leistungsstufen, körpergewicht-skaliert (v0.9.0)
+- ✅ **Advanced Training Statistics**: Plateau, Konsistenz, RPE-Qualität, Ermüdungs-Index (v0.9.0)
+- ✅ **CSV-Export** (v0.9.0)
+- ✅ Cardio Lite Tracking, Video-Support, Custom Übungen, AI Performance-Analyse
+- ✅ Keyboard-Shortcuts, Undo-Funktion, Autocomplete, Superset-Support
 
-### In Entwicklung (Week 5-6)
-- 🔄 **Phase 5.4 – Charts & Statistics Testing** (nächste Phase)
-  - Chart-Datenkorrektheit & Edge Cases
-  - Robuste Visualisierungen ohne Crashes
-
-### Geplant
-- 🔜 Phase 5.5 – API Endpoints Testing
-- 🔜 Phase 5.6 – Helper/Utils Testing
+### In Planung
 - 🔜 Onboarding-Tour & Feature-Discovery
-- 🔜 Gewichtsempfehlungen UI-Polish
-- 🔜 Notizen-System erweitern (Übungs- & Trainingstag-Notizen)
-- 🔜 Social Features (Leaderboards, Challenges)
+- 🔜 Internationalisierung (Englisch) für breitere Zielgruppe
+- 🔜 Notizen-System erweitern
 - 🔜 Nutrition Tracking (Makros & Kalorien)
 
 ### Bekannte Limitierungen
@@ -703,10 +677,10 @@ python ai_coach/secrets_manager.py set OPENROUTER_API_KEY sk-or-v1-xxx
 A: Ja! Alle Core-Features (Training Logging, Pläne, Statistiken) funktionieren ohne AI Coach. Die AI-Funktionen sind optional.
 
 **Q: Welche Kosten entstehen?**
-A: 
-- **Vollständig kostenlos:** Mit lokaler Ollama-Installation
-- **Cloud LLM (optional):** ~0.002-0.003€ pro AI-Request (OpenRouter)
-- **Hosting:** Abhängig von deinem Server/Hosting-Anbieter
+A:
+- **Hosting:** Abhängig vom Server/Hosting-Anbieter (aktuell Plesk-Shared-Hosting)
+- **KI-Funktionen (optional):** ~0.003€ pro Plangenerierung via Google Gemini 2.5 Flash (OpenRouter)
+- **Core-Funktionen:** Kostenlos (Training Logging, Statistiken, PDF-Export, Körperwerte)
 
 **Q: Kann ich meine Daten exportieren?**
 A: Ja! CSV-Export für alle Trainingsdaten, professioneller PDF-Report mit Analysen, Plan-PDF mit QR-Code, sowie JSON-Export über Django's `dumpdata` Command.
