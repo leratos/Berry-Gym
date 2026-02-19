@@ -472,7 +472,7 @@ def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
 
     koerperwerte_qs = KoerperWerte.objects.filter(user=user).order_by("-datum")
-    koerperwerte = list(koerperwerte_qs[:5])
+    koerperwerte = list(koerperwerte_qs[:10])  # letzte 10 für Verlaufstabelle im PDF
     letzter_koerperwert = koerperwerte[0] if koerperwerte else None
     user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
     rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)

@@ -436,14 +436,91 @@
     <!-- KÖRPERWERTE -->
     <h2>Körperentwicklung</h2>
     {% if koerperwerte %}
+
+    {% if letzter_koerperwert %}
+    <table>
+        <thead>
+            <tr>
+                <th>Aktuell ({{ letzter_koerperwert.datum|date:"d.m.Y" }})</th>
+                <th>Wert</th>
+                <th>Bewertung</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Gewicht</td>
+                <td>{{ letzter_koerperwert.gewicht|floatformat:1 }} kg</td>
+                <td>
+                    {% if gewichts_trend %}
+                        {% if gewichts_trend.diff > 0 %}▲{% else %}▼{% endif %}
+                        {{ gewichts_trend.diff|floatformat:1 }} kg {{ gewichts_trend.richtung }} (Gesamtzeitraum)
+                    {% else %}-{% endif %}
+                </td>
+            </tr>
+            {% if letzter_koerperwert.bmi %}
+            <tr>
+                <td>BMI</td>
+                <td>{{ letzter_koerperwert.bmi }}</td>
+                <td>
+                    {% with bmi=letzter_koerperwert.bmi %}
+                    {% if bmi < 18.5 %}Untergewicht
+                    {% elif bmi < 25 %}Normalgewicht
+                    {% elif bmi < 30 %}Übergewicht
+                    {% else %}Adipositas{% endif %}
+                    {% endwith %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.ffmi %}
+            <tr>
+                <td>FFMI</td>
+                <td>{{ letzter_koerperwert.ffmi }}</td>
+                <td>
+                    {% with ffmi=letzter_koerperwert.ffmi %}
+                    {% if ffmi < 18 %}Unterdurchschnittlich
+                    {% elif ffmi < 20 %}Durchschnittlich
+                    {% elif ffmi < 22 %}Überdurchschnittlich
+                    {% elif ffmi < 25 %}Sehr gut (natürlich erreichbar)
+                    {% else %}Exzellent{% endif %}
+                    {% endwith %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.koerperfett_prozent %}
+            <tr>
+                <td>Körperfettanteil</td>
+                <td>{{ letzter_koerperwert.koerperfett_prozent|floatformat:1 }} %
+                    {% if letzter_koerperwert.fettmasse_kg %}
+                    ({{ letzter_koerperwert.fettmasse_kg|floatformat:1 }} kg)
+                    {% endif %}
+                </td>
+                <td>-</td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.muskelmasse_prozent or letzter_koerperwert.muskelmasse_kg %}
+            <tr>
+                <td>Muskelmasse</td>
+                <td>
+                    {% if letzter_koerperwert.muskelmasse_kg %}{{ letzter_koerperwert.muskelmasse_kg|floatformat:1 }} kg{% endif %}
+                    {% if letzter_koerperwert.muskelmasse_prozent %}({{ letzter_koerperwert.muskelmasse_prozent|floatformat:1 }} %){% endif %}
+                </td>
+                <td>-</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h3>Verlauf</h3>
     <table>
         <thead>
             <tr>
                 <th>Datum</th>
                 <th>Gewicht</th>
-                <th>Brust (cm)</th>
-                <th>Taille (cm)</th>
-                <th>Bizeps (cm)</th>
+                <th>BMI</th>
+                <th>FFMI</th>
+                <th>KFA %</th>
+                <th>Muskeln %</th>
             </tr>
         </thead>
         <tbody>
@@ -451,9 +528,10 @@
             <tr>
                 <td>{{ wert.datum|date:"d.m.Y" }}</td>
                 <td>{{ wert.gewicht|floatformat:1 }} kg</td>
-                <td>{{ wert.brustumfang|floatformat:1|default:"-" }}</td>
-                <td>{{ wert.taillenumfang|floatformat:1|default:"-" }}</td>
-                <td>{{ wert.bizepsumfang|floatformat:1|default:"-" }}</td>
+                <td>{{ wert.bmi|default:"-" }}</td>
+                <td>{{ wert.ffmi|default:"-" }}</td>
+                <td>{{ wert.koerperfett_prozent|floatformat:1|default:"-" }}{% if wert.koerperfett_prozent %} %{% endif %}</td>
+                <td>{{ wert.muskelmasse_prozent|floatformat:1|default:"-" }}{% if wert.muskelmasse_prozent %} %{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -461,7 +539,7 @@
     {% else %}
     <div class="info-box warning">
         <strong>Keine Körperdaten erfasst.</strong><br>
-        Dieser Bericht fokussiert sich auf Trainingsdaten. Für eine umfassende Analyse empfehlen wir die regelmäßige Erfassung von Körperwerten (Gewicht, Umfänge). Dies ermöglicht präzisere Aussagen zur körperlichen Entwicklung.
+        Trage regelmäßig Körperwerte ein (Gewicht, KFA, Muskelmasse) um hier eine Auswertung zu erhalten.
     </div>
     {% endif %}
 
