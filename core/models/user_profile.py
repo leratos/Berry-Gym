@@ -2,6 +2,7 @@
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
 
 
 class UserProfile(models.Model):
@@ -46,6 +47,76 @@ class UserProfile(models.Model):
         verbose_name="Körpergröße (cm)",
         help_text="Wird für BMI- und FFMI-Berechnung verwendet",
     )
+
+    # ------------------------------------------------------------------
+    # KI Rate-Limiting: tägliche Nutzungszähler
+    # ------------------------------------------------------------------
+    ai_plan_count_today = models.PositiveIntegerField(
+        default=0,
+        verbose_name="KI-Plan-Generierungen heute",
+    )
+    ai_guidance_count_today = models.PositiveIntegerField(
+        default=0,
+        verbose_name="KI-Live-Guidance-Calls heute",
+    )
+    ai_analysis_count_today = models.PositiveIntegerField(
+        default=0,
+        verbose_name="KI-Analyse-Calls heute",
+    )
+    ai_counter_reset_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Letzter Counter-Reset",
+        help_text="Datum des letzten täglichen Resets (UTC)",
+    )
+
+    def _reset_ai_counters_if_needed(self) -> None:
+        """Setzt die täglichen KI-Zähler zurück wenn ein neuer Tag begonnen hat."""
+        today = timezone.now().date()
+        if self.ai_counter_reset_date != today:
+            self.ai_plan_count_today = 0
+            self.ai_guidance_count_today = 0
+            self.ai_analysis_count_today = 0
+            self.ai_counter_reset_date = today
+            self.save(
+                update_fields=[
+                    "ai_plan_count_today",
+                    "ai_guidance_count_today",
+                    "ai_analysis_count_today",
+                    "ai_counter_reset_date",
+                ]
+            )
+
+    def check_and_increment_ai_limit(self, limit_type: str, limit: int) -> bool:
+        """
+        Prüft ob das tägliche Limit erreicht ist und erhöht den Zähler.
+
+        Args:
+            limit_type: "plan", "guidance" oder "analysis"
+            limit: Maximale Anzahl pro Tag (aus settings)
+
+        Returns:
+            True  → Request erlaubt (Zähler wurde erhöht)
+            False → Limit erreicht, Request ablehnen
+        """
+        self._reset_ai_counters_if_needed()
+
+        field_map = {
+            "plan": "ai_plan_count_today",
+            "guidance": "ai_guidance_count_today",
+            "analysis": "ai_analysis_count_today",
+        }
+        field = field_map.get(limit_type)
+        if not field:
+            return True  # Unbekannter Typ → durchlassen
+
+        current = getattr(self, field)
+        if current >= limit:
+            return False
+
+        setattr(self, field, current + 1)
+        self.save(update_fields=[field])
+        return True
 
     def __str__(self):
         return f"Profil von {self.user.username}"

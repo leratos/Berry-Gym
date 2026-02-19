@@ -26,6 +26,55 @@ from django.utils import timezone
 
 from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung, UserProfile
 
+# ---------------------------------------------------------------------------
+# Rate-Limit Helper
+# ---------------------------------------------------------------------------
+
+
+def _check_ai_rate_limit(request: HttpRequest, limit_type: str) -> JsonResponse | None:
+    """
+    Prüft das tägliche KI-Limit für den eingeloggten User.
+
+    Gibt None zurück wenn der Request erlaubt ist.
+    Gibt eine 429-JsonResponse zurück wenn das Limit erreicht ist.
+    Im DEBUG/Test-Modus immer None (kein Limit).
+    """
+    if getattr(settings, "RATELIMIT_BYPASS", False):
+        return None
+
+    limit_map = {
+        "plan": settings.AI_RATE_LIMIT_PLAN_GENERATION,
+        "guidance": settings.AI_RATE_LIMIT_LIVE_GUIDANCE,
+        "analysis": settings.AI_RATE_LIMIT_ANALYSIS,
+    }
+    limit = limit_map.get(limit_type, 10)
+
+    try:
+        profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        return None  # Kein Profil → durchlassen, Fehler wird anderswo behandelt
+
+    allowed = profile.check_and_increment_ai_limit(limit_type, limit)
+    if not allowed:
+        label_map = {
+            "plan": f"{limit} Plan-Generierungen",
+            "guidance": f"{limit} Live-Guidance-Calls",
+            "analysis": f"{limit} Analyse-Calls",
+        }
+        return JsonResponse(
+            {
+                "error": (
+                    f"Tägliches Limit erreicht ({label_map.get(limit_type, str(limit))} pro Tag). "
+                    "Das Limit wird um Mitternacht UTC zurückgesetzt."
+                ),
+                "success": False,
+                "rate_limited": True,
+            },
+            status=429,
+        )
+    return None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -475,10 +524,24 @@ def generate_plan_api(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
+    # Rate Limit nur für echte Generierungen (nicht für saveCachedPlan)
+    # saveCachedPlan: Plan wurde bereits via Stream generiert (Counter schon erhöht)
     try:
-        data = json.loads(request.body)
+        _peek = json.loads(request.body)
+        _is_save_only = bool(_peek.get("saveCachedPlan") and _peek.get("plan_data"))
+    except Exception:
+        _peek = None
+        _is_save_only = False
 
-        # Check ob wir einen gecachten Plan speichern sollen
+    if not _is_save_only:
+        rate_limit_response = _check_ai_rate_limit(request, "plan")
+        if rate_limit_response:
+            return rate_limit_response
+
+    try:
+        data = _peek if _peek is not None else json.loads(request.body)
+
+        # Check ob wir einen gecachten Plan speichern sollen (zählt nicht als Generierung)
         if data.get("saveCachedPlan") and data.get("plan_data"):
             return _handle_save_cached_plan(request.user, data)
 
@@ -583,6 +646,11 @@ def optimize_plan_api(request: HttpRequest) -> JsonResponse:
     """
     if request.method != "POST":
         return JsonResponse({"error": "POST request required"}, status=405)
+
+    # Rate Limit: 10 Analyse/Optimierungs-Calls pro Tag
+    rate_limit_response = _check_ai_rate_limit(request, "analysis")
+    if rate_limit_response:
+        return rate_limit_response
 
     try:
         from ai_coach.plan_adapter import PlanAdapter
@@ -771,6 +839,11 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
+    # Rate Limit: 50 Live-Guidance-Calls pro Tag
+    rate_limit_response = _check_ai_rate_limit(request, "guidance")
+    if rate_limit_response:
+        return rate_limit_response
+
     try:
         data = json.loads(request.body)
 
@@ -856,6 +929,21 @@ def generate_plan_stream_api(request: HttpRequest) -> HttpResponse:
     """
     if request.method != "GET":
         return HttpResponse("GET required", status=405)
+
+    # Rate Limit: teilt Budget mit generate_plan_api (gleicher "plan"-Counter)
+    rate_limit_response = _check_ai_rate_limit(request, "plan")
+    if rate_limit_response:
+        # SSE-Client erwartet text/event-stream – JSON-Response als SSE-Error wrappen
+        import json as _json
+
+        error_data = _json.loads(rate_limit_response.content)
+
+        def _error_stream():
+            yield f"data: {_json.dumps({'done': True, 'success': False, 'error': error_data['error']})}\n\n"
+
+        from django.http import StreamingHttpResponse
+
+        return StreamingHttpResponse(_error_stream(), content_type="text/event-stream", status=429)
 
     import threading
 
