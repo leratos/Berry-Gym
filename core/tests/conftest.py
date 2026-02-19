@@ -88,3 +88,14 @@ def clear_cache_between_tests():
     cache.clear()
     yield
     cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def use_temp_media_root(settings, tmp_path):
+    """Leitet MEDIA_ROOT in ein temporäres Verzeichnis um.
+
+    Verhindert dass Tests echte Dateien in media/ hinterlassen.
+    Jeder Test bekommt sein eigenes Temp-Verzeichnis, das nach dem Test
+    automatisch gelöscht wird.
+    """
+    settings.MEDIA_ROOT = tmp_path / "test_media"
