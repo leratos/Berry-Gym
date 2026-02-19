@@ -33,6 +33,7 @@ def add_koerperwert(request: HttpRequest) -> HttpResponse:
         kfa = request.POST.get("kfa")
         wasser = request.POST.get("wasser")
         muskel = request.POST.get("muskel")
+        muskel_prozent = request.POST.get("muskel_prozent")
         knochen = request.POST.get("knochen")
         notiz = request.POST.get("notiz")
 
@@ -53,6 +54,7 @@ def add_koerperwert(request: HttpRequest) -> HttpResponse:
             koerperfett_prozent=kfa if kfa else None,
             koerperwasser_kg=wasser if wasser else None,
             muskelmasse_kg=muskel if muskel else None,
+            muskelmasse_prozent=muskel_prozent if muskel_prozent else None,
             knochenmasse_kg=knochen if knochen else None,
             notiz=notiz,
         )
@@ -129,6 +131,7 @@ def edit_koerperwert(request: HttpRequest, wert_id: int) -> HttpResponse:
         wert.koerperfett_prozent = request.POST.get("koerperfett_prozent") or None
         wert.fettmasse_kg = request.POST.get("fettmasse_kg") or None
         wert.muskelmasse_kg = request.POST.get("muskelmasse_kg") or None
+        wert.muskelmasse_prozent = request.POST.get("muskelmasse_prozent") or None
         wert.save()
         messages.success(request, "Körperwert erfolgreich aktualisiert!")
         return redirect("body_stats")
