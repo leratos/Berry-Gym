@@ -16,8 +16,7 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.utils import timezone
 
-from core.models import UserProfile  # noqa: F401 – needed for signal-created profile access
-
+from core.models import UserProfile  # noqa: F401 - needed for signal-created profile access
 
 # ===========================================================================
 # UserProfile Counter-Logik
