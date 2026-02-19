@@ -361,12 +361,26 @@ python ai_coach/secrets_manager.py get OPENROUTER_API_KEY
 
 > 🔗 **Live Demo:** [gym.last-strawberry.com](https://gym.last-strawberry.com) – Close Beta, Zugang über Bewerbung
 
-### Dashboard
-- Training-Heatmap (90 Tage)
-- Performance Form-Index (0-100)
-- AI Performance-Warnungen (Plateau, Rückschritt, Stagnation)
-- Streak Counter & Wochenstatistiken
-- „Fortsetzen"-Button bei offener Training-Session
+### Dashboard & Statistiken
+
+<div align="center">
+<img src="core/static/core/images/beta/dashboard_stats.png" width="45%" alt="Dashboard Statistiken" />
+<img src="core/static/core/images/beta/dashboard_vitals.png" width="45%" alt="Dashboard Vitals" />
+</div>
+
+### Analytics & Körperwerte
+
+<div align="center">
+<img src="core/static/core/images/beta/analytics.png" width="45%" alt="Analytics" />
+<img src="core/static/core/images/beta/equipment.png" width="45%" alt="Equipment" />
+</div>
+
+### KI-Funktionen
+
+<div align="center">
+<img src="core/static/core/images/beta/ai_plan.png" width="45%" alt="KI-Plangenerierung" />
+<img src="core/static/core/images/beta/live_tracking.png" width="45%" alt="Live Tracking" />
+</div>
 
 ### Training Session
 - Übungssuche mit Autocomplete
