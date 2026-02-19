@@ -84,8 +84,8 @@ jobs:
           $PYTHON manage.py migrate --noinput
           $PYTHON manage.py collectstatic --noinput --clear
 
-          echo "=== [6/7] Gunicorn neu starten ==="
-          sudo systemctl restart gunicorn
+          echo "=== [6/7] App-Server neu starten ==="
+          sudo systemctl restart homegym
 
           echo "=== [7/7] Smoke Test ==="
           sleep 5  # Kurz warten bis Gunicorn hochgefahren ist
@@ -99,7 +99,7 @@ jobs:
             git checkout "$PREVIOUS_COMMIT"
             $PIP install -r requirements.txt --quiet
             $PYTHON manage.py migrate --noinput
-            sudo systemctl restart gunicorn
+            sudo systemctl restart homegym
             echo "Rollback abgeschlossen."
             exit 1
           fi
