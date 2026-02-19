@@ -26,6 +26,9 @@ class KoerperWerte(models.Model):
     muskelmasse_kg = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True, verbose_name="Muskeln (kg)"
     )
+    muskelmasse_prozent = models.DecimalField(
+        max_digits=4, decimal_places=1, blank=True, null=True, verbose_name="Muskeln (%)"
+    )
     knochenmasse_kg = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True, verbose_name="Knochen (kg)"
     )
