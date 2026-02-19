@@ -12,13 +12,20 @@ from ..models import KoerperWerte, ProgressPhoto
 def add_koerperwert(request: HttpRequest) -> HttpResponse:
     """Formular zum Eintragen der erweiterten Watch-Daten"""
 
-    # Wir holen den letzten Eintrag, um die Größe vorzuschlagen
-    letzter_wert = KoerperWerte.objects.filter(user=request.user).last()
-    standard_groesse = letzter_wert.groesse_cm if letzter_wert else 180
+    # Neuesten Eintrag holen: ordering=["-datum"] → .first() = neuester
+    # (nicht .last() – das wäre der älteste!)
+    letzter_wert = KoerperWerte.objects.filter(user=request.user).first()
+
+    # Körpergröße: primär aus Profil, Fallback aus letzter Messung
+    try:
+        profil_groesse = request.user.profile.groesse_cm
+    except Exception:
+        profil_groesse = None
+    standard_groesse = profil_groesse or (letzter_wert.groesse_cm if letzter_wert else None)
 
     if request.method == "POST":
         # Pflichtfelder
-        groesse = request.POST.get("groesse")
+        groesse = request.POST.get("groesse") or None
         gewicht = request.POST.get("gewicht")
 
         # Optionale Watch-Daten
@@ -29,10 +36,18 @@ def add_koerperwert(request: HttpRequest) -> HttpResponse:
         knochen = request.POST.get("knochen")
         notiz = request.POST.get("notiz")
 
-        # Speichern
+        # Wenn Größe angegeben: Profil aktualisieren damit sie konsistent bleibt
+        if groesse:
+            try:
+                request.user.profile.groesse_cm = int(groesse)
+                request.user.profile.save(update_fields=["groesse_cm"])
+            except Exception:
+                pass
+
+        # Speichern – groesse_cm leer lassen, bmi/ffmi nutzen Profil-Wert
         KoerperWerte.objects.create(
             user=request.user,
-            groesse_cm=groesse,
+            groesse_cm=groesse if groesse else None,
             gewicht=gewicht,
             fettmasse_kg=fett_kg if fett_kg else None,
             koerperfett_prozent=kfa if kfa else None,
@@ -43,7 +58,7 @@ def add_koerperwert(request: HttpRequest) -> HttpResponse:
         )
         return redirect("dashboard")
 
-    context = {"standard_groesse": standard_groesse}
+    context = {"standard_groesse": standard_groesse, "profil_groesse": profil_groesse}
     return render(request, "core/add_koerperwert.html", context)
 
 

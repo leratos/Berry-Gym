@@ -8,7 +8,10 @@ class KoerperWerte(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="koerperwerte", null=True)
     datum = models.DateField(auto_now_add=True, verbose_name="Messdatum")
     groesse_cm = models.PositiveIntegerField(
-        verbose_name="Größe (cm)", help_text="Benötigt für BMI/FFMI"
+        verbose_name="Größe (cm)",
+        help_text="Benötigt für BMI/FFMI – wird aus Profil übernommen",
+        null=True,
+        blank=True,
     )
     gewicht = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Gewicht (kg)")
     fettmasse_kg = models.DecimalField(
@@ -34,23 +37,34 @@ class KoerperWerte(models.Model):
         ordering = ["-datum"]
         get_latest_by = "datum"
 
+    def _get_groesse_cm(self) -> int | None:
+        """Gibt Körpergröße zurück: erst eigener Wert, dann Profil-Wert."""
+        if self.groesse_cm:
+            return self.groesse_cm
+        try:
+            return self.user.profile.groesse_cm
+        except Exception:
+            return None
+
     @property
     def bmi(self):
-        if self.gewicht and self.groesse_cm:
-            groesse_m = self.groesse_cm / 100
+        groesse = self._get_groesse_cm()
+        if self.gewicht and groesse:
+            groesse_m = groesse / 100
             return round(float(self.gewicht) / (groesse_m**2), 1)
         return None
 
     @property
     def ffmi(self):
+        groesse = self._get_groesse_cm()
         fett_kg = None
         if self.fettmasse_kg:
             fett_kg = float(self.fettmasse_kg)
         elif self.gewicht and self.koerperfett_prozent:
             fett_kg = float(self.gewicht) * (float(self.koerperfett_prozent) / 100)
-        if self.gewicht and self.groesse_cm and fett_kg is not None:
+        if self.gewicht and groesse and fett_kg is not None:
             fettfreie_masse = float(self.gewicht) - fett_kg
-            groesse_m = self.groesse_cm / 100
+            groesse_m = groesse / 100
             ffmi_wert = fettfreie_masse / (groesse_m**2)
             ffmi_norm = ffmi_wert + 6.1 * (1.8 - groesse_m)
             return round(ffmi_norm, 1)
