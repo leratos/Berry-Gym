@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI Pipeline
 
 # Workflow-level permissions (restrictive by default)
 permissions:
@@ -8,12 +8,11 @@ on:
   push:
     branches:
       - main
-      - NewStruc      # Production Branch
-      - develop
-      - '*phase-*'      # Alle Phase-Branches (phase-2.5, phase-3.1, etc.)
-      - 'feature-*'    # Alle Feature-Branches
+      - 'feature/**'   # Alle feature/phase-* und andere feature-Branches
+      - 'hotfix/**'
   pull_request:
-    branches: [ main, NewStruc, develop ]
+    branches:
+      - main
 
 jobs:
   test:
@@ -21,22 +20,18 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read        # Checkout code
-      checks: write         # Upload test results
-      pull-requests: write  # Comment on PRs
-
-    strategy:
-      matrix:
-        python-version: ['3.12']
+      contents: read
+      checks: write
+      pull-requests: write
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.12'
         cache: 'pip'
 
     - name: Install system dependencies
@@ -47,55 +42,57 @@ jobs:
           pkg-config \
           python3-dev
 
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Create logs directory
-      run: |
-        mkdir -p logs
+    - name: Create required directories
+      run: mkdir -p logs
 
     - name: Run migrations
-      run: |
-        python manage.py migrate --noinput
       env:
-        DJANGO_SETTINGS_MODULE: config.settings
-        SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci-only-not-secure' }}
+        DJANGO_SECRET_KEY: test-secret-key-for-ci-only
         DEBUG: 'True'
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
+      run: python manage.py migrate --noinput
 
     - name: Run tests with coverage
-      run: |
-        pytest --cov=core --cov=ai_coach --cov-report=xml --cov-report=html --cov-report=term-missing --ignore=core/tests/test_refactoring.py
       env:
-        DJANGO_SETTINGS_MODULE: config.settings
-        SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci-only-not-secure' }}
+        DJANGO_SECRET_KEY: test-secret-key-for-ci-only
         DEBUG: 'True'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+      run: |
+        pytest \
+          --cov=core \
+          --cov=ai_coach \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          -q
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         flags: unittests
-        name: codecov-umbrella
         fail_ci_if_error: false
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Archive coverage reports
+    - name: Archive coverage report
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-report-${{ matrix.python-version }}
+        name: coverage-report
         path: htmlcov/
-        retention-days: 30
+        retention-days: 14
 
   lint:
     name: Code Quality
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read  # Checkout code
+      contents: read
 
     steps:
     - name: Checkout code
@@ -112,26 +109,22 @@ jobs:
         python -m pip install --upgrade pip
         pip install black==25.1.0 isort==5.13.2 flake8==7.1.1 flake8-pyproject==1.2.3
 
-    - name: Check code formatting with Black
-      run: |
-        black --check core/ config/ ai_coach/ --exclude migrations
+    - name: Black formatting check
+      run: black --check core/ config/ ai_coach/ --exclude migrations
 
-    - name: Check import sorting with isort
-      run: |
-        isort --check-only core/ config/ ai_coach/ --skip migrations
+    - name: isort import order check
+      run: isort --check-only core/ config/ ai_coach/ --skip migrations
 
-    - name: Lint with flake8
-      run: |
-        flake8 core/ config/ ai_coach/ --count --statistics --exit-zero
-      # exit-zero means it won't fail the build, just report issues
+    - name: flake8 lint (hard fail)
+      # Kein --exit-zero: Linter-Fehler brechen den Build ab
+      run: flake8 core/ config/ ai_coach/ --count --statistics
 
   security:
     name: Security Checks
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read        # Checkout code
-      security-events: write # Upload security results (if using CodeQL)
+      contents: read
 
     steps:
     - name: Checkout code
@@ -143,20 +136,24 @@ jobs:
         python-version: '3.12'
         cache: 'pip'
 
-    - name: Install dependencies
+    - name: Install security tools
       run: |
         python -m pip install --upgrade pip
         pip install safety bandit
 
-    - name: Check for security vulnerabilities in dependencies
-      run: |
-        safety check --json || true
+    - name: Dependency vulnerability scan (safety scan)
+      # continue-on-error: neue CVEs sollen CI nicht blocken, aber sichtbar sein
+      run: safety scan --output text
       continue-on-error: true
 
-    - name: Run Bandit security linter
+    - name: Static security analysis (bandit)
+      # Medium+ Severity bricht ab; Low-Issues werden nur gemeldet
       run: |
-        bandit -r core/ config/ ai_coach/ -f json -o bandit-report.json || true
-      continue-on-error: true
+        bandit -r core/ config/ ai_coach/ \
+          -ll \
+          -f json \
+          -o bandit-report.json
+      continue-on-error: false
 
     - name: Upload Bandit report
       uses: actions/upload-artifact@v4
@@ -164,4 +161,4 @@ jobs:
       with:
         name: bandit-security-report
         path: bandit-report.json
-        retention-days: 30
+        retention-days: 14
