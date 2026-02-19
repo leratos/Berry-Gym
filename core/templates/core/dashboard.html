@@ -381,6 +381,70 @@
   </div>
   {% if letzter_koerperwert %}</a>{% endif %}
 
+  <!-- Wochenübersicht -->
+  {% if week_overview %}
+  <div class="card card-stat border-secondary mb-3 shadow-sm">
+    <div class="card-body pb-2">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Diese Woche</h6>
+        <small class="text-muted">
+          {% with done=week_overview|length %}
+          {% with count=trainings_diese_woche %}
+          <span class="{% if count >= trainings_ziel %}text-success fw-bold{% else %}text-muted{% endif %}">
+            {{ count }} / {{ trainings_ziel }} Trainings
+          </span>
+          {% endwith %}{% endwith %}
+        </small>
+      </div>
+      <!-- Fortschrittsbalken -->
+      <div class="progress mb-3" style="height: 6px;">
+        {% widthratio trainings_diese_woche trainings_ziel 100 as pct %}
+        <div class="progress-bar bg-success" role="progressbar"
+             style="width: {% if pct > 100 %}100{% else %}{{ pct }}{% endif %}%"></div>
+      </div>
+      <!-- Mo–So Streifen -->
+      <div class="d-flex gap-1">
+        {% for day in week_overview %}
+        <div class="flex-fill text-center">
+          {% if day.has_training %}
+            {% if day.training_id %}
+            <a href="{% url 'training_session' day.training_id %}" class="text-decoration-none d-block">
+              <div class="rounded py-2 bg-success bg-opacity-{% if day.is_today %}100{% else %}75{% endif %}"
+                   title="{{ day.date|date:'d.m.' }}">
+                <i class="bi bi-check-lg text-white" style="font-size: 1rem;"></i>
+              </div>
+              <small class="{% if day.is_today %}text-success fw-bold{% else %}text-muted{% endif %}"
+                     style="font-size: 0.65rem;">{{ day.label }}</small>
+            </a>
+            {% else %}
+            <div class="rounded py-2 bg-success bg-opacity-75">
+              <i class="bi bi-check-lg text-white" style="font-size: 1rem;"></i>
+            </div>
+            <small class="text-muted" style="font-size: 0.65rem;">{{ day.label }}</small>
+            {% endif %}
+          {% elif day.is_today %}
+            <div class="rounded py-2 bg-primary bg-opacity-25 border border-primary">
+              <i class="bi bi-circle text-primary" style="font-size: 1rem;"></i>
+            </div>
+            <small class="text-primary fw-bold" style="font-size: 0.65rem;">{{ day.label }}</small>
+          {% elif day.is_future %}
+            <div class="rounded py-2 bg-secondary bg-opacity-10">
+              <i class="bi bi-dash text-secondary" style="font-size: 1rem;"></i>
+            </div>
+            <small class="text-muted" style="font-size: 0.65rem;">{{ day.label }}</small>
+          {% else %}
+            <div class="rounded py-2 bg-secondary bg-opacity-15">
+              <i class="bi bi-x text-secondary" style="font-size: 1rem; opacity: 0.4;"></i>
+            </div>
+            <small class="text-muted" style="font-size: 0.65rem;">{{ day.label }}</small>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Wöchentliches Volumen -->
   {% if weekly_volumes %}
   <div class="card card-stat border-secondary mb-3 shadow-sm">

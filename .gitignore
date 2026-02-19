@@ -136,6 +136,8 @@ htmlcov/
 .pytest_cache/
 .tox/
 docs/journal.txt
+test_output.txt
+test_suite*.txt
 
 # Locust Load Test Reports
 tests/load/results/*.html

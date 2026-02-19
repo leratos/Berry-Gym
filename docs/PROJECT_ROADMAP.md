@@ -280,81 +280,52 @@ Bugs gefunden: `delete_training` hatte keinen POST-Guard (GET löschte Daten)
 
 ## 🔄 WEEK 7 – PRE-LAUNCH PREPARATION (IN PROGRESS)
 
-**Aktuell:** Phase 5.4 – Charts & Statistics Testing  
-**Ziel:** 75% → 80%+ Coverage
+**Aktuell:** Phase 7.5 – i18n (Englisch)
+**Ziel:** App auf Englisch verfügbar, Export danach ohne doppelte String-Arbeit
 
-### Phase 5.4 – Charts & Statistics Testing 🔄
+### Phase 7.1 – Rate Limiting KI-Endpoints ✅
 
-**Status:** IN PROGRESS (nächste Phase)
+**Status:** COMPLETE (2026-02-19)
+- django-ratelimit + UserProfile-Counter
+- 5 KI-Endpoints abgesichert (Plan, Stream, Guidance, Analyse, Optimierung)
+- Limits via .env konfigurierbar (3/50/10 pro Tag)
+- 17 Tests
 
-**Aufgaben:**
-- Chart-Datenkorrektheit testen
-- Edge Cases: leere Daten, Einzeldatenpunkte, Datum-Ranges
-- Volumen-Charts, 1RM-Progression, Muskelgruppen-Heatmaps
-- Heatmap-Widget (90-Tage Aktivitätsmatrix)
-- Robuste Visualisierungen ohne Crashes
+### Phase 7.2 – Test-Medien aufräumen ✅
 
----
+**Status:** COMPLETE (2026-02-19)
+- 102 test_photo_*.png aus media/ gelöscht
+- conftest.py: use_temp_media_root autouse-Fixture
 
-### Phase 6.1 – Security Audit ⏳
+### Phase 7.3 – Notizen erweitern ✅
 
-**Status:** Planned
+**Status:** COMPLETE (2026-02-19)
+- PlanUebung.notiz: Technik-Hinweis pro Übung (Migration 0069 auf 7.1-Branch)
+- Satz.notiz: max_length entfernt
+- Dashboard: Kommentar in Trainingsliste, Hinweisbox im Training
+- Quick-Tags: +4 neue Emojis
+- 12 Tests
 
-**Aufgaben:**
-- OWASP Top 10 Check
-- django-axes Rate Limiting
-- bandit Security Linter
-- Safety (Dependency Vulnerabilities)
-- File Upload Validation
-- Session Security Review
+### Phase 7.4 – Wochenübersicht Dashboard ✅
 
----
+**Status:** COMPLETE (2026-02-19)
+- UserProfile.trainings_pro_woche (Migration 0069 auf 7.4-Branch)
+- _get_week_overview(): Mo–So mit Trainings-Status
+- Dashboard-Karte mit Tagesstreifen + Fortschrittsbalken
+- 15 Tests
 
-### Phase 6.2 – Performance Benchmarks ⏳
+### Phase 7.5 – Internationalisierung Englisch (i18n) 🔄
 
-**Status:** Planned
+**Status:** IN PROGRESS
+- Vorgezogen vor Export, damit Export-Strings nicht doppelt bearbeitet werden müssen
+- Scope: Framework-Setup + Core-Templates + Language-Switcher
+- AI Coach und Übungs-Beschreibungen: separater optionaler Schritt
 
-**Aufgaben:**
-- Lighthouse Audit
-- WebPageTest Performance
-- Ziele: <2s Page Load, <500ms API (P95), <50 Queries/Page, <512MB/Worker
-
----
-
-### Phase 6.3 – Deployment Automation ⏳
-
-**Status:** Planned
-
-**Aufgaben:**
-- GitHub Actions: Test → Quality → Staging → Production
-- Smoke Tests nach Deploy
-- Rollback-Mechanismus
-
----
-
-### Phase 6.4 – Monitoring ⏳
-
-**Status:** Partially Done
-
-**Fertig:**
-- ✅ Sentry Error Tracking (bereits live)
-
-**Noch zu tun:**
-- ⏳ Slow Query Monitoring
-- ⏳ Server Metrics (CPU/RAM/Disk)
-- ⏳ Performance Dashboard
-
----
-
-### Phase 6.5 – Documentation ⏳
+### Phase 7.6 – Import/Export (Hevy-Format) ⏳
 
 **Status:** Planned
-
-**Aufgaben:**
-- docs/DEPLOYMENT.md (bereits vorhanden, ggf. erweitern)
-- docs/API.md (für Plan Sharing API)
-- docs/ARCHITECTURE.md
-- README.md mit Screenshots aktualisieren
+- CSV-Export kompatibel mit Hevy/Strong
+- "Bring your data" für Switcher
 
 ---
 
