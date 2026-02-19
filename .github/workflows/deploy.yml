@@ -88,15 +88,15 @@ jobs:
           sudo systemctl restart homegym
 
           echo "=== [7/7] Smoke Test ==="
-          sleep 5  # Kurz warten bis Gunicorn hochgefahren ist
+          sleep 5  # Kurz warten bis App hochgefahren ist
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             --max-time 10 \
-            "http://localhost/accounts/login/")
+            "https://gym.last-strawberry.com/accounts/login/")
 
           if [ "$HTTP_STATUS" != "200" ]; then
             echo "❌ Smoke Test fehlgeschlagen! HTTP Status: $HTTP_STATUS"
             echo "=== ROLLBACK auf $PREVIOUS_COMMIT ==="
-            git checkout "$PREVIOUS_COMMIT"
+            git reset --hard "$PREVIOUS_COMMIT"
             $PIP install -r requirements.txt --quiet
             $PYTHON manage.py migrate --noinput
             sudo systemctl restart homegym
