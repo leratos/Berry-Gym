@@ -279,10 +279,36 @@ class ConfigViewsTest(RefactoringTestCase):
 class NotificationsViewsTest(RefactoringTestCase):
     """Test notifications.py module - Push notifications"""
 
-    def test_get_vapid_public_key_works(self):
-        """Test VAPID public key endpoint"""
-        response = self.client.get(reverse("get_vapid_public_key"))
+    def test_get_vapid_public_key_no_keys_returns_503(self):
+        """Ohne VAPID-Keys gibt der Endpoint 503 zurück (korrekt in CI/Dev)."""
+        from django.test import override_settings
+
+        with override_settings(VAPID_PUBLIC_KEY=None):
+            response = self.client.get(reverse("get_vapid_public_key"))
+        self.assertEqual(response.status_code, 503)
+        data = json.loads(response.content)
+        self.assertIn("error", data)
+
+    def test_get_vapid_public_key_with_key_returns_200(self):
+        """Mit gültigem VAPID-Key gibt der Endpoint 200 und publicKey zurück."""
+        from django.test import override_settings
+
+        # Minimaler EC-Public-Key im PEM-Format (65 raw bytes, DER-encoded = 91 bytes)
+        # Generiert mit: from cryptography.hazmat.primitives.asymmetric import ec
+        # Echter Test-Key, nicht für Production.
+        test_pem = (
+            "-----BEGIN PUBLIC KEY-----\n"
+            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEbhCHOJnPKFTq3G7z+KiVJhXVt2Oy\n"
+            "1x9Q8v3R5JkQmW4XdN2pL8sY3mK7bV6eF0cH9wP4nQ2rT1uMsXAiZ5oB7g==\n"
+            "-----END PUBLIC KEY-----\n"
+        )
+        with override_settings(VAPID_PUBLIC_KEY=test_pem):
+            response = self.client.get(reverse("get_vapid_public_key"))
         self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertIn("publicKey", data)
+        self.assertIsInstance(data["publicKey"], str)
+        self.assertGreater(len(data["publicKey"]), 0)
 
 
 class OfflineViewsTest(RefactoringTestCase):

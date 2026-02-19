@@ -1,30 +1,42 @@
 name: Deploy to Production
 
-# Workflow-level permissions (restrictive by default)
 permissions:
   contents: read
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  # Auto-Deploy: nur wenn CI auf main vollständig grün ist
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    branches: [main]
+    types: [completed]
+
+  # Manueller Trigger (z.B. für Hotfixes oder Re-Deploy)
+  workflow_dispatch:
     inputs:
       environment:
-        description: 'Deployment environment'
+        description: 'Deployment-Ziel'
         required: true
         default: 'production'
         type: choice
         options:
           - production
-          - staging
 
 jobs:
   deploy:
-    name: Deploy to ${{ github.event.inputs.environment }}
+    name: Deploy to Production
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
+
+    # Auto-Deploy: nur starten wenn CI erfolgreich war
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success')
+
+    environment: production
 
     permissions:
-      contents: read       # Checkout code
-      deployments: write   # Create deployments
+      contents: read
+      deployments: write
 
     steps:
     - name: Checkout code
@@ -38,43 +50,63 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT || 22 }}
         script: |
+          set -e  # Sofort abbrechen bei jedem Fehler
+
           cd ${{ secrets.PROJECT_PATH }}
 
-          # Backup database
-          echo "Creating database backup..."
-          python manage.py dumpdata > backup_$(date +%Y%m%d_%H%M%S).json
+          echo "=== [1/7] Git-Status prüfen ==="
+          git fetch origin main
 
-          # Pull latest code
-          echo "Pulling latest code..."
-          git fetch origin
-          git checkout ${{ github.ref_name }}
-          git pull origin ${{ github.ref_name }}
+          # Aktuellen Commit für Rollback merken
+          PREVIOUS_COMMIT=$(git rev-parse HEAD)
+          echo "Rollback-Punkt: $PREVIOUS_COMMIT"
 
-          # Install dependencies
-          echo "Installing dependencies..."
-          source venv/bin/activate
-          pip install -r requirements.txt
+          echo "=== [2/7] Datenbank-Backup ==="
+          BACKUP_FILE="backup_$(date +%Y%m%d_%H%M%S).json"
+          .venv/bin/python manage.py dumpdata \
+            --exclude auth.permission \
+            --exclude contenttypes \
+            --indent 2 \
+            > "$BACKUP_FILE"
+          echo "Backup gespeichert: $BACKUP_FILE"
 
-          # Run migrations
-          echo "Running migrations..."
-          python manage.py migrate --noinput
+          echo "=== [3/7] Code aktualisieren ==="
+          git pull origin main
 
-          # Collect static files
-          echo "Collecting static files..."
-          python manage.py collectstatic --noinput
+          echo "=== [4/7] Dependencies installieren ==="
+          .venv/bin/pip install -r requirements.txt --quiet
 
-          # Restart application
-          echo "Restarting application..."
+          echo "=== [5/7] Migrations + Static Files ==="
+          .venv/bin/python manage.py migrate --noinput
+          .venv/bin/python manage.py collectstatic --noinput --clear
+
+          echo "=== [6/7] Gunicorn neu starten ==="
           sudo systemctl restart gunicorn
-          sudo systemctl restart nginx
 
-          echo "Deployment completed successfully!"
+          echo "=== [7/7] Smoke Test ==="
+          sleep 5  # Kurz warten bis Gunicorn hochgefahren ist
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 10 \
+            "http://localhost/accounts/login/")
 
-    - name: Notify deployment status
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ Smoke Test fehlgeschlagen! HTTP Status: $HTTP_STATUS"
+            echo "=== ROLLBACK auf $PREVIOUS_COMMIT ==="
+            git checkout "$PREVIOUS_COMMIT"
+            .venv/bin/pip install -r requirements.txt --quiet
+            .venv/bin/python manage.py migrate --noinput
+            sudo systemctl restart gunicorn
+            echo "Rollback abgeschlossen."
+            exit 1
+          fi
+
+          echo "✅ Deployment erfolgreich! HTTP Status: $HTTP_STATUS"
+
+    - name: Deployment-Status melden
       if: always()
       run: |
         if [ "${{ job.status }}" == "success" ]; then
-          echo "✅ Deployment to ${{ github.event.inputs.environment }} successful!"
+          echo "✅ Deploy auf Production erfolgreich (Commit: ${{ github.sha }})"
         else
-          echo "❌ Deployment to ${{ github.event.inputs.environment }} failed!"
+          echo "❌ Deploy fehlgeschlagen – Rollback wurde auf dem Server ausgeführt"
         fi
