@@ -43,25 +43,57 @@
 
     <h6 class="text-secondary mb-3 ps-2 mt-4">Daten von der Uhr</h6>
 
-    <div class="row g-3 mb-3">
-        <div class="col-6">
-            <div class="p-3 bg-dark border border-secondary rounded-3">
-                <label class="d-block text-muted small mb-1"><i class="bi bi-droplet-fill text-danger"></i> Fett (kg)</label>
-                <input type="number" step="0.1" name="fettmasse_kg" value="{{ wert.fettmasse_kg|default:'' }}" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+    {# Fett-Block: kg und % gegenseitig berechenbar #}
+    <div class="card bg-dark border-secondary mb-3">
+        <div class="card-body pb-2 pt-3">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-droplet-fill text-danger me-2"></i>
+                <span class="text-muted small fw-bold">FETTMASSE</span>
+                <span class="ms-auto text-muted" style="font-size:0.7rem">eines eingeben → anderes wird berechnet</span>
             </div>
-        </div>
-        <div class="col-6">
-            <div class="p-3 bg-dark border border-secondary rounded-3">
-                <label class="d-block text-muted small mb-1"><i class="bi bi-lightning-fill text-warning"></i> Muskeln (kg)</label>
-                <input type="number" step="0.1" name="muskelmasse_kg" value="{{ wert.muskelmasse_kg|default:'' }}" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="text-muted" style="font-size:0.72rem">kg</label>
+                    <input id="fett_kg" type="number" step="0.1" name="fettmasse_kg"
+                           value="{{ wert.fettmasse_kg|default:'' }}"
+                           class="form-control bg-transparent text-white border-secondary fw-bold fs-5 text-center"
+                           placeholder="–">
+                </div>
+                <div class="col-6">
+                    <label class="text-muted" style="font-size:0.72rem">%</label>
+                    <input id="kfa" type="number" step="0.1" name="koerperfett_prozent"
+                           value="{{ wert.koerperfett_prozent|default:'' }}"
+                           class="form-control bg-transparent text-white border-secondary fw-bold fs-5 text-center"
+                           placeholder="–">
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="mb-3">
-        <div class="p-3 bg-dark border border-secondary rounded-3">
-            <label class="d-block text-muted small mb-1">% KFA (Uhr)</label>
-            <input type="number" step="0.1" name="koerperfett_prozent" value="{{ wert.koerperfett_prozent|default:'' }}" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
+    {# Muskel-Block: kg und % gegenseitig berechenbar #}
+    <div class="card bg-dark border-secondary mb-3">
+        <div class="card-body pb-2 pt-3">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-lightning-fill text-warning me-2"></i>
+                <span class="text-muted small fw-bold">MUSKELMASSE</span>
+                <span class="ms-auto text-muted" style="font-size:0.7rem">eines eingeben → anderes wird berechnet</span>
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="text-muted" style="font-size:0.72rem">kg</label>
+                    <input id="muskel_kg" type="number" step="0.1" name="muskelmasse_kg"
+                           value="{{ wert.muskelmasse_kg|default:'' }}"
+                           class="form-control bg-transparent text-white border-secondary fw-bold fs-5 text-center"
+                           placeholder="–">
+                </div>
+                <div class="col-6">
+                    <label class="text-muted" style="font-size:0.72rem">%</label>
+                    <input id="muskel_prozent" type="number" step="0.1" name="muskelmasse_prozent"
+                           value="{{ wert.muskelmasse_prozent|default:'' }}"
+                           class="form-control bg-transparent text-white border-secondary fw-bold fs-5 text-center"
+                           placeholder="–">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -73,4 +105,48 @@
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    const gewichtInput = document.querySelector('input[name="gewicht"]');
+    function getGewicht() { return parseFloat(gewichtInput?.value) || null; }
+    function round1(val) { return Math.round(val * 10) / 10; }
+
+    const fettKg  = document.getElementById('fett_kg');
+    const fettPct = document.getElementById('kfa');
+    const muskelKg  = document.getElementById('muskel_kg');
+    const muskelPct = document.getElementById('muskel_prozent');
+
+    fettKg.addEventListener('input', function () {
+        const g = getGewicht();
+        if (g && this.value) fettPct.value = round1(parseFloat(this.value) / g * 100);
+        else if (!this.value) fettPct.value = '';
+    });
+    fettPct.addEventListener('input', function () {
+        const g = getGewicht();
+        if (g && this.value) fettKg.value = round1(parseFloat(this.value) / 100 * g);
+        else if (!this.value) fettKg.value = '';
+    });
+    muskelKg.addEventListener('input', function () {
+        const g = getGewicht();
+        if (g && this.value) muskelPct.value = round1(parseFloat(this.value) / g * 100);
+        else if (!this.value) muskelPct.value = '';
+    });
+    muskelPct.addEventListener('input', function () {
+        const g = getGewicht();
+        if (g && this.value) muskelKg.value = round1(parseFloat(this.value) / 100 * g);
+        else if (!this.value) muskelKg.value = '';
+    });
+    gewichtInput?.addEventListener('input', function () {
+        const g = parseFloat(this.value) || null;
+        if (!g) return;
+        if (fettKg.value)    fettPct.value    = round1(parseFloat(fettKg.value)    / g * 100);
+        if (fettPct.value)   fettKg.value     = round1(parseFloat(fettPct.value)   / 100 * g);
+        if (muskelKg.value)  muskelPct.value  = round1(parseFloat(muskelKg.value)  / g * 100);
+        if (muskelPct.value) muskelKg.value   = round1(parseFloat(muskelPct.value) / 100 * g);
+    });
+})();
+</script>
 {% endblock %}
