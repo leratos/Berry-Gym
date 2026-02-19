@@ -268,6 +268,20 @@ def profile(request: HttpRequest) -> HttpResponse:
                     request, "✅ Passwort erfolgreich geändert! Du bleibst eingeloggt."
                 )
 
+        elif action == "update_body_data":
+            groesse_str = request.POST.get("groesse_cm", "").strip()
+            if groesse_str and groesse_str.isdigit():
+                groesse = int(groesse_str)
+                if 100 <= groesse <= 250:
+                    profile = request.user.profile
+                    profile.groesse_cm = groesse
+                    profile.save(update_fields=["groesse_cm"])
+                    messages.success(request, f"✅ Körpergröße auf {groesse} cm gesetzt.")
+                else:
+                    messages.error(request, "Körpergröße muss zwischen 100 und 250 cm liegen.")
+            else:
+                messages.error(request, "Bitte eine gültige Körpergröße eingeben.")
+
         return redirect("profile")
 
-    return render(request, "core/profile.html")
+    return render(request, "core/profile.html", {"user_profile": request.user.profile})
