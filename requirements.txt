@@ -90,6 +90,7 @@ Faker==40.4.0
 # ============================================
 sentry-sdk==2.22.0
 django-axes==7.1.0  # Brute-force protection
+django-ratelimit==4.1.0  # Rate limiting fuer KI-Endpoints
 defusedxml==0.7.1   # Safe XML parsing (verhindert XXE-Angriffe)
 
 # ============================================

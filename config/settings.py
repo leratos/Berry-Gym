@@ -385,6 +385,21 @@ if not DEBUG:
         print("⚠️  SENTRY_DSN nicht gesetzt - Error Tracking deaktiviert")
 
 # ==================================
+# ==================================
+# RATE LIMITING (KI-Endpoints)
+# ==================================
+# django-ratelimit: Burst-Schutz auf kostenpflichtigen AI-Endpoints
+# DB-Counter im UserProfile: tägliches Budget pro User
+#
+# In DEBUG-Modus oder Tests: Limits deaktiviert
+RATELIMIT_BYPASS = DEBUG or TESTING
+
+# Tägliche Limits (werden um Mitternacht UTC zurückgesetzt)
+AI_RATE_LIMIT_PLAN_GENERATION = int(os.getenv("AI_RATE_LIMIT_PLAN_GENERATION", "3"))
+AI_RATE_LIMIT_LIVE_GUIDANCE = int(os.getenv("AI_RATE_LIMIT_LIVE_GUIDANCE", "50"))
+AI_RATE_LIMIT_ANALYSIS = int(os.getenv("AI_RATE_LIMIT_ANALYSIS", "10"))
+
+# ==================================
 # DJANGO-AXES: Brute Force Protection
 # ==================================
 
