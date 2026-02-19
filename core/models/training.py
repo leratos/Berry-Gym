@@ -61,7 +61,7 @@ class Satz(models.Model):
         verbose_name="RPE (1-10)",
         validators=[MinValueValidator(1.0), MaxValueValidator(10.0)],
     )
-    notiz = models.TextField(blank=True, null=True, verbose_name="Notiz", max_length=500)
+    notiz = models.TextField(blank=True, null=True, verbose_name="Notiz")
     superset_gruppe = models.PositiveIntegerField(
         default=0,
         verbose_name="Superset-Gruppe",

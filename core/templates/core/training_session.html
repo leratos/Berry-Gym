@@ -350,6 +350,19 @@
                     {% endwith %}
                 {% endif %}
 
+                {% if plan_uebung_hinweise %}
+                    {% with hinweis=plan_uebung_hinweise|get_item:uebung_group.grouper.id %}
+                        {% if hinweis %}
+                        <div class="px-3 py-2 bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25">
+                            <small class="text-warning-emphasis">
+                                <i class="bi bi-lightbulb-fill me-1 text-warning"></i>
+                                {{ hinweis }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
+
                 <div class="card-body p-0">
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="text-secondary small text-uppercase">
@@ -544,17 +557,21 @@
                     </label>
 
                     <!-- Quick Tags -->
-                    <div class="btn-group btn-group-sm mb-2 flex-wrap" role="group" aria-label="Quick Tags">
-                        <button type="button" class="btn btn-outline-success" onclick="insertTag('⭐ Perfekt')">⭐ Perfekt</button>
-                        <button type="button" class="btn btn-outline-info" onclick="insertTag('👍 Gut')">👍 Gut</button>
-                        <button type="button" class="btn btn-outline-warning" onclick="insertTag('⚠️ Schwierig')">⚠️ Schwierig</button>
-                        <button type="button" class="btn btn-outline-danger" onclick="insertTag('🤕 Mit Hilfe')">🤕 Mit Hilfe</button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="insertTag('😓 Schmerz')">😓 Schmerz</button>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="insertTag('⭐ Perfekt')">⭐ Perfekt</button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="insertTag('👍 Gut')">👍 Gut</button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="insertTag('⚠️ Schwierig')">⚠️ Schwierig</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="insertTag('🤕 Mit Hilfe')">🤕 Mit Hilfe</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('😓 Schmerz')">😓 Schmerz</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('💪 Stärker')">💪 Stärker</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('😴 Müde')">😴 Müde</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('🔥 Pump')">🔥 Pump</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('🎯 PR')">🎯 PR</button>
                     </div>
 
                     <textarea name="notiz" id="notizInput" class="form-control border-secondary" rows="3"
-                              placeholder="z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', 'Neue Schuhe'..."
-                              maxlength="500" oninput="updateCharCount()"></textarea>
+                              placeholder="z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', '🎯 PR'..."
+                              oninput="updateCharCount()"></textarea>
                     <div class="d-flex justify-content-between align-items-center mt-1">
                         <small class="text-muted" id="charCount">0 / 500 Zeichen</small>
                         <button type="button" class="btn btn-sm btn-link text-muted p-0" onclick="clearNotiz()">
