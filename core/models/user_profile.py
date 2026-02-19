@@ -40,6 +40,12 @@ class UserProfile(models.Model):
         verbose_name="Deload Gewichts-Faktor",
         help_text="Faktor für Gewichts-Reduktion in Deload-Wochen (0.9 = -10%)",
     )
+    groesse_cm = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Körpergröße (cm)",
+        help_text="Wird für BMI- und FFMI-Berechnung verwendet",
+    )
 
     def __str__(self):
         return f"Profil von {self.user.username}"
