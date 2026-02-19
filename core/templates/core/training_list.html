@@ -55,6 +55,11 @@
                                 <i class="bi bi-bar-chart-fill"></i> {{ data.volumen|floatformat:0 }} kg
                             </span>
                         </div>
+                        {% if data.training.kommentar %}
+                        <div class="mt-2 text-muted small fst-italic">
+                            <i class="bi bi-chat-left-text me-1"></i>{{ data.training.kommentar|truncatechars:80 }}
+                        </div>
+                        {% endif %}
                     </div>
                 </a>
 
