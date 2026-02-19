@@ -1267,19 +1267,6 @@
         setForm.addEventListener('submit', async function(e) {
             e.preventDefault(); // Verhindere normalen Form Submit
 
-            // Emoji-Filter: Entferne 4-Byte-Emojis (temporär bis utf8mb4-Migration deployed ist)
-            const notizField = document.getElementById('notizInput');
-            if (notizField && notizField.value) {
-                const originalValue = notizField.value;
-                // Entferne alle 4-Byte UTF-8 Zeichen (Emojis)
-                const cleanedValue = originalValue.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
-
-                if (originalValue !== cleanedValue) {
-                    notizField.value = cleanedValue;
-                    showToast('ℹ️ Emojis wurden entfernt (noch nicht unterstützt)', 'warning', 3000);
-                }
-            }
-
             const formData = new FormData(setForm);
             const submitBtn = setForm.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
