@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Metriken & Kennzahlen - HomeGym{% endblock %}
+{% block title %}{% trans "Metriken & Kennzahlen" %} - HomeGym{% endblock %}
 
 {% block page_nav %}
 <nav class="navbar navbar-expand-lg navbar-page mb-4">
@@ -13,7 +13,7 @@
       <ul class="navbar-nav ms-auto">
         <li class="nav-item">
           <a class="nav-link" href="{% url 'dashboard' %}">
-            <i class="bi bi-arrow-left"></i> Zurück zum Dashboard
+            <i class="bi bi-arrow-left"></i> {% trans "Zurück zum Dashboard" %}
           </a>
         </li>
       </ul>
@@ -26,8 +26,8 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <h1 class="mb-4">📊 Metriken & Kennzahlen erklärt</h1>
-            <p class="lead">Verstehe deine Trainingsmetriken und wie sie berechnet werden</p>
+            <h1 class="mb-4">📊 {% trans "Metriken & Kennzahlen erklärt" %}</h1>
+            <p class="lead">{% trans "Verstehe deine Trainingsmetriken und wie sie berechnet werden" %}</p>
         </div>
     </div>
 
@@ -219,7 +219,7 @@
     </div>
 
     <div class="text-center mb-4">
-        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">← Zurück zum Dashboard</a>
+        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">{% trans "← Zurück zum Dashboard" %}</a>
     </div>
 </div>
 {% endblock %}

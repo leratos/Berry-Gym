@@ -142,3 +142,8 @@ test_suite*.txt
 # Locust Load Test Reports
 tests/load/results/*.html
 tests/load/results/*.csv
+show_untranslated.py
+fix_po_dupes.py
+add_translations.py
+debug_timer.py
+check_trans.py

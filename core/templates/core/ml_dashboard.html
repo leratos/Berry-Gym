@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}ML Dashboard - HomeGym{% endblock %}
+{% block title %}{% trans "ML Dashboard" %} - HomeGym{% endblock %}
 
 {% block page_nav %}
 <nav class="navbar navbar-page border-bottom mb-4">
   <div class="container-fluid">
     <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-        <i class="bi bi-arrow-left"></i> Dashboard
+        <i class="bi bi-arrow-left"></i> {% trans "Dashboard" %}
     </a>
-    <span class="navbar-text page-title fw-bold">ML Dashboard</span>
+    <span class="navbar-text page-title fw-bold">{% trans "ML Dashboard" %}</span>
     <div style="width: 40px;">
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
           <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -23,14 +23,14 @@
 <div class="container mt-2">
     <div class="row mb-4">
         <div class="col-12">
-            <h1 class="mb-0"><i class="bi bi-robot"></i> ML Prediction Dashboard</h1>
-            <p class="text-muted">Machine Learning Modelle für Gewichtsvorhersagen (100% lokal, CPU-only)</p>
+            <h1 class="mb-0"><i class="bi bi-robot"></i> {% trans "ML Prediction Dashboard" %}</h1>
+            <p class="text-muted">{% trans "Machine Learning Modelle für Gewichtsvorhersagen (100% lokal, CPU-only)" %}</p>
         </div>
     </div>
 
     <div class="alert alert-info border-info mb-4">
         <h5 class="alert-heading">
-            <i class="bi bi-info-circle-fill me-2"></i>Was macht das ML-System?
+            <i class="bi bi-info-circle-fill me-2"></i>{% trans "Was macht das ML-System?" %}
         </h5>
         <p class="mb-2">
             Das ML-System analysiert deine bisherigen Trainingseinheiten und erstellt <strong>Gewichtsvorhersagen</strong>
@@ -63,36 +63,36 @@
         <div class="col-md-3">
             <div class="card bg-primary text-white">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-check-circle"></i> Zuverlässig</h5>
+                    <h5 class="card-title"><i class="bi bi-check-circle"></i> {% trans "Zuverlässig" %}</h5>
                     <h2 class="mb-0">{{ ready_models }}</h2>
-                    <small>R² ≥ 0.5, ≥ 15 Sätze</small>
+                    <small>{% trans "R² ≥ 0.5, ≥ 15 Sätze" %}</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-danger text-white">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> Unzuverlässig</h5>
+                    <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> {% trans "Unzuverlässig" %}</h5>
                     <h2 class="mb-0">{{ unreliable_models }}</h2>
-                    <small>Zu wenig Daten oder R² &lt; 0.5</small>
+                    <small>{% trans "Zu wenig Daten oder R² < 0.5" %}</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-info text-white">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-cpu"></i> Total</h5>
+                    <h5 class="card-title"><i class="bi bi-cpu"></i> {% trans "Total" %}</h5>
                     <h2 class="mb-0">{{ total_models }}</h2>
-                    <small>Trainierte Modelle</small>
+                    <small>{% trans "Trainierte Modelle" %}</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-warning text-dark">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-arrow-repeat"></i> Neu trainieren</h5>
+                    <h5 class="card-title"><i class="bi bi-arrow-repeat"></i> {% trans "Neu trainieren" %}</h5>
                     <h2 class="mb-0">{{ needs_training }}</h2>
-                    <small>Veraltete Modelle</small>
+                    <small>{% trans "Veraltete Modelle" %}</small>
                 </div>
             </div>
         </div>
@@ -100,19 +100,19 @@
 
     <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title">Aktionen</h5>
+            <h5 class="card-title">{% trans "Aktionen" %}</h5>
             <button class="btn btn-success me-2" onclick="trainAllModels()">
-                <i class="bi bi-play-fill"></i> Alle Modelle trainieren
+                <i class="bi bi-play-fill"></i> {% trans "Alle Modelle trainieren" %}
             </button>
             <button class="btn btn-outline-secondary" onclick="location.reload()">
-                <i class="bi bi-arrow-clockwise"></i> Aktualisieren
+                <i class="bi bi-arrow-clockwise"></i> {% trans "Aktualisieren" %}
             </button>
         </div>
     </div>
 
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0">Trainierte Modelle</h5>
+            <h5 class="mb-0">{% trans "Trainierte Modelle" %}</h5>
         </div>
         <div class="card-body">
             {% if ml_models %}
@@ -120,13 +120,13 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Übung</th>
-                            <th>Status</th>
-                            <th>Samples</th>
-                            <th>R² Score</th>
-                            <th>MAE (kg)</th>
-                            <th>Trainiert am</th>
-                            <th>Aktionen</th>
+                            <th>{% trans "Übung" %}</th>
+                            <th>{% trans "Status" %}</th>
+                            <th>{% trans "Samples" %}</th>
+                            <th>{% trans "R² Score" %}</th>
+                            <th>{% trans "MAE (kg)" %}</th>
+                            <th>{% trans "Trainiert am" %}</th>
+                            <th>{% trans "Aktionen" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -162,7 +162,7 @@
                             <td>{{ model.trained_at|date:"d.m.Y H:i" }}</td>
                             <td>
                                 <button class="btn btn-sm btn-outline-primary" onclick="trainModel({{ model.uebung.id }})">
-                                    <i class="bi bi-arrow-repeat"></i> Neu trainieren
+                                    <i class="bi bi-arrow-repeat"></i> {% trans "Neu trainieren" %}
                                 </button>
                             </td>
                         </tr>
@@ -172,8 +172,8 @@
             </div>
             {% else %}
             <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Noch keine Modelle trainiert.
-                Klicke auf "Alle Modelle trainieren" um zu starten.
+                <i class="bi bi-info-circle"></i> {% trans "Noch keine Modelle trainiert." %}
+                {% trans "Klicke auf Alle Modelle trainieren um zu starten." %}
             </div>
             {% endif %}
         </div>

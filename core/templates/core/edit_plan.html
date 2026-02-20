@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Plan bearbeiten - {{ plan.name }}{% endblock %}
+{% block title %}{% trans "Plan bearbeiten" %} - {{ plan.name }}{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
@@ -28,9 +28,9 @@
 <nav class="navbar navbar-page border-bottom">
     <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-            <i class="bi bi-arrow-left"></i> Dashboard
+            <i class="bi bi-arrow-left"></i> {% trans "Dashboard" %}
         </a>
-        <span class="navbar-text">Plan bearbeiten</span>
+        <span class="navbar-text">{% trans "Plan bearbeiten" %}</span>
         <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
@@ -52,9 +52,9 @@
         <div class="col-lg-8">
             <div class="card card-stat border-secondary mb-4">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-list-check me-2"></i>Übungen auswählen</h5>
+                    <h5 class="card-title"><i class="bi bi-list-check me-2"></i>{% trans "Übungen auswählen" %}</h5>
                     <div class="mb-3">
-                        <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
+                        <input type="text" id="searchExercises" class="form-control" placeholder="{% trans "Übung suchen..." %}">
                     </div>
                     {% for gruppe, uebungen in uebungen_nach_gruppe.items %}
                     <div class="muscle-group-section mb-4">
@@ -100,45 +100,45 @@
             <div class="selected-exercises">
                 <div class="card card-stat border-warning mb-3" id="performanceWarningsCard" style="display: none;">
                     <div class="card-body">
-                        <h6 class="card-title text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Optimierungsvorschläge</h6>
+                        <h6 class="card-title text-warning"><i class="bi bi-exclamation-triangle me-2"></i>{% trans "Optimierungsvorschläge" %}</h6>
                         <div id="performanceWarnings" class="small"></div>
                         <button type="button" class="btn btn-warning btn-sm w-100 mt-2" onclick="startOptimization()">
-                            <i class="bi bi-stars me-2"></i>KI-Optimierung starten
+                            <i class="bi bi-stars me-2"></i>{% trans "KI-Optimierung starten" %}
                         </button>
                     </div>
                 </div>
 
                 <div class="card card-stat border-secondary mb-3">
                     <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-pencil-square me-2"></i>Plan bearbeiten</h5>
+                        <h5 class="card-title"><i class="bi bi-pencil-square me-2"></i>{% trans "Plan bearbeiten" %}</h5>
                         <form method="post" id="planForm">
                             {% csrf_token %}
                             <div class="mb-3">
-                                <label class="form-label">Name des Plans *</label>
+                                <label class="form-label">{% trans "Name des Plans" %} *</label>
                                 <input type="text" name="name" class="form-control" value="{{ plan.name }}" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Beschreibung</label>
+                                <label class="form-label">{% trans "Beschreibung" %}</label>
                                 <textarea name="beschreibung" class="form-control" rows="2">{{ plan.beschreibung }}</textarea>
                             </div>
                             <div class="mb-3">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" name="is_public" id="isPublicCheck" {% if plan.is_public %}checked{% endif %}>
                                     <label class="form-check-label" for="isPublicCheck">
-                                        <i class="bi bi-globe me-1"></i> Plan öffentlich machen
-                                        <small class="text-muted d-block">Andere User können diesen Plan sehen und kopieren</small>
+                                        <i class="bi bi-globe me-1"></i> {% trans "Plan öffentlich machen" %}
+                                        <small class="text-muted d-block">{% trans "Andere User können diesen Plan sehen und kopieren" %}</small>
                                     </label>
                                 </div>
                             </div>
                             <hr class="border-secondary">
-                            <h6 class="text-secondary mb-3">Ausgewählte Übungen (<span id="selectedCount">0</span>)</h6>
+                            <h6 class="text-secondary mb-3">{% trans "Ausgewählte Übungen" %} (<span id="selectedCount">0</span>)</h6>
                             <div id="recommendationWarnings"></div>
                             <div id="selectedExercises" class="exercise-order"></div>
                             <button type="submit" class="btn btn-success w-100 mb-2" id="submitBtn">
-                                <i class="bi bi-check-lg me-2"></i>Änderungen speichern
+                                <i class="bi bi-check-lg me-2"></i>{% trans "Änderungen speichern" %}
                             </button>
                             <a href="{% url 'plan_details' plan.id %}" class="btn btn-secondary w-100">
-                                <i class="bi bi-x-lg me-2"></i>Abbrechen
+                                <i class="bi bi-x-lg me-2"></i>{% trans "Abbrechen" %}
                             </a>
                         </form>
                     </div>

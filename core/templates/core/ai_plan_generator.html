@@ -1,3 +1,4 @@
+{% load i18n %}
 <!-- AI Plan Generator Modal -->
 <style>
     .ai-plan-btn {
@@ -64,7 +65,7 @@
         <div class="modal-content bg-dark border-secondary">
             <div class="modal-header border-secondary">
                 <h5 class="modal-title">
-                    <i class="bi bi-robot text-success"></i> KI-Trainingsplan erstellen
+                    <i class="bi bi-robot text-success"></i> {% trans "KI-Trainingsplan erstellen" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -72,7 +73,7 @@
                 <!-- Info Badge -->
                 <div class="alert alert-info border-info d-flex align-items-center mb-3">
                     <i class="bi bi-info-circle me-2"></i>
-                    <small>Die KI analysiert deine letzten Trainings und erstellt einen personalisierten Plan</small>
+                    <small>{% trans "Die KI analysiert deine letzten Trainings und erstellt einen personalisierten Plan" %}</small>
                 </div>
 
                 <!-- Form -->
@@ -80,15 +81,15 @@
                     <!-- Trainingsfrequenz (neu – steuert Split-Empfehlung) -->
                     <div class="mb-3">
                         <label for="trainingFrequency" class="form-label">
-                            <i class="bi bi-calendar-check"></i> Trainingsfrequenz pro Woche
+                            <i class="bi bi-calendar-check"></i> {% trans "Trainingsfrequenz pro Woche" %}
                         </label>
                         <select class="form-select bg-dark text-white border-secondary" id="trainingFrequency" required>
-                            <option value="">– Bitte wählen –</option>
-                            <option value="2">2x pro Woche</option>
-                            <option value="3">3x pro Woche</option>
-                            <option value="4">4x pro Woche</option>
-                            <option value="5">5x pro Woche</option>
-                            <option value="6">6x pro Woche</option>
+                            <option value="">{% trans "– Bitte wählen –" %}</option>
+                            <option value="2">{% trans "2x pro Woche" %}</option>
+                            <option value="3">{% trans "3x pro Woche" %}</option>
+                            <option value="4">{% trans "4x pro Woche" %}</option>
+                            <option value="5">{% trans "5x pro Woche" %}</option>
+                            <option value="6">{% trans "6x pro Woche" %}</option>
                         </select>
                         <div class="form-text" id="freqHint"></div>
                     </div>
@@ -96,85 +97,85 @@
                     <!-- Plan-Typ -->
                     <div class="mb-3">
                         <label for="planType" class="form-label">
-                            <i class="bi bi-calendar-week"></i> Plan-Typ
+                            <i class="bi bi-calendar-week"></i> {% trans "Plan-Typ" %}
                             <span class="badge bg-info ms-1 text-dark" id="splitSuggestBadge" style="display:none;">
-                                <i class="bi bi-lightbulb"></i> Empfohlen
+                                <i class="bi bi-lightbulb"></i> {% trans "Empfohlen" %}
                             </span>
                         </label>
                         <select class="form-select bg-dark text-white border-secondary" id="planType" name="plan_type" required>
-                            <option value="3er-split" selected>3er-Split (3x/Woche)</option>
-                            <option value="2er-split">2er-Split (2x/Woche)</option>
-                            <option value="4er-split">4er-Split (4x/Woche)</option>
-                            <option value="push-pull-legs">Push-Pull-Beine (3x/Woche)</option>
-                            <option value="ganzkörper">Ganzkörper (2-3x/Woche)</option>
+                            <option value="3er-split" selected>{% trans "3er-Split (3x/Woche)" %}</option>
+                            <option value="2er-split">{% trans "2er-Split (2x/Woche)" %}</option>
+                            <option value="4er-split">{% trans "4er-Split (4x/Woche)" %}</option>
+                            <option value="push-pull-legs">{% trans "Push-Pull-Beine (3x/Woche)" %}</option>
+                            <option value="ganzkörper">{% trans "Ganzkörper (2-3x/Woche)" %}</option>
                         </select>
-                        <div class="form-text">Wie oft trainierst du pro Woche?</div>
+                        <div class="form-text">{% trans "Wie oft trainierst du pro Woche?" %}</div>
                     </div>
 
                     <!-- Sätze pro Session -->
                     <div class="mb-3">
                         <label for="setsPerSession" class="form-label">
-                            <i class="bi bi-bar-chart"></i> Sätze pro Trainingstag: <strong id="setsValue">18</strong>
+                            <i class="bi bi-bar-chart"></i> {% trans "Sätze pro Trainingstag:" %} <strong id="setsValue">18</strong>
                         </label>
                         <input type="range" class="form-range" id="setsPerSession" name="sets_per_session"
                                min="12" max="24" value="18" step="2" oninput="updateSetsValue(this.value)">
                         <div class="d-flex justify-content-between">
-                            <small class="text-muted">12 (Kurz)</small>
-                            <small class="text-muted">18 (Optimal)</small>
-                            <small class="text-muted">24 (Lang)</small>
+                            <small class="text-muted">12 ({% trans "Kurz" %})</small>
+                            <small class="text-muted">18 ({% trans "Optimal" %})</small>
+                            <small class="text-muted">24 ({% trans "Lang" %})</small>
                         </div>
                     </div>
 
                     <!-- Analyse-Zeitraum -->
                     <div class="mb-3">
                         <label for="analysisDays" class="form-label">
-                            <i class="bi bi-clock-history"></i> Trainingshistorie analysieren
+                            <i class="bi bi-clock-history"></i> {% trans "Trainingshistorie analysieren" %}
                         </label>
                         <select class="form-select bg-dark text-white border-secondary" id="analysisDays" name="analysis_days">
-                            <option value="14">Letzte 2 Wochen</option>
-                            <option value="30" selected>Letzter Monat</option>
-                            <option value="60">Letzte 2 Monate</option>
+                            <option value="14">{% trans "Letzte 2 Wochen" %}</option>
+                            <option value="30" selected>{% trans "Letzter Monat" %}</option>
+                            <option value="60">{% trans "Letzte 2 Monate" %}</option>
                         </select>
                     </div>
 
                     <!-- Periodisierung -->
                     <div class="mb-3">
                         <label for="periodization" class="form-label">
-                            <i class="bi bi-arrow-repeat"></i> Periodisierung
+                            <i class="bi bi-arrow-repeat"></i> {% trans "Periodisierung" %}
                         </label>
                         <select class="form-select bg-dark text-white border-secondary" id="periodization" name="periodization">
-                            <option value="linear" selected>Linear (Progressive Steigerung)</option>
-                            <option value="wellenfoermig">Wellenförmig (Heavy/Medium/Light)</option>
-                            <option value="block">Block (Volumen → Kraft → Peak)</option>
+                            <option value="linear" selected>{% trans "Linear (Progressive Steigerung)" %}</option>
+                            <option value="wellenfoermig">{% trans "Wellenförmig (Heavy/Medium/Light)" %}</option>
+                            <option value="block">{% trans "Block (Volumen → Kraft → Peak)" %}</option>
                         </select>
-                        <div class="form-text">12 Wochen mit Deload in Woche 4/8/12</div>
+                        <div class="form-text">{% trans "12 Wochen mit Deload in Woche 4/8/12" %}</div>
                     </div>
 
                     <!-- Zielprofil -->
                     <div class="mb-3">
                         <label for="targetProfile" class="form-label">
-                            <i class="bi bi-bullseye"></i> Trainingsziel
+                            <i class="bi bi-bullseye"></i> {% trans "Trainingsziel" %}
                         </label>
                         <select class="form-select bg-dark text-white border-secondary" id="targetProfile" name="target_profile">
-                            <option value="kraft">Kraft (3-6 Wdh, RPE 7.5-9)</option>
-                            <option value="hypertrophie" selected>Muskelaufbau (6-12 Wdh, RPE 7-8.5)</option>
-                            <option value="definition">Definition (10-15 Wdh, RPE 6.5-8)</option>
+                            <option value="kraft">{% trans "Kraft (3-6 Wdh, RPE 7.5-9)" %}</option>
+                            <option value="hypertrophie" selected>{% trans "Muskelaufbau (6-12 Wdh, RPE 7-8.5)" %}</option>
+                            <option value="definition">{% trans "Definition (10-15 Wdh, RPE 6.5-8)" %}</option>
                         </select>
-                        <div class="form-text">Bestimmt RPE- und Wiederholungs-Zonen</div>
+                        <div class="form-text">{% trans "Bestimmt RPE- und Wiederholungs-Zonen" %}</div>
                     </div>
 
                     <!-- Submit Button - Text je nach Modus -->
                     <button type="submit" class="btn btn-success w-100 fw-bold" id="generateBtn">
                         <i class="bi bi-stars"></i>
                         {% if use_openrouter %}
-                            Vorschau erstellen
+                            {% trans "Vorschau erstellen" %}
                         {% else %}
-                            Plan generieren & speichern
+                            {% trans "Plan generieren & speichern" %}
                         {% endif %}
                     </button>
                     {% if not use_openrouter %}
                     <small class="text-muted d-block text-center mt-2">
-                        <i class="bi bi-cpu"></i> Lokale KI - Plan wird direkt gespeichert
+                        <i class="bi bi-cpu"></i> {% trans "Lokale KI - Plan wird direkt gespeichert" %}
                     </small>
                     {% endif %}
                 </form>
@@ -182,24 +183,24 @@
                 <!-- Plan Preview Container (initially hidden) -->
                 <div id="planPreviewContainer" style="display: none;">
                     <hr class="my-4 border-secondary">
-                    <h6 class="text-success mb-3"><i class="bi bi-eye"></i> Plan-Vorschau</h6>
+                    <h6 class="text-success mb-3"><i class="bi bi-eye"></i> {% trans "Plan-Vorschau" %}</h6>
                     <div id="planPreviewContent" class="plan-preview-content">
                         <!-- Will be populated by JavaScript -->
                     </div>
                     <div class="d-flex gap-2 mt-3">
                         <button type="button" class="btn btn-success flex-fill" id="confirmSaveBtn">
-                            <i class="bi bi-save"></i> Plan speichern
+                            <i class="bi bi-save"></i> {% trans "Plan speichern" %}
                         </button>
                         <button type="button" class="btn btn-secondary" id="cancelPreviewBtn">
-                            <i class="bi bi-x-circle"></i> Abbrechen
+                            <i class="bi bi-x-circle"></i> {% trans "Abbrechen" %}
                         </button>
                     </div>
                     <div class="form-check mt-3">
                         <input class="form-check-input" type="checkbox" id="setAsActiveCheck" checked>
                         <label class="form-check-label text-warning" for="setAsActiveCheck">
-                            <i class="bi bi-star-fill"></i> Als aktiven Plan setzen
+                            <i class="bi bi-star-fill"></i> {% trans "Als aktiven Plan setzen" %}
                             <small class="text-muted d-block ms-0 mt-1">
-                                Ersetzt den aktuellen Wochenzyklus. Deaktivieren um den neuen Plan nur zu speichern, ohne den laufenden Zyklus zu ändern.
+                                {% trans "Ersetzt den aktuellen Wochenzyklus. Deaktivieren um den neuen Plan nur zu speichern, ohne den laufenden Zyklus zu ändern." %}
                             </small>
                         </label>
                     </div>
@@ -214,24 +215,24 @@
                         </div>
                     </div>
                     <div class="step-indicator text-center" id="stepIndicator">
-                        <i class="bi bi-hourglass-split"></i> Starte Generierung...
+                        <i class="bi bi-hourglass-split"></i> {% trans "Starte Generierung..." %}
                     </div>
                 </div>
 
                 <!-- Success Message (initially hidden) -->
                 <div class="alert alert-success border-success mt-3" id="successMessage" style="display: none;">
-                    <i class="bi bi-check-circle"></i> <strong>Erfolg!</strong>
+                    <i class="bi bi-check-circle"></i> <strong>{% trans "Erfolg!" %}</strong>
                     <p class="mb-0 mt-2" id="successText"></p>
                 </div>
 
                 <!-- Error Message (initially hidden) -->
                 <div class="alert alert-danger border-danger mt-3" id="errorMessage" style="display: none;">
-                    <i class="bi bi-exclamation-triangle"></i> <strong>Fehler!</strong>
+                    <i class="bi bi-exclamation-triangle"></i> <strong>{% trans "Fehler!" %}</strong>
                     <p class="mb-0 mt-2" id="errorText"></p>
                 </div>
             </div>
             <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Schließen" %}</button>
             </div>
         </div>
     </div>

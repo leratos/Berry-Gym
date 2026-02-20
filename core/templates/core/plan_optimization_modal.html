@@ -1,10 +1,11 @@
+{% load i18n %}
 <!-- Plan Optimization Modal - Diff View für KI-Vorschläge -->
 <div class="modal fade" id="optimizationModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content bg-dark text-light">
             <div class="modal-header border-secondary">
                 <h5 class="modal-title">
-                    <i class="bi bi-stars me-2"></i>KI-Optimierungsvorschläge
+                    <i class="bi bi-stars me-2"></i>{% trans "KI-Optimierungsvorschläge" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -13,7 +14,7 @@
                 <div class="alert alert-info d-flex align-items-center mb-4">
                     <i class="bi bi-info-circle me-2"></i>
                     <div class="flex-grow-1">
-                        <strong>Analyse abgeschlossen</strong><br>
+                        <strong>{% trans "Analyse abgeschlossen" %}</strong><br>
                         <span id="optimizationModel">Model: llama-3.1-70b</span>
                     </div>
                 </div>
@@ -24,16 +25,16 @@
                 <!-- No Optimizations Found -->
                 <div id="noOptimizations" style="display: none;" class="alert alert-success">
                     <i class="bi bi-check-circle me-2"></i>
-                    <strong>Keine Optimierungen nötig!</strong><br>
-                    Dein Plan ist bereits gut ausbalanciert.
+                    <strong>{% trans "Keine Optimierungen nötig!" %}</strong><br>
+                    {% trans "Dein Plan ist bereits gut ausbalanciert." %}
                 </div>
             </div>
             <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-2"></i>Schließen
+                    <i class="bi bi-x-lg me-2"></i>{% trans "Schließen" %}
                 </button>
                 <button type="button" class="btn btn-success" onclick="applySelectedOptimizations()">
-                    <i class="bi bi-check-lg me-2"></i>Ausgewählte übernehmen
+                    <i class="bi bi-check-lg me-2"></i>{% trans "Ausgewählte übernehmen" %}
                 </button>
             </div>
         </div>
