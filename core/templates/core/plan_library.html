@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Plan-Bibliothek{% endblock %}
+{% block title %}{% trans "Plan-Bibliothek" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -31,9 +32,9 @@
     <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
         <i class="bi bi-arrow-left"></i> Dashboard
     </a>
-    <span class="navbar-text page-title fw-bold">Plan-Bibliothek</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Plan-Bibliothek" %}</span>
     <div style="width: 40px;">
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans "Theme wechseln" %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -44,8 +45,8 @@
 {% block content %}
 <div class="container pt-4">
     <div class="text-center mb-4">
-        <h2><i class="bi bi-book text-primary me-2"></i>Öffentliche Plan-Bibliothek</h2>
-        <p class="text-muted">Entdecke Trainingspläne von anderen Nutzern und kopiere sie in deine Sammlung.</p>
+        <h2><i class="bi bi-book text-primary me-2"></i>{% trans "Öffentliche Plan-Bibliothek" %}</h2>
+        <p class="text-muted">{% trans "Entdecke Trainingspläne von anderen Nutzern und kopiere sie in deine Sammlung." %}</p>
     </div>
 
     <form method="GET" class="mb-4">
@@ -54,8 +55,8 @@
                 <i class="bi bi-search text-muted"></i>
             </span>
             <input type="text" class="form-control bg-dark border-secondary text-white"
-                   name="q" placeholder="Suche nach Plänen..." value="{{ search_query }}">
-            <button class="btn btn-primary" type="submit">Suchen</button>
+                   name="q" placeholder="{% trans "Suche nach Plänen..." %}" value="{{ search_query }}">
+            <button class="btn btn-primary" type="submit">{% trans "Suchen" %}</button>
             {% if search_query %}
             <a href="{% url 'plan_library' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-x-lg"></i>
@@ -67,17 +68,17 @@
     <div class="alert alert-info d-flex align-items-center mb-4">
         <i class="bi bi-info-circle me-2 fs-4"></i>
         <div>
-            <strong>{{ total_count }} öffentliche Pläne</strong> verfügbar
-            {% if search_query %}für "{{ search_query }}"{% endif %}
+            <strong>{{ total_count }} {% trans "öffentliche Pläne" %}</strong> {% trans "verfügbar" %}
+            {% if search_query %}{% blocktrans with q=search_query %}für "{{ q }}"{% endblocktrans %}{% endif %}
         </div>
     </div>
 
     {% if not plan_gruppen and not einzelne_plaene %}
         <div class="alert alert-secondary text-center">
             <i class="bi bi-emoji-neutral me-2 fs-4"></i>
-            <p class="mb-0">Keine öffentlichen Pläne gefunden.</p>
+            <p class="mb-0">{% trans "Keine öffentlichen Pläne gefunden." %}</p>
             {% if search_query %}
-                <a href="{% url 'plan_library' %}" class="btn btn-sm btn-primary mt-2">Alle anzeigen</a>
+                <a href="{% url 'plan_library' %}" class="btn btn-sm btn-primary mt-2">{% trans "Alle anzeigen" %}</a>
             {% endif %}
         </div>
     {% else %}
@@ -92,7 +93,7 @@
                         <i class="bi bi-collection-fill text-info me-2 fs-4"></i>
                         <div>
                             <h5 class="mb-0">{{ gruppe.name }}</h5>
-                            <small class="text-muted">{{ gruppe.plaene|length }} Trainingstage • von {{ gruppe.user.username }}</small>
+                            <small class="text-muted">{{ gruppe.plaene|length }} {% trans "Trainingstage" %} • {% trans "von" %} {{ gruppe.user.username }}</small>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -107,7 +108,7 @@
                             <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %}">
                                 <div class="d-flex align-items-center">
                                     <span class="fw-bold">{{ plan.name }}</span>
-                                    <span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} Übungen</span>
+                                    <span class="badge bg-secondary ms-2 small">{{ plan.uebungen.count }} {% trans "Übungen" %}</span>
                                 </div>
                                 <a href="{% url 'plan_details' plan.id %}" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-info-circle"></i>
@@ -117,15 +118,15 @@
                         </div>
                         <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <a href="{% url 'plan_library_group' gruppe_key %}" class="btn btn-outline-info btn-sm">
-                                <i class="bi bi-eye me-1"></i>Details
+                                <i class="bi bi-eye me-1"></i>{% trans "Details" %}
                             </a>
                             {% if user.is_authenticated %}
                             <a href="{% url 'copy_group' gruppe_key %}" class="btn btn-success btn-sm">
-                                <i class="bi bi-copy me-1"></i>Komplett kopieren
+                                <i class="bi bi-copy me-1"></i>{% trans "Komplett kopieren" %}
                             </a>
                             {% else %}
                             <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-secondary btn-sm">
-                                <i class="bi bi-box-arrow-in-right me-1"></i>Anmelden zum Kopieren
+                                <i class="bi bi-box-arrow-in-right me-1"></i>{% trans "Anmelden zum Kopieren" %}
                             </a>
                             {% endif %}
                         </div>
@@ -143,7 +144,7 @@
                         </div>
                         <div class="flex-grow-1">
                             <h5 class="mb-1">{{ plan.name }}</h5>
-                            <p class="text-muted mb-0 small">{{ plan.uebungen.count }} Übungen • von {{ plan.user.username }}</p>
+                            <p class="text-muted mb-0 small">{{ plan.uebungen.count }} {% trans "Übungen" %} • {% trans "von" %} {{ plan.user.username }}</p>
                         </div>
                     </div>
                     {% if plan.beschreibung %}
@@ -151,11 +152,11 @@
                     {% endif %}
                     <div class="d-flex gap-2">
                         <a href="{% url 'plan_details' plan.id %}" class="btn btn-primary flex-grow-1">
-                            <i class="bi bi-info-circle me-1"></i>Details
+                            <i class="bi bi-info-circle me-1"></i>{% trans "Details" %}
                         </a>
                         {% if user.is_authenticated %}
                         <a href="{% url 'copy_plan' plan.id %}" class="btn btn-success">
-                            <i class="bi bi-copy"></i> Kopieren
+                            <i class="bi bi-copy"></i> {% trans "Kopieren" %}
                         </a>
                         {% else %}
                         <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-secondary">
@@ -172,10 +173,10 @@
     {% if user.is_authenticated %}
     <div class="card card-stat border-primary mt-4">
         <div class="card-body text-center">
-            <h5><i class="bi bi-megaphone me-2"></i>Teile deine Pläne!</h5>
-            <p class="text-muted mb-3">Hilf der Community und mache deine besten Trainingspläne öffentlich.</p>
+            <h5><i class="bi bi-megaphone me-2"></i>{% trans "Teile deine Pläne!" %}</h5>
+            <p class="text-muted mb-3">{% trans "Hilf der Community und mache deine besten Trainingspläne öffentlich." %}</p>
             <a href="{% url 'training_select_plan' %}" class="btn btn-primary">
-                <i class="bi bi-arrow-right me-1"></i>Zu meinen Plänen
+                <i class="bi bi-arrow-right me-1"></i>{% trans "Zu meinen Plänen" %}
             </a>
         </div>
     </div>

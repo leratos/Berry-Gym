@@ -1,32 +1,24 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Profil - HomeGym{% endblock %}
+{% block title %}{% trans "Profil" %} - HomeGym{% endblock %}
 
 {% block extra_head %}
 <style>
     .profile-avatar {
-        width: 80px;
-        height: 80px;
+        width: 80px; height: 80px;
         background: linear-gradient(135deg, #0d6efd, #6610f2);
         border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 2rem;
-        color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: bold; font-size: 2rem; color: white;
         margin: 0 auto;
     }
     .form-control, .form-select {
-        background-color: #21262d;
-        border-color: #30363d;
-        color: #c9d1d9;
+        background-color: #21262d; border-color: #30363d; color: #c9d1d9;
     }
     .form-control:focus, .form-select:focus {
-        background-color: #21262d;
-        border-color: #0d6efd;
-        color: #c9d1d9;
+        background-color: #21262d; border-color: #0d6efd; color: #c9d1d9;
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
 </style>
@@ -35,17 +27,16 @@
 {% block content %}
 <div class="container py-4">
     <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm mb-4">
-        <i class="bi bi-arrow-left me-1"></i> Zurück zum Dashboard
+        <i class="bi bi-arrow-left me-1"></i> {% trans "Zurück zum Dashboard" %}
     </a>
 
-    <!-- Profil Header -->
     <div class="text-center mb-4">
         <div class="profile-avatar mb-3">
             {{ user.username|slice:":1"|upper }}
         </div>
         <h4 class="fw-bold mb-1">{{ user.username }}</h4>
-        <p class="text-muted mb-0">{{ user.email|default:"Keine E-Mail hinterlegt" }}</p>
-        <small class="text-muted">Mitglied seit {{ user.date_joined|date:"d.m.Y" }}</small>
+        <p class="text-muted mb-0">{{ user.email|default:_("Keine E-Mail hinterlegt") }}</p>
+        <small class="text-muted">{% trans "Mitglied seit" %} {{ user.date_joined|date:"d.m.Y" }}</small>
     </div>
 
     {% if messages %}
@@ -53,13 +44,9 @@
         {% for message in messages %}
             <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
                 <strong>
-                    {% if 'success' in message.tags %}
-                        <i class="bi bi-check-circle-fill me-2"></i>
-                    {% elif 'error' in message.tags %}
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    {% else %}
-                        <i class="bi bi-info-circle-fill me-2"></i>
-                    {% endif %}
+                    {% if 'success' in message.tags %}<i class="bi bi-check-circle-fill me-2"></i>
+                    {% elif 'error' in message.tags %}<i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {% else %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
                 </strong>
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -69,60 +56,58 @@
     {% endif %}
 
     <div class="row g-4">
-        <!-- Profil bearbeiten -->
         <div class="col-md-6">
             <div class="card card-stat">
                 <div class="card-header border-secondary">
-                    <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>Profil bearbeiten</h5>
+                    <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>{% trans "Profil bearbeiten" %}</h5>
                 </div>
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="update_profile">
                         <div class="mb-3">
-                            <label class="form-label">Benutzername</label>
+                            <label class="form-label">{% trans "Benutzername" %}</label>
                             <input type="text" name="username" class="form-control"
                                    value="{{ user.username }}" minlength="3" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">E-Mail</label>
+                            <label class="form-label">{% trans "E-Mail" %}</label>
                             <input type="email" name="email" class="form-control"
                                    value="{{ user.email }}" placeholder="deine@email.de">
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-check-lg me-1"></i> Speichern
+                            <i class="bi bi-check-lg me-1"></i> {% trans "Speichern" %}
                         </button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- Passwort ändern -->
         <div class="col-md-6">
             <div class="card card-stat">
                 <div class="card-header border-secondary">
-                    <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Passwort ändern</h5>
+                    <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>{% trans "Passwort ändern" %}</h5>
                 </div>
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="change_password">
                         <div class="mb-3">
-                            <label class="form-label">Aktuelles Passwort</label>
+                            <label class="form-label">{% trans "Aktuelles Passwort" %}</label>
                             <input type="password" name="current_password" class="form-control" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Neues Passwort</label>
+                            <label class="form-label">{% trans "Neues Passwort" %}</label>
                             <input type="password" name="new_password" class="form-control"
                                    minlength="8" required>
-                            <small class="text-muted">Mindestens 8 Zeichen</small>
+                            <small class="text-muted">{% trans "Mindestens 8 Zeichen" %}</small>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Passwort bestätigen</label>
+                            <label class="form-label">{% trans "Passwort bestätigen" %}</label>
                             <input type="password" name="confirm_password" class="form-control" required>
                         </div>
                         <button type="submit" class="btn btn-warning w-100">
-                            <i class="bi bi-key me-1"></i> Passwort ändern
+                            <i class="bi bi-key me-1"></i> {% trans "Passwort ändern" %}
                         </button>
                     </form>
                 </div>
@@ -130,66 +115,63 @@
         </div>
     </div>
 
-    <!-- Körperdaten -->
     <div class="card card-stat mt-4">
         <div class="card-header border-secondary">
-            <h5 class="mb-0"><i class="bi bi-rulers me-2"></i>Körperdaten</h5>
+            <h5 class="mb-0"><i class="bi bi-rulers me-2"></i>{% trans "Körperdaten" %}</h5>
         </div>
         <div class="card-body">
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="update_body_data">
                 <div class="mb-3">
-                    <label class="form-label">Körpergröße (cm)</label>
+                    <label class="form-label">{% trans "Körpergröße (cm)" %}</label>
                     <input type="number" name="groesse_cm" class="form-control"
                            value="{{ user_profile.groesse_cm|default:'' }}"
                            min="100" max="250" placeholder="z.B. 182">
-                    <small class="text-muted">Wird für BMI- und FFMI-Berechnung verwendet</small>
+                    <small class="text-muted">{% trans "Wird für BMI- und FFMI-Berechnung verwendet" %}</small>
                 </div>
                 <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-check-lg me-1"></i> Speichern
+                    <i class="bi bi-check-lg me-1"></i> {% trans "Speichern" %}
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Schnellzugriffe -->
     <div class="card card-stat mt-4">
         <div class="card-header border-secondary">
-            <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Schnellzugriffe</h5>
+            <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>{% trans "Schnellzugriffe" %}</h5>
         </div>
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-6 col-md-3">
                     <a href="{% url 'equipment_management' %}" class="btn btn-outline-info w-100 py-3">
-                        <i class="bi bi-tools d-block fs-4 mb-1"></i>Equipment
+                        <i class="bi bi-tools d-block fs-4 mb-1"></i>{% trans "Equipment" %}
                     </a>
                 </div>
                 <div class="col-6 col-md-3">
                     <a href="{% url 'training_stats' %}" class="btn btn-outline-primary w-100 py-3">
-                        <i class="bi bi-graph-up d-block fs-4 mb-1"></i>Statistiken
+                        <i class="bi bi-graph-up d-block fs-4 mb-1"></i>{% trans "Statistiken" %}
                     </a>
                 </div>
                 <div class="col-6 col-md-3">
                     <a href="{% url 'progress_photos' %}" class="btn btn-outline-success w-100 py-3">
-                        <i class="bi bi-camera d-block fs-4 mb-1"></i>Fotos
+                        <i class="bi bi-camera d-block fs-4 mb-1"></i>{% trans "Fotos" %}
                     </a>
                 </div>
                 <div class="col-6 col-md-3">
                     <a href="{% url 'body_stats' %}" class="btn btn-outline-warning w-100 py-3">
-                        <i class="bi bi-heart-pulse d-block fs-4 mb-1"></i>Körperwerte
+                        <i class="bi bi-heart-pulse d-block fs-4 mb-1"></i>{% trans "Körperwerte" %}
                     </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Logout -->
     <div class="text-center mt-4 mb-5">
         <form method="post" action="{% url 'logout' %}" class="d-inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-danger">
-                <i class="bi bi-box-arrow-right me-1"></i> Abmelden
+                <i class="bi bi-box-arrow-right me-1"></i> {% trans "Abmelden" %}
             </button>
         </form>
     </div>

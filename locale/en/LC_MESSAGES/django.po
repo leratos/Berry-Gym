@@ -731,3 +731,516 @@ msgstr "Will be synced automatically when you're back online"
 
 msgid "Übung"
 msgstr "Exercise"
+
+# === training_stats.html ===
+msgid "Trainingsstatistiken"
+msgstr "Training Statistics"
+
+msgid "Als PDF exportieren"
+msgstr "Export as PDF"
+
+msgid "Als CSV exportieren"
+msgstr "Export as CSV"
+
+msgid "Noch keine Trainings-Daten vorhanden."
+msgstr "No training data available yet."
+
+msgid "Jetzt trainieren"
+msgstr "Start training now"
+
+msgid "Gesamt-Volumen"
+msgstr "Total Volume"
+
+msgid "Ø pro Training"
+msgstr "Avg per Workout"
+
+msgid "Volumen-Progression (pro Training)"
+msgstr "Volume Progression (per Workout)"
+
+msgid "Wöchentliches Volumen (letzte 12 Wochen)"
+msgstr "Weekly Volume (last 12 weeks)"
+
+msgid "Volumen-Analyse"
+msgstr "Volume Analysis"
+
+msgid "Anstieg"
+msgstr "increase"
+
+msgid "Rückgang"
+msgstr "decrease"
+
+msgid "Achte auf ausreichende Regeneration! Bei zu schnellem Volumen-Anstieg steigt das Verletzungsrisiko."
+msgstr "Make sure you recover adequately! Rapid volume increases raise the risk of injury."
+
+msgid "Starker Volumen-Rückgang erkannt. Achte auf Motivation und Regeneration."
+msgstr "Significant volume drop detected. Pay attention to motivation and recovery."
+
+msgid "Muskelgruppen-Balance"
+msgstr "Muscle Group Balance"
+
+msgid "Belastungsverteilung"
+msgstr "Load Distribution"
+
+msgid "Niedrig → Hoch"
+msgstr "Low → High"
+
+msgid "Trainings-Aktivität (letzte 90 Tage)"
+msgstr "Training Activity (last 90 days)"
+
+msgid "Kein Training"
+msgstr "No workout"
+
+msgid "1 Training"
+msgstr "1 workout"
+
+msgid "2 Trainings"
+msgstr "2 workouts"
+
+msgid "3+ Trainings"
+msgstr "3+ workouts"
+
+msgid "Muskelgruppen-Details"
+msgstr "Muscle Group Details"
+
+msgid "Muskelgruppe"
+msgstr "Muscle Group"
+
+msgid "Eff. Wiederholungen"
+msgstr "Eff. Reps"
+
+msgid "Schaue auch bei einzelnen Übungen für detaillierte Progressions-Analysen!"
+msgstr "Also check individual exercises for detailed progression analyses!"
+
+msgid "Volumen (kg)"
+msgstr "Volume (kg)"
+
+msgid "Wochenvolumen (kg)"
+msgstr "Weekly Volume (kg)"
+
+msgid "Effektive Wiederholungen"
+msgstr "Effective Reps"
+
+msgid "Fehler beim Laden der SVG"
+msgstr "Error loading SVG"
+
+# === plan_library.html ===
+msgid "Öffentliche Plan-Bibliothek"
+msgstr "Public Plan Library"
+
+msgid "Entdecke Trainingspläne von anderen Nutzern und kopiere sie in deine Sammlung."
+msgstr "Discover training plans from other users and copy them to your collection."
+
+msgid "Suche nach Plänen..."
+msgstr "Search for plans..."
+
+msgid "Suchen"
+msgstr "Search"
+
+msgid "öffentliche Pläne"
+msgstr "public plans"
+
+msgid "verfügbar"
+msgstr "available"
+
+msgid "Keine öffentlichen Pläne gefunden."
+msgstr "No public plans found."
+
+msgid "Komplett kopieren"
+msgstr "Copy all"
+
+msgid "Anmelden zum Kopieren"
+msgstr "Sign in to copy"
+
+msgid "Teile deine Pläne!"
+msgstr "Share your plans!"
+
+msgid "Hilf der Community und mache deine besten Trainingspläne öffentlich."
+msgstr "Help the community and make your best training plans public."
+
+msgid "Zu meinen Plänen"
+msgstr "My Plans"
+
+# === plan_library_group.html ===
+msgid "Bibliothek"
+msgstr "Library"
+
+msgid "Komplett in meine Pläne kopieren"
+msgstr "Copy all to my plans"
+
+msgid "Tag"
+msgstr "Day"
+
+msgid "Wiederholungen"
+msgstr "Reps"
+
+msgid "Nur diesen"
+msgstr "This one only"
+
+msgid "Gefällt dir dieser Split?"
+msgstr "Like this split?"
+
+msgid "Melde dich an, um diesen Split zu kopieren."
+msgstr "Sign in to copy this split."
+
+# === plan_details.html ===
+msgid "Dieser Plan ist öffentlich"
+msgstr "This plan is public"
+
+msgid "Training starten"
+msgstr "Start Workout"
+
+msgid "In meine Pläne kopieren"
+msgstr "Copy to my plans"
+
+msgid "Zurück zur Übersicht"
+msgstr "Back to overview"
+
+msgid "Übungsplan"
+msgstr "Exercise Plan"
+
+msgid "SÄTZE"
+msgstr "SETS"
+
+msgid "WDH"
+msgstr "REPS"
+
+msgid "TYP"
+msgstr "TYPE"
+
+msgid "Noch nie trainiert"
+msgstr "Never trained"
+
+msgid "Plan löschen?"
+msgstr "Delete plan?"
+
+msgid "Vergangene Trainings mit diesem Plan bleiben erhalten."
+msgstr "Past workouts with this plan will be kept."
+
+# === profile.html ===
+msgid "Profil"
+msgstr "Profile"
+
+msgid "Zurück zum Dashboard"
+msgstr "Back to Dashboard"
+
+msgid "Keine E-Mail hinterlegt"
+msgstr "No email stored"
+
+msgid "Mitglied seit"
+msgstr "Member since"
+
+msgid "E-Mail"
+msgstr "Email"
+
+msgid "Aktuelles Passwort"
+msgstr "Current Password"
+
+msgid "Neues Passwort"
+msgstr "New Password"
+
+msgid "Mindestens 8 Zeichen"
+msgstr "At least 8 characters"
+
+msgid "Passwort bestätigen"
+msgstr "Confirm Password"
+
+msgid "Körperdaten"
+msgstr "Body Data"
+
+msgid "Körpergröße (cm)"
+msgstr "Height (cm)"
+
+msgid "Wird für BMI- und FFMI-Berechnung verwendet"
+msgstr "Used for BMI and FFMI calculation"
+
+msgid "Schnellzugriffe"
+msgstr "Quick Access"
+
+msgid "Fotos"
+msgstr "Photos"
+
+# === body_stats.html ===
+msgid "Noch keine Körperwerte erfasst."
+msgstr "No body measurements recorded yet."
+
+msgid "Jetzt eintragen"
+msgstr "Log now"
+
+msgid "Fortschrittsfotos"
+msgstr "Progress Photos"
+
+msgid "Aktuell"
+msgstr "Current"
+
+msgid "Veränderung"
+msgstr "Change"
+
+msgid "Gewichtsverlauf"
+msgstr "Weight History"
+
+msgid "BMI & FFMI Verlauf"
+msgstr "BMI & FFMI History"
+
+msgid "Körperfettanteil"
+msgstr "Body Fat %"
+
+msgid "Alle Messungen"
+msgstr "All Measurements"
+
+msgid "Aktionen"
+msgstr "Actions"
+
+msgid "Körperwert löschen"
+msgstr "Delete Body Measurement"
+
+msgid "Möchtest du diesen Körperwert wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+msgstr "Do you really want to delete this body measurement? This action cannot be undone."
+
+msgid "Gewicht (kg)"
+msgstr "Weight (kg)"
+
+msgid "Körperfett (%)"
+msgstr "Body Fat (%)"
+
+msgid "Muskelmasse (kg)"
+msgstr "Muscle Mass (kg)"
+
+# === add_koerperwert.html ===
+msgid "Watch-Daten erfassen"
+msgstr "Log Watch Data"
+
+msgid "Körpergröße"
+msgstr "Height"
+
+msgid "aus Profil"
+msgstr "from profile"
+
+msgid "ändern"
+msgstr "change"
+
+msgid "Größe (cm)"
+msgstr "Height (cm)"
+
+msgid "Daten von der Uhr"
+msgstr "Data from Watch"
+
+msgid "FETTMASSE"
+msgstr "FAT MASS"
+
+msgid "eines eingeben → anderes wird berechnet"
+msgstr "enter one → other is calculated"
+
+msgid "MUSKELMASSE"
+msgstr "MUSCLE MASS"
+
+msgid "Wasser (kg)"
+msgstr "Water (kg)"
+
+msgid "Notiz (z.B. Nüchtern)"
+msgstr "Note (e.g. Fasted)"
+
+msgid "Speichern & Berechnen"
+msgstr "Save & Calculate"
+
+# === edit_koerperwert.html ===
+msgid "Körperwert bearbeiten"
+msgstr "Edit Body Measurement"
+
+msgid "leer = Profil-Wert wird verwendet"
+msgstr "empty = profile value is used"
+
+msgid "Leer lassen = Größe aus Profil verwenden"
+msgstr "Leave empty = use height from profile"
+
+msgid "Änderungen speichern"
+msgstr "Save Changes"
+
+# === cardio_add.html ===
+msgid "Cardio hinzufügen"
+msgstr "Add Cardio"
+
+msgid "Aktivität"
+msgstr "Activity"
+
+msgid "Bitte wählen..."
+msgstr "Please select..."
+
+msgid "Dauer (Minuten)"
+msgstr "Duration (Minutes)"
+
+msgid "Wie lange hast du trainiert?"
+msgstr "How long did you train?"
+
+msgid "Intensität"
+msgstr "Intensity"
+
+msgid "z.B. Brustschwimmen, Intervalle, etc."
+msgstr "e.g. Breaststroke, intervals, etc."
+
+msgid "Ermüdungspunkte"
+msgstr "Fatigue Points"
+
+msgid "Leicht"
+msgstr "Easy"
+
+msgid "Moderat"
+msgstr "Moderate"
+
+msgid "Intensiv"
+msgstr "Intense"
+
+msgid "pro Minute"
+msgstr "per minute"
+
+msgid "Punkte"
+msgstr "points"
+
+# === cardio_list.html ===
+msgid "Cardio-Übersicht"
+msgstr "Cardio Overview"
+
+msgid "Cardio-Tracking"
+msgstr "Cardio Tracking"
+
+msgid "Hinzufügen"
+msgstr "Add"
+
+msgid "Einheiten"
+msgstr "Sessions"
+
+msgid "Tage"
+msgstr "days"
+
+msgid "Minuten gesamt"
+msgstr "Total minutes"
+
+msgid "Nur letzte 30 Tage"
+msgstr "Last 30 days only"
+
+msgid "Noch keine Cardio-Einheiten erfasst."
+msgstr "No cardio sessions logged yet."
+
+msgid "Erste Cardio-Einheit hinzufügen"
+msgstr "Add first cardio session"
+
+msgid "Cardio-Einheiten werden im"
+msgstr "Cardio sessions are factored into the"
+
+msgid "berücksichtigt und helfen dem"
+msgstr "and help the"
+
+msgid "KI-Coach"
+msgstr "AI Coach"
+
+msgid ", dein Krafttraining besser zu planen. Leichtes Cardio fördert die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
+msgstr "to better plan your strength training. Light cardio supports recovery, while intense cardio adds additional fatigue."
+
+msgid "wirklich löschen?"
+msgstr "really delete?"
+
+# === equipment_management.html ===
+msgid "Ausrüstung verwalten"
+msgstr "Manage Equipment"
+
+msgid "Equipment Manager"
+msgstr "Equipment Manager"
+
+msgid "Meine Ausrüstung"
+msgstr "My Equipment"
+
+msgid "Wähle deine verfügbare Ausrüstung aus."
+msgstr "Select your available equipment."
+
+msgid "Übungen werden automatisch gefiltert und der AI Coach berücksichtigt nur verfügbares Equipment."
+msgstr "Exercises are filtered automatically and the AI Coach only considers available equipment."
+
+msgid "Verfügbare Übungen"
+msgstr "Available Exercises"
+
+msgid "Gesperrte Übungen"
+msgstr "Locked Exercises"
+
+msgid "Gesamt Übungen"
+msgstr "Total Exercises"
+
+msgid "Schnell-Auswahl"
+msgstr "Quick Select"
+
+msgid "Home Gym Basic"
+msgstr "Home Gym Basic"
+
+msgid "Home Gym Advanced"
+msgstr "Home Gym Advanced"
+
+msgid "Fitnessstudio"
+msgstr "Gym"
+
+msgid "Nur Körpergewicht"
+msgstr "Bodyweight Only"
+
+msgid "Alles abwählen"
+msgstr "Deselect All"
+
+msgid "Equipment suchen..."
+msgstr "Search equipment..."
+
+msgid "Alle Kategorien"
+msgstr "All Categories"
+
+msgid "Keine Equipment-Typen gefunden. Versuche einen anderen Suchbegriff."
+msgstr "No equipment types found. Try a different search term."
+
+msgid "hinzugefügt"
+msgstr "added"
+
+msgid "entfernt"
+msgstr "removed"
+
+msgid "Preset bereits aktiv"
+msgstr "Preset already active"
+
+msgid "Fehler beim Aktualisieren des Equipments"
+msgstr "Error updating equipment"
+
+# === workout_recommendations.html ===
+msgid "Trainingsempfehlungen"
+msgstr "Workout Recommendations"
+
+msgid "Hohe Priorität"
+msgstr "High Priority"
+
+msgid "Mittlere Priorität"
+msgstr "Medium Priority"
+
+msgid "Niedrige Priorität"
+msgstr "Low Priority"
+
+msgid "Vorgeschlagene Übungen"
+msgstr "Suggested Exercises"
+
+msgid "Wie funktionieren die Empfehlungen?"
+msgstr "How do recommendations work?"
+
+msgid "Push/Pull-Ratio"
+msgstr "Push/Pull Ratio"
+
+msgid "Prüft die Balance zwischen Druck- und Zugübungen"
+msgstr "Checks the balance between push and pull exercises"
+
+msgid "Erkennt Übungen ohne Fortschritt über mehrere Trainings"
+msgstr "Detects exercises with no progress over multiple workouts"
+
+msgid "Trainingsfrequenz"
+msgstr "Training Frequency"
+
+msgid "Überwacht deine wöchentliche Trainingskonsistenz"
+msgstr "Monitors your weekly training consistency"
+
+msgid "RPE-Analyse"
+msgstr "RPE Analysis"
+
+msgid "Bewertet deine Trainingsintensität basierend auf deinem durchschnittlichen RPE"
+msgstr "Evaluates your training intensity based on your average RPE"
+
+msgid "Analysiert dein Trainingsvolumen (Wiederholungen × RPE) pro Muskelgruppe"
+msgstr "Analyzes your training volume (reps × RPE) per muscle group"

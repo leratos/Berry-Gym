@@ -1388,3 +1388,20 @@ Da makemessages nicht verfügbar: {% trans %} Tags manuell in Template → Eintr
 
 **Nächste Phase:** Phase 7.5c (Gruppe 2) oder Phase 7.6 (Export-Templates)
 
+
+## In Arbeit: Phase 7.5c – i18n Gruppe 2 (Sekundärer User-Flow)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5c-i18n-secondary-flow
+
+**Templates (12 Stück, ~2100 Zeilen gesamt):**
+- training_stats.html (289 Zeilen) – nach jedem Training besucht
+- plan_library.html (186 Zeilen) + plan_library_group.html (122 Zeilen)
+- plan_details.html (178 Zeilen)
+- profile.html (202 Zeilen)
+- body_stats.html (240 Zeilen) + add_koerperwert.html (169) + edit_koerperwert.html (139)
+- cardio_add.html (113 Zeilen) + cardio_list.html (137 Zeilen)
+- equipment_management.html (225 Zeilen)
+- workout_recommendations.html (128 Zeilen)
+
+**Hinweis compile:** dev-scripts/compile_msgs.py (polib, kein GNU gettext nötig)
+

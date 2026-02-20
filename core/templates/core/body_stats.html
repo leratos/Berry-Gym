@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Körperwerte{% endblock %}
+{% block title %}{% trans "Körperwerte" %}{% endblock %}
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,15 +14,15 @@
     <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
         <i class="bi bi-arrow-left"></i> Dashboard
     </a>
-    <span class="navbar-text page-title fw-bold">Körperwerte</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Körperwerte" %}</span>
     <div>
-        <a class="btn btn-outline-info border-0 me-2" href="{% url 'progress_photos' %}" title="Fortschrittsfotos">
+        <a class="btn btn-outline-info border-0 me-2" href="{% url 'progress_photos' %}" title="{% trans "Fortschrittsfotos" %}">
             <i class="bi bi-camera"></i>
         </a>
         <a class="btn btn-primary border-0" href="{% url 'add_koerperwert' %}">
             <i class="bi bi-plus-lg"></i>
         </a>
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -35,23 +36,22 @@
     {% if no_data %}
         <div class="text-center py-5 text-muted">
             <i class="bi bi-graph-up display-1 opacity-25"></i>
-            <p class="mt-3">Noch keine Körperwerte erfasst.</p>
-            <a href="{% url 'add_koerperwert' %}" class="btn btn-primary mt-2">Jetzt eintragen</a>
+            <p class="mt-3">{% trans "Noch keine Körperwerte erfasst." %}</p>
+            <a href="{% url 'add_koerperwert' %}" class="btn btn-primary mt-2">{% trans "Jetzt eintragen" %}</a>
         </div>
     {% else %}
 
-        <!-- Aktuelle Werte -->
         <div class="row g-3 mb-4">
             <div class="col-6">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Aktuell</small>
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Aktuell" %}</small>
                     <div class="display-5 fw-bold text-white">{{ aktuelles_gewicht }}</div>
                     <small class="text-muted">kg</small>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Veränderung</small>
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Veränderung" %}</small>
                     <div class="display-5 fw-bold {% if aenderung >= 0 %}text-success{% else %}text-danger{% endif %}">
                         {{ aenderung|stringformat:"+.1f" }}
                     </div>
@@ -60,61 +60,56 @@
             </div>
         </div>
 
-        <!-- Gewichtsverlauf -->
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
-                    <i class="bi bi-graph-up me-2"></i>Gewichtsverlauf
+                    <i class="bi bi-graph-up me-2"></i>{% trans "Gewichtsverlauf" %}
                 </h6>
                 <canvas id="gewichtChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
 
-        <!-- BMI & FFMI Verlauf -->
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
-                    <i class="bi bi-speedometer2 me-2"></i>BMI & FFMI Verlauf
+                    <i class="bi bi-speedometer2 me-2"></i>{% trans "BMI & FFMI Verlauf" %}
                 </h6>
                 <canvas id="bmiChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
 
-        <!-- Körperfett Verlauf -->
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
-                    <i class="bi bi-percent me-2"></i>Körperfettanteil
+                    <i class="bi bi-percent me-2"></i>{% trans "Körperfettanteil" %}
                 </h6>
                 <canvas id="kfaChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
 
-        <!-- Muskelmasse Verlauf -->
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
-                    <i class="bi bi-heart-pulse me-2"></i>Muskelmasse
+                    <i class="bi bi-heart-pulse me-2"></i>{% trans "Muskelmasse" %}
                 </h6>
                 <canvas id="muskelChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
 
-        <!-- Rohdaten Tabelle -->
         <div class="card card-stat border-secondary">
             <div class="card-header border-secondary">
-                <h6 class="mb-0 text-white">Alle Messungen</h6>
+                <h6 class="mb-0 text-white">{% trans "Alle Messungen" %}</h6>
             </div>
             <div class="table-responsive">
                 <table class="table table-dark table-hover mb-0">
                     <thead class="text-secondary small">
                         <tr>
-                            <th>Datum</th>
-                            <th>Gewicht</th>
+                            <th>{% trans "Datum" %}</th>
+                            <th>{% trans "Gewicht" %}</th>
                             <th>BMI</th>
                             <th>FFMI</th>
                             <th>KFA</th>
-                            <th class="text-end">Aktionen</th>
+                            <th class="text-end">{% trans "Aktionen" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -126,12 +121,12 @@
                             <td>{{ wert.ffmi|default:"--" }}</td>
                             <td>{{ wert.koerperfett_prozent|default:"--" }}{% if wert.koerperfett_prozent %}%{% endif %}</td>
                             <td class="text-end">
-                                <a href="{% url 'edit_koerperwert' wert.id %}" class="btn btn-sm btn-outline-primary border-0" title="Bearbeiten">
+                                <a href="{% url 'edit_koerperwert' wert.id %}" class="btn btn-sm btn-outline-primary border-0" title="{% trans "Bearbeiten" %}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <button class="btn btn-sm btn-outline-danger border-0"
                                         onclick="confirmDelete({{ wert.id }}, '{% url 'delete_koerperwert' wert.id %}')"
-                                        title="Löschen">
+                                        title="{% trans "Löschen" %}">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -146,22 +141,21 @@
 
 </div>
 
-<!-- Delete Confirmation Modal (POST statt GET – Sicherheit) -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark border-secondary">
             <div class="modal-header border-secondary">
-                <h5 class="modal-title">Körperwert löschen</h5>
+                <h5 class="modal-title">{% trans "Körperwert löschen" %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                Möchtest du diesen Körperwert wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                {% trans "Möchtest du diesen Körperwert wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden." %}
             </div>
             <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Abbrechen" %}</button>
                 <form id="deleteForm" method="post" action="">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Löschen</button>
+                    <button type="submit" class="btn btn-danger">{% trans "Löschen" %}</button>
                 </form>
             </div>
         </div>
@@ -173,11 +167,8 @@
 {% if not no_data %}
 <script>
     const chartDefaults = {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-            legend: { display: true, labels: { color: '#adb5bd' } }
-        },
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: true, labels: { color: '#adb5bd' } } },
         scales: {
             x: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' } },
             y: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' } }
@@ -188,14 +179,8 @@
         type: 'line',
         data: {
             labels: {{ labels_json|safe }},
-            datasets: [{
-                label: 'Gewicht (kg)',
-                data: {{ gewicht_json|safe }},
-                borderColor: '#0dcaf0',
-                backgroundColor: 'rgba(13, 202, 240, 0.1)',
-                tension: 0.3,
-                fill: true
-            }]
+            datasets: [{ label: '{% trans "Gewicht (kg)" %}', data: {{ gewicht_json|safe }},
+                borderColor: '#0dcaf0', backgroundColor: 'rgba(13, 202, 240, 0.1)', tension: 0.3, fill: true }]
         },
         options: chartDefaults
     });
@@ -204,17 +189,10 @@
         type: 'line',
         data: {
             labels: {{ labels_json|safe }},
-            datasets: [{
-                label: 'BMI',
-                data: {{ bmi_json|safe }},
-                borderColor: '#ffc107',
-                tension: 0.3
-            }, {
-                label: 'FFMI',
-                data: {{ ffmi_json|safe }},
-                borderColor: '#198754',
-                tension: 0.3
-            }]
+            datasets: [
+                { label: 'BMI', data: {{ bmi_json|safe }}, borderColor: '#ffc107', tension: 0.3 },
+                { label: 'FFMI', data: {{ ffmi_json|safe }}, borderColor: '#198754', tension: 0.3 }
+            ]
         },
         options: chartDefaults
     });
@@ -223,14 +201,8 @@
         type: 'line',
         data: {
             labels: {{ labels_json|safe }},
-            datasets: [{
-                label: 'Körperfett (%)',
-                data: {{ kfa_json|safe }},
-                borderColor: '#dc3545',
-                backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                tension: 0.3,
-                fill: true
-            }]
+            datasets: [{ label: '{% trans "Körperfett (%)" %}', data: {{ kfa_json|safe }},
+                borderColor: '#dc3545', backgroundColor: 'rgba(220, 53, 69, 0.1)', tension: 0.3, fill: true }]
         },
         options: chartDefaults
     });
@@ -239,14 +211,8 @@
         type: 'line',
         data: {
             labels: {{ labels_json|safe }},
-            datasets: [{
-                label: 'Muskelmasse (kg)',
-                data: {{ muskel_json|safe }},
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                tension: 0.3,
-                fill: true
-            }]
+            datasets: [{ label: '{% trans "Muskelmasse (kg)" %}', data: {{ muskel_json|safe }},
+                borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', tension: 0.3, fill: true }]
         },
         options: chartDefaults
     });

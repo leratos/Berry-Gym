@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Körperwerte{% endblock %}
+{% block title %}{% trans "Körperwerte" %}{% endblock %}
 
 {% block page_nav %}
 <nav class="navbar navbar-page border-bottom mb-4">
@@ -8,7 +9,7 @@
     <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
         <i class="bi bi-x-lg"></i>
     </a>
-    <span class="navbar-text page-title fw-bold">Watch-Daten erfassen</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Watch-Daten erfassen" %}</span>
     <div style="width: 40px;"></div>
   </div>
 </nav>
@@ -23,37 +24,36 @@
         {% if profil_groesse %}
             <div class="alert alert-secondary d-flex align-items-center py-2">
                 <i class="bi bi-rulers me-2"></i>
-                <span>Körpergröße: <strong>{{ profil_groesse }} cm</strong> (aus Profil)</span>
-                <a href="{% url 'profile' %}" class="ms-auto text-secondary small">ändern</a>
+                <span>{% trans "Körpergröße" %}: <strong>{{ profil_groesse }} cm</strong> ({% trans "aus Profil" %})</span>
+                <a href="{% url 'profile' %}" class="ms-auto text-secondary small">{% trans "ändern" %}</a>
             </div>
             <input type="hidden" name="groesse" value="{{ profil_groesse }}">
         {% else %}
-            <label class="form-label text-muted small">Größe (cm) <span class="text-warning">*</span></label>
+            <label class="form-label text-muted small">{% trans "Größe (cm)" %} <span class="text-warning">*</span></label>
             <input type="number" name="groesse" value="{{ standard_groesse|default:'' }}"
                    class="form-control bg-dark text-white border-secondary"
                    placeholder="z.B. 182" min="100" max="250">
-            <small class="text-muted">Einmalig im <a href="{% url 'profile' %}">Profil</a> hinterlegen um das nicht jedes Mal einzugeben</small>
+            <small class="text-muted">{% blocktrans %}Einmalig im <a href="{% url 'profile' %}">Profil</a> hinterlegen um das nicht jedes Mal einzugeben{% endblocktrans %}</small>
         {% endif %}
     </div>
 
     <div class="card bg-dark border-secondary mb-3">
         <div class="card-body text-center py-3">
-            <label class="form-label text-secondary text-uppercase fw-bold ls-1">Gewicht (kg)</label>
+            <label class="form-label text-secondary text-uppercase fw-bold ls-1">{% trans "Gewicht (kg)" %}</label>
             <div class="input-group justify-content-center">
                 <input type="number" step="0.1" name="gewicht" class="form-control form-control-lg bg-dark text-white text-center border-0 display-1 fw-bold" style="font-size: 3rem; max-width: 200px;" required autofocus placeholder="00.0">
             </div>
         </div>
     </div>
 
-    <h6 class="text-secondary mb-3 ps-2 mt-4">Daten von der Uhr</h6>
+    <h6 class="text-secondary mb-3 ps-2 mt-4">{% trans "Daten von der Uhr" %}</h6>
 
-    {# Fett-Block: kg und % gegenseitig berechenbar #}
     <div class="card bg-dark border-secondary mb-3">
         <div class="card-body pb-2 pt-3">
             <div class="d-flex align-items-center mb-2">
                 <i class="bi bi-droplet-fill text-danger me-2"></i>
-                <span class="text-muted small fw-bold">FETTMASSE</span>
-                <span class="ms-auto text-muted" style="font-size:0.7rem">eines eingeben → anderes wird berechnet</span>
+                <span class="text-muted small fw-bold">{% trans "FETTMASSE" %}</span>
+                <span class="ms-auto text-muted" style="font-size:0.7rem">{% trans "eines eingeben → anderes wird berechnet" %}</span>
             </div>
             <div class="row g-2">
                 <div class="col-6">
@@ -72,13 +72,12 @@
         </div>
     </div>
 
-    {# Muskel-Block: kg und % gegenseitig berechenbar #}
     <div class="card bg-dark border-secondary mb-3">
         <div class="card-body pb-2 pt-3">
             <div class="d-flex align-items-center mb-2">
                 <i class="bi bi-lightning-fill text-warning me-2"></i>
-                <span class="text-muted small fw-bold">MUSKELMASSE</span>
-                <span class="ms-auto text-muted" style="font-size:0.7rem">eines eingeben → anderes wird berechnet</span>
+                <span class="text-muted small fw-bold">{% trans "MUSKELMASSE" %}</span>
+                <span class="ms-auto text-muted" style="font-size:0.7rem">{% trans "eines eingeben → anderes wird berechnet" %}</span>
             </div>
             <div class="row g-2">
                 <div class="col-6">
@@ -100,89 +99,65 @@
     <div class="row g-3 mb-3">
         <div class="col-6">
             <div class="p-3 bg-dark border border-secondary rounded-3">
-                <label class="d-block text-muted small mb-1"><i class="bi bi-water text-info"></i> Wasser (kg)</label>
+                <label class="d-block text-muted small mb-1"><i class="bi bi-water text-info"></i> {% trans "Wasser (kg)" %}</label>
                 <input type="number" step="0.1" name="wasser" class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="-">
             </div>
         </div>
     </div>
 
     <div class="mt-4">
-        <textarea name="notiz" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="Notiz (z.B. Nüchtern)"></textarea>
+        <textarea name="notiz" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="{% trans "Notiz (z.B. Nüchtern)" %}"></textarea>
     </div>
 
     <div class="d-grid mt-5 pb-5">
         <button type="submit" class="btn btn-primary btn-lg fw-bold p-3 rounded-4">
-            Speichern & Berechnen
+            {% trans "Speichern & Berechnen" %}
         </button>
     </div>
   </form>
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 (function () {
     const gewichtInput = document.querySelector('input[name="gewicht"]');
+    function getGewicht() { return parseFloat(gewichtInput?.value) || null; }
+    function round1(val) { return Math.round(val * 10) / 10; }
 
-    function getGewicht() {
-        return parseFloat(gewichtInput?.value) || null;
-    }
-
-    function round1(val) {
-        return Math.round(val * 10) / 10;
-    }
-
-    // Fett: kg ↔ %
     const fettKg  = document.getElementById('fett_kg');
     const fettPct = document.getElementById('kfa');
 
     fettKg.addEventListener('input', function () {
         const g = getGewicht();
-        if (g && this.value) {
-            fettPct.value = round1(parseFloat(this.value) / g * 100);
-        } else if (!this.value) {
-            fettPct.value = '';
-        }
+        if (g && this.value) fettPct.value = round1(parseFloat(this.value) / g * 100);
+        else if (!this.value) fettPct.value = '';
     });
-
     fettPct.addEventListener('input', function () {
         const g = getGewicht();
-        if (g && this.value) {
-            fettKg.value = round1(parseFloat(this.value) / 100 * g);
-        } else if (!this.value) {
-            fettKg.value = '';
-        }
+        if (g && this.value) fettKg.value = round1(parseFloat(this.value) / 100 * g);
+        else if (!this.value) fettKg.value = '';
     });
 
-    // Muskel: kg ↔ %
     const muskelKg  = document.getElementById('muskel_kg');
     const muskelPct = document.getElementById('muskel_prozent');
 
     muskelKg.addEventListener('input', function () {
         const g = getGewicht();
-        if (g && this.value) {
-            muskelPct.value = round1(parseFloat(this.value) / g * 100);
-        } else if (!this.value) {
-            muskelPct.value = '';
-        }
+        if (g && this.value) muskelPct.value = round1(parseFloat(this.value) / g * 100);
+        else if (!this.value) muskelPct.value = '';
     });
-
     muskelPct.addEventListener('input', function () {
         const g = getGewicht();
-        if (g && this.value) {
-            muskelKg.value = round1(parseFloat(this.value) / 100 * g);
-        } else if (!this.value) {
-            muskelKg.value = '';
-        }
+        if (g && this.value) muskelKg.value = round1(parseFloat(this.value) / 100 * g);
+        else if (!this.value) muskelKg.value = '';
     });
 
-    // Gewicht geändert → alle abhängigen Felder neu berechnen
     gewichtInput?.addEventListener('input', function () {
         const g = parseFloat(this.value) || null;
         if (!g) return;
-        if (fettKg.value)  fettPct.value  = round1(parseFloat(fettKg.value)  / g * 100);
-        if (fettPct.value) fettKg.value   = round1(parseFloat(fettPct.value) / 100 * g);
+        if (fettKg.value)    fettPct.value    = round1(parseFloat(fettKg.value)    / g * 100);
+        if (fettPct.value)   fettKg.value     = round1(parseFloat(fettPct.value)   / 100 * g);
         if (muskelKg.value)  muskelPct.value  = round1(parseFloat(muskelKg.value)  / g * 100);
         if (muskelPct.value) muskelKg.value   = round1(parseFloat(muskelPct.value) / 100 * g);
     });

@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load source_tags %}
+{% load i18n %}
 
-{% block title %}Trainingsempfehlungen - HomeGym{% endblock %}
+{% block title %}{% trans "Trainingsempfehlungen" %} - HomeGym{% endblock %}
 
 {% block page_nav %}
 <nav class="navbar navbar-page border-bottom">
@@ -9,7 +10,7 @@
     <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
         <i class="bi bi-arrow-left"></i>
     </a>
-    <span class="navbar-text page-title fw-bold">Trainingsempfehlungen</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Trainingsempfehlungen" %}</span>
     <div style="width: 40px;"></div>
   </div>
 </nav>
@@ -20,10 +21,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1">
-                <i class="bi bi-robot me-2"></i>Trainingsempfehlungen
+                <i class="bi bi-robot me-2"></i>{% trans "Trainingsempfehlungen" %}
             </h1>
             <p class="text-muted small mb-0">
-                Intelligente Analysen basierend auf deinen letzten {{ analysiert_tage }} Tagen
+                {% blocktrans with days=analysiert_tage %}Intelligente Analysen basierend auf deinen letzten {{ days }} Tagen{% endblocktrans %}
             </p>
         </div>
     </div>
@@ -73,11 +74,11 @@
                             <div class="d-flex align-items-center mb-2">
                                 <h5 class="card-title mb-0 me-2">{{ emp.titel }}</h5>
                                 {% if emp.prioritaet == 'hoch' %}
-                                <span class="badge bg-danger">Hohe Priorität</span>
+                                <span class="badge bg-danger">{% trans "Hohe Priorität" %}</span>
                                 {% elif emp.prioritaet == 'mittel' %}
-                                <span class="badge bg-warning text-dark">Mittlere Priorität</span>
+                                <span class="badge bg-warning text-dark">{% trans "Mittlere Priorität" %}</span>
                                 {% elif emp.prioritaet == 'niedrig' %}
-                                <span class="badge bg-info">Niedrige Priorität</span>
+                                <span class="badge bg-info">{% trans "Niedrige Priorität" %}</span>
                                 {% endif %}
                             </div>
                             <p class="text-muted mb-2">{{ emp.beschreibung }}</p>
@@ -91,12 +92,12 @@
                             <div class="alert alert-success alert-sm mb-0 py-2">
                             {% endif %}
                                 <i class="bi bi-lightbulb me-2"></i>
-                                <strong>Empfehlung:</strong> {{ emp.empfehlung }}
+                                <strong>{% trans "Empfehlung" %}:</strong> {{ emp.empfehlung }}
                             </div>
                             {% if emp.uebungen %}
                             <div class="mt-3">
                                 <p class="small text-muted mb-2">
-                                    <i class="bi bi-person-arms-up me-1"></i>Vorgeschlagene Übungen:
+                                    <i class="bi bi-person-arms-up me-1"></i>{% trans "Vorgeschlagene Übungen" %}:
                                 </p>
                                 <div class="d-flex flex-wrap gap-2">
                                     {% for uebung in emp.uebungen %}
@@ -118,14 +119,14 @@
     <div class="card mt-4 bg-dark bg-opacity-25 border-0">
         <div class="card-body">
             <h6 class="card-title mb-2">
-                <i class="bi bi-info-circle me-2"></i>Wie funktionieren die Empfehlungen?
+                <i class="bi bi-info-circle me-2"></i>{% trans "Wie funktionieren die Empfehlungen?" %}
             </h6>
             <ul class="small text-muted mb-0">
-                <li><strong>Muskelgruppen-Balance:</strong> Analysiert dein Trainingsvolumen (Wiederholungen × RPE) pro Muskelgruppe</li>
-                <li><strong>Push/Pull-Ratio:</strong> Prüft die Balance zwischen Druck- und Zugübungen</li>
-                <li><strong>Stagnation:</strong> Erkennt Übungen ohne Fortschritt über mehrere Trainings {% source_tooltip "plateau_analysis" %}</li>
-                <li><strong>Trainingsfrequenz:</strong> Überwacht deine wöchentliche Trainingskonsistenz</li>
-                <li><strong>RPE-Analyse:</strong> Bewertet deine Trainingsintensität basierend auf deinem durchschnittlichen RPE {% source_tooltip "rpe_quality" %}</li>
+                <li><strong>{% trans "Muskelgruppen-Balance" %}:</strong> {% trans "Analysiert dein Trainingsvolumen (Wiederholungen × RPE) pro Muskelgruppe" %}</li>
+                <li><strong>{% trans "Push/Pull-Ratio" %}:</strong> {% trans "Prüft die Balance zwischen Druck- und Zugübungen" %}</li>
+                <li><strong>{% trans "Stagnation" %}:</strong> {% trans "Erkennt Übungen ohne Fortschritt über mehrere Trainings" %} {% source_tooltip "plateau_analysis" %}</li>
+                <li><strong>{% trans "Trainingsfrequenz" %}:</strong> {% trans "Überwacht deine wöchentliche Trainingskonsistenz" %}</li>
+                <li><strong>{% trans "RPE-Analyse" %}:</strong> {% trans "Bewertet deine Trainingsintensität basierend auf deinem durchschnittlichen RPE" %} {% source_tooltip "rpe_quality" %}</li>
             </ul>
         </div>
     </div>

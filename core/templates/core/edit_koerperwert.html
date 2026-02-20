@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Körperwert bearbeiten{% endblock %}
+{% block title %}{% trans "Körperwert bearbeiten" %}{% endblock %}
 
 {% block page_nav %}
 <nav class="navbar navbar-page border-bottom mb-4">
@@ -8,7 +9,7 @@
     <a class="btn btn-outline-secondary border-0" href="{% url 'body_stats' %}">
         <i class="bi bi-x-lg"></i>
     </a>
-    <span class="navbar-text page-title fw-bold">Körperwert bearbeiten</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Körperwert bearbeiten" %}</span>
     <div style="width: 40px;"></div>
   </div>
 </nav>
@@ -21,35 +22,34 @@
 
     <div class="alert alert-info">
         <i class="bi bi-info-circle me-2"></i>
-        <strong>Datum:</strong> {{ wert.datum|date:"d.m.Y" }}
+        <strong>{% trans "Datum" %}:</strong> {{ wert.datum|date:"d.m.Y" }}
     </div>
 
     <div class="mb-3">
-        <label class="form-label text-muted small">Größe (cm)</label>
+        <label class="form-label text-muted small">{% trans "Größe (cm)" %}</label>
         <input type="number" name="groesse_cm" value="{{ wert.groesse_cm|default:'' }}"
                class="form-control bg-dark text-white border-secondary"
-               min="100" max="250" placeholder="leer = Profil-Wert wird verwendet">
-        <small class="text-muted">Leer lassen = Größe aus Profil verwenden</small>
+               min="100" max="250" placeholder="{% trans "leer = Profil-Wert wird verwendet" %}">
+        <small class="text-muted">{% trans "Leer lassen = Größe aus Profil verwenden" %}</small>
     </div>
 
     <div class="card bg-dark border-secondary mb-3">
         <div class="card-body text-center py-3">
-            <label class="form-label text-secondary text-uppercase fw-bold ls-1">Gewicht (kg)</label>
+            <label class="form-label text-secondary text-uppercase fw-bold ls-1">{% trans "Gewicht (kg)" %}</label>
             <div class="input-group justify-content-center">
                 <input type="number" step="0.1" name="gewicht" value="{{ wert.gewicht }}" class="form-control form-control-lg bg-dark text-white text-center border-0 display-1 fw-bold" style="font-size: 3rem; max-width: 200px;" required autofocus>
             </div>
         </div>
     </div>
 
-    <h6 class="text-secondary mb-3 ps-2 mt-4">Daten von der Uhr</h6>
+    <h6 class="text-secondary mb-3 ps-2 mt-4">{% trans "Daten von der Uhr" %}</h6>
 
-    {# Fett-Block: kg und % gegenseitig berechenbar #}
     <div class="card bg-dark border-secondary mb-3">
         <div class="card-body pb-2 pt-3">
             <div class="d-flex align-items-center mb-2">
                 <i class="bi bi-droplet-fill text-danger me-2"></i>
-                <span class="text-muted small fw-bold">FETTMASSE</span>
-                <span class="ms-auto text-muted" style="font-size:0.7rem">eines eingeben → anderes wird berechnet</span>
+                <span class="text-muted small fw-bold">{% trans "FETTMASSE" %}</span>
+                <span class="ms-auto text-muted" style="font-size:0.7rem">{% trans "eines eingeben → anderes wird berechnet" %}</span>
             </div>
             <div class="row g-2">
                 <div class="col-6">
@@ -70,13 +70,12 @@
         </div>
     </div>
 
-    {# Muskel-Block: kg und % gegenseitig berechenbar #}
     <div class="card bg-dark border-secondary mb-3">
         <div class="card-body pb-2 pt-3">
             <div class="d-flex align-items-center mb-2">
                 <i class="bi bi-lightning-fill text-warning me-2"></i>
-                <span class="text-muted small fw-bold">MUSKELMASSE</span>
-                <span class="ms-auto text-muted" style="font-size:0.7rem">eines eingeben → anderes wird berechnet</span>
+                <span class="text-muted small fw-bold">{% trans "MUSKELMASSE" %}</span>
+                <span class="ms-auto text-muted" style="font-size:0.7rem">{% trans "eines eingeben → anderes wird berechnet" %}</span>
             </div>
             <div class="row g-2">
                 <div class="col-6">
@@ -99,9 +98,9 @@
 
     <div class="d-grid gap-2 mt-5 pb-5">
         <button type="submit" class="btn btn-primary btn-lg fw-bold p-3 rounded-4">
-            <i class="bi bi-check-lg me-2"></i>Änderungen speichern
+            <i class="bi bi-check-lg me-2"></i>{% trans "Änderungen speichern" %}
         </button>
-        <a href="{% url 'body_stats' %}" class="btn btn-secondary">Abbrechen</a>
+        <a href="{% url 'body_stats' %}" class="btn btn-secondary">{% trans "Abbrechen" %}</a>
     </div>
   </form>
 </div>

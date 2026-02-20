@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Ausrüstung verwalten - HomeGym{% endblock %}
+{% block title %}{% trans "Ausrüstung verwalten" %} - HomeGym{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
@@ -23,8 +24,8 @@
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
             <i class="bi bi-arrow-left"></i> Dashboard
         </a>
-        <span class="navbar-text">Equipment Manager</span>
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+        <span class="navbar-text">{% trans "Equipment Manager" %}</span>
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans "Theme wechseln" %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -35,11 +36,11 @@
 <div class="container-fluid py-4">
     <div class="row mb-4">
         <div class="col">
-            <h2 class="mb-3"><i class="bi bi-tools me-2"></i>Meine Ausrüstung</h2>
+            <h2 class="mb-3"><i class="bi bi-tools me-2"></i>{% trans "Meine Ausrüstung" %}</h2>
             <div class="alert alert-info border-info">
                 <i class="bi bi-info-circle me-2"></i>
-                <strong>Wähle deine verfügbare Ausrüstung aus.</strong>
-                Übungen werden automatisch gefiltert und der AI Coach berücksichtigt nur verfügbares Equipment.
+                <strong>{% trans "Wähle deine verfügbare Ausrüstung aus." %}</strong>
+                {% trans "Übungen werden automatisch gefiltert und der AI Coach berücksichtigt nur verfügbares Equipment." %}
             </div>
         </div>
     </div>
@@ -50,7 +51,7 @@
                 <div class="card-body">
                     <i class="bi bi-check-circle-fill text-success fs-2 mb-2"></i>
                     <h3 class="text-success mb-0">{{ available_uebungen }}</h3>
-                    <small class="text-muted">Verfügbare Übungen</small>
+                    <small class="text-muted">{% trans "Verfügbare Übungen" %}</small>
                 </div>
             </div>
         </div>
@@ -59,7 +60,7 @@
                 <div class="card-body">
                     <i class="bi bi-lock-fill text-warning fs-2 mb-2"></i>
                     <h3 class="text-warning mb-0">{{ unavailable_uebungen }}</h3>
-                    <small class="text-muted">Gesperrte Übungen</small>
+                    <small class="text-muted">{% trans "Gesperrte Übungen" %}</small>
                 </div>
             </div>
         </div>
@@ -68,7 +69,7 @@
                 <div class="card-body">
                     <i class="bi bi-collection-fill text-primary fs-2 mb-2"></i>
                     <h3 class="text-primary mb-0">{{ total_uebungen }}</h3>
-                    <small class="text-muted">Gesamt Übungen</small>
+                    <small class="text-muted">{% trans "Gesamt Übungen" %}</small>
                 </div>
             </div>
         </div>
@@ -76,24 +77,24 @@
 
     <div class="card border-primary mb-4">
         <div class="card-header bg-primary bg-opacity-10 border-primary">
-            <h5 class="mb-0"><i class="bi bi-lightning-fill text-primary me-2"></i>Schnell-Auswahl</h5>
+            <h5 class="mb-0"><i class="bi bi-lightning-fill text-primary me-2"></i>{% trans "Schnell-Auswahl" %}</h5>
         </div>
         <div class="card-body">
             <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-outline-primary" onclick="selectPreset('home-basic')">
-                    <i class="bi bi-house me-1"></i>Home Gym Basic
+                    <i class="bi bi-house me-1"></i>{% trans "Home Gym Basic" %}
                 </button>
                 <button type="button" class="btn btn-outline-primary" onclick="selectPreset('home-advanced')">
-                    <i class="bi bi-house-fill me-1"></i>Home Gym Advanced
+                    <i class="bi bi-house-fill me-1"></i>{% trans "Home Gym Advanced" %}
                 </button>
                 <button type="button" class="btn btn-outline-primary" onclick="selectPreset('fitness-studio')">
-                    <i class="bi bi-building me-1"></i>Fitnessstudio
+                    <i class="bi bi-building me-1"></i>{% trans "Fitnessstudio" %}
                 </button>
                 <button type="button" class="btn btn-outline-secondary" onclick="selectPreset('bodyweight')">
-                    <i class="bi bi-person-arms-up me-1"></i>Nur Körpergewicht
+                    <i class="bi bi-person-arms-up me-1"></i>{% trans "Nur Körpergewicht" %}
                 </button>
                 <button type="button" class="btn btn-outline-danger" onclick="selectPreset('none')">
-                    <i class="bi bi-x-circle me-1"></i>Alles abwählen
+                    <i class="bi bi-x-circle me-1"></i>{% trans "Alles abwählen" %}
                 </button>
             </div>
         </div>
@@ -102,11 +103,11 @@
     <div class="search-box">
         <div class="row g-2 mb-3">
             <div class="col-md-8">
-                <input type="text" id="equipmentSearch" class="form-control" placeholder="Equipment suchen...">
+                <input type="text" id="equipmentSearch" class="form-control" placeholder="{% trans "Equipment suchen..." %}">
             </div>
             <div class="col-md-4">
                 <select class="form-select" id="categoryFilter">
-                    <option value="">Alle Kategorien</option>
+                    <option value="">{% trans "Alle Kategorien" %}</option>
                     {% for category in categorized_equipment.keys %}
                     <option value="{{ category }}">{{ category }}</option>
                     {% endfor %}
@@ -156,7 +157,7 @@
 
     <div id="noResults" class="alert alert-warning d-none">
         <i class="bi bi-search me-2"></i>
-        Keine Equipment-Typen gefunden. Versuche einen anderen Suchbegriff.
+        {% trans "Keine Equipment-Typen gefunden. Versuche einen anderen Suchbegriff." %}
     </div>
 </div>
 {% endblock %}
@@ -165,6 +166,11 @@
 <script src="{% static 'core/js/loading-manager.js' %}"></script>
 <script src="{% static 'core/js/toast.js' %}"></script>
 <script>
+    const msgAdded = "{% trans "hinzugefügt" %}";
+    const msgRemoved = "{% trans "entfernt" %}";
+    const msgPresetActive = "{% trans "Preset bereits aktiv" %}";
+    const msgUpdateError = "{% trans "Fehler beim Aktualisieren des Equipments" %}";
+
     function toggleEquipmentCard(equipmentId, card) {
         const checkbox = card.querySelector(`#equipment_${equipmentId}`);
         checkbox.checked = !checkbox.checked;
@@ -184,13 +190,13 @@
             })
             .then(r => r.json())
             .then(data => {
-                toast.success(`${data.equipment_name}: ${data.status === 'added' ? 'hinzugefügt' : 'entfernt'}`);
+                toast.success(`${data.equipment_name}: ${data.status === 'added' ? msgAdded : msgRemoved}`);
                 setTimeout(() => location.reload(), 800);
             })
             .catch(() => {
                 this.checked = !isChecked;
                 card.classList.toggle('selected', !isChecked);
-                toast.error('Fehler beim Aktualisieren des Equipments');
+                toast.error(msgUpdateError);
             })
             .finally(() => { this.disabled = false; });
         });
@@ -235,7 +241,7 @@
             const should = selected.some(eq => name.includes(eq) || eq.includes(name));
             if (checkbox.checked !== should) { checkbox.checked = should; checkbox.dispatchEvent(new Event('change')); changed++; }
         });
-        if (changed === 0) toast.info('Preset bereits aktiv');
+        if (changed === 0) toast.info(msgPresetActive);
     }
 </script>
 {% endblock %}
