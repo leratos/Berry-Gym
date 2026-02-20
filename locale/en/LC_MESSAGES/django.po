@@ -1415,8 +1415,8 @@ msgid "Kurzbeschreibung"
 msgstr "Kurzbeschreibung"
 
 #: .\core\templates\core\feedback_create.html:60
-msgid "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
-msgstr "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
+msgid "z.B. Timer funktioniert nicht oder Wunsch: Export als Excel"
+msgstr "e.g. Timer not working or Feature request: Excel export"
 
 #: .\core\templates\core\feedback_create.html:63
 msgid "Max. 200 Zeichen"
@@ -2112,8 +2112,8 @@ msgid "Aktuelles Gewicht (optional)"
 msgstr "Aktuelles Gewicht (optional)"
 
 #: .\core\templates\core\progress_photos.html:67
-msgid "z.B. 'Start', 'Nach 3 Monaten'"
-msgstr "z.B. 'Start', 'Nach 3 Monaten'"
+msgid "z.B. Start, Nach 3 Monaten"
+msgstr "e.g. Start, After 3 Months"
 
 #: .\core\templates\core\progress_photos.html:70
 msgid "Hochladen"
