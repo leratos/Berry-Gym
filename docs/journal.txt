@@ -1471,3 +1471,35 @@ Da makemessages nicht verfügbar: {% trans %} Tags manuell in Template → Eintr
 
 **Ziel:** 17 Templates mit {% trans %} versehen, django.po erweitern, compilieren
 **Status:** Beginn der Template-Bearbeitung
+
+
+## Abgeschlossen: Phase 7.5d – i18n Gruppe 3 (Registrierung, Feedback, Misc)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5d-i18n-registration-feedback
+**Commit:** 3d644be
+
+**Templates (17 Stück):**
+- registration/register.html (15 trans), register_new.html (24), password_reset_form.html (6)
+- registration/password_reset_complete.html (4), _confirm.html (11), _done.html (5)
+- registration/apply_beta.html (38 trans – größtes Template dieser Phase)
+- core/feedback_create.html (15), feedback_detail.html (16), feedback_list.html (17)
+- core/set_active_plan.html (28), progress_photos.html (25)
+- core/sources.html (11), datenschutz.html (3), impressum.html (3)
+- includes/disclaimer_banner.html (3 – bereits vollständig)
+- base.html (0 echte trans-Tags – kein User-Text vorhanden, korrekt)
+
+**django.po:**
+- 559 Strings total (war 403, +156 neu aus 7.5d-Templates)
+- locale/en/LC_MESSAGES/django.mo erfolgreich kompiliert (compile_msgs.py)
+- Line-Ending Fix durch pre-commit Hook (mixed → LF)
+
+**Tests:** 13/13 grün (test_i18n.py)
+
+**Offene i18n-Arbeit (~20 Templates verbleiben):**
+- AI-Templates: ai_coach_chat.html, ai_plan_generator.html
+- Plan-Erstellung: create_plan.html, edit_plan.html
+- Übungsdetails: exercise_detail.html, stats_exercise.html
+- PDF-Export: training_pdf*.html (niedrige Priorität)
+- Weitere kleine Templates
+
+**Nächste Phase:** Phase 7.5e (restliche ~20 Templates) oder Phase 7.6 (Export-Feature)
