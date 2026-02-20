@@ -2907,8 +2907,8 @@ msgid "Müde"
 msgstr "Tired"
 
 #: .\core\templates\core\training_session.html:551
-msgid "z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', '🎯 PR'..."
-msgstr "e.g. 'Last 2 reps with help', 'Grip too narrow', '🎯 PR'..."
+msgid "z.B. Letzte 2 Wdh. mit Hilfe, Grip zu eng, PR..."
+msgstr "e.g. Last 2 reps with help, Grip too narrow, PR..."
 
 #: .\core\templates\core\training_session.html:554
 #: .\core\templates\core\training_session.html:1370

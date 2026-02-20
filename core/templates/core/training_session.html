@@ -537,18 +537,18 @@
                         <i class="bi bi-pencil-square me-1"></i>{% trans "Notiz (optional)" %}
                     </label>
                     <div class="d-flex flex-wrap gap-1 mb-2" id="quickTagButtons">
-                        <button type="button" class="btn btn-outline-success btn-sm quick-tag" data-tag="⭐ {% trans "Perfekt" %}">⭐ {% trans "Perfekt" %}</button>
-                        <button type="button" class="btn btn-outline-info btn-sm quick-tag" data-tag="👍 {% trans "Gut" %}">👍 {% trans "Gut" %}</button>
-                        <button type="button" class="btn btn-outline-warning btn-sm quick-tag" data-tag="⚠️ {% trans "Schwierig" %}">⚠️ {% trans "Schwierig" %}</button>
-                        <button type="button" class="btn btn-outline-danger btn-sm quick-tag" data-tag="🤕 {% trans "Mit Hilfe" %}">🤕 {% trans "Mit Hilfe" %}</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm quick-tag" data-tag="😓 {% trans "Schmerz" %}">😓 {% trans "Schmerz" %}</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm quick-tag" data-tag="💪 {% trans "Stärker" %}">💪 {% trans "Stärker" %}</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm quick-tag" data-tag="😴 {% trans "Müde" %}">😴 {% trans "Müde" %}</button>
+                        <button type="button" class="btn btn-outline-success btn-sm quick-tag" data-tag="⭐ {% trans 'Perfekt' %}">⭐ {% trans "Perfekt" %}</button>
+                        <button type="button" class="btn btn-outline-info btn-sm quick-tag" data-tag="👍 {% trans 'Gut' %}">👍 {% trans "Gut" %}</button>
+                        <button type="button" class="btn btn-outline-warning btn-sm quick-tag" data-tag="⚠️ {% trans 'Schwierig' %}">⚠️ {% trans "Schwierig" %}</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm quick-tag" data-tag="🤕 {% trans 'Mit Hilfe' %}">🤕 {% trans "Mit Hilfe" %}</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm quick-tag" data-tag="😓 {% trans 'Schmerz' %}">😓 {% trans "Schmerz" %}</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm quick-tag" data-tag="💪 {% trans 'Stärker' %}">💪 {% trans "Stärker" %}</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm quick-tag" data-tag="😴 {% trans 'Müde' %}">😴 {% trans "Müde" %}</button>
                         <button type="button" class="btn btn-outline-secondary btn-sm quick-tag" data-tag="🔥 Pump">🔥 Pump</button>
                         <button type="button" class="btn btn-outline-secondary btn-sm quick-tag" data-tag="🎯 PR">🎯 PR</button>
                     </div>
                     <textarea name="notiz" id="notizInput" class="form-control border-secondary" rows="3"
-                              placeholder="{% trans "z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', '🎯 PR'..." %}"
+                              placeholder="{% trans 'z.B. Letzte 2 Wdh. mit Hilfe, Grip zu eng, PR...' %}"
                               oninput="updateCharCount()"></textarea>
                     <div class="d-flex justify-content-between align-items-center mt-1">
                         <small class="text-muted" id="charCount">0 / 500 {% trans "Zeichen" %}</small>
@@ -1358,7 +1358,7 @@
             notizInput.focus();
         }
 
-        // Quick-Tag Buttons: data-tag statt onclick (vermeidet Quote-Escaping mit {% trans %})
+        // Quick-Tag Buttons: data-tag statt onclick (kein trans-Tag im onclick-Attribut)
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('#quickTagButtons .quick-tag');
             if (btn) insertTag(btn.dataset.tag);

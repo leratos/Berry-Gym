@@ -1558,3 +1558,21 @@ Gruppe C (übersprungen – niedrige Prio):
 
 **Offene i18n-Arbeit:**
 - training_pdf*.html (bewusst zurückgestellt – kein EN-UI-Text)
+
+## Abgeschlossen: fix/timer-inserttag-quote-escaping (20.02.2026)
+
+**Problem:** `startRestTimer is not defined` in Chrome-Konsole (DE), Timer funktionierte nur in EN.
+
+**Ursache:** `{% trans "Wort" %}` innerhalb von `onclick="insertTag('... {% trans "X" %} ...')"` –
+die inneren Doppel-Quotes des trans-Tags schlossen das HTML-Attribut vorzeitig.
+Dadurch wurde der nachfolgende `<script>`-Block nicht korrekt geparst → alle JS-Funktionen undefiniert.
+
+**Fix in training_session.html:**
+- Quick-Tag Buttons: `onclick` entfernt, stattdessen `data-tag="... {% trans 'X' %} ..."` (einfache Quotes im trans-Tag)
+- Event-Delegation per `document.addEventListener('click', ...)` auf `#quickTagButtons .quick-tag`
+- Placeholder-Text: Apostrophe aus msgid entfernt → `z.B. Letzte 2 Wdh. mit Hilfe, Grip zu eng, PR...`
+- django.po: altes msgid mit Apostrophen durch neues ersetzt, EN-Übersetzung angepasst
+- compilemessages: django.mo aktualisiert
+- .gitignore: debug_timer.py, check_trans.py ergänzt
+
+**Commit:** fix/timer-inserttag-quote-escaping
