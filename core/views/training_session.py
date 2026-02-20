@@ -57,13 +57,13 @@ def training_select_plan(request: HttpRequest) -> HttpResponse:
     """Zeigt alle verfügbaren Pläne zur Auswahl an. Priorisiert aktive Plan-Gruppe."""
     filter_type = request.GET.get("filter", "eigene")
 
+    # Öffentliche Pläne sind über /plan-library/ erreichbar – hier nicht mehr anzeigen
     if filter_type == "public":
-        plaene = (
-            Plan.objects.filter(is_public=True)
-            .exclude(user=request.user)
-            .order_by("gruppe_name", "gruppe_reihenfolge", "name")
-        )
-    elif filter_type == "shared":
+        from django.shortcuts import redirect
+
+        return redirect(f"{request.path}?filter=eigene")
+
+    if filter_type == "shared":
         plaene = request.user.shared_plans.all().order_by(
             "gruppe_name", "gruppe_reihenfolge", "name"
         )
