@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: HomeGym 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-19 22:02+0100\n"
-"PO-Revision-Date: 2026-02-19 22:02+0100\n"
+"POT-Creation-Date: 2026-02-20 12:00+0100\n"
+"PO-Revision-Date: 2026-02-20 12:00+0100\n"
 "Last-Translator: HomeGym Team\n"
 "Language-Team: English\n"
 "Language: en\n"
@@ -16,118 +16,718 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: .\core\templates\core\includes\global_header.html:54
+# === global_header.html ===
 msgid "Admin-Panel"
 msgstr "Admin Panel"
 
-#: .\core\templates\core\includes\global_header.html:61
 msgid "Profil bearbeiten"
 msgstr "Edit Profile"
 
-#: .\core\templates\core\includes\global_header.html:66
 msgid "Equipment"
 msgstr "Equipment"
 
-#: .\core\templates\core\includes\global_header.html:71
 msgid "Statistiken"
 msgstr "Statistics"
 
-#: .\core\templates\core\includes\global_header.html:79
 msgid "Abmelden"
 msgstr "Sign Out"
 
-#: .\core\templates\core\training_list.html:5
-msgid "Trainings-Logbuch"
-msgstr "Training Log"
+# === global_footer.html ===
+msgid "Dein persönliches Fitness-Tracking"
+msgstr "Your personal fitness tracking"
 
-#: .\core\templates\core\training_list.html:11
-msgid "Dashboard"
-msgstr "Dashboard"
+msgid "Plan-Bibliothek"
+msgstr "Plan Library"
 
-#: .\core\templates\core\training_list.html:13
-msgid "Dein Verlauf"
-msgstr "Your History"
+msgid "Cardio"
+msgstr "Cardio"
 
-#: .\core\templates\core\training_list.html:29
-msgid "Noch keine Trainings absolviert."
-msgstr "No workouts logged yet."
+msgid "Feedback"
+msgstr "Feedback"
 
-#: .\core\templates\core\training_list.html:30
-msgid "Jetzt starten!"
-msgstr "Start now!"
+msgid "Datenschutz"
+msgstr "Privacy Policy"
 
-#: .\core\templates\core\training_list.html:53
-#: .\core\templates\core\training_list.html:99
-msgid "Sätze"
-msgstr "Sets"
-
-#: .\core\templates\core\training_list.html:90
-msgid "Training löschen?"
-msgstr "Delete Workout?"
-
-#: .\core\templates\core\training_list.html:95
-msgid "Möchtest du dieses Training wirklich unwiderruflich löschen?"
-msgstr "Do you really want to permanently delete this workout?"
-
-#: .\core\templates\core\training_list.html:104
-msgid "Alle Sätze gehen verloren!"
-msgstr "All sets will be lost!"
-
-#: .\core\templates\core\training_list.html:108
-msgid "Abbrechen"
-msgstr "Cancel"
-
-#: .\core\templates\core\training_list.html:113
-msgid "Ja, unwiderruflich löschen"
-msgstr "Yes, delete permanently"
-
-#: .\core\templates\registration\login.html:7
-msgid "Login"
-msgstr "Login"
-
-#: .\core\templates\registration\login.html:22
-msgid "Dein persönliches Trainingstagebuch"
-msgstr "Your personal training journal"
-
-#: .\core\templates\registration\login.html:28
-#: .\core\templates\registration\login.html:85
-msgid "Anmelden"
-msgstr "Sign In"
-
-#: .\core\templates\registration\login.html:33
-msgid "Ungültiger Benutzername oder Passwort."
-msgstr "Invalid username or password."
-
-#: .\core\templates\registration\login.html:40
-msgid "Dein Account hat keine Berechtigung für diese Seite."
-msgstr "Your account does not have permission for this page."
-
-#: .\core\templates\registration\login.html:50
-#: .\core\templates\registration\login.html:57
-msgid "Benutzername"
-msgstr "Username"
-
-#: .\core\templates\registration\login.html:65
-#: .\core\templates\registration\login.html:72
-msgid "Passwort"
-msgstr "Password"
-
-#: .\core\templates\registration\login.html:77
-msgid "Passwort vergessen?"
-msgstr "Forgot password?"
-
-#: .\core\templates\registration\login.html:92
-msgid "Noch keinen Account?"
-msgstr "No account yet?"
-
-#: .\core\templates\registration\login.html:94
-msgid "Für Beta bewerben"
-msgstr "Apply for Beta"
-
-#: .\core\templates\registration\login.html:105
 msgid "Impressum"
 msgstr "Legal Notice"
 
-#: .\core\templates\registration\login.html:107
-msgid "Datenschutz"
-msgstr "Privacy Policy"
+msgid "Quellen"
+msgstr "Sources"
+
+# === training_list.html ===
+msgid "Trainings-Logbuch"
+msgstr "Training Log"
+
+msgid "Dashboard"
+msgstr "Dashboard"
+
+msgid "Dein Verlauf"
+msgstr "Your History"
+
+msgid "Noch keine Trainings absolviert."
+msgstr "No workouts logged yet."
+
+msgid "Jetzt starten!"
+msgstr "Start now!"
+
+msgid "Sätze"
+msgstr "Sets"
+
+msgid "Training löschen?"
+msgstr "Delete Workout?"
+
+msgid "Möchtest du dieses Training wirklich unwiderruflich löschen?"
+msgstr "Do you really want to permanently delete this workout?"
+
+msgid "Alle Sätze gehen verloren!"
+msgstr "All sets will be lost!"
+
+msgid "Abbrechen"
+msgstr "Cancel"
+
+msgid "Ja, unwiderruflich löschen"
+msgstr "Yes, delete permanently"
+
+# === login.html ===
+msgid "Login"
+msgstr "Login"
+
+msgid "Dein persönliches Trainingstagebuch"
+msgstr "Your personal training journal"
+
+msgid "Anmelden"
+msgstr "Sign In"
+
+msgid "Ungültiger Benutzername oder Passwort."
+msgstr "Invalid username or password."
+
+msgid "Dein Account hat keine Berechtigung für diese Seite."
+msgstr "Your account does not have permission for this page."
+
+msgid "Benutzername"
+msgstr "Username"
+
+msgid "Passwort"
+msgstr "Password"
+
+msgid "Passwort vergessen?"
+msgstr "Forgot password?"
+
+msgid "Noch keinen Account?"
+msgstr "No account yet?"
+
+msgid "Für Beta bewerben"
+msgstr "Apply for Beta"
+
+# === training_finish.html ===
+msgid "Training abschließen"
+msgstr "Finish Workout"
+
+msgid "Training beenden"
+msgstr "Finish Workout"
+
+msgid "Zurück"
+msgstr "Back"
+
+msgid "Theme wechseln"
+msgstr "Toggle Theme"
+
+msgid "Gut gemacht!"
+msgstr "Well done!"
+
+msgid "Du hast es geschafft – hier ist deine Zusammenfassung"
+msgstr "You did it – here's your summary"
+
+msgid "Arbeitssätze"
+msgstr "Work Sets"
+
+msgid "Übungen"
+msgstr "Exercises"
+
+msgid "Gesamtvolumen"
+msgstr "Total Volume"
+
+msgid "Gewicht × Wiederholungen (ohne Warmup)"
+msgstr "Weight × Reps (excluding warm-up)"
+
+msgid "Aufwärmsätze"
+msgstr "Warm-up Sets"
+
+msgid "AI-Trainings-Tipp"
+msgstr "AI Training Tip"
+
+msgid "Empfehlung"
+msgstr "Recommendation"
+
+msgid "Trainingsdauer"
+msgstr "Workout Duration"
+
+msgid "Minuten"
+msgstr "Minutes"
+
+msgid "Wie lief's? (optional)"
+msgstr "How did it go? (optional)"
+
+msgid "z.B. Gutes Pump-Gefühl, Schulter etwas müde..."
+msgstr "e.g. Great pump, shoulder a bit tired..."
+
+msgid "Training speichern"
+msgstr "Save Workout"
+
+msgid "Nochmal anpassen"
+msgstr "Adjust Again"
+
+# === training_select_plan.html ===
+msgid "Training wählen"
+msgstr "Choose Workout"
+
+msgid "Modus wählen"
+msgstr "Choose Mode"
+
+msgid "Freies Training"
+msgstr "Free Workout"
+
+msgid "Ohne Vorlage starten und Übungen spontan wählen."
+msgstr "Start without a template and choose exercises freely."
+
+msgid "TRAININGSPLÄNE"
+msgstr "TRAINING PLANS"
+
+msgid "Meine"
+msgstr "Mine"
+
+msgid "Geteilt"
+msgstr "Shared"
+
+msgid "Öffentlich"
+msgstr "Public"
+
+msgid "Neuen Plan erstellen"
+msgstr "Create New Plan"
+
+msgid "Aktiven Plan festlegen"
+msgstr "Set Active Plan"
+
+msgid "Pläne ausgewählt"
+msgstr "Plans selected"
+
+msgid "Gruppenname"
+msgstr "Group Name"
+
+msgid "Gruppieren"
+msgstr "Group"
+
+msgid "Noch keine Pläne erstellt. Erstelle deinen ersten Plan!"
+msgstr "No plans created yet. Create your first plan!"
+
+msgid "Noch keine Pläne mit dir geteilt."
+msgstr "No plans shared with you yet."
+
+msgid "Trainingspartner können Pläne über die Teilen-Funktion mit dir teilen."
+msgstr "Training partners can share plans with you using the share function."
+
+msgid "Noch keine öffentlichen Pläne verfügbar."
+msgstr "No public plans available yet."
+
+msgid "Trainingstage"
+msgstr "Training Days"
+
+msgid "Umbenennen"
+msgstr "Rename"
+
+msgid "Aktiver Plan"
+msgstr "Active Plan"
+
+msgid "Alle löschen"
+msgstr "Delete All"
+
+msgid "WEITERE PLÄNE"
+msgstr "MORE PLANS"
+
+msgid "Duplizieren"
+msgstr "Duplicate"
+
+msgid "Teilen"
+msgstr "Share"
+
+msgid "Mehr anzeigen"
+msgstr "Show more"
+
+msgid "Weniger"
+msgstr "Less"
+
+msgid "Starten"
+msgstr "Start"
+
+msgid "Details"
+msgstr "Details"
+
+msgid "Bearbeiten"
+msgstr "Edit"
+
+msgid "Kopieren"
+msgstr "Copy"
+
+msgid "von"
+msgstr "by"
+
+msgid "Gruppe auflösen? Pläne werden einzeln angezeigt."
+msgstr "Disband group? Plans will be shown individually."
+
+msgid "Fehler"
+msgstr "Error"
+
+msgid "Fehler aufgetreten."
+msgstr "An error occurred."
+
+msgid "Plan wirklich löschen? Nicht rückgängig machbar."
+msgstr "Really delete plan? This cannot be undone."
+
+msgid "Alle Pläne der Gruppe löschen? NICHT rückgängig machbar!"
+msgstr "Delete all plans in the group? This CANNOT be undone!"
+
+msgid "Bist du WIRKLICH sicher?"
+msgstr "Are you REALLY sure?"
+
+msgid "Neue Gruppe"
+msgstr "New Group"
+
+msgid "Mindestens 2 Pläne auswählen."
+msgstr "Select at least 2 plans."
+
+msgid "Neuer Gruppenname:"
+msgstr "New group name:"
+
+msgid "Gruppe umbenannt"
+msgstr "Group renamed"
+
+# === dashboard.html ===
+msgid "TRAINING"
+msgstr "TRAINING"
+
+msgid "Offenes Training fortsetzen"
+msgstr "Continue open workout"
+
+msgid "Fortsetzen"
+msgstr "Continue"
+
+msgid "Ausrüstung verwalten"
+msgstr "Manage Equipment"
+
+msgid "Push-Benachrichtigungen"
+msgstr "Push Notifications"
+
+msgid "Alle anzeigen"
+msgstr "Show All"
+
+msgid "Aufräumen"
+msgstr "Clean Up"
+
+msgid "Diese Woche"
+msgstr "This Week"
+
+msgid "Trainings"
+msgstr "Workouts"
+
+msgid "Wochen"
+msgstr "Weeks"
+
+msgid "Aktiver Plan"
+msgstr "Active Plan"
+
+msgid "Plan wechseln"
+msgstr "Switch Plan"
+
+msgid "Woche"
+msgstr "Week"
+
+msgid "Volumen"
+msgstr "Volume"
+
+msgid "Gewicht"
+msgstr "Weight"
+
+msgid "Ziel-RPE"
+msgstr "Target RPE"
+
+msgid "Deine aktive Plan-Gruppe existiert nicht mehr."
+msgstr "Your active plan group no longer exists."
+
+msgid "Neu wählen"
+msgstr "Choose New"
+
+msgid "Kein aktiver Plan gesetzt"
+msgstr "No active plan set"
+
+msgid "Aktiven Trainingsplan festlegen"
+msgstr "Set Active Training Plan"
+
+msgid "Performance Form-Index"
+msgstr "Performance Form Index"
+
+msgid "Wie wird das berechnet?"
+msgstr "How is this calculated?"
+
+msgid "Basiert auf Frequenz, Konsistenz, RPE und Volumen-Trends"
+msgstr "Based on frequency, consistency, RPE and volume trends"
+
+msgid "AI Performance-Analyse"
+msgstr "AI Performance Analysis"
+
+msgid "Automatische Erkennung von Plateau, Rückschritt und Stagnation"
+msgstr "Automatic detection of plateau, regression and stagnation"
+
+msgid "Plateau"
+msgstr "Plateau"
+
+msgid "Rückschritt"
+msgstr "Regression"
+
+msgid "Stagnation"
+msgstr "Stagnation"
+
+msgid "Tipp"
+msgstr "Tip"
+
+msgid "Powered by AI-Algorithmus • Analysiert deine letzten 4 Wochen"
+msgstr "Powered by AI algorithm • Analyzes your last 4 weeks"
+
+msgid "Letztes Workout"
+msgstr "Last Workout"
+
+msgid "Noch kein Eintrag"
+msgstr "No entry yet"
+
+msgid "Deine Top 3 Übungen"
+msgstr "Your Top 3 Exercises"
+
+msgid "TRAININGS-HISTORIE"
+msgstr "TRAINING HISTORY"
+
+msgid "Letzte 12 Monate"
+msgstr "Last 12 Months"
+
+msgid "Gesamt"
+msgstr "Total"
+
+msgid "Weniger"
+msgstr "Less"
+
+msgid "Mehr"
+msgstr "More"
+
+msgid "KÖRPER & VITALWERTE"
+msgstr "BODY & VITALS"
+
+msgid "Aktuelles Gewicht"
+msgstr "Current Weight"
+
+msgid "Verlauf anzeigen"
+msgstr "Show History"
+
+msgid "Wöchentliches Volumen"
+msgstr "Weekly Volume"
+
+msgid "Cardio diese Woche"
+msgstr "Cardio This Week"
+
+msgid "Ermüdungs-Index"
+msgstr "Fatigue Index"
+
+msgid "Faktoren"
+msgstr "Factors"
+
+msgid "Muskeln"
+msgstr "Muscle Mass"
+
+msgid "KFA / Fett"
+msgstr "BF% / Fat"
+
+msgid "Training starten"
+msgstr "Start Workout"
+
+msgid "Cardio hinzufügen"
+msgstr "Add Cardio"
+
+msgid "KI-Plan erstellen"
+msgstr "Create AI Plan"
+
+msgid "Trainingsempfehlungen (AI)"
+msgstr "Workout Recommendations (AI)"
+
+msgid "ML Vorhersage-Modelle"
+msgstr "ML Prediction Models"
+
+msgid "Muskelgruppen & Übungen"
+msgstr "Muscle Groups & Exercises"
+
+msgid "Werte eintragen"
+msgstr "Log Values"
+
+msgid "Push-Benachrichtigungen deaktivieren?"
+msgstr "Disable push notifications?"
+
+msgid "Push-Benachrichtigungen deaktiviert"
+msgstr "Push notifications disabled"
+
+msgid "Push-Benachrichtigungen aktiviert!"
+msgstr "Push notifications enabled!"
+
+msgid "Push-Notifications werden geladen... Bitte versuche es in wenigen Sekunden erneut."
+msgstr "Push notifications are loading... Please try again in a few seconds."
+
+msgid "Fehler beim Aktivieren der Benachrichtigungen"
+msgstr "Error enabling notifications"
+
+msgid "Push-Benachrichtigungen aktiv"
+msgstr "Push notifications active"
+
+msgid "Push-Benachrichtigungen aktivieren"
+msgstr "Enable push notifications"
+
+# === training_session.html ===
+msgid "Training"
+msgstr "Workout"
+
+msgid "Pausenuhr starten"
+msgstr "Start Rest Timer"
+
+msgid "Timer-Dauer wählen"
+msgstr "Choose Timer Duration"
+
+msgid "Timer-Dauer"
+msgstr "Timer Duration"
+
+msgid "Pausendauer"
+msgstr "Rest Duration"
+
+msgid "Sekunden"
+msgstr "Seconds"
+
+msgid "Sound-Einstellungen"
+msgstr "Sound Settings"
+
+msgid "Sound aktiv"
+msgstr "Sound On"
+
+msgid "Lautstärke"
+msgstr "Volume"
+
+msgid "Fertig"
+msgstr "Done"
+
+msgid "Deload-Training"
+msgstr "Deload Workout"
+
+msgid "Wird nicht in Statistik gezählt"
+msgstr "Not counted in statistics"
+
+msgid "Empfohlene Deload-Woche – zählt aktuell zur Statistik"
+msgstr "Recommended deload week – currently counted in statistics"
+
+msgid "Zählt für Statistik"
+msgstr "Counts for statistics"
+
+msgid "Gesamtvolumen heute"
+msgstr "Total Volume Today"
+
+msgid "Drück auf +, um loszulegen!"
+msgstr "Press + to get started!"
+
+msgid "Übungsdetails anzeigen"
+msgstr "Show Exercise Details"
+
+msgid "Ziel"
+msgstr "Goal"
+
+msgid "ML-Empfehlung"
+msgstr "ML Recommendation"
+
+msgid "Pause aus KI-Plan"
+msgstr "Rest from AI Plan"
+
+msgid "Berechnete Pause"
+msgstr "Calculated Rest"
+
+msgid "Klick zum Starten"
+msgstr "Click to Start"
+
+msgid "Wdh / Sek"
+msgstr "Reps / Sec"
+
+msgid "Aktion"
+msgstr "Action"
+
+msgid "Weiteren Satz hinzufügen"
+msgstr "Add Another Set"
+
+msgid "Neuer Personal Record!"
+msgstr "New Personal Record!"
+
+msgid "Pause"
+msgstr "Rest"
+
+msgid "Satz hinzufügen"
+msgstr "Add Set"
+
+msgid "Satz bearbeiten"
+msgstr "Edit Set"
+
+msgid "Übung suchen"
+msgstr "Search Exercise"
+
+msgid "Bankdrücken, Kniebeugen, ..."
+msgstr "Bench Press, Squats, ..."
+
+msgid "1. Muskelgruppe"
+msgstr "1. Muscle Group"
+
+msgid "-- Bitte wählen --"
+msgstr "-- Please select --"
+
+msgid "2. Übung"
+msgstr "2. Exercise"
+
+msgid "-- Erst Muskelgruppe wählen --"
+msgstr "-- Select muscle group first --"
+
+msgid "Gewicht (kg)"
+msgstr "Weight (kg)"
+
+msgid "Zusatzgewicht (kg)"
+msgstr "Additional Weight (kg)"
+
+msgid "Wdh. / Sek."
+msgstr "Reps / Sec."
+
+msgid "Keine"
+msgstr "None"
+
+msgid "Aufwärmsatz"
+msgstr "Warm-up Set"
+
+msgid "Notiz (optional)"
+msgstr "Note (optional)"
+
+msgid "Perfekt"
+msgstr "Perfect"
+
+msgid "Gut"
+msgstr "Good"
+
+msgid "Schwierig"
+msgstr "Difficult"
+
+msgid "Mit Hilfe"
+msgstr "With Help"
+
+msgid "Schmerz"
+msgstr "Pain"
+
+msgid "Stärker"
+msgstr "Stronger"
+
+msgid "Müde"
+msgstr "Tired"
+
+msgid "z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', '🎯 PR'..."
+msgstr "e.g. 'Last 2 reps with help', 'Grip too narrow', '🎯 PR'..."
+
+msgid "Zeichen"
+msgstr "Characters"
+
+msgid "Löschen"
+msgstr "Delete"
+
+msgid "Speichern"
+msgstr "Save"
+
+msgid "Satz löschen?"
+msgstr "Delete Set?"
+
+msgid "Möchtest du diesen Satz wirklich löschen?"
+msgstr "Do you really want to delete this set?"
+
+msgid "Ja, löschen"
+msgstr "Yes, delete"
+
+msgid "gelöscht"
+msgstr "deleted"
+
+msgid "Wdh"
+msgstr "Reps"
+
+msgid "Rückgängig"
+msgstr "Undo"
+
+msgid "Satz wiederhergestellt"
+msgstr "Set restored"
+
+msgid "Fehler beim Löschen"
+msgstr "Error deleting"
+
+msgid "Netzwerkfehler beim Löschen"
+msgstr "Network error while deleting"
+
+msgid "Körpergewicht-Übung · ca."
+msgstr "Bodyweight exercise · approx."
+
+msgid "KG wirkt als Last"
+msgstr "bodyweight acts as load"
+
+msgid "Körpergewicht-Übung · isometrisch (kein Heben)"
+msgstr "Bodyweight exercise · isometric (no lifting)"
+
+msgid "-- Übung wählen --"
+msgstr "-- Choose Exercise --"
+
+msgid "Körpergewicht-Übung: Ziel +1–2 Wdh."
+msgstr "Bodyweight exercise: target +1–2 reps"
+
+msgid "Letztes Mal"
+msgstr "Last time"
+
+msgid "Offline-Änderungen werden angezeigt"
+msgstr "Offline changes are shown"
+
+msgid "Serverfehler beim Speichern"
+msgstr "Server error while saving"
+
+msgid "Serverfehler"
+msgstr "Server error"
+
+msgid "Satz konnte nicht gespeichert werden"
+msgstr "Set could not be saved"
+
+msgid "Fehler beim Speichern"
+msgstr "Error saving"
+
+msgid "Speichern..."
+msgstr "Saving..."
+
+msgid "Änderung offline gespeichert - wird synchronisiert"
+msgstr "Change saved offline – will be synced"
+
+msgid "Satz offline gespeichert - wird synchronisiert"
+msgstr "Set saved offline – will be synced"
+
+msgid "Offline-Speicherung fehlgeschlagen."
+msgstr "Offline saving failed."
+
+msgid "Pause vorbei!"
+msgstr "Rest over!"
+
+msgid "Bereit für den nächsten Satz?"
+msgstr "Ready for the next set?"
+
+msgid "Satz"
+msgstr "Set"
+
+msgid "offline gespeichert"
+msgstr "saved offline"
+
+msgid "Werden automatisch synchronisiert wenn du wieder online bist"
+msgstr "Will be synced automatically when you're back online"
+
+msgid "Übung"
+msgstr "Exercise"
