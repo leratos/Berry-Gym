@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Neuer Trainingsplan - HomeGym{% endblock %}
+{% block title %}{% trans "Neuen Plan erstellen" %} - HomeGym{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
@@ -49,10 +49,10 @@
 <nav class="navbar navbar-page border-bottom">
     <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-            <i class="bi bi-arrow-left"></i> Dashboard
+            <i class="bi bi-arrow-left"></i> {% trans "Dashboard" %}
         </a>
-        <span class="navbar-text">Neuer Trainingsplan</span>
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+        <span class="navbar-text">{% trans "Neuer Trainingsplan" %}</span>
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans "Theme wechseln" %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -73,9 +73,9 @@
     <!-- Template-Auswahl Button -->
     <div class="mb-3">
         <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#templateModal">
-            <i class="bi bi-lightning-charge-fill me-2"></i>Von Template starten
+            <i class="bi bi-lightning-charge-fill me-2"></i>{% trans "Von Template starten" %}
         </button>
-        <span class="text-muted ms-2">Oder erstelle einen Plan von Grund auf:</span>
+        <span class="text-muted ms-2">{% trans "Oder erstelle einen Plan von Grund auf:" %}</span>
     </div>
 
     <div class="row">
@@ -84,13 +84,13 @@
             <div class="card card-stat border-secondary mb-4">
                 <div class="card-body">
                     <h5 class="card-title">
-                        <i class="bi bi-list-check me-2"></i>Übungen auswählen
+                        <i class="bi bi-list-check me-2"></i>{% trans "Übungen auswählen" %}
                     </h5>
-                    <p class="text-muted small">Klicke auf Übungen, um sie zum Plan hinzuzufügen</p>
+                    <p class="text-muted small">{% trans "Klicke auf Übungen, um sie zum Plan hinzuzufügen" %}</p>
 
                     <!-- Suche -->
                     <div class="mb-3">
-                        <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
+                        <input type="text" id="searchExercises" class="form-control" placeholder="{% trans "Übung suchen..." %}">
                     </div>
 
                     <!-- Übungen nach Muskelgruppen -->
@@ -145,19 +145,19 @@
                 <div class="card card-stat border-secondary mb-3">
                     <div class="card-body">
                         <h5 class="card-title">
-                            <i class="bi bi-clipboard-check me-2"></i>Neuer Plan
+                            <i class="bi bi-clipboard-check me-2"></i>{% trans "Neuer Plan" %}
                         </h5>
 
                         <form method="post" id="planForm">
                             {% csrf_token %}
 
                             <div class="mb-3">
-                                <label class="form-label">Name des Plans *</label>
+                                <label class="form-label">{% trans "Name des Plans" %} *</label>
                                 <input type="text" name="name" class="form-control" required>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Beschreibung</label>
+                                <label class="form-label">{% trans "Beschreibung" %}</label>
                                 <textarea name="beschreibung" class="form-control" rows="2"></textarea>
                             </div>
 
@@ -165,8 +165,8 @@
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" name="is_public" id="isPublicCheck">
                                     <label class="form-check-label" for="isPublicCheck">
-                                        <i class="bi bi-globe me-1"></i> Plan öffentlich machen
-                                        <small class="text-muted d-block">Andere User können diesen Plan sehen und kopieren</small>
+                                        <i class="bi bi-globe me-1"></i> {% trans "Plan öffentlich machen" %}
+                                        <small class="text-muted d-block">{% trans "Andere User können diesen Plan sehen und kopieren" %}</small>
                                     </label>
                                 </div>
                             </div>
@@ -174,7 +174,7 @@
                             <hr class="border-secondary">
 
                             <h6 class="text-secondary mb-3">
-                                Ausgewählte Übungen (<span id="selectedCount">0</span>)
+                                {% trans "Ausgewählte Übungen" %} (<span id="selectedCount">0</span>)
                             </h6>
 
                             <div id="recommendationWarnings"></div>
@@ -187,7 +187,7 @@
                             </div>
 
                             <button type="submit" class="btn btn-success w-100" id="submitBtn" disabled>
-                                <i class="bi bi-check-lg me-2"></i>Plan erstellen
+                                <i class="bi bi-check-lg me-2"></i>{% trans "Plan erstellen" %}
                             </button>
                         </form>
                     </div>
@@ -204,21 +204,20 @@
             <div class="modal-header border-secondary">
                 <h5 class="modal-title">
                     <i class="bi bi-lightning-charge-fill text-warning me-2"></i>
-                    Aus Template starten
+                    {% trans "Aus Template starten" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <p class="text-muted mb-4">
-                    Wähle ein vorgefertigtes Template basierend auf bewährten Trainingsprinzipien.
-                    Die Übungen werden automatisch an dein verfügbares Equipment angepasst.
+                    {% trans "Wähle ein vorgefertigtes Template basierend auf bewährten Trainingsprinzipien. Die Übungen werden automatisch an dein verfügbares Equipment angepasst." %}
                 </p>
 
                 <div id="templatesContainer" class="row g-4">
                     <!-- Templates werden hier geladen -->
                     <div class="text-center py-5">
                         <div class="spinner-border text-info" role="status">
-                            <span class="visually-hidden">Lädt...</span>
+                            <span class="visually-hidden">{% trans "Lädt..." %}</span>
                         </div>
                     </div>
                 </div>
@@ -226,7 +225,7 @@
                 <!-- Template Detail View (nested) -->
                 <div id="templateDetailView" style="display: none;">
                     <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="showTemplateList()">
-                        <i class="bi bi-arrow-left me-2"></i>Zurück zur Auswahl
+                        <i class="bi bi-arrow-left me-2"></i>{% trans "Zurück zur Auswahl" %}
                     </button>
                     <div id="templateDetailContent"></div>
                 </div>

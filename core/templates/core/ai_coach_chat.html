@@ -1,4 +1,4 @@
-{% load static %}
+{% load static i18n %}
 <!-- AI Coach Chat Interface -->
 <style>
     .ai-coach-btn {
@@ -100,7 +100,7 @@
 </style>
 
 <!-- Floating AI Coach Button -->
-<button type="button" class="btn btn-success ai-coach-btn" data-bs-toggle="modal" data-bs-target="#aiCoachModal" title="KI-Coach fragen">
+<button type="button" class="btn btn-success ai-coach-btn" data-bs-toggle="modal" data-bs-target="#aiCoachModal" title="{% trans "KI-Coach fragen" %}">
     <i class="bi bi-robot"></i>
 </button>
 
@@ -110,7 +110,7 @@
         <div class="modal-content bg-dark border-secondary">
             <div class="modal-header border-secondary">
                 <h5 class="modal-title">
-                    <i class="bi bi-robot text-success"></i> KI-Coach
+                    <i class="bi bi-robot text-success"></i> {% trans "KI-Coach" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -119,10 +119,10 @@
                 <div class="context-info" id="contextInfo">
                     <div class="d-flex align-items-center mb-2">
                         <i class="bi bi-info-circle text-success me-2"></i>
-                        <strong>Aktueller Context</strong>
+                        <strong>{% trans "Aktueller Context" %}</strong>
                     </div>
                     <div id="contextDetails" class="small">
-                        <i class="bi bi-hourglass-split"></i> Lade Context...
+                        <i class="bi bi-hourglass-split"></i> {% trans "Lade Context..." %}
                     </div>
                 </div>
 
@@ -150,14 +150,14 @@
                 <form id="aiCoachForm">
                     <div class="input-group">
                         <input type="text" class="form-control bg-dark text-white border-secondary"
-                               id="questionInput" placeholder="Frag den KI-Coach..."
+                               id="questionInput" placeholder="{% trans "Frag den KI-Coach..." %}"
                                autocomplete="off" required>
                         <button class="btn btn-success" type="submit" id="sendBtn">
                             <i class="bi bi-send"></i>
                         </button>
                     </div>
                     <div class="form-text text-muted mt-2">
-                        <i class="bi bi-lightbulb"></i> Tipp: Sei spezifisch für bessere Antworten
+                        <i class="bi bi-lightbulb"></i> {% trans "Tipp: Sei spezifisch für bessere Antworten" %}
                     </div>
                 </form>
             </div>

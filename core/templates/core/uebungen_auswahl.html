@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Übungen - HomeGym{% endblock %}
+{% block title %}{% trans "Übungen" %} - HomeGym{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
@@ -27,10 +27,10 @@
 <nav class="navbar navbar-page border-bottom">
     <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-            <i class="bi bi-arrow-left"></i> Dashboard
+            <i class="bi bi-arrow-left"></i> {% trans "Dashboard" %}
         </a>
-        <span class="navbar-text">Übungs-Bibliothek</span>
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+        <span class="navbar-text">{% trans "Übungs-Bibliothek" %}</span>
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -41,12 +41,12 @@
 <div class="container-fluid py-4">
     <div class="row mb-4">
         <div class="col">
-            <h2 class="mb-3"><i class="bi bi-collection me-2"></i>Alle Übungen</h2>
-            <p class="text-muted">Übersicht mit Haupt- und Hilfsmuskelgruppen</p>
+            <h2 class="mb-3"><i class="bi bi-collection me-2"></i>{% trans "Alle Übungen" %}</h2>
+            <p class="text-muted">{% trans "Übersicht mit Haupt- und Hilfsmuskelgruppen" %}</p>
         </div>
         <div class="col-auto">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCustomExerciseModal">
-                <i class="bi bi-plus-circle me-2"></i>Eigene Übung erstellen
+                <i class="bi bi-plus-circle me-2"></i>{% trans "Eigene Übung erstellen" %}
             </button>
         </div>
         {% if user.is_staff %}
@@ -62,11 +62,11 @@
 
     <div class="row mb-4">
         <div class="col-md-4">
-            <input type="text" id="searchExercises" class="form-control" placeholder="Übung suchen...">
+            <input type="text" id="searchExercises" class="form-control" placeholder="{% trans "Übung suchen..." %}">
         </div>
         <div class="col-md-4">
             <select class="form-select" id="tagFilter">
-                <option value="">Alle Tags</option>
+                <option value="">{% trans "Alle Tags" %}</option>
                 {% for tag in all_tags %}
                 <option value="{{ tag.id }}">{{ tag.get_name_display }}</option>
                 {% endfor %}
@@ -76,7 +76,7 @@
             <div class="form-check form-switch d-flex align-items-center h-100">
                 <input class="form-check-input" type="checkbox" id="favoritenFilter" style="cursor: pointer;">
                 <label class="form-check-label ms-2" for="favoritenFilter" style="cursor: pointer;">
-                    <i class="bi bi-star-fill text-warning me-1"></i>Nur Favoriten
+                    <i class="bi bi-star-fill text-warning me-1"></i>{% trans "Nur Favoriten" %}
                 </label>
             </div>
         </div>
@@ -99,16 +99,16 @@
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-0 text-light flex-grow-1">
                                     {{ uebung.bezeichnung }}
-                                    {% if uebung.is_custom %}<span class="badge bg-info text-dark ms-2"><i class="bi bi-person-fill"></i> Custom</span>{% endif %}
+                                    {% if uebung.is_custom %}<span class="badge bg-info text-dark ms-2"><i class="bi bi-person-fill"></i> {% trans "Custom" %}</span>{% endif %}
                                 </h5>
                                 <button class="btn btn-sm btn-outline-warning border-0 favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}"
                                         onclick="event.preventDefault(); event.stopPropagation(); toggleFavorit({{ uebung.id }}, this);"
-                                        title="{% if user in uebung.favoriten.all %}Aus Favoriten entfernen{% else %}Zu Favoriten hinzufügen{% endif %}">
+                                        title="{% if user in uebung.favoriten.all %}{% trans "Aus Favoriten entfernen" %}{% else %}{% trans "Zu Favoriten hinzufügen" %}{% endif %}">
                                     <i class="bi {% if user in uebung.favoriten.all %}bi-star-fill{% else %}bi-star{% endif %} text-warning"></i>
                                 </button>
                             </div>
                             <div class="mb-3">
-                                <h6 class="text-muted small mb-2"><i class="bi bi-bullseye me-1"></i>Muskelgruppen</h6>
+                                <h6 class="text-muted small mb-2"><i class="bi bi-bullseye me-1"></i>{% trans "Muskelgruppen" %}</h6>
                                 <div class="muscle-visual mb-2">
                                     <span class="muscle-dot primary"></span>
                                     <span class="badge muscle-badge primary"><i class="bi bi-star-fill"></i> {{ uebung.muskelgruppe_label }}</span>
@@ -122,7 +122,7 @@
                                     {% endfor %}
                                 </div>
                                 {% else %}
-                                <small class="text-muted"><i class="bi bi-info-circle"></i> Keine Hilfsmuskeln erfasst</small>
+                                <small class="text-muted"><i class="bi bi-info-circle"></i> {% trans "Keine Hilfsmuskeln erfasst" %}</small>
                                 {% endif %}
                             </div>
                             {% if uebung.tags.all %}
@@ -138,7 +138,7 @@
                                 {% if user.is_staff %}
                                 <div class="mt-2">
                                     <a href="{% url 'admin:core_uebung_change' uebung.id %}" class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation();">
-                                        <i class="bi bi-pencil"></i> Bearbeiten
+                                        <i class="bi bi-pencil"></i> {% trans "Bearbeiten" %}
                                     </a>
                                 </div>
                                 {% endif %}
@@ -158,22 +158,22 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content bg-dark border-secondary">
             <div class="modal-header border-secondary">
-                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Eigene Übung erstellen</h5>
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>{% trans "Eigene Übung erstellen" %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form id="createCustomExerciseForm">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>Erstelle eine eigene Übung, die nur für dich sichtbar ist.</div>
+                    <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>{% trans "Erstelle eine eigene Übung, die nur für dich sichtbar ist." %}</div>
                     <div class="mb-3">
-                        <label for="exerciseName" class="form-label">Name der Übung *</label>
-                        <input type="text" class="form-control" id="exerciseName" name="bezeichnung" required placeholder="z.B. Meine Variation für Bizeps">
+                        <label for="exerciseName" class="form-label">{% trans "Name der Übung" %} *</label>
+                        <input type="text" class="form-control" id="exerciseName" name="bezeichnung" required placeholder="{% trans "​z.B. Meine Variation für Bizeps" %}">
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="muskelgruppe" class="form-label">Hauptmuskelgruppe *</label>
+                            <label for="muskelgruppe" class="form-label">{% trans "Hauptmuskelgruppe" %} *</label>
                             <select class="form-select" id="muskelgruppe" name="muskelgruppe" required>
-                                <option value="">-- Auswählen --</option>
+                                <option value="">{% trans "-- Auswählen --" %}</option>
                                 <option>Brust</option><option>Rücken</option><option>Schultern</option>
                                 <option>Bizeps</option><option>Trizeps</option><option>Unterarme</option>
                                 <option>Bauch</option><option>Beine</option><option>Waden</option>
@@ -181,47 +181,47 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="hilfsmuskeln" class="form-label">Hilfsmuskelgruppen</label>
-                            <input type="text" class="form-control" id="hilfsmuskeln" name="hilfsmuskeln" placeholder="z.B. Trizeps, Schultern">
-                            <small class="form-text text-muted">Optional, kommagetrennt</small>
+                            <label for="hilfsmuskeln" class="form-label">{% trans "Hilfsmuskelgruppen" %}</label>
+                            <input type="text" class="form-control" id="hilfsmuskeln" name="hilfsmuskeln" placeholder="{% trans "z.B. Trizeps, Schultern" %}">
+                            <small class="form-text text-muted">{% trans "Optional, kommagetrennt" %}</small>
                         </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="gewichtsTyp" class="form-label">Gewichtstyp</label>
+                            <label for="gewichtsTyp" class="form-label">{% trans "Gewichtstyp" %}</label>
                             <select class="form-select" id="gewichtsTyp" name="gewichts_typ">
                                 <option value="">-- Keine Angabe --</option>
                                 <option>Freies Gewicht</option><option>Maschine</option><option>Körpergewicht</option><option>Kabel</option><option>Band</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="bewegungsTyp" class="form-label">Bewegungstyp</label>
+                            <label for="bewegungsTyp" class="form-label">{% trans "Bewegungstyp" %}</label>
                             <select class="form-select" id="bewegungsTyp" name="bewegungstyp">
-                                <option value="">-- Keine Angabe --</option>
-                                <option value="Compound">Compound (Mehrgelenkig)</option>
-                                <option value="Isolation">Isolation (Eingelenkig)</option>
+                                <option value="">{% trans "-- Keine Angabe --" %}</option>
+                                <option value="Compound">{% trans "Compound (Mehrgelenkig)" %}</option>
+                                <option value="Isolation">{% trans "Isolation (Eingelenkig)" %}</option>
                             </select>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="equipment" class="form-label">Benötigtes Equipment</label>
+                        <label for="equipment" class="form-label">{% trans "Benötigtes Equipment" %}</label>
                         <select class="form-select" id="equipment" name="equipment" multiple size="6">
                             {% for eq in user_equipment %}
                             <option value="{{ eq.id }}">{{ eq.name }}</option>
                             {% endfor %}
                         </select>
-                        <small class="form-text text-muted">Mehrfachauswahl mit Strg/Cmd + Klick</small>
+                        <small class="form-text text-muted">{% trans "Mehrfachauswahl mit Strg/Cmd + Klick" %}</small>
                     </div>
                     <div class="mb-3">
-                        <label for="beschreibung" class="form-label">Beschreibung</label>
-                        <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3" placeholder="Optionale Notizen..."></textarea>
+                        <label for="beschreibung" class="form-label">{% trans "Beschreibung" %}</label>
+                        <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3" placeholder="{% trans "Optionale Notizen..." %}"></textarea>
                     </div>
                     <div id="customExerciseError" class="alert alert-danger d-none"></div>
                     <div id="customExerciseSuccess" class="alert alert-success d-none"></div>
                 </div>
                 <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Abbrechen</button>
-                    <button type="submit" class="btn btn-primary" id="createCustomExerciseBtn"><i class="bi bi-check-circle me-2"></i>Übung erstellen</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>{% trans "Abbrechen" %}</button>
+                    <button type="submit" class="btn btn-primary" id="createCustomExerciseBtn"><i class="bi bi-check-circle me-2"></i>{% trans "Übung erstellen" %}</button>
                 </div>
             </form>
         </div>

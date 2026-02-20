@@ -1,3 +1,4 @@
+{% load i18n %}
 <!-- Übungs-Info Modal - Wiederverwendbare Komponente -->
 <div class="modal fade" id="exerciseInfoModal" tabindex="-1" aria-labelledby="exerciseInfoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -5,14 +6,14 @@
             <div class="modal-header">
                 <h5 class="modal-title" id="exerciseInfoModalLabel">
                     <i class="bi bi-info-circle me-2"></i>
-                    <span id="exerciseModalTitle">Übungsdetails</span>
+                    <span id="exerciseModalTitle">{% trans "Übungsdetails" %}</span>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans "Schließen" %}"></button>
             </div>
             <div class="modal-body">
                 <div id="exerciseModalLoading" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Lädt...</span>
+                        <span class="visually-hidden">{% trans "Lädt..." %}</span>
                     </div>
                 </div>
 
@@ -29,7 +30,7 @@
                     <!-- Kein Bild Hinweis -->
                     <div id="exerciseNoImage" class="alert alert-light text-center mb-4" style="display: none;">
                         <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
-                        <p class="mb-0 mt-2 text-muted">Keine Grafik verfügbar</p>
+                        <p class="mb-0 mt-2 text-muted">{% trans "Keine Grafik verfügbar" %}</p>
                     </div>
 
                     <!-- Muskelgruppe Badge -->
@@ -47,7 +48,7 @@
                     <!-- Beschreibung -->
                     <div class="mb-3">
                         <h6 class="text-muted mb-2">
-                            <i class="bi bi-card-text me-2"></i>Anleitung
+                            <i class="bi bi-card-text me-2"></i>{% trans "Anleitung" %}
                         </h6>
                         <div id="exerciseDescription" class="border rounded p-3 card-stat border-secondary">
                             <p class="mb-0" id="exerciseDescriptionText"></p>
@@ -57,7 +58,7 @@
                     <!-- Equipment -->
                     <div id="exerciseEquipmentContainer" class="mb-3" style="display: none;">
                         <h6 class="text-muted mb-2">
-                            <i class="bi bi-tools me-2"></i>Benötigtes Equipment
+                            <i class="bi bi-tools me-2"></i>{% trans "Benötigtes Equipment" %}
                         </h6>
                         <div id="exerciseEquipment" class="d-flex flex-wrap gap-2">
                             <!-- Equipment Badges werden hier dynamisch eingefügt -->
@@ -70,7 +71,7 @@
                             <div class="card border-0 card-stat border-secondary">
                                 <div class="card-body">
                                     <h6 class="card-subtitle mb-2 text-muted">
-                                        <i class="bi bi-person-arms-up me-2"></i>Gewichtstyp
+                                        <i class="bi bi-person-arms-up me-2"></i>{% trans "Gewichtstyp" %}
                                     </h6>
                                     <p class="card-text mb-0" id="exerciseWeightType">-</p>
                                 </div>
@@ -80,7 +81,7 @@
                             <div class="card border-0 card-stat border-secondary">
                                 <div class="card-body">
                                     <h6 class="card-subtitle mb-2 text-muted">
-                                        <i class="bi bi-diagram-3 me-2"></i>Hilfsmuskeln
+                                        <i class="bi bi-diagram-3 me-2"></i>{% trans "Hilfsmuskeln" %}
                                     </h6>
                                     <p class="card-text mb-0" id="exerciseHilfsmuskeln">-</p>
                                 </div>
@@ -96,7 +97,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-2"></i>Schließen
+                    <i class="bi bi-x-lg me-2"></i>{% trans "Schließen" %}
                 </button>
             </div>
         </div>

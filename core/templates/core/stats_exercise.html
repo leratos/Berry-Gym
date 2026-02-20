@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Statistik: {{ uebung.bezeichnung }}{% endblock %}
+{% block title %}{% trans "Statistik" %}: {{ uebung.bezeichnung }}{% endblock %}
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,13 +11,13 @@
 <nav class="navbar navbar-page border-bottom mb-4">
   <div class="container-fluid">
     <a class="btn btn-outline-secondary border-0" href="javascript:history.back()">
-        <i class="bi bi-arrow-left"></i> Zurück
+        <i class="bi bi-arrow-left"></i> {% trans "Zurück" %}
     </a>
     <span class="navbar-text page-title fw-bold text-truncate" style="max-width: 200px;">
         {{ uebung.bezeichnung }}
     </span>
     <div style="width: 40px;">
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -31,8 +31,8 @@
     {% if no_data %}
         <div class="text-center py-5 text-muted">
             <i class="bi bi-graph-up display-1 opacity-25"></i>
-            <p class="mt-3">Noch keine Daten für diese Übung.</p>
-            <small>Trainiere erst einmal, damit wir etwas auswerten können!</small>
+            <p class="mt-3">{% trans "Noch keine Daten für diese Übung." %}</p>
+            <small>{% trans "Trainiere erst einmal, damit wir etwas auswerten können!" %}</small>
         </div>
     {% else %}
 
@@ -41,16 +41,16 @@
         <div class="row g-2 mb-3">
             <div class="col-6">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Est. 1RM (effektiv)</small>
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">{% trans "Est. 1RM (effektiv)" %}</small>
                     <div class="display-6 fw-bold text-success">{{ personal_record }}</div>
                     <small class="text-muted">kg</small>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Bestes Satz-Gewicht</small>
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">{% trans "Bestes Satz-Gewicht" %}</small>
                     <div class="display-6 fw-bold text-info">{{ best_weight|floatformat:1 }}</div>
-                    <small class="text-muted">kg effektiv</small>
+                    <small class="text-muted">{% trans "kg effektiv" %}</small>
                 </div>
             </div>
         </div>
@@ -58,14 +58,14 @@
         <div class="row g-2 mb-4">
             <div class="col-6">
                 <div class="card card-stat border-info text-center p-3">
-                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Wiederholungs-Rekord</small>
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">{% trans "Wiederholungs-Rekord" %}</small>
                     <div class="display-6 fw-bold text-warning">{{ best_reps }}</div>
-                    <small class="text-muted">Wdh. (ohne Zusatz)</small>
+                    <small class="text-muted">{% trans "Wdh. (ohne Zusatz)" %}</small>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Körpergewicht-Faktor</small>
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">{% trans "Körpergewicht-Faktor" %}</small>
                     <div class="display-6 fw-bold text-secondary">{{ uebung.koerpergewicht_faktor|floatformat:0 }}%</div>
                     <small class="text-muted">von {{ user_koerpergewicht|floatformat:1 }} kg KG</small>
                 </div>
@@ -77,14 +77,14 @@
         <div class="row g-2 mb-4">
             <div class="col-6">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Est. 1RM Max</small>
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">{% trans "Est. 1RM Max" %}</small>
                     <div class="display-6 fw-bold text-success">{{ personal_record }}</div>
                     <small class="text-muted">kg</small>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">Schwerster Satz</small>
+                    <small class="text-secondary text-uppercase ls-1" style="font-size: 0.7rem;">{% trans "Schwerster Satz" %}</small>
                     <div class="display-6 fw-bold text-info">{{ best_weight }}</div>
                     <small class="text-muted">kg</small>
                 </div>
