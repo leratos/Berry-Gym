@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}{{ plan.name }} - Details{% endblock %}
+{% block title %}{{ plan.name }} - {% trans "Details" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -18,11 +19,11 @@
 <nav class="navbar navbar-page border-bottom">
   <div class="container-fluid">
     <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}">
-        <i class="bi bi-arrow-left"></i> Zurück
+        <i class="bi bi-arrow-left"></i> {% trans "Zurück" %}
     </a>
     <span class="navbar-text page-title fw-bold text-truncate" style="max-width: 200px;">{{ plan.name }}</span>
     <div style="width: 40px;">
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
           <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -42,7 +43,7 @@
                 <div>
                     <h4 class="mb-1">{{ plan.name }}</h4>
                     <small class="text-muted">
-                        <i class="bi bi-check2-square me-1"></i>{{ uebungen_mit_historie|length }} Übungen
+                        <i class="bi bi-check2-square me-1"></i>{{ uebungen_mit_historie|length }} {% trans "Übungen" %}
                     </small>
                 </div>
             </div>
@@ -53,19 +54,19 @@
 
             {% if plan.is_public %}
             <div class="alert alert-info mb-3 py-2">
-                <i class="bi bi-globe me-1"></i> Dieser Plan ist öffentlich
+                <i class="bi bi-globe me-1"></i> {% trans "Dieser Plan ist öffentlich" %}
             </div>
             {% endif %}
 
             <div class="d-grid gap-2">
                 {% if is_owner %}
                     <a href="{% url 'training_start_plan' plan.id %}" class="btn btn-success btn-lg fw-bold">
-                        <i class="bi bi-play-circle-fill me-2"></i> Training starten
+                        <i class="bi bi-play-circle-fill me-2"></i> {% trans "Training starten" %}
                     </a>
                     <div class="row g-2">
                         <div class="col-6 col-md-3">
                             <a href="{% url 'edit_plan' plan.id %}" class="btn btn-outline-info w-100">
-                                <i class="bi bi-pencil-square me-1"></i> Bearbeiten
+                                <i class="bi bi-pencil-square me-1"></i> {% trans "Bearbeiten" %}
                             </a>
                         </div>
                         <div class="col-6 col-md-3">
@@ -75,23 +76,23 @@
                         </div>
                         <div class="col-12 col-md-6">
                             <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#deletePlanModal">
-                                <i class="bi bi-trash me-1"></i> Löschen
+                                <i class="bi bi-trash me-1"></i> {% trans "Löschen" %}
                             </button>
                         </div>
                     </div>
                 {% else %}
                     <a href="{% url 'copy_plan' plan.id %}" class="btn btn-success btn-lg fw-bold">
-                        <i class="bi bi-copy me-2"></i> In meine Pläne kopieren
+                        <i class="bi bi-copy me-2"></i> {% trans "In meine Pläne kopieren" %}
                     </a>
                     <a href="{% url 'training_select_plan' %}?filter=public" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i> Zurück zur Übersicht
+                        <i class="bi bi-arrow-left me-1"></i> {% trans "Zurück zur Übersicht" %}
                     </a>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <h6 class="text-secondary mb-3 ps-1 text-uppercase">Übungsplan</h6>
+    <h6 class="text-secondary mb-3 ps-1 text-uppercase">{% trans "Übungsplan" %}</h6>
 
     {% for item in uebungen_mit_historie %}
     <div class="card card-stat border-secondary mb-3 shadow-sm {% if item.plan_uebung.superset_gruppe > 0 %}superset-group-{{ item.plan_uebung.superset_gruppe }}{% endif %}">
@@ -105,7 +106,7 @@
                     <h6 class="mb-0 text-white">
                         <a href="#" class="text-decoration-none text-white exercise-link"
                            data-exercise-id="{{ item.plan_uebung.uebung.id }}"
-                           title="Übungsdetails anzeigen">
+                           title="{% trans "Übungsdetails anzeigen" %}">
                             {{ item.plan_uebung.uebung.bezeichnung }}
                             <i class="bi bi-info-circle-fill text-info opacity-50 ms-1"></i>
                         </a>
@@ -121,19 +122,19 @@
             <div class="row g-2 mb-3">
                 <div class="col-4">
                     <div class="bg-secondary bg-opacity-10 rounded p-2 text-center">
-                        <small class="text-secondary d-block" style="font-size: 0.7rem;">SÄTZE</small>
+                        <small class="text-secondary d-block" style="font-size: 0.7rem;">{% trans "SÄTZE" %}</small>
                         <strong class="text-white">{{ item.plan_uebung.saetze_ziel }}</strong>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="bg-secondary bg-opacity-10 rounded p-2 text-center">
-                        <small class="text-secondary d-block" style="font-size: 0.7rem;">WDH</small>
+                        <small class="text-secondary d-block" style="font-size: 0.7rem;">{% trans "WDH" %}</small>
                         <strong class="text-white">{{ item.plan_uebung.wiederholungen_ziel|default:"--" }}</strong>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="bg-secondary bg-opacity-10 rounded p-2 text-center">
-                        <small class="text-secondary d-block" style="font-size: 0.7rem;">TYP</small>
+                        <small class="text-secondary d-block" style="font-size: 0.7rem;">{% trans "TYP" %}</small>
                         <strong class="text-white">{{ item.plan_uebung.uebung.get_gewichts_typ_display|truncatewords:1 }}</strong>
                     </div>
                 </div>
@@ -141,14 +142,14 @@
             {% if item.letztes_gewicht %}
             <div class="alert alert-dark border-secondary mb-0 py-2 px-3">
                 <small class="text-muted">
-                    <i class="bi bi-clock-history me-1"></i>Letztes Mal:
+                    <i class="bi bi-clock-history me-1"></i>{% trans "Letztes Mal" %}:
                     <strong class="text-success">{{ item.letztes_gewicht }} kg</strong> ×
-                    <strong class="text-info">{{ item.letzte_wdh }}</strong> Wdh
+                    <strong class="text-info">{{ item.letzte_wdh }}</strong> {% trans "Wdh" %}
                 </small>
             </div>
             {% else %}
             <div class="alert alert-secondary mb-0 py-2 px-3">
-                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Noch nie trainiert</small>
+                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>{% trans "Noch nie trainiert" %}</small>
             </div>
             {% endif %}
         </div>
@@ -163,23 +164,23 @@
         <div class="modal-content bg-dark border-danger">
             <div class="modal-header border-danger">
                 <h5 class="modal-title text-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Plan löschen?
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{% trans "Plan löschen?" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Möchtest du den Trainingsplan <strong>"{{ plan.name }}"</strong> wirklich löschen?</p>
+                <p>{% blocktrans with name=plan.name %}Möchtest du den Trainingsplan <strong>"{{ name }}"</strong> wirklich löschen?{% endblocktrans %}</p>
                 <p class="text-warning small mb-0">
                     <i class="bi bi-info-circle me-1"></i>
-                    Vergangene Trainings mit diesem Plan bleiben erhalten.
+                    {% trans "Vergangene Trainings mit diesem Plan bleiben erhalten." %}
                 </p>
             </div>
             <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Abbrechen" %}</button>
                 <form method="post" action="{% url 'delete_plan' plan.id %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i>Löschen
+                        <i class="bi bi-trash me-1"></i>{% trans "Löschen" %}
                     </button>
                 </form>
             </div>

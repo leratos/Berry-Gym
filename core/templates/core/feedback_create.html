@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Feedback einreichen - HomeGym{% endblock %}
+{% block title %}{% trans "Feedback einreichen" %} - HomeGym{% endblock %}
 
 {% block page_nav %}
 <nav class="navbar navbar-page border-bottom">
@@ -9,9 +10,9 @@
         <i class="bi bi-arrow-left"></i>
     </a>
     <span class="navbar-text page-title fw-bold">
-        {% if feedback_type == 'BUG' %}Bugreport
-        {% elif feedback_type == 'QUESTION' %}Frage stellen
-        {% else %}Verbesserungsvorschlag{% endif %}
+        {% if feedback_type == 'BUG' %}{% trans "Bugreport" %}
+        {% elif feedback_type == 'QUESTION' %}{% trans "Frage stellen" %}
+        {% else %}{% trans "Verbesserungsvorschlag" %}{% endif %}
     </span>
     <div style="width: 40px;"></div>
   </div>
@@ -35,7 +36,7 @@
                         {% csrf_token %}
 
                         <div class="mb-4">
-                            <label class="form-label">Typ</label>
+                            <label class="form-label">{% trans "Typ" %}</label>
                             <div class="btn-group w-100" role="group">
                                 <input type="radio" class="btn-check" name="feedback_type" id="typeBug" value="BUG" {% if feedback_type == 'BUG' %}checked{% endif %}>
                                 <label class="btn btn-outline-danger" for="typeBug">
@@ -47,41 +48,41 @@
                                 </label>
                                 <input type="radio" class="btn-check" name="feedback_type" id="typeQuestion" value="QUESTION" {% if feedback_type == 'QUESTION' %}checked{% endif %}>
                                 <label class="btn btn-outline-info" for="typeQuestion">
-                                    <i class="bi bi-question-circle"></i> Frage
+                                    <i class="bi bi-question-circle"></i> {% trans "Frage" %}
                                 </label>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="title" class="form-label">Kurzbeschreibung *</label>
+                            <label for="title" class="form-label">{% trans "Kurzbeschreibung" %} *</label>
                             <input type="text" class="form-control bg-secondary text-white border-0"
                                    id="title" name="title"
-                                   placeholder="z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
+                                   placeholder="{% trans "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'" %}"
                                    value="{{ title|default:'' }}"
                                    maxlength="200" required>
-                            <div class="form-text">Max. 200 Zeichen</div>
+                            <div class="form-text">{% trans "Max. 200 Zeichen" %}</div>
                         </div>
 
                         <div class="mb-4">
-                            <label for="description" class="form-label">Detaillierte Beschreibung *</label>
+                            <label for="description" class="form-label">{% trans "Detaillierte Beschreibung" %} *</label>
                             <textarea class="form-control bg-secondary text-white border-0"
                                       id="description" name="description"
                                       rows="6" required
-                                      placeholder="Beschreibe dein Feedback...">{{ description|default:'' }}</textarea>
+                                      placeholder="{% trans "Beschreibe dein Feedback..." %}">{{ description|default:'' }}</textarea>
                         </div>
 
                         <div class="alert alert-info mb-4">
                             <i class="bi bi-info-circle"></i>
-                            <strong>Beta-Tester Feedback</strong><br>
-                            <small>Dein Feedback hilft uns, HomeGym zu verbessern. Wir prüfen jeden Vorschlag und antworten dir über diese Seite.</small>
+                            <strong>{% trans "Beta-Tester Feedback" %}</strong><br>
+                            <small>{% trans "Dein Feedback hilft uns, HomeGym zu verbessern. Wir prüfen jeden Vorschlag und antworten dir über diese Seite." %}</small>
                         </div>
 
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success flex-fill">
-                                <i class="bi bi-send"></i> Feedback absenden
+                                <i class="bi bi-send"></i> {% trans "Feedback absenden" %}
                             </button>
                             <a href="{% url 'feedback_list' %}" class="btn btn-outline-secondary">
-                                Abbrechen
+                                {% trans "Abbrechen" %}
                             </a>
                         </div>
                     </form>

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load source_tags %}
+{% load i18n %}
 
 {% block title %}HomeGym Dashboard{% endblock %}
 
@@ -91,30 +92,30 @@
 
   <!-- Sektion 1: Training -->
   <div class="d-flex justify-content-between align-items-center mb-3">
-      <h6 class="text-secondary ps-1 mb-0">TRAINING</h6>
+      <h6 class="text-secondary ps-1 mb-0">{% trans "TRAINING" %}</h6>
       <div class="d-flex gap-3 align-items-center">
           {% if offene_session %}
           <a href="{% url 'training_session' offene_session.id %}"
              class="btn btn-sm btn-warning fw-bold d-flex align-items-center gap-1"
-             title="Offenes Training fortsetzen">
+             title="{% trans 'Offenes Training fortsetzen' %}">
               <i class="bi bi-play-circle-fill"></i>
-              <span class="d-none d-sm-inline">Fortsetzen</span>
+              <span class="d-none d-sm-inline">{% trans "Fortsetzen" %}</span>
           </a>
           {% endif %}
-          <a href="{% url 'equipment_management' %}" class="text-decoration-none small fw-bold text-warning" title="Ausrüstung verwalten">
-              <i class="bi bi-tools"></i> Equipment
+          <a href="{% url 'equipment_management' %}" class="text-decoration-none small fw-bold text-warning" title="{% trans 'Ausrüstung verwalten' %}">
+              <i class="bi bi-tools"></i> {% trans "Equipment" %}
           </a>
-          <button onclick="togglePushNotifications()" class="btn btn-sm btn-outline-secondary border-0" id="pushToggleBtn" title="Push-Benachrichtigungen">
+          <button onclick="togglePushNotifications()" class="btn btn-sm btn-outline-secondary border-0" id="pushToggleBtn" title="{% trans 'Push-Benachrichtigungen' %}">
               <i class="bi bi-bell-slash" id="pushIcon"></i>
           </button>
-          <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+          <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans 'Theme wechseln' %}">
               <i class="bi bi-moon-fill" id="themeIcon"></i>
           </button>
           <a href="{% url 'training_stats' %}" class="text-decoration-none small fw-bold text-info">
-              <i class="bi bi-graph-up"></i> Statistiken
+              <i class="bi bi-graph-up"></i> {% trans "Statistiken" %}
           </a>
           <a href="{% url 'training_list' %}" class="text-decoration-none small fw-bold text-primary">
-              Alle anzeigen <i class="bi bi-chevron-right"></i>
+              {% trans "Alle anzeigen" %} <i class="bi bi-chevron-right"></i>
           </a>
       </div>
   </div>
@@ -124,10 +125,9 @@
   <div class="alert alert-warning d-flex align-items-center mb-3 py-2">
       <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
       <div class="flex-grow-1 small">
-          Du hast <strong>{{ offene_sessions_anzahl }} nicht abgeschlossene Trainings</strong>.
-          Nur das neueste wird zum Fortsetzen angezeigt.
+          {% blocktrans with count=offene_sessions_anzahl %}Du hast <strong>{{ count }} nicht abgeschlossene Trainings</strong>. Nur das neueste wird zum Fortsetzen angezeigt.{% endblocktrans %}
       </div>
-      <a href="{% url 'training_list' %}" class="btn btn-sm btn-outline-warning ms-2">Aufräumen</a>
+      <a href="{% url 'training_list' %}" class="btn btn-sm btn-outline-warning ms-2">{% trans "Aufräumen" %}</a>
   </div>
   {% endif %}
 
@@ -136,9 +136,9 @@
     <div class="col-6">
       <div class="card card-stat shadow-sm">
         <div class="card-body text-center py-3">
-            <div class="stat-label mb-1"><i class="bi bi-calendar-week me-1"></i> Diese Woche</div>
+            <div class="stat-label mb-1"><i class="bi bi-calendar-week me-1"></i> {% trans "Diese Woche" %}</div>
             <div class="display-4 fw-bold text-primary">{{ trainings_diese_woche }}</div>
-            <small class="text-muted">Trainings</small>
+            <small class="text-muted">{% trans "Trainings" %}</small>
         </div>
       </div>
     </div>
@@ -147,7 +147,7 @@
         <div class="card-body text-center py-3">
             <div class="stat-label mb-1"><i class="bi bi-fire me-1"></i> Streak</div>
             <div class="display-4 fw-bold text-warning">{{ streak }}</div>
-            <small class="text-muted">Wochen</small>
+            <small class="text-muted">{% trans "Wochen" %}</small>
         </div>
       </div>
     </div>
@@ -163,17 +163,17 @@
             <i class="bi {% if is_deload %}bi-battery-half{% else %}bi-bullseye{% endif %} fs-4"></i>
           </div>
           <div>
-            <small class="text-muted">Aktiver Plan</small>
+            <small class="text-muted">{% trans "Aktiver Plan" %}</small>
             <h5 class="mb-0">{{ active_plan_group_name }}</h5>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
           {% if cycle_week %}
           <span class="badge {% if is_deload %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-            {% if is_deload %}Deload{% else %}Woche {{ cycle_week }}/{{ cycle_length }}{% endif %}
+            {% if is_deload %}Deload{% else %}{% blocktrans with w=cycle_week l=cycle_length %}Woche {{ w }}/{{ l }}{% endblocktrans %}{% endif %}
           </span>
           {% endif %}
-          <a href="{% url 'set_active_plan_group' %}" class="btn btn-sm btn-outline-{% if is_deload %}warning{% else %}primary{% endif %}" title="Plan wechseln">
+          <a href="{% url 'set_active_plan_group' %}" class="btn btn-sm btn-outline-{% if is_deload %}warning{% else %}primary{% endif %}" title="{% trans 'Plan wechseln' %}">
             <i class="bi bi-arrow-repeat"></i>
           </a>
         </div>
@@ -181,7 +181,7 @@
       {% if is_deload %}
       <div class="alert alert-warning py-2 px-3 mb-2 small">
         <i class="bi bi-info-circle me-1"></i>
-        <strong>Deload-Woche:</strong> Volumen &minus;{{ deload_volume_pct }}%, Gewicht &minus;{{ deload_weight_pct }}%, Ziel-RPE {{ deload_rpe_target }}
+        <strong>Deload-{% trans "Woche" %}:</strong> {% trans "Volumen" %} &minus;{{ deload_volume_pct }}%, {% trans "Gewicht" %} &minus;{{ deload_weight_pct }}%, {% trans "Ziel-RPE" %} {{ deload_rpe_target }}
       </div>
       {% endif %}
       {% if next_plan %}
@@ -197,9 +197,9 @@
   <div class="alert alert-warning mb-3 d-flex align-items-center">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>
     <div class="flex-grow-1">
-      <small>Deine aktive Plan-Gruppe existiert nicht mehr.</small>
+      <small>{% trans "Deine aktive Plan-Gruppe existiert nicht mehr." %}</small>
     </div>
-    <a href="{% url 'set_active_plan_group' %}" class="btn btn-sm btn-warning ms-2">Neu wählen</a>
+    <a href="{% url 'set_active_plan_group' %}" class="btn btn-sm btn-warning ms-2">{% trans "Neu wählen" %}</a>
   </div>
   {% else %}
   <a href="{% url 'set_active_plan_group' %}" class="card card-stat border-secondary mb-3 text-decoration-none shadow-sm">
@@ -209,8 +209,8 @@
           <i class="bi bi-bullseye fs-4"></i>
         </div>
         <div class="flex-grow-1">
-          <small class="text-muted">Kein aktiver Plan gesetzt</small>
-          <div class="fw-bold">Aktiven Trainingsplan festlegen</div>
+          <small class="text-muted">{% trans "Kein aktiver Plan gesetzt" %}</small>
+          <div class="fw-bold">{% trans "Aktiven Trainingsplan festlegen" %}</div>
         </div>
         <i class="bi bi-chevron-right text-muted"></i>
       </div>
@@ -223,23 +223,20 @@
   <div class="card card-stat border-secondary mb-3 shadow-sm">
     <div class="card-body pb-2">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Diese Woche</h6>
+        <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>{% trans "Diese Woche" %}</h6>
         <small class="text-muted">
-          {% with done=week_overview|length %}
           {% with count=trainings_diese_woche %}
           <span class="{% if count >= trainings_ziel %}text-success fw-bold{% else %}text-muted{% endif %}">
-            {{ count }} / {{ trainings_ziel }} Trainings
+            {{ count }} / {{ trainings_ziel }} {% trans "Trainings" %}
           </span>
-          {% endwith %}{% endwith %}
+          {% endwith %}
         </small>
       </div>
-      <!-- Fortschrittsbalken -->
       <div class="progress mb-3" style="height: 6px;">
         {% widthratio trainings_diese_woche trainings_ziel 100 as pct %}
         <div class="progress-bar bg-success" role="progressbar"
              style="width: {% if pct > 100 %}100{% else %}{{ pct }}{% endif %}%"></div>
       </div>
-      <!-- Mo–So Streifen -->
       <div class="d-flex gap-1">
         {% for day in week_overview %}
         <div class="flex-fill text-center">
@@ -288,8 +285,8 @@
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="mb-0">
-                <i class="bi bi-speedometer2 me-2"></i>Performance Form-Index
-                <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="Wie wird das berechnet?">
+                <i class="bi bi-speedometer2 me-2"></i>{% trans "Performance Form-Index" %}
+                <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="{% trans 'Wie wird das berechnet?' %}">
                     <i class="bi bi-question-circle text-muted"></i>
                 </a>
                 {% source_tooltip "fatigue_index" %}
@@ -314,7 +311,7 @@
         </div>
         <div class="mt-3 pt-3 border-top border-secondary">
             <small class="text-muted">
-                <i class="bi bi-info-circle me-1"></i>Basiert auf Frequenz, Konsistenz, RPE und Volumen-Trends
+                <i class="bi bi-info-circle me-1"></i>{% trans "Basiert auf Frequenz, Konsistenz, RPE und Volumen-Trends" %}
             </small>
         </div>
     </div>
@@ -326,11 +323,11 @@
   <div class="card card-stat mb-4 shadow-sm border-warning">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>AI Performance-Analyse</h6>
+            <h6 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>{% trans "AI Performance-Analyse" %}</h6>
             <span class="badge bg-warning text-dark">{{ performance_warnings|length }}</span>
         </div>
         <p class="text-muted small mb-3">
-            <i class="bi bi-info-circle me-1"></i>Automatische Erkennung von Plateau, Rückschritt und Stagnation
+            <i class="bi bi-info-circle me-1"></i>{% trans "Automatische Erkennung von Plateau, Rückschritt und Stagnation" %}
         </p>
         <div class="list-group list-group-flush bg-transparent">
             {% for warning in performance_warnings %}
@@ -341,16 +338,16 @@
                         <div class="d-flex justify-content-between align-items-start mb-1">
                             <strong class="text-{{ warning.color }}">{{ warning.exercise }}</strong>
                             <span class="badge bg-{{ warning.color }} bg-opacity-25 text-{{ warning.color }}">
-                                {% if warning.type == 'plateau' %}Plateau
-                                {% elif warning.type == 'regression' %}Rückschritt
-                                {% elif warning.type == 'stagnation' %}Stagnation
+                                {% if warning.type == 'plateau' %}{% trans "Plateau" %}
+                                {% elif warning.type == 'regression' %}{% trans "Rückschritt" %}
+                                {% elif warning.type == 'stagnation' %}{% trans "Stagnation" %}
                                 {% endif %}
                             </span>
                         </div>
                         <p class="mb-2 small">{{ warning.message }}</p>
                         <p class="mb-0 small text-muted">
                             <i class="bi bi-lightbulb-fill me-1"></i>
-                            <strong>Tipp:</strong> {{ warning.suggestion }}
+                            <strong>{% trans "Tipp" %}:</strong> {{ warning.suggestion }}
                         </p>
                     </div>
                 </div>
@@ -359,7 +356,7 @@
         </div>
         <div class="mt-3 pt-3 border-top border-secondary">
             <small class="text-muted">
-                <i class="bi bi-cpu me-1"></i>Powered by AI-Algorithmus • Analysiert deine letzten 4 Wochen
+                <i class="bi bi-cpu me-1"></i>{% trans "Powered by AI-Algorithmus • Analysiert deine letzten 4 Wochen" %}
             </small>
         </div>
     </div>
@@ -370,12 +367,12 @@
   <div class="card card-stat mb-4 shadow-sm">
     <div class="card-body d-flex justify-content-between align-items-center">
         <div>
-            <div class="stat-label mb-1"><i class="bi bi-calendar-check me-1"></i> Letztes Workout</div>
+            <div class="stat-label mb-1"><i class="bi bi-calendar-check me-1"></i> {% trans "Letztes Workout" %}</div>
             <div class="stat-value">
                 {% if letztes_training %}{{ letztes_training.datum|date:"d.m.Y" }}{% else %}--{% endif %}
             </div>
             <small class="text-muted">
-                {% if letztes_training %}vor {{ letztes_training.datum|timesince }}{% else %}Noch kein Eintrag{% endif %}
+                {% if letztes_training %}{% blocktrans with t=letztes_training.datum|timesince %}vor {{ t }}{% endblocktrans %}{% else %}{% trans "Noch kein Eintrag" %}{% endif %}
             </small>
         </div>
         <i class="bi bi-fire fs-1 text-danger opacity-50"></i>
@@ -389,7 +386,7 @@
   {% if favoriten %}
   <div class="card card-stat mb-4 shadow-sm">
     <div class="card-body">
-        <div class="stat-label mb-3"><i class="bi bi-star-fill me-1"></i> Deine Top 3 Übungen</div>
+        <div class="stat-label mb-3"><i class="bi bi-star-fill me-1"></i> {% trans "Deine Top 3 Übungen" %}</div>
         <div class="list-group list-group-flush bg-transparent">
             {% for fav in favoriten %}
             <a href="{% url 'exercise_stats' fav.uebung__id %}" class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center">
@@ -407,40 +404,40 @@
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <span class="stat-label d-block mb-1">TRAININGS-HISTORIE</span>
-                <small class="text-muted">Letzte 12 Monate</small>
+                <span class="stat-label d-block mb-1">{% trans "TRAININGS-HISTORIE" %}</span>
+                <small class="text-muted">{% trans "Letzte 12 Monate" %}</small>
             </div>
             <div class="text-end">
                 <div class="stat-value text-primary">{{ gesamt_trainings }}</div>
-                <small class="text-muted">Gesamt</small>
+                <small class="text-muted">{% trans "Gesamt" %}</small>
             </div>
         </div>
         <div id="training-heatmap" class="mb-2"></div>
         <div class="d-flex justify-content-end align-items-center gap-2 mt-2">
-            <small class="text-muted">Weniger</small>
+            <small class="text-muted">{% trans "Weniger" %}</small>
             <div class="heatmap-legend-box" data-level="0"></div>
             <div class="heatmap-legend-box" data-level="1"></div>
             <div class="heatmap-legend-box" data-level="2"></div>
             <div class="heatmap-legend-box" data-level="3"></div>
             <div class="heatmap-legend-box" data-level="4"></div>
-            <small class="text-muted">Mehr</small>
+            <small class="text-muted">{% trans "Mehr" %}</small>
         </div>
     </div>
   </div>
 
   <!-- Sektion 2: Körper & Vitalwerte -->
-  <h6 class="text-secondary mb-3 ps-1">KÖRPER & VITALWERTE</h6>
+  <h6 class="text-secondary mb-3 ps-1">{% trans "KÖRPER & VITALWERTE" %}</h6>
 
   {% if letzter_koerperwert %}<a href="{% url 'body_stats' %}" class="text-decoration-none">{% endif %}
   <div class="card card-stat mb-3 shadow-sm">
     <div class="card-body text-center py-4">
-        <div class="stat-label mb-2">Aktuelles Gewicht</div>
+        <div class="stat-label mb-2">{% trans "Aktuelles Gewicht" %}</div>
         <div class="display-3 fw-bold">
             {% if letzter_koerperwert %}
                 {{ letzter_koerperwert.gewicht }} <span class="fs-4 text-muted">kg</span>
             {% else %}--{% endif %}
         </div>
-        {% if letzter_koerperwert %}<small class="text-info"><i class="bi bi-graph-up-arrow"></i> Verlauf anzeigen</small>{% endif %}
+        {% if letzter_koerperwert %}<small class="text-info"><i class="bi bi-graph-up-arrow"></i> {% trans "Verlauf anzeigen" %}</small>{% endif %}
     </div>
   </div>
   {% if letzter_koerperwert %}</a>{% endif %}
@@ -449,7 +446,7 @@
   {% if weekly_volumes %}
   <div class="card card-stat border-secondary mb-3 shadow-sm">
     <div class="card-body">
-        <h6 class="mb-3"><i class="bi bi-calendar-week me-2"></i>Wöchentliches Volumen</h6>
+        <h6 class="mb-3"><i class="bi bi-calendar-week me-2"></i>{% trans "Wöchentliches Volumen" %}</h6>
         <div class="row g-2">
             {% for week in weekly_volumes %}
             <div class="col-6 col-md-3">
@@ -473,12 +470,12 @@
     <div class="card-body py-3">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h6 class="mb-1"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio diese Woche</h6>
-                <small class="text-muted">{{ cardio_diese_woche }} Einheit{% if cardio_diese_woche > 1 %}en{% endif %}</small>
+                <h6 class="mb-1"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>{% trans "Cardio diese Woche" %}</h6>
+                <small class="text-muted">{% blocktrans with count=cardio_diese_woche %}{{ count }} Einheit{% endblocktrans %}{% if cardio_diese_woche > 1 %}en{% endif %}</small>
             </div>
             <div class="text-end">
                 <div class="fs-4 fw-bold text-danger">{{ cardio_minuten_diese_woche }}</div>
-                <small class="text-muted">Minuten</small>
+                <small class="text-muted">{% trans "Minuten" %}</small>
             </div>
         </div>
         <a href="{% url 'cardio_list' %}" class="stretched-link"></a>
@@ -492,8 +489,8 @@
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="mb-0">
-                <i class="bi bi-battery-charging me-2"></i>Ermüdungs-Index
-                <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="Wie wird das berechnet?">
+                <i class="bi bi-battery-charging me-2"></i>{% trans "Ermüdungs-Index" %}
+                <a href="{% url 'metriken_help' %}" class="text-decoration-none ms-2" title="{% trans 'Wie wird das berechnet?' %}">
                     <i class="bi bi-question-circle text-muted"></i>
                 </a>
             </h6>
@@ -507,7 +504,7 @@
         <p class="text-{{ fatigue_color }} mb-2"><i class="bi bi-info-circle me-1"></i>{{ fatigue_message }}</p>
         {% if fatigue_warnings %}
         <div class="mt-2 pt-2 border-top border-secondary">
-            <small class="text-muted d-block mb-1">Faktoren:</small>
+            <small class="text-muted d-block mb-1">{% trans "Faktoren" %}:</small>
             {% for warning in fatigue_warnings %}
             <small class="badge bg-{{ fatigue_color }} bg-opacity-25 text-{{ fatigue_color }} me-1">{{ warning }}</small>
             {% endfor %}
@@ -542,7 +539,7 @@
       {% if letzter_koerperwert.muskelmasse_kg %}
       <div class="col-6">
         <div class="card card-stat p-3 text-center">
-            <div class="stat-label mb-1">Muskeln</div>
+            <div class="stat-label mb-1">{% trans "Muskeln" %}</div>
             <div class="stat-value text-warning">{{ letzter_koerperwert.muskelmasse_kg }} <small class="fs-6">kg</small></div>
         </div>
       </div>
@@ -550,7 +547,7 @@
       {% if letzter_koerperwert.koerperfett_prozent or letzter_koerperwert.fettmasse_kg %}
       <div class="col-6">
         <div class="card card-stat p-3 text-center">
-            <div class="stat-label mb-1">KFA / Fett</div>
+            <div class="stat-label mb-1">{% trans "KFA / Fett" %}</div>
             <div class="stat-value text-danger">
                 {% if letzter_koerperwert.koerperfett_prozent %}
                     {{ letzter_koerperwert.koerperfett_prozent }}<small class="fs-6">%</small>
@@ -567,26 +564,26 @@
   <!-- Haupt-Buttons -->
   <div class="d-grid gap-3 mt-5">
     <a href="{% url 'training_select_plan' %}" class="btn btn-success btn-action fw-bold rounded-4 shadow">
-        <i class="bi bi-play-circle-fill me-2"></i> Training starten
+        <i class="bi bi-play-circle-fill me-2"></i> {% trans "Training starten" %}
     </a>
     <a href="{% url 'cardio_add' %}" class="btn btn-outline-danger btn-action fw-bold rounded-4">
-        <i class="bi bi-heart-pulse-fill me-2"></i> Cardio hinzufügen
+        <i class="bi bi-heart-pulse-fill me-2"></i> {% trans "Cardio hinzufügen" %}
         {% if cardio_diese_woche > 0 %}<span class="badge bg-danger ms-2">{{ cardio_diese_woche }}×</span>{% endif %}
     </a>
     <button type="button" class="btn btn-warning btn-action fw-bold rounded-4 shadow" data-bs-toggle="modal" data-bs-target="#aiPlanGeneratorModal">
-        <i class="bi bi-stars me-2"></i> KI-Plan erstellen
+        <i class="bi bi-stars me-2"></i> {% trans "KI-Plan erstellen" %}
     </button>
     <a href="{% url 'workout_recommendations' %}" class="btn btn-outline-success btn-action fw-bold rounded-4 shadow">
-        <i class="bi bi-robot me-2"></i> Trainingsempfehlungen (AI)
+        <i class="bi bi-robot me-2"></i> {% trans "Trainingsempfehlungen (AI)" %}
     </a>
     <a href="{% url 'ml_dashboard' %}" class="btn btn-info btn-action fw-bold rounded-4 shadow">
-        <i class="bi bi-cpu me-2"></i> ML Vorhersage-Modelle
+        <i class="bi bi-cpu me-2"></i> {% trans "ML Vorhersage-Modelle" %}
     </a>
     <a href="{% url 'muscle_map' %}" class="btn btn-primary btn-action fw-bold rounded-4 shadow">
-        <i class="bi bi-person-arms-up me-2"></i> Muskelgruppen & Übungen
+        <i class="bi bi-person-arms-up me-2"></i> {% trans "Muskelgruppen & Übungen" %}
     </a>
     <a href="{% url 'add_koerperwert' %}" class="btn btn-outline-secondary btn-action fw-bold rounded-4">
-        <i class="bi bi-smartwatch me-2"></i> Werte eintragen
+        <i class="bi bi-smartwatch me-2"></i> {% trans "Werte eintragen" %}
     </a>
   </div>
 
@@ -605,19 +602,19 @@
         const icon = document.getElementById('pushIcon');
         try {
             if (typeof pushManager === 'undefined') {
-                alert('Push Notifications werden geladen...\nBitte versuche es in wenigen Sekunden erneut.');
+                alert('{% trans "Push Notifications werden geladen... Bitte versuche es in wenigen Sekunden erneut." %}');
                 return;
             }
             if (!pushManager.swRegistration) { await pushManager.init(); }
             const isSubscribed = await pushManager.isSubscribed();
             if (isSubscribed) {
-                if (confirm('Push-Benachrichtigungen deaktivieren?')) {
+                if (confirm('{% trans "Push-Benachrichtigungen deaktivieren?" %}')) {
                     btn.disabled = true;
                     const result = await pushManager.unsubscribe();
                     if (result.success) {
                         icon.className = 'bi bi-bell-slash';
                         btn.classList.remove('text-primary');
-                        alert('✅ Push-Benachrichtigungen deaktiviert');
+                        alert('✅ {% trans "Push-Benachrichtigungen deaktiviert" %}');
                     }
                     btn.disabled = false;
                 }
@@ -627,16 +624,16 @@
                 if (result.success) {
                     icon.className = 'bi bi-bell-fill';
                     btn.classList.add('text-primary');
-                    alert('✅ Push-Benachrichtigungen aktiviert!\n\nDu erhältst jetzt Benachrichtigungen für:\n• Training-Erinnerungen\n• Achievements\n• Rest-Day Reminders');
+                    alert('✅ {% trans "Push-Benachrichtigungen aktiviert!" %}');
                 } else {
-                    alert('❌ Fehler: ' + result.message);
+                    alert('❌ {% trans "Fehler" %}: ' + result.message);
                 }
                 btn.disabled = false;
             }
             updatePushIcon();
         } catch (error) {
             console.error('Push Toggle Error:', error);
-            alert('Fehler beim Aktivieren der Benachrichtigungen');
+            alert('{% trans "Fehler beim Aktivieren der Benachrichtigungen" %}');
             btn.disabled = false;
         }
     }
@@ -651,23 +648,21 @@
             if (isSubscribed) {
                 icon.className = 'bi bi-bell-fill';
                 btn.classList.add('text-primary');
-                btn.title = 'Push-Benachrichtigungen aktiv';
+                btn.title = '{% trans "Push-Benachrichtigungen aktiv" %}';
             } else {
                 icon.className = 'bi bi-bell-slash';
                 btn.classList.remove('text-primary');
-                btn.title = 'Push-Benachrichtigungen aktivieren';
+                btn.title = '{% trans "Push-Benachrichtigungen aktivieren" %}';
             }
         } catch (error) {
             console.error('Push Icon Update Error:', error);
         }
     }
 
-    // Push Icon beim Laden setzen
     window.addEventListener('DOMContentLoaded', function() {
         updatePushIcon();
     });
 
-    // PWA Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
             navigator.serviceWorker.register('/service-worker.js')
@@ -687,10 +682,8 @@
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        console.log('💾 PWA kann installiert werden!');
     });
     window.addEventListener('appinstalled', () => {
-        console.log('✅ PWA erfolgreich installiert!');
         deferredPrompt = null;
     });
 

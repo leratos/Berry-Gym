@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load custom_filters %}
+{% load i18n %}
 {# === HEAD: nur page-spezifisches CSS === #}
 {% block extra_head %}
 <!-- Toast Notification System -->
@@ -49,7 +50,6 @@
             50% { transform: scale(1.08); }
         }
 
-        /* Theme-aware Training Navbar */
         .navbar-training {
             background-color: var(--bs-body-bg);
             border-bottom-color: var(--bs-border-color) !important;
@@ -77,7 +77,6 @@
             color: #212529;
         }
 
-        /* Undo Toast Styling */
         .toast-undo {
             background: linear-gradient(135deg, #343a40 0%, #495057 100%);
             color: white;
@@ -95,14 +94,8 @@
         }
 
         @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         @keyframes countdown {
@@ -149,7 +142,6 @@
             color: var(--bs-secondary-color);
         }
 
-        /* Mobile-optimierte Navbar */
         @media (max-width: 576px) {
             .training-navbar {
                 flex-wrap: wrap;
@@ -176,7 +168,6 @@
             .training-navbar .btn-group .btn {
                 padding: 0.375rem 0.4rem;
             }
-            /* Timer-Text auf mobil ausblenden */
             .training-navbar .timer-text {
                 display: none;
             }
@@ -184,63 +175,63 @@
     </style>
 {% endblock extra_head %}
 
-{# === HEADER: Global-Nav + Training-spezifische Toolbar === #}
+{# === HEADER === #}
 {% block header %}
     {% include 'core/includes/global_header.html' %}
 
     <nav class="navbar navbar-training border-bottom mb-3 shadow">
       <div class="container-fluid training-navbar">
         <span class="navbar-text fw-bold training-title">
-            Training #{{ training.id }}
+            {% trans "Training" %} #{{ training.id }}
         </span>
         <div class="nav-actions d-flex gap-2">
-            <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}" title="Abbrechen">
-                <i class="bi bi-arrow-left"></i><span class="d-none d-sm-inline"> Abbrechen</span>
+            <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}" title="{% trans 'Abbrechen' %}">
+                <i class="bi bi-arrow-left"></i><span class="d-none d-sm-inline"> {% trans "Abbrechen" %}</span>
             </a>
             <!-- Rest Timer Dropdown -->
             <div class="btn-group">
-                <button class="btn btn-outline-warning border-0" onclick="startRestTimer()" title="Pausenuhr starten">
+                <button class="btn btn-outline-warning border-0" onclick="startRestTimer()" title="{% trans 'Pausenuhr starten' %}">
                     <i class="bi bi-stopwatch"></i>
                 </button>
-                <button class="btn btn-outline-warning border-0 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="Timer-Dauer wählen">
-                    <span class="visually-hidden">Timer-Dauer</span>
+                <button class="btn btn-outline-warning border-0 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="{% trans 'Timer-Dauer wählen' %}">
+                    <span class="visually-hidden">{% trans "Timer-Dauer" %}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-theme dropdown-menu-end" style="min-width: 250px;">
-                    <li><h6 class="dropdown-header">Pausendauer</h6></li>
+                    <li><h6 class="dropdown-header">{% trans "Pausendauer" %}</h6></li>
                     <li><a class="dropdown-item" href="#" onclick="setTimerDuration(60); return false;">
-                        <i class="bi bi-clock"></i> 60 Sekunden
+                        <i class="bi bi-clock"></i> 60 {% trans "Sekunden" %}
                     </a></li>
                     <li><a class="dropdown-item active" href="#" onclick="setTimerDuration(90); return false;">
-                        <i class="bi bi-clock"></i> 90 Sekunden
+                        <i class="bi bi-clock"></i> 90 {% trans "Sekunden" %}
                     </a></li>
                     <li><a class="dropdown-item" href="#" onclick="setTimerDuration(120); return false;">
-                        <i class="bi bi-clock"></i> 120 Sekunden
+                        <i class="bi bi-clock"></i> 120 {% trans "Sekunden" %}
                     </a></li>
                     <li><a class="dropdown-item" href="#" onclick="setTimerDuration(180); return false;">
-                        <i class="bi bi-clock"></i> 180 Sekunden
+                        <i class="bi bi-clock"></i> 180 {% trans "Sekunden" %}
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header">Sound-Einstellungen</h6></li>
+                    <li><h6 class="dropdown-header">{% trans "Sound-Einstellungen" %}</h6></li>
                     <li class="px-3 py-2">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="soundToggle" checked onchange="toggleSound()">
                             <label class="form-check-label" for="soundToggle">
-                                <i class="bi bi-volume-up"></i> Sound aktiv
+                                <i class="bi bi-volume-up"></i> {% trans "Sound aktiv" %}
                             </label>
                         </div>
                     </li>
                     <li class="px-3 py-2">
                         <label for="volumeSlider" class="form-label small">
-                            <i class="bi bi-volume-down"></i> Lautstärke: <span id="volumeValue">30</span>%
+                            <i class="bi bi-volume-down"></i> {% trans "Lautstärke" %}: <span id="volumeValue">30</span>%
                         </label>
                         <input type="range" class="form-range" id="volumeSlider" min="0" max="100" value="30" oninput="updateVolume(this.value)">
                     </li>
                 </ul>
             </div>
-            <a class="btn btn-success border-0 fw-bold" href="{% url 'finish_training' training.id %}" title="Training beenden">
-                <i class="bi bi-check-circle"></i><span class="d-none d-sm-inline"> Fertig</span>
+            <a class="btn btn-success border-0 fw-bold" href="{% url 'finish_training' training.id %}" title="{% trans 'Training beenden' %}">
+                <i class="bi bi-check-circle"></i><span class="d-none d-sm-inline"> {% trans "Fertig" %}</span>
             </a>
-            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+            <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans 'Theme wechseln' %}">
               <i class="bi bi-moon-fill" id="themeIcon"></i>
             </button>
         </div>
@@ -259,17 +250,17 @@
                        {% if training.ist_deload %}checked{% endif %}
                        onchange="toggleDeload(this.checked)">
                 <label class="form-check-label small" for="deloadToggle">
-                    <i class="bi bi-arrow-down-circle"></i> Deload-Training
+                    <i class="bi bi-arrow-down-circle"></i> {% trans "Deload-Training" %}
                 </label>
             </div>
             <small class="text-muted" id="deloadHint">
                 {% if training.ist_deload %}
-                    <i class="bi bi-info-circle"></i> Wird nicht in Statistik gezählt
+                    <i class="bi bi-info-circle"></i> {% trans "Wird nicht in Statistik gezählt" %}
                 {% else %}
                     {% if is_deload_week %}
-                        <i class="bi bi-info-circle"></i> Empfohlene Deload-Woche – zählt aktuell zur Statistik
+                        <i class="bi bi-info-circle"></i> {% trans "Empfohlene Deload-Woche – zählt aktuell zur Statistik" %}
                     {% else %}
-                        Zählt für Statistik
+                        {% trans "Zählt für Statistik" %}
                     {% endif %}
                 {% endif %}
             </small>
@@ -279,11 +270,11 @@
         {% if saetze %}
         <div class="alert alert-dark border-secondary d-flex justify-content-between align-items-center mb-3">
             <div>
-                <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Gesamtvolumen heute</small>
+                <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Gesamtvolumen heute" %}</small>
                 <div class="fs-4 fw-bold text-success">{{ total_volume|floatformat:0 }} kg</div>
             </div>
             <div class="text-end">
-                <small class="text-muted">{{ arbeitssaetze_count }} Arbeitssätze</small>
+                <small class="text-muted">{{ arbeitssaetze_count }} {% trans "Arbeitssätze" %}</small>
             </div>
         </div>
         {% endif %}
@@ -291,7 +282,7 @@
         {% if not saetze %}
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-dumbbell display-1 opacity-25"></i>
-                <p class="mt-3">Drück auf +, um loszulegen!</p>
+                <p class="mt-3">{% trans "Drück auf +, um loszulegen!" %}</p>
             </div>
         {% else %}
 
@@ -304,12 +295,11 @@
                         <h5 class="mb-0 text-primary fw-bold me-2">
                             <a href="#" class="text-decoration-none text-primary exercise-link"
                                data-exercise-id="{{ uebung_group.grouper.id }}"
-                               title="Übungsdetails anzeigen">
+                               title="{% trans 'Übungsdetails anzeigen' %}">
                                 {{ uebung_group.grouper }}
                                 <i class="bi bi-info-circle-fill"></i>
                             </a>
                         </h5>
-                        <!-- NEU: Der Statistik-Link -->
                         <a href="{% url 'exercise_stats' uebung_group.grouper.id %}" class="text-decoration-none text-info opacity-50">
                             <i class="bi bi-graph-up"></i>
                         </a>
@@ -319,12 +309,12 @@
                             {% with ziel=plan_ziele|get_item:uebung_group.grouper.id %}
                                 {% if ziel %}
                                 <span class="badge bg-info text-dark">
-                                    <i class="bi bi-bullseye me-1"></i>Ziel: {{ ziel.saetze_ziel }}×{{ ziel.wiederholungen_ziel }}
+                                    <i class="bi bi-bullseye me-1"></i>{% trans "Ziel" %}: {{ ziel.saetze_ziel }}×{{ ziel.wiederholungen_ziel }}
                                 </span>
                                 {% endif %}
                             {% endwith %}
                         {% endif %}
-                        <span class="badge bg-secondary">{{ uebung_group.list|length }} Sätze</span>
+                        <span class="badge bg-secondary">{{ uebung_group.list|length }} {% trans "Sätze" %}</span>
                     </div>
                 </div>
                 <!-- Gewichtsempfehlung -->
@@ -334,16 +324,14 @@
                         <div class="px-3 py-2 bg-dark bg-opacity-50 border-bottom border-secondary">
                             <small class="text-info">
                                 <i class="bi bi-cpu-fill me-1"></i>
-                                <strong>ML-Empfehlung:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
+                                <strong>{% trans "ML-Empfehlung" %}:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
                                 <button class="btn btn-sm {% if empf.pause_from_plan %}btn-warning{% else %}btn-outline-warning{% endif %} py-0 px-2 ms-2"
                                         onclick="setTimerDuration({{ empf.pause }}); startRestTimer();"
-                                        title="{% if empf.pause_from_plan %}Pause aus KI-Plan{% else %}Berechnete Pause{% endif %} - Klick zum Starten">
+                                        title="{% if empf.pause_from_plan %}{% trans 'Pause aus KI-Plan' %}{% else %}{% trans 'Berechnete Pause' %}{% endif %} - {% trans 'Klick zum Starten' %}">
                                     <i class="bi bi-stopwatch"></i> {{ empf.pause }}s
                                     {% if empf.pause_from_plan %}<i class="bi bi-robot ms-1" style="font-size: 0.7rem;"></i>{% endif %}
                                 </button>
-                                <span class="text-muted ms-2">
-                                    ({{ empf.hint }})
-                                </span>
+                                <span class="text-muted ms-2">({{ empf.hint }})</span>
                             </small>
                         </div>
                         {% endif %}
@@ -369,8 +357,8 @@
                             <tr>
                                 <th class="ps-3" style="width: 10%">#</th>
                                 <th style="width: 30%">kg</th>
-                                <th style="width: 30%">Wdh / Sek</th>
-                                <th class="text-end pe-3">Aktion</th>
+                                <th style="width: 30%">{% trans "Wdh / Sek" %}</th>
+                                <th class="text-end pe-3">{% trans "Aktion" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -405,19 +393,14 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end pe-3 text-nowrap">
-                                    <!-- TIMER BUTTON -->
                                     <button class="btn btn-link text-warning opacity-75 text-decoration-none px-1"
-                                            onclick="startRestTimer()" title="Pausenuhr starten">
+                                            onclick="startRestTimer()" title="{% trans 'Pausenuhr starten' %}">
                                         <i class="bi bi-stopwatch"></i>
                                     </button>
-
-                                    <!-- EDIT BUTTON -->
                                     <button class="btn btn-link text-info opacity-75 text-decoration-none px-2"
-                                            onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}', '{{ satz.notiz|default_if_none:''|escapejs }}', '{{ satz.superset_gruppe }}')">>
+                                            onclick="openEditModal('{{ satz.id }}', '{{ satz.uebung.id }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}', '{{ satz.rpe|default_if_none:'' }}', '{{ satz.ist_aufwaermsatz|yesno:'true,false' }}', '{{ satz.notiz|default_if_none:''|escapejs }}', '{{ satz.superset_gruppe }}')">
                                         <i class="bi bi-pencil-fill"></i>
                                     </button>
-
-                                    <!-- DELETE BUTTON -->
                                     <button class="btn btn-link text-danger opacity-50 text-decoration-none px-2"
                                             onclick="confirmDelete('{{ satz.id }}', '{{ satz.uebung.bezeichnung }}', '{{ satz.gewicht }}', '{{ satz.wiederholungen }}')">
                                         <i class="bi bi-x-lg"></i>
@@ -434,7 +417,7 @@
                                 data-exercise-id="{{ uebung_group.grouper.id }}"
                                 data-last-superset="{{ last_satz.superset_gruppe|default:0 }}"
                                 onclick="openModalWithExercise('{{ uebung_group.grouper.id }}', this.dataset.lastSuperset)">
-                            <i class="bi bi-plus-circle me-2"></i> Weiteren Satz hinzufügen
+                            <i class="bi bi-plus-circle me-2"></i> {% trans "Weiteren Satz hinzufügen" %}
                         </button>
                         {% endwith %}
                     </div>
@@ -455,12 +438,10 @@
             <div id="prToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="toast-header bg-success text-white">
                     <i class="bi bi-trophy-fill me-2"></i>
-                    <strong class="me-auto">Neuer Personal Record!</strong>
+                    <strong class="me-auto">{% trans "Neuer Personal Record!" %}</strong>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
-                <div class="toast-body card-stat" id="prToastBody">
-                    <!-- Dynamic content -->
-                </div>
+                <div class="toast-body card-stat" id="prToastBody"></div>
             </div>
         </div>
 
@@ -468,18 +449,18 @@
         <div class="rest-timer" id="restTimer" style="display: none;">
             <div class="timer-circle bg-warning text-dark" id="timerDisplay" onclick="stopTimer()">
                 <div id="timerSeconds">90</div>
-                <small>Pause</small>
+                <small>{% trans "Pause" %}</small>
             </div>
         </div>
 
     </div>
 
-    <!-- DAS MODAL -->
+    <!-- SATZ MODAL -->
     <div class="modal fade" id="addSetModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content card-stat shadow">
           <div class="modal-header border-secondary">
-            <h5 class="modal-title" id="modalTitle">Satz hinzufügen</h5>
+            <h5 class="modal-title" id="modalTitle">{% trans "Satz hinzufügen" %}</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <form method="post" id="setForm" action="">
@@ -487,14 +468,14 @@
             <div class="modal-body">
 
                 <div class="mb-3">
-                    <label class="form-label text-secondary small text-uppercase">Übung suchen</label>
-                    <input type="text" id="exerciseSearchInput" class="form-control border-secondary mb-3" placeholder="Bankdrücken, Kniebeugen, ...">
+                    <label class="form-label text-secondary small text-uppercase">{% trans "Übung suchen" %}</label>
+                    <input type="text" id="exerciseSearchInput" class="form-control border-secondary mb-3" placeholder="{% trans 'Bankdrücken, Kniebeugen, ...' %}">
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label text-secondary small text-uppercase">1. Muskelgruppe</label>
+                    <label class="form-label text-secondary small text-uppercase">{% trans "1. Muskelgruppe" %}</label>
                     <select id="muscleFilter" class="form-select border-secondary mb-2">
-                        <option value="">-- Bitte wählen --</option>
+                        <option value="">{% trans "-- Bitte wählen --" %}</option>
                         {% regroup uebungen by get_muskelgruppe_display as muskel_liste %}
                         {% for group in muskel_liste %}
                             <option value="{{ group.list.0.muskelgruppe }}">{{ group.grouper }}</option>
@@ -503,20 +484,20 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label text-secondary small text-uppercase">2. Übung</label>
+                    <label class="form-label text-secondary small text-uppercase">{% trans "2. Übung" %}</label>
                     <select name="uebung" id="uebungSelect" class="form-select border-secondary" required disabled>
-                        <option value="" selected disabled>-- Erst Muskelgruppe wählen --</option>
+                        <option value="" selected disabled>{% trans "-- Erst Muskelgruppe wählen --" %}</option>
                     </select>
                 </div>
 
                 <div class="row g-2">
                     <div class="col-6">
-                        <label class="form-label text-secondary" id="gewichtLabel">Gewicht (kg)</label>
+                        <label class="form-label text-secondary" id="gewichtLabel">{% trans "Gewicht (kg)" %}</label>
                         <input type="number" step="0.5" name="gewicht" id="gewichtInput" class="form-control border-secondary" required placeholder="0.0">
                         <div id="kgHint" class="form-text text-info" style="display:none; font-size:0.75rem;"></div>
                     </div>
                     <div class="col-6">
-                        <label class="form-label text-secondary">Wdh. / Sek.</label>
+                        <label class="form-label text-secondary">{% trans "Wdh. / Sek." %}</label>
                         <input type="number" name="wiederholungen" id="wdhInput" class="form-control border-secondary" required placeholder="0">
                     </div>
                 </div>
@@ -529,7 +510,7 @@
                     <div class="col-6">
                         <label class="form-label text-secondary">Superset</label>
                         <select name="superset_gruppe" id="supersetInput" class="form-select border-secondary">
-                            <option value="0">Keine</option>
+                            <option value="0">{% trans "Keine" %}</option>
                             <option value="1">S1</option>
                             <option value="2">S2</option>
                             <option value="3">S3</option>
@@ -544,7 +525,7 @@
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="ist_aufwaermsatz" id="warmupCheck">
                             <label class="form-check-label text-secondary" for="warmupCheck">
-                                <i class="bi bi-fire me-1"></i> Aufwärmsatz
+                                <i class="bi bi-fire me-1"></i> {% trans "Aufwärmsatz" %}
                             </label>
                         </div>
                     </div>
@@ -553,29 +534,26 @@
                 <!-- Notiz -->
                 <div class="mt-3">
                     <label class="form-label text-secondary">
-                        <i class="bi bi-pencil-square me-1"></i>Notiz (optional)
+                        <i class="bi bi-pencil-square me-1"></i>{% trans "Notiz (optional)" %}
                     </label>
-
-                    <!-- Quick Tags -->
                     <div class="d-flex flex-wrap gap-1 mb-2">
-                        <button type="button" class="btn btn-outline-success btn-sm" onclick="insertTag('⭐ Perfekt')">⭐ Perfekt</button>
-                        <button type="button" class="btn btn-outline-info btn-sm" onclick="insertTag('👍 Gut')">👍 Gut</button>
-                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="insertTag('⚠️ Schwierig')">⚠️ Schwierig</button>
-                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="insertTag('🤕 Mit Hilfe')">🤕 Mit Hilfe</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('😓 Schmerz')">😓 Schmerz</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('💪 Stärker')">💪 Stärker</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('😴 Müde')">😴 Müde</button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="insertTag('⭐ {% trans "Perfekt" %}')">⭐ {% trans "Perfekt" %}</button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="insertTag('👍 {% trans "Gut" %}')">👍 {% trans "Gut" %}</button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="insertTag('⚠️ {% trans "Schwierig" %}')">⚠️ {% trans "Schwierig" %}</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="insertTag('🤕 {% trans "Mit Hilfe" %}')">🤕 {% trans "Mit Hilfe" %}</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('😓 {% trans "Schmerz" %}')">😓 {% trans "Schmerz" %}</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('💪 {% trans "Stärker" %}')">💪 {% trans "Stärker" %}</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('😴 {% trans "Müde" %}')">😴 {% trans "Müde" %}</button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('🔥 Pump')">🔥 Pump</button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTag('🎯 PR')">🎯 PR</button>
                     </div>
-
                     <textarea name="notiz" id="notizInput" class="form-control border-secondary" rows="3"
-                              placeholder="z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', '🎯 PR'..."
+                              placeholder="{% trans "z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', '🎯 PR'..." %}"
                               oninput="updateCharCount()"></textarea>
                     <div class="d-flex justify-content-between align-items-center mt-1">
-                        <small class="text-muted" id="charCount">0 / 500 Zeichen</small>
+                        <small class="text-muted" id="charCount">0 / 500 {% trans "Zeichen" %}</small>
                         <button type="button" class="btn btn-sm btn-link text-muted p-0" onclick="clearNotiz()">
-                            <i class="bi bi-x-circle"></i> Löschen
+                            <i class="bi bi-x-circle"></i> {% trans "Löschen" %}
                         </button>
                     </div>
                 </div>
@@ -584,40 +562,40 @@
                 <div id="progressionHint" class="alert alert-info mt-3 py-2 px-3" style="display: none;">
                     <small>
                         <i class="bi bi-lightbulb-fill me-1"></i>
-                        <strong>Tipp:</strong> <span id="progressionText"></span>
+                        <strong>{% trans "Tipp" %}:</strong> <span id="progressionText"></span>
                     </small>
                 </div>
 
             </div>
             <div class="modal-footer border-secondary">
-                <button type="submit" class="btn btn-primary w-100 fw-bold">Speichern</button>
+                <button type="submit" class="btn btn-primary w-100 fw-bold">{% trans "Speichern" %}</button>
             </div>
           </form>
         </div>
       </div>
     </div>
 
-    <!-- DELETE CONFIRMATION MODAL -->
+    <!-- DELETE MODAL -->
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content card-stat border-danger">
           <div class="modal-header border-danger">
             <h5 class="modal-title text-danger">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>Satz löschen?
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{% trans "Satz löschen?" %}
             </h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-            <p class="mb-2">Möchtest du diesen Satz wirklich löschen?</p>
+            <p class="mb-2">{% trans "Möchtest du diesen Satz wirklich löschen?" %}</p>
             <div class="alert alert-secondary mb-0">
                 <strong id="deleteExerciseName"></strong><br>
                 <span id="deleteSetDetails" class="text-muted"></span>
             </div>
           </div>
           <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Abbrechen" %}</button>
             <a href="#" id="confirmDeleteBtn" class="btn btn-danger">
-                <i class="bi bi-trash-fill me-1"></i> Ja, löschen
+                <i class="bi bi-trash-fill me-1"></i> {% trans "Ja, löschen" %}
             </a>
           </div>
         </div>
@@ -633,11 +611,8 @@
     <script src="{% static 'core/js/exercise-autocomplete.js' %}"></script>
 
     <script>
-        // Training Context für Keyboard Shortcuts
         document.body.dataset.context = 'training';
 
-        // Daten für Filter
-        // FIX: |escapejs verhindert Abstürze bei Namen wie "Farmer's Walk"
         const allExercises = [
             {% for uebung in uebungen %}
             {
@@ -671,63 +646,50 @@
         const progressionHint = document.getElementById('progressionHint');
         const progressionText = document.getElementById('progressionText');
 
-        // ===== KÖRPERGEWICHT-ÜBUNGEN: Label + Hint dynamisch anpassen =====
         function updateGewichtLabel(uebungId) {
             const ex = allExercises.find(e => String(e.id) === String(uebungId));
             if (ex && ex.gewichtsTyp === 'KOERPERGEWICHT') {
-                gewichtLabel.textContent = 'Zusatzgewicht (kg)';
+                gewichtLabel.textContent = '{% trans "Zusatzgewicht (kg)" %}';
                 gewichtInput.placeholder = '0';
                 if (ex.kgFaktor > 0) {
                     const pct = Math.round(ex.kgFaktor * 100);
-                    kgHint.textContent = `Körpergewicht-Übung · ca. ${pct}% KG wirkt als Last`;
+                    kgHint.textContent = `{% trans "Körpergewicht-Übung · ca." %} ${pct}% {% trans "KG wirkt als Last" %}`;
                 } else {
-                    kgHint.textContent = 'Körpergewicht-Übung · isometrisch (kein Heben)';
+                    kgHint.textContent = '{% trans "Körpergewicht-Übung · isometrisch (kein Heben)" %}';
                 }
                 kgHint.style.display = 'block';
             } else {
-                gewichtLabel.textContent = 'Gewicht (kg)';
+                gewichtLabel.textContent = '{% trans "Gewicht (kg)" %}';
                 gewichtInput.placeholder = '0.0';
                 kgHint.style.display = 'none';
             }
         }
         const exerciseSearchInput = document.getElementById('exerciseSearchInput');
 
-        // URL Basis für POST
         const addUrl = "{% url 'add_set' training.id %}";
 
-        // Autocomplete initialisieren
         if (exerciseSearchInput) {
             const autocomplete = new ExerciseAutocomplete(exerciseSearchInput, allExercises, {
                 minChars: 2,
                 maxResults: 8,
                 onSelect: (exercise) => {
-                    // Muskelgruppe und Übung automatisch auswählen
                     muscleFilter.value = exercise.muscleKey;
                     updateExerciseDropdown(exercise.muscleKey, exercise.id);
                     uebungSelect.value = exercise.id;
-
-                    // Ghosting laden
                     loadGhosting(exercise.id);
-
-                    // Label für Körpergewichtsübungen anpassen
                     updateGewichtLabel(exercise.id);
-
-                    // Suchfeld leeren
                     exerciseSearchInput.value = '';
-
-                    // Focus auf Gewicht
                     setTimeout(() => gewichtInput.focus(), 100);
                 }
             });
         }
 
-        // Filter Logic
         muscleFilter.addEventListener('change', function() {
             updateExerciseDropdown(this.value);
         });
 
         function updateExerciseDropdown(muscleKey, preselectId = null) {
-            uebungSelect.innerHTML = '<option value="" selected disabled>-- Übung wählen --</option>';
+            uebungSelect.innerHTML = '<option value="" selected disabled>{% trans "-- Übung wählen --" %}</option>';
             if (!muscleKey) {
                 uebungSelect.disabled = true; return;
             }
@@ -741,28 +703,21 @@
 
             if (preselectId) {
                 uebungSelect.value = preselectId;
-                // Nur Ghosting bei NEUEN Sätzen (addUrl) triggern
                 if(setForm.action === addUrl) fetchGhostData(preselectId);
             }
         }
 
-        // Ghosting Trigger
         uebungSelect.addEventListener('change', function() {
             updateGewichtLabel(this.value);
             if(this.value && setForm.action.includes('add_set')) fetchGhostData(this.value);
         });
 
-        // MODUS 1: NEUEN SATZ ERSTELLEN
         function openModalWithExercise(uebungId, lastSuperset = '0') {
-            modalTitle.innerText = "Satz hinzufügen";
+            modalTitle.innerText = "{% trans 'Satz hinzufügen' %}";
             setForm.action = addUrl;
-
-            // Felder freischalten
             muscleFilter.disabled = false;
-
-            // Reset
             gewichtInput.value = ""; wdhInput.value = ""; rpeInput.value = ""; warmupCheck.checked = false; notizInput.value = "";
-            supersetInput.value = lastSuperset || '0'; // Letzte Superset-Gruppe oder 0
+            supersetInput.value = lastSuperset || '0';
             progressionHint.style.display = 'none';
 
             if (uebungId) {
@@ -779,27 +734,20 @@
             setTimeout(() => { uebungId ? gewichtInput.focus() : muscleFilter.focus(); }, 500);
         }
 
-        // MODUS 2: SATZ BEARBEITEN
         async function openEditModal(setId, uebungId, gewicht, wdh, rpe, isWarmup, notiz, supersetGroup) {
-            modalTitle.innerText = "Satz bearbeiten";
-            // URL dynamisch anpassen
+            modalTitle.innerText = "{% trans 'Satz bearbeiten' %}";
             let updateUrl = "{% url 'update_set' 0 %}".replace('0', setId);
             setForm.action = updateUrl;
 
-            // Werte füllen
             const exData = allExercises.find(ex => ex.id === uebungId);
             if (exData) {
                 muscleFilter.value = exData.muscleKey;
                 updateExerciseDropdown(exData.muscleKey, uebungId);
             }
-            // Label für Körpergewichtsübungen anpassen
             updateGewichtLabel(uebungId);
-
-            // Felder sperren: Übung darf beim Bearbeiten nicht geändert werden (Datenkonsistenz)
             muscleFilter.disabled = true;
             uebungSelect.disabled = true;
 
-            // Prüfe ob es Offline-Daten für diesen Satz gibt
             let finalGewicht = gewicht;
             let finalWdh = wdh;
             let finalRpe = rpe;
@@ -809,21 +757,13 @@
 
             try {
                 const offlineData = await offlineManager.getUnsyncedData('trainingData');
-                console.log('[Edit Modal] Checking offline data for set ID:', setId, 'Total unsynced:', offlineData.length);
-
-                // Suche nach ALLEN Updates für diesen Satz und nimm den NEUESTEN
                 const matchingUpdates = offlineData.filter(item => {
                     return item.is_update && item.action && item.action.includes(`/set/${setId}/update/`);
                 });
 
-                console.log('[Edit Modal] Matching updates for this set:', matchingUpdates.length);
-
                 if (matchingUpdates.length > 0) {
-                    // Sortiere nach ID (Date.now() - höhere ID = neuerer Eintrag)
                     matchingUpdates.sort((a, b) => b.id - a.id);
                     const offlineUpdate = matchingUpdates[0];
-
-                    console.log('[Edit Modal] Using latest offline update:', offlineUpdate);
                     finalGewicht = offlineUpdate.gewicht || gewicht;
                     finalWdh = offlineUpdate.wiederholungen || wdh;
                     finalRpe = offlineUpdate.rpe || rpe;
@@ -831,10 +771,9 @@
                     finalWarmup = offlineUpdate.is_warmup ? 'true' : 'false';
                     finalSuperset = offlineUpdate.superset_gruppe || supersetGroup;
 
-                    // Zeige Hinweis
                     const hint = document.createElement('div');
                     hint.className = 'alert alert-warning alert-sm mb-2';
-                    hint.innerHTML = '<i class="bi bi-cloud-upload me-2"></i>Offline-Änderungen werden angezeigt';
+                    hint.innerHTML = '<i class="bi bi-cloud-upload me-2"></i>{% trans "Offline-Änderungen werden angezeigt" %}';
                     setForm.insertBefore(hint, setForm.firstChild);
                     setTimeout(() => hint.remove(), 3000);
                 }
@@ -842,25 +781,20 @@
                 console.warn('[Edit Modal] Could not check offline data:', e);
             }
 
-            // Daten eintragen (mit Komma-Fix für deutsche Zahlen)
             gewichtInput.value = String(finalGewicht).replace(',', '.');
             wdhInput.value = finalWdh;
             rpeInput.value = finalRpe;
             notizInput.value = finalNotiz || '';
             warmupCheck.checked = (finalWarmup === 'true');
             supersetInput.value = finalSuperset || '0';
-
-            // Kein Progression Hint beim Bearbeiten
             progressionHint.style.display = 'none';
 
             myModal.show();
             setTimeout(() => gewichtInput.focus(), 500);
         }
 
-        // API Call - holt Gewichtsempfehlung mit Planziel
         async function fetchGhostData(id) {
             try {
-                // Planziel für diese Übung ermitteln
                 let zielParam = '';
                 const planZiele = {{ plan_ziele|safe }};
                 if (planZiele && planZiele[id] && planZiele[id].wiederholungen_ziel) {
@@ -870,25 +804,22 @@
                 const res = await fetch(`/api/last-set/${id}/${zielParam}`);
                 const data = await res.json();
                 if (data.success) {
-                    // Bei Körpergewichts-Übungen: kein Zusatzgewicht vorausfüllen wenn 0
                     const ex = allExercises.find(e => String(e.id) === String(id));
                     const isKg = ex && ex.gewichtsTyp === 'KOERPERGEWICHT';
                     if (isKg && parseFloat(data.gewicht) === 0) {
-                        gewichtInput.value = '';  // leer lassen statt 0
+                        gewichtInput.value = '';
                     } else {
                         gewichtInput.value = data.gewicht;
                     }
                     wdhInput.value = data.wiederholungen;
                     if(data.rpe) rpeInput.value = data.rpe;
 
-                    // Progressive Overload Hinweis anzeigen
                     if (data.progression_hint) {
                         let hint = data.progression_hint;
-                        // Bei KG-Übungen mit Gewicht=0: Hinweis auf Wdh-Steigerung statt kg
                         if (isKg && parseFloat(data.letztes_gewicht) === 0) {
-                            hint = `Körpergewicht-Übung: Ziel +1–2 Wdh. (Letztes Mal: ${data.letzte_wdh} Wdh.)`;
+                            hint = `{% trans "Körpergewicht-Übung: Ziel +1–2 Wdh." %} ({% trans "Letztes Mal" %}: ${data.letzte_wdh} Wdh.)`;
                         } else if (data.letztes_gewicht !== data.gewicht || data.letzte_wdh !== data.wiederholungen) {
-                            hint += ` (Letztes Mal: ${data.letztes_gewicht}kg × ${data.letzte_wdh})`;
+                            hint += ` ({% trans "Letztes Mal" %}: ${data.letztes_gewicht}kg × ${data.letzte_wdh})`;
                         }
                         progressionText.innerText = hint;
                         progressionHint.style.display = 'block';
@@ -898,52 +829,34 @@
         }
 
         // ========== UNDO DELETE SYSTEM ==========
-        let deletedSets = []; // Array für gelöschte Sätze mit Timeout
+        let deletedSets = [];
 
-        // Delete Confirmation mit Undo
         function confirmDelete(setId, exerciseName, weight, reps) {
             const deleteUrl = `/set/${setId}/delete/`;
+            const setData = { setId, exerciseName, weight, reps, deleteUrl, timeout: null };
 
-            // Satz-Daten für Undo speichern
-            const setData = {
-                setId: setId,
-                exerciseName: exerciseName,
-                weight: weight,
-                reps: reps,
-                deleteUrl: deleteUrl,
-                timeout: null
-            };
-
-            // Sofort aus UI entfernen (optimistic delete)
             const setCard = document.querySelector(`[data-set-id="${setId}"]`);
             if (setCard) {
                 setCard.style.opacity = '0.5';
                 setCard.style.pointerEvents = 'none';
             }
 
-            // Toast mit Undo-Button anzeigen
             showUndoToast(setData);
-
-            // Nach 5 Sekunden endgültig löschen
-            setData.timeout = setTimeout(() => {
-                executeDelete(setData);
-            }, 5000);
-
+            setData.timeout = setTimeout(() => { executeDelete(setData); }, 5000);
             deletedSets.push(setData);
         }
 
         function showUndoToast(setData) {
-            // Toast mit Undo-Button erstellen
             const toastHtml = `
                 <div class="toast-undo" data-set-id="${setData.setId}">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="flex-grow-1">
                             <i class="bi bi-trash me-2"></i>
-                            <strong>${setData.exerciseName}</strong> gelöscht
-                            <small class="d-block text-muted">${setData.weight} kg × ${setData.reps} Wdh</small>
+                            <strong>${setData.exerciseName}</strong> {% trans "gelöscht" %}
+                            <small class="d-block text-muted">${setData.weight} kg × ${setData.reps} {% trans "Wdh" %}</small>
                         </div>
                         <button class="btn btn-sm btn-warning" onclick="undoDelete(${setData.setId})">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Rückgängig
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>{% trans "Rückgängig" %}
                         </button>
                     </div>
                     <div class="progress mt-2" style="height: 2px;">
@@ -952,7 +865,6 @@
                 </div>
             `;
 
-            // Toast-Container (falls noch nicht vorhanden)
             let toastContainer = document.getElementById('undoToastContainer');
             if (!toastContainer) {
                 toastContainer = document.createElement('div');
@@ -965,7 +877,6 @@
             toastDiv.innerHTML = toastHtml;
             toastContainer.appendChild(toastDiv.firstElementChild);
 
-            // Auto-remove nach 5 Sekunden
             setTimeout(() => {
                 const toastEl = toastContainer.querySelector(`[data-set-id="${setData.setId}"]`);
                 if (toastEl) {
@@ -977,110 +888,69 @@
         }
 
         function undoDelete(setId) {
-            // Finde gelöschten Satz
             const index = deletedSets.findIndex(s => s.setId === setId);
             if (index === -1) return;
-
             const setData = deletedSets[index];
-
-            // Timeout abbrechen
             clearTimeout(setData.timeout);
-
-            // Aus Array entfernen
             deletedSets.splice(index, 1);
 
-            // UI wiederherstellen
             const setCard = document.querySelector(`[data-set-id="${setId}"]`);
-            if (setCard) {
-                setCard.style.opacity = '1';
-                setCard.style.pointerEvents = 'auto';
-            }
+            if (setCard) { setCard.style.opacity = '1'; setCard.style.pointerEvents = 'auto'; }
 
-            // Toast entfernen
             const toastEl = document.querySelector(`.toast-undo[data-set-id="${setId}"]`);
-            if (toastEl) {
-                toastEl.remove();
-            }
+            if (toastEl) toastEl.remove();
 
-            // Bestätigungs-Toast
-            if (typeof toast !== 'undefined') {
-                toast.info('Satz wiederhergestellt');
-            }
+            if (typeof toast !== 'undefined') toast.info('{% trans "Satz wiederhergestellt" %}');
         }
 
         function executeDelete(setData) {
-            // Endgültiges Löschen via POST
             fetch(setData.deleteUrl, {
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCSRFToken(),
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json' }
             })
             .then(response => {
                 if (response.ok) {
-                    // Seite neu laden nach erfolgreichem Delete
                     location.reload();
                 } else {
-                    console.error('Delete fehlgeschlagen');
-                    // Bei Fehler: Satz wiederherstellen
                     const setCard = document.querySelector(`[data-set-id="${setData.setId}"]`);
-                    if (setCard) {
-                        setCard.style.opacity = '1';
-                        setCard.style.pointerEvents = 'auto';
-                    }
-                    if (typeof toast !== 'undefined') {
-                        toast.error('Fehler beim Löschen');
-                    }
+                    if (setCard) { setCard.style.opacity = '1'; setCard.style.pointerEvents = 'auto'; }
+                    if (typeof toast !== 'undefined') toast.error('{% trans "Fehler beim Löschen" %}');
                 }
             })
-            .catch(error => {
-                console.error('Netzwerkfehler:', error);
-                if (typeof toast !== 'undefined') {
-                    toast.error('Netzwerkfehler beim Löschen');
-                }
+            .catch(() => {
+                if (typeof toast !== 'undefined') toast.error('{% trans "Netzwerkfehler beim Löschen" %}');
             });
 
-            // Aus Array entfernen
             const index = deletedSets.findIndex(s => s.setId === setData.setId);
-            if (index !== -1) {
-                deletedSets.splice(index, 1);
-            }
+            if (index !== -1) deletedSets.splice(index, 1);
         }
 
         // ========== REST TIMER ==========
         let timerInterval = null;
         let timerSeconds = 90;
-        let timerDuration = 90; // Standard-Dauer
+        let timerDuration = 90;
         const restTimerEl = document.getElementById('restTimer');
         const timerDisplayEl = document.getElementById('timerDisplay');
         const timerSecondsEl = document.getElementById('timerSeconds');
 
-        // Timer-Dauer und State beim Laden wiederherstellen
         window.addEventListener('load', function() {
-            // Gespeicherte Timer-Dauer laden
             const savedDuration = localStorage.getItem('timerDuration');
             if (savedDuration) {
                 timerDuration = parseInt(savedDuration);
                 updateDropdownActive(timerDuration);
             }
 
-            // Laufenden Timer wiederherstellen
             const savedTimer = localStorage.getItem('restTimer');
             if (savedTimer) {
                 const data = JSON.parse(savedTimer);
                 const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
                 const remaining = data.duration - elapsed;
-
-                if (remaining > 0) {
-                    startRestTimer(remaining);
-                }
+                if (remaining > 0) startRestTimer(remaining);
             }
         });
 
-        // Sound-Settings (LocalStorage)
-        let soundEnabled = localStorage.getItem('soundEnabled') !== 'false'; // Default: true
-        let soundVolume = parseFloat(localStorage.getItem('soundVolume') || '0.3'); // Default: 30%
+        let soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+        let soundVolume = parseFloat(localStorage.getItem('soundVolume') || '0.3');
 
         function showPRToast(message) {
             const toastEl = document.getElementById('prToast');
@@ -1095,17 +965,16 @@
             localStorage.setItem('soundEnabled', soundEnabled);
         }
 
-        // Deload-Toggle: Speichert Status per AJAX
         function toggleDeload(isDeload) {
             const banner = document.getElementById('deloadBanner');
             const hint = document.getElementById('deloadHint');
 
             if (isDeload) {
                 banner.className = banner.className.replace('alert-dark', 'alert-info');
-                hint.innerHTML = '<i class="bi bi-info-circle"></i> Wird nicht in Statistik gezählt';
+                hint.innerHTML = '<i class="bi bi-info-circle"></i> {% trans "Wird nicht in Statistik gezählt" %}';
             } else {
                 banner.className = banner.className.replace('alert-info', 'alert-dark');
-                hint.innerHTML = 'Zählt für Statistik';
+                hint.innerHTML = '{% trans "Zählt für Statistik" %}';
             }
 
             fetch(`/api/training/{{ training.id }}/toggle-deload/`, {
@@ -1120,12 +989,11 @@
         }
 
         function updateVolume(value) {
-            soundVolume = value / 100; // 0-1 Range
+            soundVolume = value / 100;
             localStorage.setItem('soundVolume', soundVolume);
             document.getElementById('volumeValue').innerText = value;
         }
 
-        // Settings beim Laden wiederherstellen
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('soundToggle').checked = soundEnabled;
             const volumePercent = Math.round(soundVolume * 100);
@@ -1140,11 +1008,9 @@
         }
 
         function updateDropdownActive(duration) {
-            // Entferne alle active-Klassen
             document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
                 item.classList.remove('active');
             });
-            // Setze active für gewählte Dauer
             document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
                 const onclick = item.getAttribute('onclick');
                 if (onclick && onclick.includes(`setTimerDuration(${duration})`)) {
@@ -1153,49 +1019,37 @@
             });
         }
 
-        // Sound für Timer-Ende (Web Audio API)
         function playTimerSound() {
-            if (!soundEnabled) return; // Sound deaktiviert
-
+            if (!soundEnabled) return;
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-                // Drei Beeps: hoch-mittel-hoch
                 const beeps = [
                     { freq: 800, start: 0, duration: 0.15 },
                     { freq: 600, start: 0.2, duration: 0.15 },
                     { freq: 800, start: 0.4, duration: 0.3 }
                 ];
-
                 beeps.forEach(beep => {
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
-
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
-
                     oscillator.frequency.value = beep.freq;
                     oscillator.type = 'sine';
-
                     gainNode.gain.setValueAtTime(soundVolume, audioContext.currentTime + beep.start);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + beep.start + beep.duration);
-
                     oscillator.start(audioContext.currentTime + beep.start);
                     oscillator.stop(audioContext.currentTime + beep.start + beep.duration);
                 });
-            } catch (e) {
-                console.log('Audio nicht verfügbar:', e);
-            }
+            } catch (e) { console.log('Audio nicht verfügbar:', e); }
         }
 
         function startRestTimer(seconds = null) {
-            stopTimer(); // Stop any existing timer
+            stopTimer();
             timerSeconds = seconds !== null ? seconds : timerDuration;
             timerSecondsEl.innerText = timerSeconds;
             restTimerEl.style.display = 'block';
             timerDisplayEl.classList.add('timer-running');
 
-            // Timer-State in localStorage speichern
             localStorage.setItem('restTimer', JSON.stringify({
                 startTime: Date.now(),
                 duration: timerSeconds
@@ -1205,13 +1059,11 @@
                 timerSeconds--;
                 timerSecondsEl.innerText = timerSeconds;
 
-                // Farbwechsel bei wenig Zeit
                 if (timerSeconds <= 10) {
                     timerDisplayEl.classList.remove('bg-warning');
                     timerDisplayEl.classList.add('bg-danger', 'text-white');
                 }
 
-                // Countdown-Beeps bei letzten 3 Sekunden
                 if (soundEnabled && timerSeconds > 0 && timerSeconds <= 3) {
                     try {
                         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1228,25 +1080,16 @@
                     } catch (e) {}
                 }
 
-                // Timer abgelaufen
                 if (timerSeconds <= 0) {
                     stopTimer();
-
-                    // Sound abspielen
                     playTimerSound();
+                    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
 
-                    // Vibration (wenn verfügbar)
-                    if (navigator.vibrate) {
-                        navigator.vibrate([200, 100, 200, 100, 200]);
-                    }
-
-                    // Notification zeigen (ohne alert - nicht-blockierend)
                     const notification = document.createElement('div');
                     notification.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #198754; color: white; padding: 2rem; border-radius: 1rem; font-size: 1.5rem; z-index: 10000; box-shadow: 0 0 20px rgba(0,0,0,0.5); text-align: center;';
-                    notification.innerHTML = '⏰<br><strong>Pause vorbei!</strong><br><small>Bereit für den nächsten Satz?</small>';
+                    notification.innerHTML = '⏰<br><strong>{% trans "Pause vorbei!" %}</strong><br><small>{% trans "Bereit für den nächsten Satz?" %}</small>';
                     document.body.appendChild(notification);
 
-                    // Auto-remove nach 3 Sekunden
                     setTimeout(() => {
                         notification.style.opacity = '0';
                         notification.style.transition = 'opacity 0.5s';
@@ -1257,41 +1100,31 @@
         }
 
         function stopTimer() {
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             localStorage.removeItem('restTimer');
             restTimerEl.style.display = 'none';
             timerDisplayEl.classList.remove('timer-running', 'bg-danger', 'text-white');
             timerDisplayEl.classList.add('bg-warning', 'text-dark');
         }
 
-        // Helper: CSRF Token aus Cookie holen
         function getCSRFToken() {
             const name = 'csrftoken';
             const cookies = document.cookie.split(';');
             for (let cookie of cookies) {
                 cookie = cookie.trim();
-                if (cookie.startsWith(name + '=')) {
-                    return cookie.substring(name.length + 1);
-                }
+                if (cookie.startsWith(name + '=')) return cookie.substring(name.length + 1);
             }
             return '';
         }
 
-        // AJAX Form Submit (verhindert Page Reload & behält Stoppuhr)
         setForm.addEventListener('submit', async function(e) {
-            e.preventDefault(); // Verhindere normalen Form Submit
-
+            e.preventDefault();
             const formData = new FormData(setForm);
             const submitBtn = setForm.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Speichern...';
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>{% trans "Speichern..." %}';
 
-            // Versuche ZUERST Online-Submit
             try {
-                // Timeout mit AbortController (Browser-kompatibel)
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -1305,13 +1138,10 @@
                     signal: controller.signal
                 });
 
-                clearTimeout(timeoutId); // Wichtig: Timer clearen bei Erfolg
+                clearTimeout(timeoutId);
 
-                // Prüfe Response Status BEVOR du parsest
                 if (!response.ok) {
-                    // Server-Fehler (4xx, 5xx) - NICHT offline!
-                    let errorMsg = 'Serverfehler beim Speichern';
-
+                    let errorMsg = '{% trans "Serverfehler beim Speichern" %}';
                     try {
                         const contentType = response.headers.get('content-type');
                         if (contentType && contentType.includes('application/json')) {
@@ -1319,72 +1149,44 @@
                             errorMsg = data.error || errorMsg;
                         }
                     } catch (parseError) {
-                        // HTML-Fehlerseite statt JSON - typisch für 500er Fehler
-                        console.error('[Server Error] Status:', response.status, response.statusText);
-                        errorMsg = `Serverfehler (${response.status}). Bitte versuche es erneut oder kontaktiere Support.`;
+                        errorMsg = `{% trans "Serverfehler" %} (${response.status}).`;
                     }
-
                     showToast(errorMsg, 'error', 5000);
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Speichern';
-                    return; // Wichtig: NICHT in den Offline-Modus gehen!
+                    submitBtn.innerHTML = '{% trans "Speichern" %}';
+                    return;
                 }
 
-                // Response OK - parse JSON
                 const data = await response.json();
 
-                // Prüfe ob Service Worker Offline-Response zurückgegeben hat
-                if (data.offline) {
-                    console.log('[Offline] Service Worker returned offline response, saving locally...');
-                    // Behandle wie im catch-Block (speichere in IndexedDB)
-                    throw new Error('Offline mode - saving locally');
-                }
+                if (data.offline) throw new Error('Offline mode - saving locally');
 
                 if (data.success) {
-                    // PR-Toast anzeigen falls vorhanden
-                    if (data.pr_message) {
-                        showPRToast(data.pr_message);
-                    }
-
+                    if (data.pr_message) showPRToast(data.pr_message);
                     myModal.hide();
-
-                    // Seite neu laden um Sätze anzuzeigen (aber ohne die Stoppuhr zu stoppen)
                     location.reload();
                 } else {
-                    showToast(data.error || 'Satz konnte nicht gespeichert werden', 'error', 4000);
+                    showToast(data.error || '{% trans "Satz konnte nicht gespeichert werden" %}', 'error', 4000);
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Speichern';
+                    submitBtn.innerHTML = '{% trans "Speichern" %}';
                 }
             } catch (error) {
-                // Prüfe ob es ein ECHTER Netzwerkfehler ist (offline) oder ein Parse/Timeout-Fehler
                 const isNetworkError = error.name === 'TypeError' ||
                                       error.message.includes('Failed to fetch') ||
                                       error.message.includes('NetworkError') ||
                                       error.message.includes('Offline mode');
-
                 const isTimeout = error.name === 'TimeoutError' || error.name === 'AbortError';
 
                 if (!isNetworkError && !isTimeout) {
-                    // Unerwarteter Fehler (z.B. Parse-Error) - zeige Fehler, gehe NICHT offline
-                    console.error('[Submit Error]', error);
-                    showToast('Fehler beim Speichern: ' + error.message, 'error', 5000);
+                    showToast('{% trans "Fehler beim Speichern" %}: ' + error.message, 'error', 5000);
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Speichern';
+                    submitBtn.innerHTML = '{% trans "Speichern" %}';
                     return;
                 }
 
-                // Echter Offline-Modus oder Timeout → Speichere lokal
-                console.log('[Offline] Server nicht erreichbar, speichere lokal:', error.message);
-
                 try {
-                    // Offline: Speichere in IndexedDB
-                    // WICHTIG: Bei Update ist das Select disabled → Wert direkt aus Select holen
                     const uebungId = formData.get('uebung') || uebungSelect.value;
-                    const uebungName = allExercises.find(ex => ex.id == uebungId)?.name || 'Übung';
-
-                    console.log('[Offline] uebungId:', uebungId, 'uebungName:', uebungName);
-
-                    // Prüfe ob es ein Update ist (URL enthält /set/X/update/)
+                    const uebungName = allExercises.find(ex => ex.id == uebungId)?.name || '{% trans "Übung" %}';
                     const isUpdate = setForm.action.includes('/set/') && setForm.action.includes('/update/');
 
                     const setData = {
@@ -1404,148 +1206,81 @@
                         is_update: isUpdate
                     };
 
-                    console.log('[Offline] Saving setData:', setData);
                     await offlineManager.saveOfflineData('trainingData', setData);
-                    console.log('[Offline] Save successful');
 
-                    // Toast anzeigen
                     const toast = document.createElement('div');
                     toast.className = 'connection-toast offline';
                     toast.innerHTML = isUpdate ?
-                        '💾 Änderung offline gespeichert - wird synchronisiert' :
-                        '💾 Satz offline gespeichert - wird synchronisiert';
+                        '💾 {% trans "Änderung offline gespeichert - wird synchronisiert" %}' :
+                        '💾 {% trans "Satz offline gespeichert - wird synchronisiert" %}';
                     document.body.appendChild(toast);
                     setTimeout(() => toast.remove(), 3000);
 
                     myModal.hide();
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Speichern';
+                    submitBtn.innerHTML = '{% trans "Speichern" %}';
 
-                    // Bei Update: Satz in UI aktualisieren + gelben Badge hinzufügen
-                    // Bei Add: Satz sofort in UI anzeigen (addOfflineSetToUI ruft updateOfflineBanner auf)
                     if (isUpdate) {
-                        console.log('[Offline] Update saved offline');
-
-                        // Extrahiere Set-ID aus URL (z.B. /set/359/update/)
                         const setIdMatch = setForm.action.match(/\/set\/(\d+)\/update\//);
                         if (setIdMatch) {
                             const setId = setIdMatch[1];
-                            console.log('[Offline] Updating set in UI, ID:', setId);
-
-                            // Finde den Edit-Button mit dieser Set-ID
                             const editBtn = document.querySelector(`button[onclick*="openEditModal('${setId}'"]`);
-                            console.log('[Offline] Edit button found:', !!editBtn);
-
                             if (editBtn) {
                                 const row = editBtn.closest('tr');
-                                console.log('[Offline] Row found:', !!row);
-
                                 if (row && row.cells && row.cells.length >= 3) {
-                                    // Aktualisiere Gewicht (Zelle 1 - nach der #-Spalte)
-                                    const gewichtCell = row.cells[1];
-                                    const gewichtSpan = gewichtCell.querySelector('.fw-bold');
-                                    console.log('[Offline] Gewicht span found:', !!gewichtSpan);
-
-                                    if (gewichtSpan) {
-                                        gewichtSpan.textContent = setData.gewicht;
-                                    }
-
-                                    // Aktualisiere Wiederholungen (Zelle 2)
-                                    const wdhCell = row.cells[2];
-                                    const wdhSpan = wdhCell.querySelector('.fw-bold');
-                                    console.log('[Offline] Wdh span found:', !!wdhSpan);
-
-                                    if (wdhSpan) {
-                                        wdhSpan.textContent = setData.wiederholungen;
-                                    }
-
-                                    // Füge gelben Hintergrund hinzu
+                                    const gewichtSpan = row.cells[1].querySelector('.fw-bold');
+                                    if (gewichtSpan) gewichtSpan.textContent = setData.gewicht;
+                                    const wdhSpan = row.cells[2].querySelector('.fw-bold');
+                                    if (wdhSpan) wdhSpan.textContent = setData.wiederholungen;
                                     row.classList.add('bg-warning', 'bg-opacity-10');
-
-                                    // Füge Offline-Badge hinzu
                                     if (!row.querySelector('.badge.bg-warning')) {
                                         const badge = document.createElement('span');
                                         badge.className = 'badge bg-warning ms-2';
                                         badge.innerHTML = '<i class="bi bi-cloud-upload me-1"></i>Offline';
-                                        gewichtCell.appendChild(badge);
+                                        row.cells[1].appendChild(badge);
                                     }
-
-                                    console.log('[Offline] UI updated successfully');
-                                } else {
-                                    console.warn('[Offline] Row or cells not found');
                                 }
-                            } else {
-                                console.warn('[Offline] Edit button not found for set ID:', setId);
                             }
-                        } else {
-                            console.warn('[Offline] Could not extract set ID from URL:', setForm.action);
                         }
-
-                        // Zeige zusätzlichen Hinweis
-                        const infoToast = document.createElement('div');
-                        infoToast.className = 'connection-toast offline';
-                        infoToast.style.top = '80px'; // Unter dem ersten Toast
-                        infoToast.innerHTML = '✓ UI aktualisiert - wird beim Sync übertragen';
-                        document.body.appendChild(infoToast);
-                        setTimeout(() => infoToast.remove(), 4000);
                     } else {
-                        console.log('[Offline] Adding to UI...');
                         addOfflineSetToUI(setData);
                     }
 
-                    // Registriere Background Sync
                     if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
                         navigator.serviceWorker.ready.then(registration => {
-                            console.log('[Offline] Registering background sync...');
                             return registration.sync.register('sync-training-data');
                         }).catch(err => console.error('Sync registration failed:', err));
                     }
                 } catch (offlineError) {
                     console.error('[Offline] Fehler beim Offline-Speichern:', offlineError);
-                    showToast('Offline-Speicherung fehlgeschlagen. Bitte später erneut versuchen.', 'error', 5000);
+                    showToast('{% trans "Offline-Speicherung fehlgeschlagen." %}', 'error', 5000);
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Speichern';
+                    submitBtn.innerHTML = '{% trans "Speichern" %}';
                 }
             }
         });
     </script>
 
-    <!-- Include Exercise Info Modal -->
     {% include 'core/exercise_info_modal.html' %}
-
-    <!-- Include AI Coach Chat -->
     {% include 'core/ai_coach_chat.html' %}
 
-    <!-- Toast Notification System -->
     <script src="{% static 'core/js/toast.js' %}"></script>
 
     <script>
-
-    // Funktion um offline Satz in UI hinzuzufügen
-
         function addOfflineSetToUI(setData) {
-            // Finde oder erstelle Übungs-Container
-            const uebungName = setData.uebung_name || 'Übung';
+            const uebungName = setData.uebung_name || '{% trans "Übung" %}';
             const mainContent = document.querySelector('.container > .row');
+            if (!mainContent) return;
 
-            if (!mainContent) {
-                console.error('[Offline] Could not find main content area');
-                return;
-            }
-
-            // Suche existierende Übungskarte
             let exerciseCard = null;
             const allCards = mainContent.querySelectorAll('.card');
-
             for (const card of allCards) {
                 const cardTitle = card.querySelector('.card-title, h5');
                 if (cardTitle && cardTitle.textContent.includes(uebungName)) {
-                    exerciseCard = card;
-                    break;
+                    exerciseCard = card; break;
                 }
             }
 
-            // Wenn Übung noch nicht existiert, erstelle neue Karte
             if (!exerciseCard) {
                 const col = document.createElement('div');
                 col.className = 'col-12';
@@ -1566,7 +1301,6 @@
                 exerciseCard = col.querySelector('.card');
             }
 
-            // Füge Satz zur Liste hinzu
             const setList = exerciseCard.querySelector('.set-list');
             const setDiv = document.createElement('div');
             setDiv.className = 'set-item d-flex justify-content-between align-items-center mb-2 p-2 border rounded bg-warning bg-opacity-10';
@@ -1574,29 +1308,21 @@
                 <div>
                     <i class="bi bi-cloud-upload text-warning me-2"></i>
                     <strong>#${setList.children.length + 1}</strong>
-                    <span class="ms-2">${setData.gewicht} kg × ${setData.wiederholungen} Wdh</span>
+                    <span class="ms-2">${setData.gewicht} kg × ${setData.wiederholungen} {% trans "Wdh" %}</span>
                     ${setData.rpe ? `<span class="badge bg-secondary ms-2">RPE ${setData.rpe}</span>` : ''}
                     ${setData.is_warmup ? '<span class="badge bg-info ms-2">Warm-up</span>' : ''}
                     ${setData.notiz ? `<br><small class="text-muted">${setData.notiz}</small>` : ''}
                 </div>
-                <div>
-                    <span class="badge bg-warning">Offline</span>
-                </div>
+                <div><span class="badge bg-warning">Offline</span></div>
             `;
             setList.appendChild(setDiv);
-
-            // Update oder erstelle Banner
             updateOfflineBanner();
         }
 
-        // Funktion um Offline-Banner zu aktualisieren
         function updateOfflineBanner() {
             offlineManager.getAllData('trainingData').then(allData => {
                 const trainingId = {{ training.id }};
-                const offlineSets = allData.filter(item =>
-                    item.training_id === trainingId && !item.synced
-                );
-
+                const offlineSets = allData.filter(item => item.training_id === trainingId && !item.synced);
                 let banner = document.getElementById('offline-banner');
 
                 if (offlineSets.length > 0) {
@@ -1604,18 +1330,14 @@
                         banner = document.createElement('div');
                         banner.id = 'offline-banner';
                         banner.className = 'alert alert-warning d-flex align-items-center mb-3';
-
                         const container = document.querySelector('.container');
-                        if (container) {
-                            container.insertBefore(banner, container.firstChild);
-                        }
+                        if (container) container.insertBefore(banner, container.firstChild);
                     }
-
                     banner.innerHTML = `
                         <i class="bi bi-cloud-upload me-2"></i>
                         <div>
-                            <strong>${offlineSets.length} Satz${offlineSets.length > 1 ? 'e' : ''} offline gespeichert</strong>
-                            <br><small>Werden automatisch synchronisiert wenn du wieder online bist</small>
+                            <strong>${offlineSets.length} {% trans "Satz" %}${offlineSets.length > 1 ? 'e' : ''} {% trans "offline gespeichert" %}</strong>
+                            <br><small>{% trans "Werden automatisch synchronisiert wenn du wieder online bist" %}</small>
                         </div>
                     `;
                 } else if (banner) {
@@ -1624,26 +1346,14 @@
             });
         }
 
-        // Offline Sätze beim Laden anzeigen
         async function loadOfflineSets() {
-            try {
-                updateOfflineBanner();
-            } catch (error) {
-                console.error('[Offline] Error loading offline sets:', error);
-            }
+            try { updateOfflineBanner(); } catch (error) { console.error('[Offline] Error:', error); }
         }
 
-        // Quick Tags für Notizen
         function insertTag(tag) {
             const notizInput = document.getElementById('notizInput');
             const currentValue = notizInput.value.trim();
-
-            if (currentValue) {
-                notizInput.value = currentValue + ' | ' + tag;
-            } else {
-                notizInput.value = tag;
-            }
-
+            notizInput.value = currentValue ? currentValue + ' | ' + tag : tag;
             updateCharCount();
             notizInput.focus();
         }
@@ -1657,9 +1367,7 @@
             const notizInput = document.getElementById('notizInput');
             const charCount = document.getElementById('charCount');
             const length = notizInput.value.length;
-
-            charCount.textContent = `${length} / 500 Zeichen`;
-
+            charCount.textContent = `${length} / 500 {% trans "Zeichen" %}`;
             if (length > 450) {
                 charCount.classList.add('text-warning');
                 charCount.classList.remove('text-muted');
@@ -1672,12 +1380,8 @@
             }
         }
 
-        // Nach DOMContentLoaded laden
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                loadOfflineSets();
-                updateCharCount();
-            });
+            document.addEventListener('DOMContentLoaded', () => { loadOfflineSets(); updateCharCount(); });
         } else {
             loadOfflineSets();
             updateCharCount();

@@ -9,10 +9,11 @@ Testet:
 - {% trans %} Tags im Header rendern korrekt
 """
 
-import pytest  # noqa: F401
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings  # noqa: F401
 from django.urls import reverse  # noqa: F401
-from django.contrib.auth import get_user_model
+
+import pytest  # noqa: F401
 
 User = get_user_model()
 
@@ -135,6 +136,7 @@ class I18nSettingsTest(TestCase):
     def test_mo_file_exists(self):
         """Kompilierte .mo Datei für Englisch muss existieren."""
         import os
+
         from django.conf import settings
 
         mo_path = settings.LOCALE_PATHS[0] / "en" / "LC_MESSAGES" / "django.mo"

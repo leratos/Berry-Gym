@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Cardio-Übersicht - HomeGym{% endblock %}
+{% block title %}{% trans "Cardio-Übersicht" %} - HomeGym{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -17,10 +18,10 @@
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="navbar-text page-title fw-bold">
-            <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio-Tracking
+            <i class="bi bi-heart-pulse-fill text-danger me-2"></i>{% trans "Cardio-Tracking" %}
         </span>
         <a href="{% url 'cardio_add' %}" class="btn btn-success">
-            <i class="bi bi-plus-circle me-1"></i>Hinzufügen
+            <i class="bi bi-plus-circle me-1"></i>{% trans "Hinzufügen" %}
         </a>
     </div>
 </nav>
@@ -29,13 +30,12 @@
 {% block content %}
 <div class="container pb-5">
 
-    <!-- Statistik-Karten -->
     <div class="row g-3 mb-4">
         <div class="col-6">
             <div class="card card-stat h-100">
                 <div class="card-body text-center">
                     <div class="fs-2 text-danger fw-bold">{{ total_einheiten }}</div>
-                    <div class="text-muted small">Einheiten{% if not show_all %} (30 Tage){% endif %}</div>
+                    <div class="text-muted small">{% trans "Einheiten" %}{% if not show_all %} (30 {% trans "Tage" %}){% endif %}</div>
                 </div>
             </div>
         </div>
@@ -43,50 +43,39 @@
             <div class="card card-stat h-100">
                 <div class="card-body text-center">
                     <div class="fs-2 text-primary fw-bold">{{ total_minuten }}</div>
-                    <div class="text-muted small">Minuten gesamt</div>
+                    <div class="text-muted small">{% trans "Minuten gesamt" %}</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filter -->
     <div class="mb-3">
         {% if show_all %}
             <a href="{% url 'cardio_list' %}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-calendar3 me-1"></i>Nur letzte 30 Tage
+                <i class="bi bi-calendar3 me-1"></i>{% trans "Nur letzte 30 Tage" %}
             </a>
         {% else %}
             <a href="{% url 'cardio_list' %}?all=1" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-calendar-range me-1"></i>Alle anzeigen
+                <i class="bi bi-calendar-range me-1"></i>{% trans "Alle anzeigen" %}
             </a>
         {% endif %}
     </div>
 
-    <!-- Cardio-Liste -->
     {% if cardio_einheiten %}
     <div class="list-group">
         {% for cardio in cardio_einheiten %}
         <div class="list-group-item d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
                 <div class="me-3 fs-4">
-                    {% if cardio.aktivitaet == 'SCHWIMMEN' %}
-                        <i class="bi bi-water text-info"></i>
-                    {% elif cardio.aktivitaet == 'LAUFEN' %}
-                        <i class="bi bi-person-walking text-success"></i>
-                    {% elif cardio.aktivitaet == 'RADFAHREN' %}
-                        <i class="bi bi-bicycle text-warning"></i>
-                    {% elif cardio.aktivitaet == 'RUDERN' %}
-                        <i class="bi bi-tsunami text-primary"></i>
-                    {% elif cardio.aktivitaet == 'GEHEN' %}
-                        <i class="bi bi-signpost-split text-secondary"></i>
-                    {% elif cardio.aktivitaet == 'HIIT' %}
-                        <i class="bi bi-lightning-fill text-danger"></i>
-                    {% elif cardio.aktivitaet == 'STEPPER' %}
-                        <i class="bi bi-stairs text-info"></i>
-                    {% elif cardio.aktivitaet == 'SEILSPRINGEN' %}
-                        <i class="bi bi-arrow-repeat text-success"></i>
-                    {% else %}
-                        <i class="bi bi-heart-pulse text-danger"></i>
+                    {% if cardio.aktivitaet == 'SCHWIMMEN' %}<i class="bi bi-water text-info"></i>
+                    {% elif cardio.aktivitaet == 'LAUFEN' %}<i class="bi bi-person-walking text-success"></i>
+                    {% elif cardio.aktivitaet == 'RADFAHREN' %}<i class="bi bi-bicycle text-warning"></i>
+                    {% elif cardio.aktivitaet == 'RUDERN' %}<i class="bi bi-tsunami text-primary"></i>
+                    {% elif cardio.aktivitaet == 'GEHEN' %}<i class="bi bi-signpost-split text-secondary"></i>
+                    {% elif cardio.aktivitaet == 'HIIT' %}<i class="bi bi-lightning-fill text-danger"></i>
+                    {% elif cardio.aktivitaet == 'STEPPER' %}<i class="bi bi-stairs text-info"></i>
+                    {% elif cardio.aktivitaet == 'SEILSPRINGEN' %}<i class="bi bi-arrow-repeat text-success"></i>
+                    {% else %}<i class="bi bi-heart-pulse text-danger"></i>
                     {% endif %}
                 </div>
                 <div>
@@ -100,17 +89,17 @@
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-primary rounded-pill">{{ cardio.dauer_minuten }} Min</span>
                 {% if cardio.intensitaet == 'LEICHT' %}
-                    <span class="badge bg-success">Leicht</span>
+                    <span class="badge bg-success">{% trans "Leicht" %}</span>
                 {% elif cardio.intensitaet == 'MODERAT' %}
-                    <span class="badge bg-warning text-dark">Moderat</span>
+                    <span class="badge bg-warning text-dark">{% trans "Moderat" %}</span>
                 {% else %}
-                    <span class="badge bg-danger">Intensiv</span>
+                    <span class="badge bg-danger">{% trans "Intensiv" %}</span>
                 {% endif %}
-                <span class="badge bg-secondary" title="Ermüdungspunkte">
+                <span class="badge bg-secondary" title="{% trans "Ermüdungspunkte" %}">
                     <i class="bi bi-battery-half"></i> {{ cardio.ermuedungs_punkte }}
                 </span>
                 <form method="post" action="{% url 'cardio_delete' cardio.id %}" class="d-inline"
-                      onsubmit="return confirm('{{ cardio.get_aktivitaet_display }} wirklich löschen?')">
+                      onsubmit="return confirm('{{ cardio.get_aktivitaet_display }} {% trans "wirklich löschen?" %}')">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger">
                         <i class="bi bi-trash"></i>
@@ -122,22 +111,20 @@
     </div>
     {% else %}
     <div class="alert alert-secondary text-center">
-        <i class="bi bi-heart-pulse me-2"></i>Noch keine Cardio-Einheiten erfasst.
+        <i class="bi bi-heart-pulse me-2"></i>{% trans "Noch keine Cardio-Einheiten erfasst." %}
         <br>
         <a href="{% url 'cardio_add' %}" class="btn btn-success mt-3">
-            <i class="bi bi-plus-circle me-1"></i>Erste Cardio-Einheit hinzufügen
+            <i class="bi bi-plus-circle me-1"></i>{% trans "Erste Cardio-Einheit hinzufügen" %}
         </a>
     </div>
     {% endif %}
 
-    <!-- Quick Info -->
     <div class="card card-stat mt-4">
         <div class="card-body">
-            <h6 class="text-muted mb-2"><i class="bi bi-info-circle me-1"></i>Info</h6>
+            <h6 class="text-muted mb-2"><i class="bi bi-info-circle me-1"></i>{% trans "Info" %}</h6>
             <p class="mb-0 small text-muted">
-                Cardio-Einheiten werden im <strong>Ermüdungs-Index</strong> berücksichtigt und helfen dem
-                <strong>KI-Coach</strong>, dein Krafttraining besser zu planen. Leichtes Cardio fördert
-                die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht.
+                {% trans "Cardio-Einheiten werden im" %} <strong>{% trans "Ermüdungs-Index" %}</strong> {% trans "berücksichtigt und helfen dem" %}
+                <strong>{% trans "KI-Coach" %}</strong>, {% trans "dein Krafttraining besser zu planen. Leichtes Cardio fördert die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht." %}
             </p>
         </div>
     </div>

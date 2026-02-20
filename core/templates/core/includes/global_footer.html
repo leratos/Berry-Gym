@@ -1,4 +1,5 @@
 <!-- Global Footer - Include in allen Seiten -->
+{% load i18n %}
 
 <!-- Scientific Disclaimers (shown based on URL and category) -->
 {% include 'includes/disclaimer_banner.html' %}
@@ -9,29 +10,29 @@
             <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
                 <span class="text-muted">
                     &copy; {{ current_year|default:"2026" }} HomeGym
-                    <span class="d-none d-sm-inline">- Dein persönliches Fitness-Tracking</span>
+                    <span class="d-none d-sm-inline">- {% trans "Dein persönliches Fitness-Tracking" %}</span>
                 </span>
             </div>
             <div class="col-md-6 text-center text-md-end">
                 <a href="{% url 'plan_library' %}" class="text-muted text-decoration-none me-3">
-                    <i class="bi bi-book"></i> Plan-Bibliothek
+                    <i class="bi bi-book"></i> {% trans "Plan-Bibliothek" %}
                 </a>
                 {% if user.is_authenticated %}
                 <a href="{% url 'cardio_list' %}" class="text-muted text-decoration-none me-3">
-                    <i class="bi bi-heart-pulse"></i> Cardio
+                    <i class="bi bi-heart-pulse"></i> {% trans "Cardio" %}
                 </a>
                 <a href="{% url 'feedback_list' %}" class="text-muted text-decoration-none me-3">
-                    <i class="bi bi-chat-dots"></i> Feedback
+                    <i class="bi bi-chat-dots"></i> {% trans "Feedback" %}
                 </a>
                 {% endif %}
                 <a href="{% url 'datenschutz' %}" class="text-muted text-decoration-none me-3">
-                    <i class="bi bi-shield-check"></i> Datenschutz
+                    <i class="bi bi-shield-check"></i> {% trans "Datenschutz" %}
                 </a>
                 <a href="{% url 'impressum' %}" class="text-muted text-decoration-none me-3">
-                    <i class="bi bi-file-text"></i> Impressum
+                    <i class="bi bi-file-text"></i> {% trans "Impressum" %}
                 </a>
                 <a href="{% url 'sources_list' %}" class="text-muted text-decoration-none">
-                    <i class="bi bi-journal-bookmark"></i> Quellen
+                    <i class="bi bi-journal-bookmark"></i> {% trans "Quellen" %}
                 </a>
             </div>
         </div>
