@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load i18n static %}
 
-{% block title %}Wissenschaftliche Quellen – HomeGym{% endblock %}
+{% block title %}{% trans "Wissenschaftliche Quellen" %} – HomeGym{% endblock %}
 
 {% block content %}
 <div class="container mt-4 mb-5">
@@ -11,12 +11,11 @@
     <div class="col">
       <h1 class="h3 fw-bold">
         <i class="bi bi-journal-bookmark text-primary me-2"></i>
-        Wissenschaftliche Quellen
+        {% trans "Wissenschaftliche Quellen" %}
       </h1>
       <p class="text-muted">
-        Die Algorithmen und Empfehlungen in HomeGym basieren auf peer-reviewter Forschungsliteratur.
-        Hier findest du alle verwendeten Quellen.
-        <strong>{{ gesamt_count }} Quellen</strong> insgesamt.
+        {% trans "Die Algorithmen und Empfehlungen in HomeGym basieren auf peer-reviewter Forschungsliteratur. Hier findest du alle verwendeten Quellen." %}
+        <strong>{% blocktrans with n=gesamt_count %}{{ n }} Quellen{% endblocktrans %}</strong> {% trans "insgesamt." %}
       </p>
     </div>
   </div>
@@ -26,7 +25,7 @@
     <div class="d-flex flex-wrap gap-2">
       <a href="{% url 'sources_list' %}"
          class="btn btn-sm {% if not selected_category %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-        <i class="bi bi-grid me-1"></i>Alle ({{ gesamt_count }})
+        <i class="bi bi-grid me-1"></i>{% blocktrans with n=gesamt_count %}Alle ({{ n }}){% endblocktrans %}
       </a>
       {% for kat in kategorien %}
       <a href="{% url 'sources_list' %}?category={{ kat.key }}"
@@ -100,10 +99,10 @@
                 <a href="{{ quelle.url }}"
                    target="_blank" rel="noopener noreferrer"
                    class="btn btn-sm btn-outline-secondary">
-                  <i class="bi bi-link-45deg me-1"></i>Link
+                  <i class="bi bi-link-45deg me-1"></i>{% trans "Link" %}
                 </a>
                 {% else %}
-                <span class="text-muted" style="font-size:0.8rem;">Kein Link</span>
+                <span class="text-muted" style="font-size:0.8rem;">{% trans "Kein Link" %}</span>
                 {% endif %}
               </div>
             </div>
@@ -116,18 +115,16 @@
   {% else %}
     <div class="text-center py-5 text-muted">
       <i class="bi bi-search display-4 d-block mb-3"></i>
-      Keine Quellen in dieser Kategorie gefunden.
-      <a href="{% url 'sources_list' %}">Alle Quellen anzeigen</a>
+      {% trans "Keine Quellen in dieser Kategorie gefunden." %}
+      <a href="{% url 'sources_list' %}">{% trans "Alle Quellen anzeigen" %}</a>
     </div>
   {% endif %}
 
   <!-- Hinweis -->
   <div class="alert alert-info mt-5" role="alert">
     <i class="bi bi-info-circle me-2"></i>
-    <strong>Hinweis:</strong> Die ℹ-Icons in der App verweisen auf diese Seite.
-    Wissenschaftliche Empfehlungen sind Richtwerte – individuelle Faktoren
-    (Genetik, Erholung, Ernährung) beeinflussen das Ergebnis.
-    Diese App ersetzt keine professionelle Trainingsberatung.
+    <strong>{% trans "Hinweis:" %}</strong>
+    {% trans "Die ℹ-Icons in der App verweisen auf diese Seite. Wissenschaftliche Empfehlungen sind Richtwerte – individuelle Faktoren (Genetik, Erholung, Ernährung) beeinflussen das Ergebnis. Diese App ersetzt keine professionelle Trainingsberatung." %}
   </div>
 
 </div>

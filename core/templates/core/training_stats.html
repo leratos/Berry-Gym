@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Trainingsstatistiken{% endblock %}
+{% block title %}{% trans "Trainingsstatistiken" %}{% endblock %}
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,15 +14,15 @@
     <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
         <i class="bi bi-arrow-left"></i> Dashboard
     </a>
-    <span class="navbar-text page-title fw-bold">Statistiken</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Statistiken" %}</span>
     <div>
-        <a href="{% url 'export_training_pdf' %}" class="btn btn-outline-danger border-0 me-2" title="Als PDF exportieren">
+        <a href="{% url 'export_training_pdf' %}" class="btn btn-outline-danger border-0 me-2" title="{% trans "Als PDF exportieren" %}">
             <i class="bi bi-file-pdf"></i> PDF
         </a>
-        <a href="{% url 'export_training_csv' %}" class="btn btn-outline-success border-0" title="Als CSV exportieren">
+        <a href="{% url 'export_training_csv' %}" class="btn btn-outline-success border-0" title="{% trans "Als CSV exportieren" %}">
             <i class="bi bi-file-earmark-spreadsheet"></i> CSV
         </a>
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans "Theme wechseln" %}">
           <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -35,28 +36,28 @@
     {% if no_data %}
         <div class="text-center py-5 text-muted">
             <i class="bi bi-graph-up display-1 opacity-25"></i>
-            <p class="mt-3">Noch keine Trainings-Daten vorhanden.</p>
-            <a href="{% url 'training_select_plan' %}" class="btn btn-primary mt-2">Jetzt trainieren</a>
+            <p class="mt-3">{% trans "Noch keine Trainings-Daten vorhanden." %}</p>
+            <a href="{% url 'training_select_plan' %}" class="btn btn-primary mt-2">{% trans "Jetzt trainieren" %}</a>
         </div>
     {% else %}
 
         <div class="row g-3 mb-4">
             <div class="col-4">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Trainings</small>
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Trainings" %}</small>
                     <div class="display-6 fw-bold text-primary">{{ trainings_count }}</div>
                 </div>
             </div>
             <div class="col-4">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Gesamt-Volumen</small>
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Gesamt-Volumen" %}</small>
                     <div class="display-6 fw-bold text-success">{{ gesamt_volumen|floatformat:0 }}</div>
                     <small class="text-muted">kg</small>
                 </div>
             </div>
             <div class="col-4">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">Ø pro Training</small>
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Ø pro Training" %}</small>
                     <div class="display-6 fw-bold text-info">{{ durchschnitt_volumen|floatformat:0 }}</div>
                     <small class="text-muted">kg</small>
                 </div>
@@ -66,7 +67,7 @@
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
-                    <i class="bi bi-graph-up-arrow me-2"></i>Volumen-Progression (pro Training)
+                    <i class="bi bi-graph-up-arrow me-2"></i>{% trans "Volumen-Progression (pro Training)" %}
                 </h6>
                 <canvas id="volumenChart" style="max-height: 300px;"></canvas>
             </div>
@@ -75,27 +76,27 @@
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
-                    <i class="bi bi-calendar-week me-2"></i>Wöchentliches Volumen (letzte 12 Wochen)
+                    <i class="bi bi-calendar-week me-2"></i>{% trans "Wöchentliches Volumen (letzte 12 Wochen)" %}
                 </h6>
                 {% if deload_warnings %}
                 <div class="alert alert-warning border-warning mb-3">
-                    <h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Volumen-Analyse</h6>
+                    <h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>{% trans "Volumen-Analyse" %}</h6>
                     {% for warning in deload_warnings %}
                         {% if warning.type == 'spike' %}
                         <div class="small mb-2">
                             <strong>{{ warning.week }}:</strong>
-                            <span class="text-danger">+{{ warning.increase }}% Anstieg</span>
+                            <span class="text-danger">+{{ warning.increase }}% {% trans "Anstieg" %}</span>
                             ({{ warning.volume }} kg)<br>
                             <i class="bi bi-info-circle me-1"></i>
-                            <em>Achte auf ausreichende Regeneration! Bei zu schnellem Volumen-Anstieg steigt das Verletzungsrisiko.</em>
+                            <em>{% trans "Achte auf ausreichende Regeneration! Bei zu schnellem Volumen-Anstieg steigt das Verletzungsrisiko." %}</em>
                         </div>
                         {% elif warning.type == 'drop' %}
                         <div class="small mb-2">
                             <strong>{{ warning.week }}:</strong>
-                            <span class="text-info">-{{ warning.decrease }}% Rückgang</span>
+                            <span class="text-info">-{{ warning.decrease }}% {% trans "Rückgang" %}</span>
                             ({{ warning.volume }} kg)<br>
                             <i class="bi bi-info-circle me-1"></i>
-                            <em>Starker Volumen-Rückgang erkannt. Achte auf Motivation und Regeneration.</em>
+                            <em>{% trans "Starker Volumen-Rückgang erkannt. Achte auf Motivation und Regeneration." %}</em>
                         </div>
                         {% endif %}
                     {% endfor %}
@@ -108,7 +109,7 @@
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
-                    <i class="bi bi-diagram-3 me-2"></i>Muskelgruppen-Balance
+                    <i class="bi bi-diagram-3 me-2"></i>{% trans "Muskelgruppen-Balance" %}
                 </h6>
                 <div class="row">
                     <div class="col-md-7">
@@ -116,13 +117,13 @@
                     </div>
                     <div class="col-md-5">
                         <div class="text-center mb-2">
-                            <small class="text-muted">Belastungsverteilung</small>
+                            <small class="text-muted">{% trans "Belastungsverteilung" %}</small>
                         </div>
                         <div id="svgBalanceWrapper" style="max-width: 100%; height: 400px; overflow: hidden;"></div>
                         <div class="text-center mt-2">
                             <small class="text-muted">
                                 <span style="display: inline-block; width: 40px; height: 12px; background: linear-gradient(to right, #d9d9d9, #ff0000); border: 1px solid #666; border-radius: 2px; vertical-align: middle;"></span>
-                                <span class="ms-2">Niedrig → Hoch</span>
+                                <span class="ms-2">{% trans "Niedrig → Hoch" %}</span>
                             </small>
                         </div>
                     </div>
@@ -133,29 +134,29 @@
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
-                    <i class="bi bi-calendar-check me-2"></i>Trainings-Aktivität (letzte 90 Tage)
+                    <i class="bi bi-calendar-check me-2"></i>{% trans "Trainings-Aktivität (letzte 90 Tage)" %}
                 </h6>
                 <div id="heatmap" style="min-height: 150px;"></div>
                 <small class="text-muted d-block mt-2 text-center">
-                    <i class="bi bi-square-fill text-secondary me-1" style="font-size: 0.6rem;"></i> Kein Training
-                    <i class="bi bi-square-fill ms-3" style="color: rgba(25, 135, 84, 0.3); font-size: 0.6rem;"></i> 1 Training
-                    <i class="bi bi-square-fill" style="color: rgba(25, 135, 84, 0.6); font-size: 0.6rem;"></i> 2 Trainings
-                    <i class="bi bi-square-fill" style="color: rgba(25, 135, 84, 1); font-size: 0.6rem;"></i> 3+ Trainings
+                    <i class="bi bi-square-fill text-secondary me-1" style="font-size: 0.6rem;"></i> {% trans "Kein Training" %}
+                    <i class="bi bi-square-fill ms-3" style="color: rgba(25, 135, 84, 0.3); font-size: 0.6rem;"></i> {% trans "1 Training" %}
+                    <i class="bi bi-square-fill" style="color: rgba(25, 135, 84, 0.6); font-size: 0.6rem;"></i> {% trans "2 Trainings" %}
+                    <i class="bi bi-square-fill" style="color: rgba(25, 135, 84, 1); font-size: 0.6rem;"></i> {% trans "3+ Trainings" %}
                 </small>
             </div>
         </div>
 
         <div class="card card-stat border-secondary mb-4">
             <div class="card-header border-secondary">
-                <h6 class="mb-0 text-white">Muskelgruppen-Details</h6>
+                <h6 class="mb-0 text-white">{% trans "Muskelgruppen-Details" %}</h6>
             </div>
             <div class="table-responsive">
                 <table class="table table-dark table-hover mb-0">
                     <thead class="text-secondary small">
                         <tr>
-                            <th>Muskelgruppe</th>
-                            <th class="text-center">Sätze</th>
-                            <th class="text-end">Eff. Wiederholungen</th>
+                            <th>{% trans "Muskelgruppe" %}</th>
+                            <th class="text-center">{% trans "Sätze" %}</th>
+                            <th class="text-end">{% trans "Eff. Wiederholungen" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -177,7 +178,7 @@
 
         <div class="alert alert-info">
             <i class="bi bi-info-circle me-2"></i>
-            <strong>Tipp:</strong> Schaue auch bei einzelnen Übungen für detaillierte Progressions-Analysen!
+            <strong>{% trans "Tipp" %}:</strong> {% trans "Schaue auch bei einzelnen Übungen für detaillierte Progressions-Analysen!" %}
         </div>
 
     {% endif %}
@@ -203,7 +204,7 @@
         data: {
             labels: {{ volumen_labels_json|safe }},
             datasets: [{
-                label: 'Volumen (kg)',
+                label: '{% trans "Volumen (kg)" %}',
                 data: {{ volumen_data_json|safe }},
                 borderColor: '#198754',
                 backgroundColor: 'rgba(25, 135, 84, 0.1)',
@@ -218,7 +219,7 @@
         data: {
             labels: {{ weekly_labels_json|safe }},
             datasets: [{
-                label: 'Wochenvolumen (kg)',
+                label: '{% trans "Wochenvolumen (kg)" %}',
                 data: {{ weekly_data_json|safe }},
                 backgroundColor: '#0dcaf0', borderColor: '#0dcaf0', borderWidth: 1
             }]
@@ -231,7 +232,7 @@
         data: {
             labels: {{ mg_labels_json|safe }},
             datasets: [{
-                label: 'Effektive Wiederholungen',
+                label: '{% trans "Effektive Wiederholungen" %}',
                 data: {{ mg_data_json|safe }},
                 backgroundColor: [
                     '#0d6efd','#6610f2','#6f42c1','#d63384',
@@ -304,7 +305,7 @@
                 });
             }
         })
-        .catch(e => console.error('Fehler beim Laden der SVG:', e));
+        .catch(e => console.error('{% trans "Fehler beim Laden der SVG" %}:', e));
 </script>
 {% endif %}
 {% endblock %}

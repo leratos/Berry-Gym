@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load i18n static %}
 
-{% block title %}Datenschutzerklärung - HomeGym{% endblock %}
+{% block title %}{% trans "Datenschutzerklärung" %} - HomeGym{% endblock %}
 
 {% block header %}{% endblock %}
 
@@ -134,10 +134,10 @@
                     <hr class="my-4 border-secondary">
                     <div class="text-center">
                         <a href="{% url 'impressum' %}" class="btn btn-outline-success me-2">
-                            <i class="bi bi-file-text"></i> Impressum
+                            <i class="bi bi-file-text"></i> {% trans "Impressum" %}
                         </a>
                         <a href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left"></i> Zurück
+                            <i class="bi bi-arrow-left"></i> {% trans "Zurück" %}
                         </a>
                     </div>
                 </div>

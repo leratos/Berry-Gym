@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Training abschließen{% endblock %}
+{% block title %}{% trans "Training abschließen" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -37,11 +38,11 @@
 <nav class="navbar navbar-page border-bottom mb-4">
   <div class="container-fluid">
     <a class="btn btn-outline-secondary border-0" href="{% url 'training_session' training.id %}">
-        <i class="bi bi-arrow-left"></i> Zurück
+        <i class="bi bi-arrow-left"></i> {% trans "Zurück" %}
     </a>
-    <span class="navbar-text page-title fw-bold">Training beenden</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Training beenden" %}</span>
     <div style="width: 40px;">
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans 'Theme wechseln' %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -54,34 +55,34 @@
 
   <div class="text-center mb-4">
     <div class="congrats-icon">🎉</div>
-    <h2 class="mb-2">Gut gemacht!</h2>
-    <p class="text-muted">Du hast es geschafft – hier ist deine Zusammenfassung</p>
+    <h2 class="mb-2">{% trans "Gut gemacht!" %}</h2>
+    <p class="text-muted">{% trans "Du hast es geschafft – hier ist deine Zusammenfassung" %}</p>
   </div>
 
   <div class="row g-3 mb-4">
     <div class="col-6">
       <div class="stat-card rounded-3 p-3 text-center">
-        <div class="stat-label mb-2">Arbeitssätze</div>
+        <div class="stat-label mb-2">{% trans "Arbeitssätze" %}</div>
         <div class="stat-number text-primary">{{ arbeitssaetze_count }}</div>
       </div>
     </div>
     <div class="col-6">
       <div class="stat-card rounded-3 p-3 text-center">
-        <div class="stat-label mb-2">Übungen</div>
+        <div class="stat-label mb-2">{% trans "Übungen" %}</div>
         <div class="stat-number text-info">{{ uebungen_count }}</div>
       </div>
     </div>
     <div class="col-12">
       <div class="stat-card rounded-3 p-4 text-center">
-        <div class="stat-label mb-2">Gesamtvolumen</div>
+        <div class="stat-label mb-2">{% trans "Gesamtvolumen" %}</div>
         <div class="stat-number text-success">{{ total_volume|floatformat:0 }} <span class="fs-4 text-muted">kg</span></div>
-        <small class="text-muted">Gewicht × Wiederholungen (ohne Warmup)</small>
+        <small class="text-muted">{% trans "Gewicht × Wiederholungen (ohne Warmup)" %}</small>
       </div>
     </div>
     {% if warmup_saetze_count > 0 %}
     <div class="col-12">
       <div class="stat-card rounded-3 p-3 text-center">
-        <div class="stat-label mb-2">Aufwärmsätze</div>
+        <div class="stat-label mb-2">{% trans "Aufwärmsätze" %}</div>
         <div class="stat-number text-warning fs-3">{{ warmup_saetze_count }}</div>
       </div>
     </div>
@@ -94,14 +95,14 @@
       <i class="bi {{ ai_suggestion.icon }} fs-2 me-3"></i>
       <div class="flex-grow-1">
         <h5 class="alert-heading mb-2">
-          <i class="bi bi-lightbulb-fill me-2"></i>AI-Trainings-Tipp #{{ training_count }}
+          <i class="bi bi-lightbulb-fill me-2"></i>{% trans "AI-Trainings-Tipp" %} #{{ training_count }}
         </h5>
         <p class="mb-2"><strong>{{ ai_suggestion.title }}</strong></p>
         <p class="mb-2">{{ ai_suggestion.message }}</p>
         <hr>
         <p class="mb-0">
           <i class="bi bi-arrow-right-circle me-2"></i>
-          <strong>Empfehlung:</strong> {{ ai_suggestion.action }}
+          <strong>{% trans "Empfehlung" %}:</strong> {{ ai_suggestion.action }}
         </p>
       </div>
     </div>
@@ -113,26 +114,26 @@
     <div class="card card-stat border-secondary mb-3">
       <div class="card-body">
         <label class="form-label text-secondary small text-uppercase mb-2">
-          <i class="bi bi-clock-history"></i> Trainingsdauer
+          <i class="bi bi-clock-history"></i> {% trans "Trainingsdauer" %}
         </label>
         <div class="input-group mb-3">
           <input type="number" name="dauer_minuten" class="form-control bg-dark text-white border-secondary"
                  value="{{ dauer_geschaetzt }}" min="1" max="300" required>
-          <span class="input-group-text bg-dark text-secondary border-secondary">Minuten</span>
+          <span class="input-group-text bg-dark text-secondary border-secondary">{% trans "Minuten" %}</span>
         </div>
         <label class="form-label text-secondary small text-uppercase mb-2">
-          <i class="bi bi-chat-left-text"></i> Wie lief's? (optional)
+          <i class="bi bi-chat-left-text"></i> {% trans "Wie lief's? (optional)" %}
         </label>
         <textarea name="kommentar" class="form-control bg-dark text-white border-secondary" rows="3"
-                  placeholder="z.B. Gutes Pump-Gefühl, Schulter etwas müde...">{{ training.kommentar|default:"" }}</textarea>
+                  placeholder="{% trans 'z.B. Gutes Pump-Gefühl, Schulter etwas müde...' %}">{{ training.kommentar|default:"" }}</textarea>
       </div>
     </div>
     <div class="d-grid gap-2 mt-4">
       <button type="submit" class="btn btn-success btn-lg fw-bold">
-        <i class="bi bi-check-circle-fill me-2"></i> Training speichern
+        <i class="bi bi-check-circle-fill me-2"></i> {% trans "Training speichern" %}
       </button>
       <a href="{% url 'training_session' training.id %}" class="btn btn-outline-secondary">
-        Nochmal anpassen
+        {% trans "Nochmal anpassen" %}
       </a>
     </div>
   </form>

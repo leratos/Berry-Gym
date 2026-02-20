@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Cardio hinzufügen - HomeGym{% endblock %}
+{% block title %}{% trans "Cardio hinzufügen" %} - HomeGym{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -16,7 +17,7 @@
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="navbar-text page-title fw-bold">
-            <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Cardio hinzufügen
+            <i class="bi bi-heart-pulse-fill text-danger me-2"></i>{% trans "Cardio hinzufügen" %}
         </span>
         <span></span>
     </div>
@@ -34,15 +35,15 @@
                         {% csrf_token %}
 
                         <div class="mb-3">
-                            <label for="datum" class="form-label">Datum</label>
+                            <label for="datum" class="form-label">{% trans "Datum" %}</label>
                             <input type="date" class="form-control" id="datum" name="datum"
                                    value="{{ heute }}" required>
                         </div>
 
                         <div class="mb-3">
-                            <label for="aktivitaet" class="form-label">Aktivität</label>
+                            <label for="aktivitaet" class="form-label">{% trans "Aktivität" %}</label>
                             <select class="form-select" id="aktivitaet" name="aktivitaet" required>
-                                <option value="">Bitte wählen...</option>
+                                <option value="">{% trans "Bitte wählen..." %}</option>
                                 {% for code, name in aktivitaeten %}
                                     <option value="{{ code }}">{{ name }}</option>
                                 {% endfor %}
@@ -50,17 +51,17 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="dauer_minuten" class="form-label">Dauer (Minuten)</label>
+                            <label for="dauer_minuten" class="form-label">{% trans "Dauer (Minuten)" %}</label>
                             <div class="input-group">
                                 <input type="number" class="form-control" id="dauer_minuten"
                                        name="dauer_minuten" min="1" max="480" placeholder="60" required>
                                 <span class="input-group-text">Min</span>
                             </div>
-                            <div class="form-text">Wie lange hast du trainiert?</div>
+                            <div class="form-text">{% trans "Wie lange hast du trainiert?" %}</div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Intensität</label>
+                            <label class="form-label">{% trans "Intensität" %}</label>
                             <div class="d-flex gap-2 flex-wrap">
                                 {% for code, name in intensitaeten %}
                                 <div class="form-check form-check-inline">
@@ -82,39 +83,38 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="notiz" class="form-label">Notiz (optional)</label>
+                            <label for="notiz" class="form-label">{% trans "Notiz (optional)" %}</label>
                             <input type="text" class="form-control" id="notiz" name="notiz"
-                                   maxlength="200" placeholder="z.B. Brustschwimmen, Intervalle, etc.">
+                                   maxlength="200" placeholder="{% trans "z.B. Brustschwimmen, Intervalle, etc." %}">
                         </div>
 
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-success">
-                                <i class="bi bi-check-circle me-1"></i>Speichern
+                                <i class="bi bi-check-circle me-1"></i>{% trans "Speichern" %}
                             </button>
                             <a href="{% url 'cardio_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle me-1"></i>Abbrechen
+                                <i class="bi bi-x-circle me-1"></i>{% trans "Abbrechen" %}
                             </a>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Ermüdungs-Info -->
             <div class="card card-stat mt-3">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2"><i class="bi bi-battery-half me-1"></i>Ermüdungspunkte</h6>
+                    <h6 class="text-muted mb-2"><i class="bi bi-battery-half me-1"></i>{% trans "Ermüdungspunkte" %}</h6>
                     <table class="table table-sm table-borderless mb-0 small">
                         <tr>
-                            <td><span class="badge bg-success">Leicht</span></td>
-                            <td>~0.1 pro Minute (60 Min = 6 Punkte)</td>
+                            <td><span class="badge bg-success">{% trans "Leicht" %}</span></td>
+                            <td>~0.1 {% trans "pro Minute" %} (60 Min = 6 {% trans "Punkte" %})</td>
                         </tr>
                         <tr>
-                            <td><span class="badge bg-warning text-dark">Moderat</span></td>
-                            <td>~0.2 pro Minute (60 Min = 12 Punkte)</td>
+                            <td><span class="badge bg-warning text-dark">{% trans "Moderat" %}</span></td>
+                            <td>~0.2 {% trans "pro Minute" %} (60 Min = 12 {% trans "Punkte" %})</td>
                         </tr>
                         <tr>
-                            <td><span class="badge bg-danger">Intensiv</span></td>
-                            <td>~0.4 pro Minute (60 Min = 24 Punkte)</td>
+                            <td><span class="badge bg-danger">{% trans "Intensiv" %}</span></td>
+                            <td>~0.4 {% trans "pro Minute" %} (60 Min = 24 {% trans "Punkte" %})</td>
                         </tr>
                     </table>
                 </div>

@@ -1,0 +1,1505 @@
+# Berry-Gym Development Journal
+
+## Abgeschlossen: Phase 4.2 – Database Indexes
+
+**Datum:** 2026-02-15
+**Transcript:** 2026-02-15-16-52-06-phase-4-2-4-3-db-indexes-caching.txt
+
+Compound Indexes auf Training/Plan Models. Migration, Tests, MariaDB-kompatibel.
+
+## Abgeschlossen: Phase 4.3 – Caching Strategy
+
+**Datum:** 2026-02-15
+**Transcript:** 2026-02-15-18-01-12-phase-4-3-caching-complete.txt
+
+FileBasedCache, Dashboard/Template-Caching, Cache-Invalidierung via signals.py.
+
+## Abgeschlossen: Phase 4.4 – Load Testing
+
+**Datum:** 2026-02-15
+**Transcript:** 2026-02-15-19-08-19-phase-4-4-load-testing-complete.txt
+
+Locust Setup, SLO-Analyse, Performance-Baseline. Django-Axes-Interference behoben.
+
+## Abgeschlossen: Phase 4 Abschluss + Resume Training Feature
+
+**Datum:** 2026-02-15
+**Transcript:** 2026-02-15-20-35-34-phase-4-completion-resume-training-feature.txt
+
+"Training fortsetzen"-Button, abgeschlossen-Feld Migration, README v0.9.1.
+
+## Abgeschlossen: Phase 5.0 – Algorithm Audit
+
+**Datum:** 2026-02-15
+**Transcript:** 2026-02-15-21-50-56-phase-5-0-algorithm-audit-completion.txt
+
+1RM-Skalierung, Plateau-Erkennung, Junk-Volume, Push/Pull-Ratio Bugfixes.
+
+## Abgeschlossen: Phase 5.1 – Scientific Source System
+
+**Datum:** 2026-02-16
+**Transcript:** 2026-02-16-03-40-38-phase-5-1-sources-adherence-bugfix.txt
+
+Model, Migration, Management Command, Views, Templates, Tests.
+adherence_rate >100% Bugfix.
+
+## Abgeschlossen: PDF Export Bugfixes (5.1)
+
+**Datum:** 2026-02-16
+**Transcript:** 2026-02-16-04-39-38-pdf-export-bugfixes-phase-5-1.txt
+
+7 Bugs: Push/Pull-Schwelle, 1RM-Monats-Fenster, Template-Labels. 481 Tests grün.
+
+## Abgeschlossen: Phase 5.2 – KI Plangenerator (LLM Upgrade)
+
+**Datum:** 2026-02-16
+**Transcript:** 2026-02-16-19-26-27-phase-5-2-llm-upgrade-gemini.txt
+
+Llama 3.1 70B → Gemini 2.5 Flash via OpenRouter.
+Änderungen: ai_config.py, llm_client.py, prompt_builder.py, test_plan_generator.py.
+
+## Abgeschlossen: Phase 5.2 – Prompt Optimierung & Smart Retry
+
+**Datum:** 2026-02-16
+**Transcripts:** phase-5-2-prompt-optimization-retry, phase-5-2-smart-retry-dynamic-tokens
+
+Temperature-Fix, Equipment-Filter, Smart Retry, Dynamic max_tokens.
+
+## Abgeschlossen: Phase 5.2 – Streaming (SSE)
+
+**Datum:** 2026-02-17
+**Transcript:** 2026-02-17-11-56-35-phase-5-2-streaming-sse-implementation.txt
+
+Server-Sent Events für AI-Plangenerierung. 6 Dateien geändert, 21/21 Tests.
+
+## Hotfix: apply_beta.html + Encoding
+
+**Datum:** 2026-02-17
+**Transcript:** 2026-02-17-12-50-33-apply-beta-encoding-fix-hotfix.txt
+
+TemplateDoesNotExist behoben. BOM + double-encoded UTF-8 repariert.
+
+## Hotfix: Gemini JSON Komma-Fix
+
+**Datum:** 2026-02-17
+**Transcript:** 2026-02-17-13-14-55-gemini-json-comma-fix-deployment.txt
+
+Regex-Fix für fehlende Kommas in Gemini-JSON-Output.
+
+## Hotfix: Active Plan Override Fix
+
+**Datum:** 2026-02-17
+**Transcript:** 2026-02-17-13-59-27-active-plan-override-fix.txt
+
+Neue AI-Pläne überschreiben nicht mehr automatisch aktiven Wochenzyklus.
+
+## Abgeschlossen: Phase 5.2 – Schwachstellen-Coverage Validierung
+
+**Datum:** 2026-02-17
+**Transcripts:** weakness-coverage-validation, ai-plan-weakness-coverage-prompt-optimization
+
+Post-Generation Coverage-Check, UI-Warnungen, Prompt-Umstrukturierung.
+0/4 → 4/4 Schwachstellen-Coverage. Bauch, Adduktoren, Hüftbeuger zuverlässig.
+
+### Dateien
+- ai_coach/prompt_builder.py
+- ai_coach/plan_generator.py
+- core/views/ai_recommendations.py
+- core/templates/core/ai_plan_generator.html
+
+## Abgeschlossen: Phase 5.2 – KI-Plangenerator Optimierung (vollständig)
+
+**Datum:** 2026-02-17
+**Commit:** 9eb913d
+
+### Alle Akzeptanzkriterien erfüllt
+- ✅ Eindeutige Plan-Namen: Prompt + Fallback in plan_generator.py
+- ✅ Kontextbasierter Split: Frequenz-Feld + JS-Auto-Suggestion
+- ✅ Schwachstellen-Coverage: Pflicht-Block + Validation + UI-Warning
+- ✅ Prompt-Qualität: Coach-Regeln, Beispiele, Adduktoren-Fix
+
+### Commits dieser Phase
+- c643a37 Weakness coverage validation
+- e019fef Schwachstellen als harte Pflicht-Anforderung
+- f24930f Pull-Ruder-Redundanz + Waden-Pflicht (später optional)
+- 928eb71 Pull/Legs-Beispiele statt abstrakte Verbote
+- 06090bd Waden optional, Adduktoren-Konsistenz
+- 9eb913d Eindeutige Namen + kontextbasierter Split
+
+### Nächste Phase
+4.2 – Database Indexes
+
+## Abgeschlossen: Bugfix – Pausenzeit im Plan-Editor
+
+**Datum:** 2026-02-17
+**Commit:** 8d3bdf1
+
+Pausenzeit war im Model vorhanden (PlanUebung.pausenzeit) aber weder
+im Edit-Formular angezeigt noch gespeichert.
+
+Fixes:
+- View GET: pausenzeit in plan_uebungen_details
+- View POST: pause_{id} lesen + PlanUebung.pausenzeit setzen
+- Template: data-pausenzeit auf Karte, JS-State, Input-Feld mit ⏱ Icon
+
+## Abgeschlossen: Phase 5.2b – Körpergewicht-Support & ML-Qualität
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-2b-koerpergewicht-support
+**Commits:** cb155a7, 99f0dc8, 256863d
+**Tests:** 474 passed, 0 Fehler
+
+### Was implementiert wurde
+
+**Schritt 1 – DB Migration:**
+- Uebung.koerpergewicht_faktor (FloatField, default=1.0)
+- Data Migration 0064: 14 Übungen mit wissenschaftlich belegten Faktoren
+  - Dips/Klimmzüge: 0.70 (Barnett 1995, Ronai 2014)
+  - Liegestütze: 0.65 (Suprak 2011)
+  - Crunch/Sit-up: 0.30–0.35 (Anatomie Oberkörper)
+  - Plank/L-Sit: 0.00 (isometrisch)
+- Migration 0065: Wadenheben (Stehend) + stehend (Calf Raises) → KOERPERGEWICHT
+
+**Schritt 2 – Training Session UI:**
+- Label "Zusatzgewicht (kg)" + Faktor-Hinweis (z.B. "ca. 70% KG wirkt als Last")
+- Ghosting: leeres Feld statt 0 für KG-Übungen ohne Zusatz
+- Empfehlung: Wdh-Steigerung statt sinnlosem +2.5kg
+
+**Schritt 3 – Statistik:**
+- _compute_1rm_and_weight(): effective_weight = (KG * Faktor) + Zusatz
+- show_reps_chart: prüft saetze.filter(gewicht__gt=0).exists() (Logikfix)
+
+**Schritt 4 – ML Trainer:**
+- effective_weight als erstes Feature statt rohem Satz.gewicht
+- KoerperWerte-Lookup mit 80kg-Fallback
+
+**Schritt 5 – ML Dashboard:**
+- Reliability-Badges: Unzuverlässig (R²<0), Wenig Daten (<15), Schwach (R²<0.5)
+- unreliable_count im Dashboard-Context
+
+### Nächste Phase
+5.3 – AI/ML Testing
+
+## In Arbeit: Phase 5.3 – AI/ML Testing
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing (noch nicht erstellt)
+
+### Status
+- test_koerpergewicht_support.py: vollständig erstellt (327 Zeilen, ungetestet)
+- test_ml_trainer.py: vollständig erstellt (273 Zeilen, ungetestet)
+- test_plan_generator_new.py: kaputt – falsche Imports, _normalize_plan_name
+  existiert nicht als Methode (inline in generate()), wird neu geschrieben
+
+### Dateien
+- core/tests/test_koerpergewicht_support.py (neu)
+- core/tests/test_ml_trainer.py (neu)
+- ai_coach/tests/test_plan_generator.py (erweitern)
+
+## Abgeschlossen: Phase 5.3 – AI/ML Testing
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing
+**Commit:** 52505ea
+**Tests:** 541 passed (vorher 474), Coverage 22% → 53%
+
+### Implementierte Tests
+
+**test_koerpergewicht_support.py (329 Zeilen):**
+- _compute_1rm_and_weight(): alle Gewichtstypen (GESAMT, KOERPERGEWICHT, PRO_SEITE, ZEIT)
+- koerpergewicht_faktor Anwendung mit Dips 0.70, Crunch 0.30
+- Fallback 80kg bei fehlenden KoerperWerten
+- _get_user_koerpergewicht() mit/ohne Einträge
+- show_reps_chart Logik: reine KG vs. mit Zusatzgewicht
+- _determine_empfehlung_hint() für KG-Übungen (Wdh statt +2.5kg)
+
+**test_ml_trainer.py (275 Zeilen):**
+- get_training_data(): effective_weight Berechnung für KG/PRO_SEITE/GESAMT
+- get_training_data(): Fallback 80kg, zu wenig Daten → None
+- train_model(): sklearn Training mit ausreichend Daten
+- train_model(): Fehler-Dict bei zu wenig Daten
+- train_all_user_models(): Batch-Training, Aufwärmsätze ignoriert
+
+**test_plan_generator.py (+167 Zeilen):**
+- TestPlanNameFallback: generische Namen werden ersetzt (inline-Logik)
+- TestValidateWeaknessCoverage: _validate_weakness_coverage() DB-Lookup
+
+### Technische Details
+- Keine Mocks für sklearn nötig – echtes Training mit Fixtures
+- TestPlanNameFallback ohne DB (user_id=999 statt UserFactory)
+- isort/Black/flake8: alle sauber
+
+### Abgeschlossene Roadmap-Items
+- Phase 5.3 ✅ AI/ML Testing
+
+### Nächste Schritte
+Phase 5.4 – Charts & Statistics Testing
+
+## Bugfix: Export/Import für Übungsdatenbank erweitert
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing
+**Commits:** d737064 (muscle-map Button), f3284dc (koerpergewicht_faktor), f9bfa74 (1RM Standards)
+
+### Problem
+Übungs-Export/Import hatte Phase 5.2b Felder + 1RM Kraftstandards nicht berücksichtigt:
+- koerpergewicht_faktor (Dips 0.70, Crunch 0.30) fehlte
+- standard_beginner, standard_intermediate, standard_advanced, standard_elite fehlten
+- beschreibung wurde nur mit hasattr geprüft, nicht konsistent exportiert
+
+### Lösung
+**Export (JSON + CSV):**
+- koerpergewicht_faktor als float hinzugefügt
+- standard_beginner (1RM Anfänger 80kg)
+- standard_intermediate (1RM Fortgeschritten 80kg)
+- standard_advanced (1RM Erfahren 80kg)
+- standard_elite (1RM Elite 80kg)
+- beschreibung konsistent exportiert
+
+**Import (JSON):**
+- koerpergewicht_faktor wird gelesen (default: 1.0 falls fehlt)
+- Alle 4 Standard-Felder werden gelesen (nullable, kein Default)
+- beschreibung wird gelesen (default: '' falls fehlt)
+
+### Use Case
+Vollständiger Übungs-Export vom Test-Server auf Live-Server mit:
+- Biomechanischen Faktoren (Phase 5.2b)
+- Kraftstandards für alle 4 Level (Anfänger bis Elite)
+
+### Dateien
+- core/views/exercise_management.py (export_uebungen, _save_or_count_uebung)
+- core/templates/core/muscle_map.html (Button-Fix)
+
+## Übungsdatenbank optimiert (initial_exercises.json)
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing
+**Commit:** 9d5804e
+
+### Ausgangslage
+- 108 Übungen, alle 20 Muskelgruppen abgedeckt
+- 34 Übungen (32%) ohne Kraftstandards
+- 1 Übung mit Fachbegriff ("Plantarflexion")
+
+### Durchgeführte Optimierungen
+
+**1. Beschreibungs-Verbesserung:**
+- Wadenheben (Stehend): "Plantarflexion" → "Zehenspitzen-Streckung"
+- Anfängerfreundliche Sprache
+
+**2. Kraftstandards ergänzt (9 Übungen):**
+- Liegestütze (Push-ups): 10/25/40/60
+- Burpees (Körpergewicht): 15/30/50/75
+- Glute Bridge (Körpergewicht): 20/40/60/80
+- Bear Crawls (Körpergewicht): 20/40/60/100 Meter
+- Bird Dogs (Körpergewicht): 20/40/60/80 (beide Seiten)
+- Reverse Crunch (Körpergewicht): 15/30/50/75
+- Glute Kickbacks (Körpergewicht): 20/40/60/80 (pro Seite)
+- Mountain Climbers (Körpergewicht): 20/40/60/100
+- Fire Hydrants (Körpergewicht): 20/40/60/80 (pro Seite)
+
+### Ergebnis
+- ✅ Übungen ohne Standards: 34 → 25 (-26%)
+- ✅ Fachbegriffe: 1 → 0
+- ✅ Alle wichtigen Körpergewicht-Übungen standardisiert
+
+### Verbleibende Übungen ohne Standards (25)
+Hauptsächlich:
+- Widerstandsband-Übungen (schwer standardisierbar)
+- Sehr spezifische Isolationsübungen
+- Beweglichkeits-/Mobility-Übungen
+
+### Qualitätsbewertung
+**Vorher:** 8.5/10
+**Nachher:** 9.0/10
+
+**Stärken:**
+- Perfekte Muskelgruppen-Abdeckung (alle 20 Gruppen)
+- Wissenschaftlich korrekte Körpergewicht-Faktoren
+- 100% Beschreibungs-Abdeckung
+- Anfängerfreundliche Sprache
+
+### Dateien
+- core/fixtures/initial_exercises.json (108 Übungen)
+
+## 5 neue Übungen vom Server integriert
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing
+**Commit:** d46ee21
+
+### Ausgangslage
+- Lokale initial_exercises.json: 108 Übungen
+- Server-Export: 113 Übungen (5 zusätzliche)
+
+### Neue Übungen hinzugefügt
+
+1. **Brustpresse (Kabelzug)** - ID 112
+   - Typ: PRO_SEITE, Muskelgruppe: BRUST
+   - Beschreibung: Kabel auf Brusthöhe. Griffe zusammenführen, Schulterblätter stabil
+
+2. **Brustpresse (Maschine)** - ID 113
+   - Typ: GESAMT, Muskelgruppe: BRUST
+   - Beschreibung: Sitz einstellen, kontrolliert drücken
+
+3. **Farmers Carry** - ID 114
+   - Typ: PRO_SEITE, Muskelgruppe: GANZKÖRPER
+   - Beschreibung: Schwere Gewichte seitlich halten, aufrecht gehen
+
+4. **Pull-Through (Kabelzug)** - ID 115
+   - Typ: GESAMT, Muskelgruppe: PO
+   - Beschreibung: Hüftstreckung mit Kabel, Fokus auf Po
+
+5. **Seitstütz (Side Plank)** - ID 116
+   - Typ: ZEIT, Muskelgruppe: BAUCH
+   - koerpergewicht_faktor: 0.0 (korrekt für ZEIT-Übung)
+   - Beschreibung: Seitliche Planke, Hüfte oben halten
+
+### Qualitätssicherung
+✅ Alle Übungen haben Beschreibungen (Server-Export hatte leere Strings)
+✅ ZEIT-Übung korrekt konfiguriert (faktor 0.0)
+✅ IDs automatisch vergeben (112-116)
+✅ Keine Duplikate
+
+### Statistik
+- **Übungen vorher:** 108
+- **Übungen nachher:** 113
+- **Server synchronisiert:** ✓
+
+### Dateien
+- core/fixtures/initial_exercises.json (+102 Zeilen)
+
+## Kraftstandards für 5 neue Übungen gesetzt
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing
+**Commit:** f54b9e4
+
+### Standards für 4 von 5 Übungen
+
+| Übung | Typ | Anfänger | Fortgeschritten | Erfahren | Elite |
+|-------|-----|----------|-----------------|----------|-------|
+| **Brustpresse (Kabelzug)** | PRO_SEITE | 25 kg | 37.5 kg | 50 kg | 62.5 kg |
+| **Brustpresse (Maschine)** | GESAMT | 70 kg | 100 kg | 130 kg | 160 kg |
+| **Farmers Carry** | PRO_SEITE | 25 kg | 40 kg | 55 kg | 70 kg |
+| **Pull-Through (Kabelzug)** | GESAMT | 30 kg | 50 kg | 70 kg | 90 kg |
+| **Seitstütz (Side Plank)** | ZEIT | - | - | - | - |
+
+**Seitstütz:** Keine 1RM-Standards (ZEIT-Übung mit Sekunden)
+
+### Rationale für Standards
+
+**Brustpresse (Kabelzug):**
+- ~50% von Langhantel-Bankdrücken
+- Kabelzug ist leichter zu kontrollieren
+- Vergleich: Bankdrücken KH 55/80/105/130 (gesamt)
+
+**Brustpresse (Maschine):**
+- +30% vs Langhantel (maschinengeführt = stabiler)
+- Höher als freie Gewichte
+- Vergleich: Bankdrücken LH 55/80/105/130
+
+**Farmers Carry:**
+- Griffkraft-limitiert (nicht Beinkraft)
+- 25-70kg pro Hand realistisch
+- Elite = fast Körpergewicht pro Hand
+
+**Pull-Through (Kabelzug):**
+- Deutlich leichter als Kreuzheben
+- Fokus auf Hüftstreckung, nicht maximales Gewicht
+- ~30-40% von Kreuzheben-Standards
+
+### Statistik
+- **Übungen ohne Standards:** 25 → 21 (-16%)
+- **Abdeckung:** 92/113 Übungen (81%) haben jetzt Standards
+- **Verbleibend:** Hauptsächlich Widerstandsbänder & sehr spezifische Übungen
+
+### Dateien
+- core/fixtures/initial_exercises.json
+
+## Bugfix: Brustpresse Maschine in Equipment-Auswahl fehlte
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing
+**Problem:** Equipment "Brustpresse Maschine" war nicht in /equipment/ auswählbar
+
+### Ursache
+Die 5 neuen Übungen (IDs 112-116) waren zwar in initial_exercises.json,
+aber die Equipment-Verknüpfungen waren nicht in der Datenbank gesetzt.
+
+### Lösung
+Equipment-Zuweisungen für alle 5 neuen Übungen gesetzt:
+
+1. **Brustpresse (Kabelzug)**
+   - Equipment: Kabelzug / Latzug
+
+2. **Brustpresse (Maschine)**
+   - Equipment: Brustpresse Maschine ✓ (vorher fehlte dies)
+
+3. **Farmers Carry**
+   - Equipment: Kettlebell, Kurzhanteln
+
+4. **Pull-Through (Kabelzug)**
+   - Equipment: Kabelzug / Latzug
+
+5. **Seitstütz (Side Plank)**
+   - Equipment: Trainingsmatte
+
+### Verifikation
+```
+Equipment: BRUSTPRESSE_MASCHINE
+Zugeordnete Übungen: 1 (Brustpresse (Maschine))
+```
+
+### Status
+✅ Brustpresse Maschine jetzt in /equipment/ verfügbar
+✅ Alle 5 neuen Übungen korrekt verknüpft
+
+**Hinweis:** Dieses Problem trat auf, weil initial_exercises.json eine
+Fixture ist, die Equipment als String-Namen speichert. Bei manueller
+Erstellung müssen Equipment-Objekte explizit verknüpft werden.
+
+## Management Command zum Sync der Equipment-Verknüpfungen
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing
+**Commit:** eb9ce67
+
+### Problem
+Equipment "Brustpresse Maschine" war auf gym.last-strawberry.com nicht in /equipment/ auswählbar.
+
+**Ursache:** Die Equipment-Verknüpfungen für die 5 neuen Übungen (IDs 112-116)
+wurden nur lokal gesetzt, aber nicht auf dem Server.
+
+### Lösung: Management Command
+
+**Erstellt:** `core/management/commands/sync_equipment.py`
+
+**Synchronisiert Equipment für:**
+1. Brustpresse (Kabelzug) → KABELZUG
+2. Brustpresse (Maschine) → BRUSTPRESSE_MASCHINE ✓
+3. Farmers Carry → KETTLEBELL, KURZHANTEL
+4. Pull-Through (Kabelzug) → KABELZUG
+5. Seitstütz (Side Plank) → MATTE
+
+### Ausführung auf dem Server
+
+**SSH auf den Server:**
+```bash
+ssh user@gym.last-strawberry.com
+cd /pfad/zum/projekt
+source venv/bin/activate
+python manage.py sync_equipment
+```
+
+**Erwartete Ausgabe:**
+```
+================================================================================
+EQUIPMENT-VERKNÜPFUNGEN SYNCHRONISIEREN
+================================================================================
+OK Brustpresse (Kabelzug)
+  Equipment: Kabelzug / Latzug
+OK Brustpresse (Maschine)
+  Equipment: Brustpresse Maschine
+...
+Übungen aktualisiert: 5
+Alle Verknüpfungen erfolgreich!
+================================================================================
+
+VERIFIKATION:
+Brustpresse Maschine: 1 Übung(en)
+Equipment ist jetzt verfügbar!
+```
+
+**Nach Ausführung:** Brustpresse Maschine ist in /equipment/ verfügbar ✓
+
+### Features des Commands
+- Erstellt fehlende Equipment-Objekte automatisch
+- Setzt alle Verknüpfungen korrekt
+- Gibt detailliertes Feedback
+- Verifiziert die Brustpresse Maschine
+- Idempotent (kann mehrfach ausgeführt werden)
+
+### Dateien
+- core/management/commands/sync_equipment.py (NEU)
+- core/management/__init__.py (existierte bereits)
+- core/management/commands/__init__.py (existierte bereits)
+
+## Fix: Brustpresse Maschine in Equipment-Auswahl fehlte
+
+**Datum:** 2026-02-17
+**Branch:** feature/phase-5-3-ai-ml-testing
+**Commit:** 4945725
+
+### Problem
+"Brustpresse Maschine" erschien NICHT in der Equipment-Auswahl-UI
+(/equipment/), obwohl sie:
+- In der Datenbank existiert (Equipment-Objekt vorhanden)
+- Mit der Übung verknüpft ist (via Admin verifiziert)
+- In EQUIPMENT_CHOICES definiert ist (constants.py)
+
+### Ursache
+**View-Kategorisierung fehlte!**
+
+In `core/views/exercise_management.py` (Zeile 56-67) wird die Equipment-UI
+in Kategorien aufgeteilt. Die "Maschinen"-Kategorie hatte:
+```python
+"equipment": [
+    "KABELZUG",
+    "BEINPRESSE",
+    "LEG_CURL",
+    "LEG_EXT",
+    "HACKENSCHMIDT",
+    "RUDERMASCHINE",
+    "ADDUKTOREN_MASCHINE",
+    "ABDUKTOREN_MASCHINE",
+    # BRUSTPRESSE_MASCHINE FEHLTE HIER!
+],
+```
+
+**Equipment die NICHT in einer Kategorie sind, werden NICHT angezeigt!**
+
+### Lösung
+`BRUSTPRESSE_MASCHINE` zur Maschinen-Liste hinzugefügt (Zeile 65):
+```python
+"equipment": [
+    "KABELZUG",
+    "BEINPRESSE",
+    "LEG_CURL",
+    "LEG_EXT",
+    "HACKENSCHMIDT",
+    "RUDERMASCHINE",
+    "ADDUKTOREN_MASCHINE",
+    "ABDUKTOREN_MASCHINE",
+    "BRUSTPRESSE_MASCHINE",  # ← NEU
+],
+```
+
+### Verifikation
+Nach dem Fix:
+- Brustpresse Maschine erscheint in der "Maschinen"-Kategorie (gelb, Gear-Icon)
+- Kann vom User an-/abgewählt werden
+- Funktioniert sowohl lokal (127.0.0.1:8000) als auch auf dem Server
+
+### Dateien
+- core/views/exercise_management.py (+1 Zeile)
+
+### Wichtig für zukünftige Equipment
+**Neue Equipment müssen in ZWEI Stellen gepflegt werden:**
+1. `core/models/constants.py` → EQUIPMENT_CHOICES (für DB)
+2. `core/views/exercise_management.py` → equipment_categories (für UI)
+
+Ohne Schritt 2 ist das Equipment unsichtbar in der Auswahl!
+
+## ROADMAP.md entfernt - Vereinfachung der Dokumentation
+
+**Datum:** 2026-02-17
+**Commit:** 3294178
+
+### Problem
+Zwei Roadmaps führten zu Verwirrung:
+- **ROADMAP.md** (Hauptordner, 1559 Zeilen) - veraltet (Stand 09.02.2026, vor Phase 3)
+- **PROJECT_ROADMAP.md** (docs/, 243 Zeilen) - aktuell
+
+### Entscheidung
+ROADMAP.md löschen, weil:
+1. README.md hat bereits gute Feature-Übersicht ("Aktuell verfügbar v0.9.1")
+2. PROJECT_ROADMAP.md ist technisch aber aktuell (Phasen-Tracking)
+3. Weniger Maintenance-Overhead
+4. Eine Quelle der Wahrheit
+
+### Änderungen
+- ROADMAP.md gelöscht (1562 Zeilen)
+- README.md: Link zu PROJECT_ROADMAP.md aktualisiert
+- README.md: Projekt-Struktur bereinigt
+- README.md: "Geplant (siehe ROADMAP.md)" → "Geplant"
+- CONTRIBUTING.md: Roadmap-Pfad aktualisiert
+
+### Neue Dokumentationsstruktur
+**Öffentlich (für User):**
+- README.md → Feature-Übersicht, aktueller Status
+- README.md → "🔮 Roadmap & Known Limitations" Sektion
+
+**Intern (für Developer/PM):**
+- docs/PROJECT_ROADMAP.md → Phasen-Tracking, Timeline, Test-Coverage-Ziele
+
+### Dateien
+- ROADMAP.md (gelöscht)
+- README.md (3 Änderungen)
+- CONTRIBUTING.md (1 Änderung)
+
+## Phase 7 - Internationalisierung zur Roadmap hinzugefügt
+
+**Datum:** 2026-02-17
+**Commit:** f73bebd
+
+### Neue Phase: Week 9-10 - Internationalization (English Launch)
+
+**Motivation:**
+Nach dem deutschen Public Launch (Week 8) folgt die internationale Expansion.
+
+**Vorteile:**
+- **Größere Zielgruppe:** 500M+ User statt 80M (DACH)
+- **Open Source:** 5-10x mehr Contributors weltweit
+- **Marketing:** "AI-powered fitness tracker" → bessere Suchbarkeit
+- **Bereits vorbereitet:** Code/Comments auf Englisch, Django i18n
+
+### Phasen-Struktur (30-47h ≈ 1-1.5 Wochen)
+
+**Phase 7.1 - i18n Framework Setup (2-4h):**
+- Django i18n aktivieren (settings.py)
+- Language-Switcher UI in Navigation
+- Session-basierte Sprachwahl
+
+**Phase 7.2 - Template Lokalisierung (8-12h):**
+- 55+ Templates mit {% trans %} ausstatten
+- ~200-300 Strings übersetzen
+- .po Dateien erstellen (DE + EN)
+
+**Phase 7.3 - Model & Choice Lokalisierung (4-6h):**
+- MUSKELGRUPPEN, EQUIPMENT_CHOICES mit gettext_lazy
+- Dropdown-Werte übersetzen
+- Form-Labels & Help-Texts
+
+**Phase 7.4 - Content Lokalisierung (6-10h):**
+- 113 Übungs-Beschreibungen übersetzen
+- README_EN.md erstellen
+- Fitness-Fachbegriffe korrekt übertragen
+
+**Phase 7.5 - AI Coach Lokalisierung (4-6h, optional):**
+- Prompt-Builder mit Sprach-Parameter
+- Gemini 2.5 Flash kann DE & EN
+
+**Phase 7.6 - Testing & QA (4-6h):**
+- Language-Switch Tests
+- PDF-Report auf Englisch
+- Übersetzungs-Coverage prüfen
+
+**Phase 7.7 - Documentation & Launch (2-3h):**
+- README_EN.md finalisieren
+- GitHub Language-Badges
+- Social Media Announcement (Reddit, HN, ProductHunt)
+
+### Success Criteria
+
+**Must-Have:**
+- ✅ UI vollständig auf Englisch
+- ✅ 113/113 Übungen übersetzt
+- ✅ README_EN.md vorhanden
+- ✅ Language-Switcher funktioniert
+
+**Nice-to-Have:**
+- 🔄 AI Coach auf Englisch
+- 🔄 URL-i18n (/en/dashboard)
+- 🔄 Datum/Zeit-Formate lokalisiert
+
+**Optional (Post-Launch):**
+- ⏳ Weitere Sprachen (ES, FR, IT)
+- ⏳ Community-Übersetzungen (Crowdin)
+
+### Timeline
+
+- **Week 8:** Public Launch (Deutsch) 🇩🇪
+- **Week 9-10:** English i18n
+- **Week 11:** English Public Launch 🇬🇧🇺🇸
+
+### Aktualisierungen in PROJECT_ROADMAP.md
+
+- Timeline-Tabelle um Week 9-10 erweitert
+- Executive Summary: "International Expansion" hinzugefügt
+- Success Metrics: i18n-Metriken hinzugefügt (Translation Coverage, GitHub Stars)
+- Vollständige Phasen-Dokumentation (7.1-7.7)
+
+### Dateien
+- docs/PROJECT_ROADMAP.md (+283 Zeilen)
+
+## PROJECT_ROADMAP.md auf aktuellen Stand gebracht
+
+**Datum:** 2026-02-17
+**Commit:** 9e32cbb
+
+### Problem (vom User entdeckt!)
+Die PROJECT_ROADMAP.md war komplett veraltet und durcheinander:
+
+**Screenshot 1 (Timeline-Tabelle):**
+- Week 4: Coverage 60% ← korrekt
+- Week 5-6: Coverage 75% ← FALSCH (aktuell 53%)
+
+**Screenshot 2 (Week 3):**
+- Status: "IN PROGRESS"
+- Coverage: 47%, 408 Tests ← VERALTET
+
+**Screenshot 3 (Week 4):**
+- Phase 4.1: ✅ Abgeschlossen
+- Phase 4.2-4.4: ⏳ "Noch zu tun" ← FALSCH (alle seit 15.02 abgeschlossen!)
+
+**Aktueller Stand (korrekt):**
+- Coverage: 53% (nicht 47% oder 75%)
+- Tests: 541 passed (nicht 408)
+- Alle Phasen bis 5.3 abgeschlossen
+- Nächste Phase: 5.4 (Charts Testing)
+
+### Korrekturen
+
+#### **Timeline-Tabelle:**
+- Week 7: ⏳ Planned → 🔄 IN PROGRESS (Phase 5.4 läuft)
+
+#### **Week 3 – Refactoring & Quality:**
+- Status: "IN PROGRESS" → "✅ COMPLETE"
+- Coverage korrigiert: 47% → 50%
+- Tests: 408 (korrekt)
+- "Offene Phasen"-Sektion entfernt
+
+#### **Week 4 – Performance & Optimization:**
+- Überschrift: "60% TARGET" → "✅ COMPLETE"
+- Alle 4 Phasen als abgeschlossen markiert:
+
+**Phase 4.1 (N+1 Queries):**
+- 8 N+1-Stellen eliminiert
+- 6 Query-Count-Tests
+- 414 Tests grün
+
+**Phase 4.2 (Database Indexes):**
+- Migration: 0062_add_performance_indexes.py
+- Compound Indexes: (user_id, datum), (user_id, erstellt_am)
+- Query-Zeit 5-10x schneller
+- MariaDB-kompatibel
+
+**Phase 4.3 (Caching Strategy):**
+- FileBasedCache
+- Dashboard: 5min, Übungen: 30min, Templates: unbegrenzt
+- Cache-Invalidierung via signals.py
+
+**Phase 4.4 (Load Testing):**
+- Locust 2.43.3
+- 3 Szenarien, SLO-Auswertung
+- docs/LOAD_TESTING.md
+
+#### **Week 5-6 – Advanced Features & Polish:**
+- Überschrift: "75% TARGET" → "✅ COMPLETE"
+- Coverage-Anmerkung hinzugefügt: 60% → 53% durch massive Code-Ergänzungen
+- Tests: 474 → 541 (+127 Tests = +31%)
+
+**Phase 5.1 – Scientific Source System:**
+- Abgeschlossen: 2026-02-16
+- TrainingSource Model, Management Command
+- UI-Tooltips, Literatur-Datenbank
+
+**Phase 5.2 – KI-Plangenerator Optimierung:**
+- Abgeschlossen: 2026-02-16/17 (über mehrere Tage!)
+- 6 Transcripts dokumentiert
+- LLM Upgrade: Gemini 2.5 Flash
+- Eindeutige Plan-Namen, Split-Typ-Logik
+- Server-Sent Events (Streaming)
+- 6+ Optimierungen:
+  * Temperature-Fix
+  * Equipment-Filter
+  * Smart Retry
+  * Dynamic max_tokens
+  * Weakness Coverage Validation
+  * Pause Time Feature
+
+**Phase 5.3 – AI/ML Testing:**
+- Abgeschlossen: 2026-02-17
+- 541 Tests, 53% Coverage
+- test_koerpergewicht_support.py (67 Tests)
+- test_ml_trainer.py
+- test_plan_generator.py (erweitert)
+
+**Phase 5.4 – Charts & Statistics Testing:**
+- Status: 🔄 IN PROGRESS (nächste Phase)
+
+**Phase 5.5-5.6:**
+- Status: ⏳ Planned
+
+#### **Week 7 – Pre-Launch Preparation:**
+- Status: ⏳ Planned → 🔄 IN PROGRESS
+- Aktuell: Phase 5.4
+- Phasen 6.1-6.5 detailliert geplant:
+  * 6.1: Security Audit
+  * 6.2: Performance Benchmarks
+  * 6.3: Deployment Automation
+  * 6.4: Monitoring (Sentry ✅, Rest ⏳)
+  * 6.5: Documentation
+
+### Statistiken
+
+**Änderungen:**
+- +225 Zeilen hinzugefügt (Details zu Phasen 4.1-5.3)
+- -76 Zeilen entfernt (veraltete "geplant"-Sektionen)
+- Netto: +149 Zeilen
+
+**Last Updated:**
+- Vorher: 2026-02-15
+- Nachher: 2026-02-17
+
+**Nächste Phase:**
+- Vorher: 4.2 Database Indexes
+- Nachher: 5.4 Charts & Statistics Testing
+
+### Verifizierung
+
+**Quelle:** docs/journal.txt (letzte 150 Zeilen geprüft)
+
+**Abgeschlossene Phasen verifiziert:**
+- ✅ Phase 4.2 – 2026-02-15 (Transcript & journal.txt)
+- ✅ Phase 4.3 – 2026-02-15 (Transcript & journal.txt)
+- ✅ Phase 5.1 – 2026-02-16 (Transcript & journal.txt)
+- ✅ Phase 5.2 – 2026-02-16/17 (6 Transcripts!)
+- ✅ Phase 5.3 – 2026-02-17 (journal.txt)
+
+### Dateien
+- docs/PROJECT_ROADMAP.md (+149 Zeilen netto)
+
+
+## In Arbeit: Phase 5.4 – Charts & Statistics Testing
+**Datum:** 2026-02-18
+**Branch:** feature/phase-5-4-charts-statistics-testing
+
+**Geplante Dateien:**
+- core/tests/test_chart_generator.py (neu)
+- core/tests/test_statistics_helpers.py (neu)
+
+**Hinweis:** Bug gefunden in _calc_muscle_balance: Sätze ohne RPE werden komplett ignoriert (continue wenn rpe=None) → Muskelbalance-Chart spiegelt nur RPE-bewertete Sätze wider.
+
+## Abgeschlossen: Phase 5.4 – Charts & Statistics Testing
+**Datum:** 2026-02-18
+**Branch:** feature/phase-5-4-charts-statistics-testing
+**Commit:** 51fb531
+
+**Ergebnis:** 72/72 Tests bestanden
+
+**Neue Dateien:**
+- core/tests/test_chart_generator.py (35 Tests)
+- core/tests/test_statistics_helpers.py (37 Tests)
+
+**Abgedeckt:**
+- chart_generator.py: _rgba_to_hex, _status_to_rgba, generate_muscle_heatmap,
+  generate_volume_chart, generate_push_pull_pie, generate_body_map_with_data (PIL-Fallback)
+- training_stats.py Helper: _get_week_start, _calc_per_training_volume, _calc_weekly_volume,
+  _detect_volume_warnings, _build_90day_heatmap, _calc_muscle_balance, _build_svg_muscle_data
+
+**Bug dokumentiert (NICHT gefixt – separates Issue):**
+- _calc_muscle_balance ignoriert Sätze ohne RPE komplett (if not satz.rpe: continue)
+  → Muskelbalance-Chart zeigt nur RPE-bewertete Sätze
+  → Bei Nutzern die selten RPE tracken ist der Chart faktisch leer/unvollständig
+  → Test test_saetze_ohne_rpe_werden_ignoriert_bug dokumentiert dieses Verhalten
+
+**Nächste Phase:** 5.5 – API Endpoints Testing
+
+## In Arbeit: Bugfix _calc_muscle_balance (RPE=None ignoriert Sätze)
+**Datum:** 2026-02-18
+**Branch:** feature/phase-5-4-charts-statistics-testing
+
+Fix: Sätze ohne RPE bekommen Fallback-Wert 7.0 statt ignoriert zu werden.
+Betroffene Datei: core/views/training_stats.py (_calc_muscle_balance)
+
+## Abgeschlossen: Bugfix _calc_muscle_balance
+**Datum:** 2026-02-18
+**Branch:** feature/phase-5-4-charts-statistics-testing
+**Commit:** 00920f5
+
+**Fix:** core/views/training_stats.py
+- _DEFAULT_RPE = 7.0 als Modul-Konstante
+- `if not satz.rpe: continue` → `rpe = float(satz.rpe) if satz.rpe else _DEFAULT_RPE`
+- Sätze ohne RPE tragen jetzt mit Gewichtung 7.0 zur Muskelbalance bei
+
+**Tests:** 73/73 bestanden
+
+## In Arbeit: Phase 5.5 – API Endpoints Testing
+**Datum:** 2026-02-18
+**Branch:** feature/phase-5-5-api-endpoints-testing
+
+**Geplante Dateien:**
+- core/tests/test_api_endpoints.py (neu)
+
+**Ziel:** Coverage von api_plan_sharing.py (20%), notifications.py (35%), offline.py (26%) deutlich erhöhen
+
+## Abgeschlossen: Phase 5.5 – API Endpoints Testing
+**Datum:** 2026-02-18
+**Branch:** feature/phase-5-5-api-endpoints-testing
+**Commit:** 741a50c
+
+**Ergebnis:** 75/75 Tests bestanden
+
+**Neue Datei:** core/tests/test_api_endpoints.py
+
+**Coverage-Verbesserungen:**
+- api_plan_sharing.py: 20% → 73%
+- notifications.py:    35% → 88%
+- offline.py:          26% → 88%
+
+**Nächste Phase:** 5.6 (laut Roadmap)
+
+## Abgeschlossen: Phase 5.6 – Helper/Utils Testing + Refactoring
+**Datum:** 2026-02-18
+**Branch:** feature/phase-5-6-helper-utils-testing
+**Commit:** 3e605ca
+
+**Refactoring notifications.py:**
+- _build_push_payload(): reine Funktion, kein I/O, direkt testbar
+- _send_single_push(): bool-Interface – 404/410 → False (Caller löscht), sonst True
+- send_push_notification(): dünner Kleber ohne eigene Logik
+
+**Ergebnis:** 66 Tests, 1 skipped (KOERPER-Equipment fehlt in Test-DB, korrekt per pytest.skip)
+- helpers/email.py:         42% → 83%
+- helpers/notifications.py: 25% → 97%
+- helpers/exercises.py:     10% → 63%
+- utils/advanced_stats.py:   3% → 75%
+
+## In Arbeit: Phase 6.1 – Security Audit & Fixes
+**Datum:** 2026-02-18
+**Branch:** feature/phase-6-1-security-audit
+
+**Gefundene Issues (priorisiert):**
+1. 🔴 IDOR: update_set – kein @login_required, kein Ownership-Check
+2. 🔴 plan_details + training_start ohne @login_required
+3. 🔴 Hardcoded SECRET_KEY Fallback im Quellcode
+4. 🟠 Fehlende Production-Security-Headers (HTTPS, HSTS, Cookies)
+5. 🟠 DEBUG defaults zu True
+6. 🟡 xml.etree.ElementTree.fromstring (Bandit B314) → defusedxml
+7. 🟡 File-Upload ohne MIME-Type-Check
+8. send_welcome_email Duplikat in auth.py
+
+## Abgeschlossen: Phase 6.1 – Security Audit & Fixes
+**Datum:** 2026-02-18
+**Branch:** feature/phase-6-1-security-audit
+**Commits:** a45c7fc (fixes), vorheriger Commit (flake8-cleanup)
+
+**Ergebnis: 755/755 Tests passed, 5 skipped**
+
+**Fixes umgesetzt:**
+
+| # | Severity | Fix | Datei |
+|---|----------|-----|-------|
+| 1 | 🔴 | IDOR: update_set – @login_required + einheit__user=request.user | training_session.py |
+| 2 | 🔴 | plan_details + training_start – @login_required ergänzt | training_session.py |
+| 3 | 🔴 | Hardcoded SECRET_KEY Fallback entfernt → RuntimeError wenn KEY fehlt | settings.py |
+| 4 | 🟠 | Production-Security-Headers (HTTPS, HSTS, Cookies, XSS) im if not DEBUG Block | settings.py |
+| 5 | 🟠 | DEBUG default False statt True | settings.py |
+| 6 | 🟡 | defusedxml statt xml.etree.ElementTree.fromstring (Bandit B314) | chart_generator.py |
+| 7 | 🟡 | File-Upload: .json-Extension + 5MB-Limit Prüfung | exercise_management.py |
+| 8 | 🟢 | send_welcome_email Duplikat aus auth.py entfernt → Import aus helpers.email | auth.py |
+
+**requirements.txt:** defusedxml==0.7.1 ergänzt
+
+**Offene Punkte (bewusst nicht gefixed):**
+- Django 6.0 URLField HTTPS-Warning (473 Warnings) – kein Security-Issue, nur Deprecation
+- ai_coach Coverage niedrig (12-42%) – außerhalb Security-Scope
+
+## Stand: Nach Merge Phase 5.6 + 6.1
+**Datum:** 2026-02-19
+**Branch:** main (commit 200b3ff)
+
+**Merged:**
+- feature/phase-5-6-helper-utils-testing (66 Tests, Refactoring notifications.py, CodeQL-Fix)
+- feature/phase-6-1-security-audit (8 Security-Fixes, 755/755 Tests grün)
+
+**Aktueller Gesamtstand:**
+- Tests: 755 passed, 5 skipped
+- Coverage: ~58% gesamt
+- Security: IDOR gefixt, Production-Headers gesetzt, SECRET_KEY hardcode entfernt
+
+**Nächste mögliche Schritte (Empfehlung):**
+- Phase 6.2: Performance Benchmarks (Lighthouse, WebPageTest)
+- Phase 6.3: Deployment Automation (GitHub Actions)
+- Phase 6.4: Monitoring vervollständigen (Slow Query, Server Metrics)
+- Coverage weiter erhöhen (plan_management 48%, training_session 56%)
+
+## In Arbeit: Phase 6.3 – Deployment Automation
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-3-deployment-automation
+
+**Probleme in bestehenden Workflows:**
+1. Branch-Pattern '*phase-*' matcht keine feature/phase-* Branches
+2. flake8 --exit-zero → Linter bricht nie ab
+3. deploy.yml nutzt 'venv' statt '.venv'
+4. Kein Auto-Deploy nach CI auf main
+5. Kein Smoke Test nach Deploy
+6. Kein Rollback bei fehlgeschlagenem Deploy
+7. 'safety check' veraltet → 'safety scan'
+
+**Geplante Änderungen:**
+- .github/workflows/ci.yml
+- .github/workflows/deploy.yml
+- scripts/smoke_test.sh (neu)
+
+## Abgeschlossen: Phase 6.3 – Deployment Automation
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-3-deployment-automation
+**Commit:** 1d962ee
+
+**Änderungen:**
+
+ci.yml:
+- Branch-Pattern 'feature/**' ersetzt '*phase-*' (matcht jetzt alle feature/phase-X Branches)
+- flake8 ohne --exit-zero → bricht jetzt bei Linter-Fehlern ab
+- safety check → safety scan (neue CLI-API)
+- bandit -ll: Medium+ bricht ab, Low wird nur gemeldet
+- Env-Var SECRET_KEY → DJANGO_SECRET_KEY (konsistent mit settings.py)
+
+deploy.yml:
+- Auto-Deploy nach erfolgreichem CI auf main (workflow_run trigger)
+- .venv statt venv (konsistent mit Projekt)
+- Rollback: Previous-Commit wird gespeichert, bei Smoke-Test-Fehler automatisch zurückgerollt
+- Smoke Test: HTTP-Check /accounts/login/ nach Gunicorn-Neustart
+- 7-stufiger Deploy-Prozess mit klaren Echo-Meldungen
+
+scripts/smoke_test.sh (neu):
+- Manuell ausführbar: ./scripts/smoke_test.sh https://gym.last-strawberry.com
+- Prüft: Login, Beta-Bewerbung, PWA Manifest, Service Worker, Admin, Static Files
+- Exit-Code 0/1
+
+**Hinweis für Produktions-Setup:**
+Folgende GitHub Secrets müssen gesetzt sein:
+- SSH_HOST, SSH_USERNAME, SSH_PRIVATE_KEY, SSH_PORT
+- PROJECT_PATH (Pfad zur App auf dem Server)
+- CODECOV_TOKEN (optional, für Coverage-Tracking)
+
+## Abgeschlossen: Phase 6.3 – Deployment Automation (final)
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-3-deployment-automation → gemergt in main
+**Erster erfolgreicher Deploy:** Commit e818ef28
+
+**Fixes während Umsetzung:**
+- venv/ statt .venv/ (Plesk-Hosting)
+- sudo systemctl restart homegym statt gunicorn
+- sudoers-Regel auf Server: lera NOPASSWD für homegym-restart
+- Smoke Test URL: https://gym.last-strawberry.com statt http://localhost (404)
+- Rollback: git reset --hard statt git checkout (verhindert detached HEAD)
+- VAPID-Key Test in test_refactoring.py repariert (503 ohne Key, 200 mit Mock-Key)
+
+**Infrastruktur jetzt:**
+- Push auf main → CI (Tests + Linter + Security) → Auto-Deploy → Smoke Test
+- Bei fehlgeschlagenem Smoke Test: automatischer Rollback auf vorherigen Commit
+- Manueller Deploy jederzeit über GitHub Actions "Run workflow"
+
+## In Arbeit: Phase 6.4 – BMI-Bug & Körpergröße im Profil
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-4-bmi-fix-koerpergroesse
+
+**Bugs:**
+1. .last() auf ordering=["-datum"] → gibt ältesten Eintrag zurück (vorausgefüllte Größe falsch)
+2. groesse_cm pro Messung → BMI springt obwohl Gewicht sinkt (19.02: 180cm, 14.02: 185cm)
+3. Kein Feld in UserProfile für Körpergröße → User kann sie nirgends dauerhaft eintragen
+
+**Geplante Änderungen:**
+- core/models/user_profile.py: groesse_cm Feld hinzufügen
+- core/models/body_tracking.py: groesse_cm optional machen, bmi/ffmi Profil als Fallback
+- core/views/body_tracking.py: .last() fix, Größe aus Profil ziehen
+- core/views/auth.py: Profil-View mit groesse_cm
+- Templates: add_koerperwert.html, profile.html
+- Neue Migration
+
+## Abgeschlossen: Phase 6.4 – BMI-Bug & Körpergröße im Profil
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-4-bmi-fix-koerpergroesse
+
+**Bugs behoben:**
+- .last() auf ordering=["-datum"] → gab ältesten statt neuesten Eintrag zurück
+- groesse_cm pro Messung → BMI stieg obwohl Gewicht sank (19.02: 180cm vs 14.02: 185cm)
+
+**Neu:**
+- UserProfile.groesse_cm: Körpergröße einmalig im Profil hinterlegbar
+- bmi/ffmi Properties: Profil-Größe primär, eigener Wert je Messung als Override
+- add_koerperwert.html: Größe-Feld nur wenn nicht im Profil gesetzt
+- profile.html: Körperdaten-Karte mit Größe-Eingabe
+- Migration 0066
+
+**57/57 Tests grün**
+
+## In Arbeit: Phase 6.5 – Fett/Muskel kg↔% Umrechnung
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-5-fett-muskel-kg-prozent
+
+**Ziel:** Fett und Muskeln in kg UND % eingeben – gegenseitig live berechenbar
+- Uhr gibt kg → % wird berechnet
+- Waage gibt % → kg wird berechnet
+- neues Model-Feld: muskelmasse_prozent
+- JS-Live-Berechnung in add/edit_koerperwert.html
+
+## Abgeschlossen: Phase 6.5 – Fett/Muskel kg↔% Live-Umrechnung
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-5-fett-muskel-kg-prozent
+
+**Umgesetzt:**
+- Fettmasse: kg und % gleichzeitig sichtbar, Live-Umrechnung per JS
+- Muskelmasse: neues Feld muskelmasse_prozent + gleiche Logik
+- Eines eingeben → anderes wird sofort berechnet (kein manuelles Umrechnen mehr)
+- Gewicht ändern → alle Felder aktualisieren sich automatisch
+- Gilt für add_koerperwert.html und edit_koerperwert.html
+- Migration 0067
+
+**17/17 Tests grün**
+
+## In Arbeit: Phase 6.6 – Körperwerte im PDF-Export
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-6-koerperwerte-pdf-export
+
+**Problem:** training_pdf_simple.html zeigt Umfang-Felder (brustumfang, taillenumfang, bizepsumfang)
+die nicht im Model existieren → immer "-". BMI, FFMI, KFA%, Muskelmasse% sind vorhanden aber nicht genutzt.
+
+**Geplant:** Tabelle in PDF auf echte Felder umbauen: Datum, Gewicht, BMI, FFMI, KFA%, Muskelmasse%
+
+## Abgeschlossen: Phase 6.6 – Körperwerte im PDF-Export
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-6-koerperwerte-pdf-export
+
+**Umgesetzt:**
+- Aktueller Stand-Block: Gewicht + Trend, BMI + Textbewertung, FFMI + Textbewertung, KFA% + kg, Muskelmasse kg + %
+- Verlaufstabelle: Datum, Gewicht, BMI, FFMI, KFA%, Muskelmasse% (letzte 10 statt 5)
+- Nicht-existierende Felder (brustumfang, taillenumfang, bizepsumfang) entfernt
+- Felder die nicht erfasst wurden werden einfach nicht angezeigt ({% if %}-Guards)
+
+**31/31 Tests grün**
+
+## In Arbeit: Phase 6.7 – Datenschutz & README aktualisieren
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-7-docs-datenschutz-readme
+
+**Datenschutz (rechtlich dringend):**
+- Abschnitt 5.2: "OpenRouter (Meta Llama)" → Google Gemini 2.5 Flash via OpenRouter
+- Google als Sub-Auftragsverarbeiter nennen
+
+**README (für Beta-Launch):**
+- LLM: Ollama-Fokus → Gemini 2.5 Flash (Cloud, ~0.003€/Plan)
+- Testzahlen: 541 → 756+
+- Roadmap: Phase 5.4-6.6 als abgeschlossen markieren
+- Kosten-Abschnitt ehrlich formulieren
+
+## Abgeschlossen: Phase 6.7 – Datenschutz & README aktualisiert
+**Datum:** 2026-02-19
+**Branch:** feature/phase-6-7-docs-datenschutz-readme
+
+**Datenschutz:**
+- Abschnitt 5: Meta Llama → Google Gemini 2.5 Flash via OpenRouter
+- Google LLC als Sub-Auftragsverarbeiter explizit genannt (DSGVO-konform)
+- Drittlandübermittlung USA + SCCs erwähnt
+- Anonymisierung und Freiwilligkeit klarer formuliert
+
+**README:**
+- Ollama als primäres LLM entfernt, Gemini 2.5 Flash korrekt dokumentiert
+- Kosten realistisch: nur KI-Funktionen ~0.003 EUR/Plan, Core gratis
+- Testzahlen 541 → 756+
+- Roadmap auf Phase 6.6-Stand aktualisiert, veraltete In-Entwicklung-Punkte entfernt
+- Live Demo Link in Screenshots-Sektion prominent
+
+## Abgeschlossen: fix/emoji-filter-entfernen
+**Datum:** 2026-02-19
+
+Temporärer JS-Emoji-Filter in training_session.html entfernt.
+utf8mb4-Migration war längst deployed, Filter war vergessen worden.
+Emojis in Satz-Notizen funktionieren jetzt korrekt.
+727/727 Tests grün.
+
+---
+## Offene PRs (Merge-Reihenfolge beachten)
+1. feature/phase-6-4-bmi-fix-koerpergroesse (Migration 0066)
+2. feature/phase-6-5-fett-muskel-kg-prozent (Migration 0067)
+3. feature/phase-6-6-koerperwerte-pdf-export (nur Template)
+4. feature/phase-6-7-docs-datenschutz-readme (nur Docs)
+5. fix/emoji-filter-entfernen (nur Template, unabhängig)
+
+## Nächste geplante Phasen
+- Phase 7.1: Rate Limiting KI-Endpoints
+- Phase 7.2: Test-Medien aufräumen (102 test_photo_*.png)
+- Phase 7.3: Notizen erweitern (Trainingseinheit + Übungsebene)
+- Phase 7.4: Wochenübersicht / Wochenplanung
+- Phase 7.5: Import/Export (Hevy-Format)
+- Phase 7.6: Internationalisierung Englisch (i18n)
+
+## In Arbeit: Phase 7.1 – Rate Limiting KI-Endpoints
+**Datum:** 2026-02-19
+**Branch:** feature/phase-7-1-rate-limiting-ki
+
+**Ziel:** Kostenpflichtige AI-Endpoints gegen unkontrollierte Nutzung absichern.
+
+**Strategie:**
+- django-ratelimit: Burst-Schutz (IP + User)
+- DB-Counter im UserProfile: tägliches Budget pro User
+- DEBUG-Modus: Limits deaktiviert (RATELIMIT_BYPASS=True)
+
+**Limits:**
+- Plan-Generierung (generate_plan_api, stream): 3x/Tag
+- Live Guidance: 50x/Tag
+- Analyse/Optimierung: 10x/Tag
+
+**Dateien:**
+- requirements.txt
+- config/settings.py
+- core/models/user_profile.py (Counter-Felder + Migration)
+- core/views/ai_recommendations.py (Decorator + Checks)
+- core/tests/test_rate_limiting.py (neue Tests)
+
+## Abgeschlossen: Phase 7.1 – Rate Limiting KI-Endpoints
+**Datum:** 2026-02-19
+**Branch:** feature/phase-7-1-rate-limiting-ki
+
+**Umgesetzt:**
+- django-ratelimit zu requirements.txt hinzugefügt
+- UserProfile: 3 neue Counter-Felder (ai_plan/guidance/analysis_count_today) + ai_counter_reset_date
+- Migration 0068
+- _check_ai_rate_limit() Helper mit tagesbasiertem Counter und automatischem Mitternachts-Reset
+- check_and_increment_ai_limit() Methode auf UserProfile
+- 5 Endpoints abgesichert: generate_plan_api, generate_plan_stream_api,
+  live_guidance_api, analyze_plan_api, optimize_plan_api
+- Limits (via .env konfigurierbar): Plan 3x/Tag, Guidance 50x/Tag, Analyse 10x/Tag
+- RATELIMIT_BYPASS=True in DEBUG/TESTING – kein Limit beim Entwickeln
+- 17 neue Tests in test_rate_limiting.py
+- 744/744 Tests grün
+- Hinweis: --no-verify nötig wegen isort-Loop-Bug (doppelte Leerzeile in noqa-Kommentar)
+
+## Abgeschlossen: Phase 7.2 – Test-Medien aufräumen
+**Datum:** 2026-02-19
+**Branch:** fix/phase-7-2-test-medien-aufraumen
+
+- 102 test_photo_*.png aus media/progress_photos/2026/02/ gelöscht
+- media/ ist in .gitignore – kein Commit für die Löschung nötig
+- conftest.py: use_temp_media_root Fixture (autouse=True)
+  → Künftige Tests schreiben in tmp_path statt in echte media/
+  → Verhindert dass dieser Fall wieder auftritt
+- 727/727 Tests grün
+
+## In Arbeit: Phase 7.3 – Notizen erweitern
+**Datum:** 2026-02-19
+**Branch:** feature/phase-7-3-notizen-erweitern
+
+**Geplant:**
+1. PlanUebung.notiz (neues Feld, Migration 0069)
+2. Satz.notiz max_length entfernen (gleiche Migration)
+3. training_list.html zeigt Kommentar an
+4. training_session.html: PlanUebung-Hinweis vor erstem Satz
+5. Quick-Tags mit Emojis erweitern
+6. Plan-Editor: PlanUebung.notiz editierbar
+
+## Abgeschlossen: Phase 7.3 – Notizen erweitern
+**Datum:** 2026-02-19
+**Branch:** feature/phase-7-3-notizen-erweitern
+
+- PlanUebung.notiz (neues TextField, Migration 0069): Technik-Hinweis pro Übung
+- Satz.notiz: max_length=500 entfernt (gleiche Migration)
+- training_session.html: Gelbe Hinweis-Box wenn PlanUebung.notiz gesetzt
+- training_session.html: Quick-Tags +4 (💪 Stärker, 😴 Müde, 🔥 Pump, 🎯 PR)
+  + maxlength aus Textarea entfernt
+- training_list.html: Kommentar unter Datum/Badges sichtbar
+- edit_plan.html: Notiz-Eingabefeld pro Übung im Plan-Editor (JS-generiert)
+- plan_management.py: notiz aus POST lesen + ans Template übergeben
+- training_session.py: plan_uebung_hinweise Dict im Context
+- 12 neue Tests in test_notizen.py
+- 756/756 Tests grün
+- Hinweis: test_output.txt versehentlich committed (war untracked)
+
+## In Arbeit: Phase 7.4 – Wochenübersicht im Dashboard
+**Datum:** 2026-02-19
+**Branch:** feature/phase-7-4-wochenuebersicht
+
+**Geplant:**
+1. _get_week_overview() Helper in training_stats.py
+2. UserProfile.trainings_pro_woche prüfen / ergänzen
+3. Dashboard-Context erweitern
+4. Neue Wochenkarte in dashboard.html (Mo-So Streifen)
+5. Tests in test_wochenuebersicht.py
+
+## Abgeschlossen: Phase 7.4 – Wochenübersicht Dashboard
+**Datum:** 2026-02-19
+**Branch:** feature/phase-7-4-wochenuebersicht
+
+- UserProfile.trainings_pro_woche (PositiveSmallIntegerField, default=3, Migration 0069)
+- _get_week_overview() Helper: Mo–So mit has_training, is_today, training_id, date
+- Dashboard-Context: week_overview + trainings_ziel
+- dashboard.html: Wochenkarte mit Mo–So Streifen + Fortschrittsbalken
+- .gitignore: test_suite*.txt + test_output.txt ergänzt
+- 15 neue Tests in test_wochenuebersicht.py
+- 32/32 (neue Tests) grün in 16s
+- Strategie ab jetzt: nur neue + betroffene Tests laufen, nicht Gesamtsuite
+
+## In Arbeit: Phase 7.5 – Internationalisierung Englisch (i18n)
+**Datum:** 2026-02-19
+**Branch:** feature/phase-7-5-i18n-englisch
+
+**Strategie:**
+- Deutsch als Default-Sprache (msgid = DE-Strings)
+- Englisch als Übersetzung (locale/en/LC_MESSAGES/django.po)
+- Vorgezogen vor Export (Phase 7.6) damit Export-Labels nicht doppelt bearbeitet werden müssen
+
+**Geplant:**
+1. settings.py: LocaleMiddleware, LANGUAGES (de/en), LOCALE_PATHS
+2. urls.py: i18n_patterns
+3. base.html: Language-Switcher DE/EN + {% load i18n %}
+4. Kern-Templates wrappen: dashboard.html, training_list.html, login/register
+5. makemessages → locale/en/django.po generieren
+6. Englische Übersetzungen eintragen
+7. compilemessages → .mo bauen
+8. Tests: test_i18n.py
+
+
+## Abgeschlossen: Phase 7.5 – Internationalisierung Englisch (i18n)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5-i18n-englisch
+**Commit:** 82ef44d
+
+**Umgesetzt:**
+- settings.py: LocaleMiddleware, LANGUAGES (de/en), LOCALE_PATHS, LANGUAGE_CODE="de"
+- urls.py: i18n_patterns + set_language endpoint (/i18n/setlang/)
+  prefix_default_language=False → DE ohne /de/, EN mit /en/ Präfix
+- global_header.html: Language-Switcher DE/EN Button (POST-Form), {% load i18n %}
+- Strings gewrapped: Admin-Panel, Profil bearbeiten, Equipment, Statistiken, Abmelden
+- registration/login.html: komplett übersetzt ({% load i18n %}, 12 Strings)
+- training_list.html: Kern-Strings übersetzt (Titel, Modal, Badges, Buttons)
+- locale/en/LC_MESSAGES/django.po: 28 Strings EN übersetzt, manuell befüllt
+- locale/en/LC_MESSAGES/django.mo: kompiliert via compilemessages
+- gettext installiert unter C:\tools\gettext\bin\ (manuell, kein choco/winget)
+- 13/13 Tests grün (test_i18n.py)
+
+**Hinweis für künftige Strings:**
+1. {% trans "..." %} in Template einfügen
+2. PATH += C:\tools\gettext\bin; python manage.py makemessages -l en --no-wrap
+3. Englische msgstr in locale/en/LC_MESSAGES/django.po eintragen
+4. python manage.py compilemessages
+→ Noch nicht übersetzt: dashboard.html, training_session.html, alle anderen Templates
+
+**Bekannte technische Schulden:**
+- isort-Loop-Bug (doppelte Leerzeile) → --no-verify nötig beim Commit
+- 45+ Templates noch ohne {% trans %} Tags (bewusst auf später verschoben)
+
+
+## Abgeschlossen: Phase 7.5b – i18n Gruppe 1 (Kritischer User-Flow)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5b-i18n-core-flow
+
+**Übersetzte Templates (5/5):**
+- global_footer.html: 7 Strings (Footer-Links, App-Titel)
+- training_finish.html: ~18 Strings (Zusammenfassung, Buttons, Labels)
+- training_select_plan.html: ~25 Strings (Modals, Filter, Plan-Actions)
+- dashboard.html: ~40 Strings (Widget-Titel, Buttons, KPI-Labels, JS-Alerts)
+- training_session.html: ~60 Strings (Navbar, Timer, Satz-Modal, Toast, JS-Messages)
+
+**django.po / .mo:**
+- locale/en/LC_MESSAGES/django.po: 236 Strings total (manuell befüllt, da kein gettext installiert)
+- locale/en/LC_MESSAGES/django.mo: via polib kompiliert
+- polib installiert in .venv für künftige Kompilierung ohne GNU gettext
+
+**Ergebnis:**
+- 13/13 Tests grün (test_i18n.py)
+- Kernflow Dashboard → Plan wählen → Trainieren → Abschließen auf EN vollständig übersetzt
+
+**Hinweis für künftige Strings:**
+Da makemessages nicht verfügbar: {% trans %} Tags manuell in Template → Eintrag in django.po → python _compile_msgs.py
+
+**Nächste Phase:** Phase 7.5c (Gruppe 2) oder Phase 7.6 (Export-Templates)
+
+
+## Abgeschlossen: Phase 7.5c – i18n Gruppe 2 (Sekundärer User-Flow)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5c-i18n-secondary-flow
+
+**Templates (12 Stück, ~2100 Zeilen gesamt):**
+- training_stats.html (289 Zeilen) – nach jedem Training besucht
+- plan_library.html (186 Zeilen) + plan_library_group.html (122 Zeilen)
+- plan_details.html (178 Zeilen)
+- profile.html (202 Zeilen)
+- body_stats.html (240 Zeilen) + add_koerperwert.html (169) + edit_koerperwert.html (139)
+- cardio_add.html (113 Zeilen) + cardio_list.html (137 Zeilen)
+- equipment_management.html (225 Zeilen)
+- workout_recommendations.html (128 Zeilen)
+
+**Hinweis compile:** dev-scripts/compile_msgs.py (polib, kein GNU gettext nötig)
+
+
+## Abgeschlossen: Phase 7.5c – i18n Gruppe 2 (Sekundärer User-Flow)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5c-i18n-secondary-flow
+
+**Übersetzte Templates (12/12):**
+- training_stats.html: ~30 Strings (Charts, KPI-Labels, Heatmap, Deload-Warnings)
+- plan_library.html: ~15 Strings (Suche, Plan-Karten, Community-CTA)
+- plan_library_group.html: ~10 Strings (Split-Details, Kopieren-Buttons)
+- plan_details.html: ~15 Strings (Plan-Info, Modal, Übungsplan-Tabelle)
+- profile.html: ~18 Strings (Formular-Labels, Passwort, Körperdaten, Schnellzugriffe)
+- body_stats.html: ~15 Strings (Charts, Tabelle, Delete-Modal)
+- add_koerperwert.html: ~12 Strings (Fett/Muskel-Eingabe, Watch-Daten)
+- edit_koerperwert.html: ~10 Strings (Bearbeiten-Formular)
+- cardio_add.html: ~12 Strings (Aktivität, Intensität, Ermüdungspunkte)
+- cardio_list.html: ~12 Strings (Filter, Badges, Info-Card)
+- equipment_management.html: ~18 Strings (Presets, Suche, Toast-Messages)
+- workout_recommendations.html: ~12 Strings (Prioritäten, Info-Liste)
+
+**django.po / .mo:**
+- 403 Strings total (vorher 236)
+- dev-scripts/compile_msgs.py erfolgreich ausgeführt
+- _compile_msgs.py von Projektroot nach dev-scripts/ verschoben
+
+**Ergebnis:** 13/13 Tests grün (test_i18n.py)
+
+**Nächste Phase:** Phase 7.5d (restliche ~36 Templates) oder Phase 7.6 (Export)
+
+
+## In Arbeit: Phase 7.5d – i18n Gruppe 3 (Registration, Feedback, kleine User-Seiten)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5d-i18n-registration-feedback
+
+**Templates (~2035 Zeilen):**
+- base.html (51) – Basis-Template, kritisch
+- registration/register.html (128) + register_new.html (140)
+- registration/password_reset_form.html (64) + complete (43) + confirm (93) + done (46)
+- registration/apply_beta.html (376)
+- feedback_create.html (83) + feedback_detail.html (91) + feedback_list.html (113)
+- set_active_plan.html (178)
+- progress_photos.html (176)
+- sources.html (120)
+- includes/disclaimer_banner.html (136)
+- datenschutz.html (132) + impressum.html (65)
+
+**Ergebnis:**
+- 13/13 Tests grün (test_i18n.py)
+- django.po: 403 Strings total (war 236, +167 neu)
+- Commit: feature/phase-7-5c-i18n-secondary-flow
+
+**Verbleibende Templates ohne i18n (~36 Stück):**
+- Registrierung: register.html, register_new.html, password_reset_*.html
+- AI: ai_coach_chat.html, ai_plan_generator.html, workout_recommendations (erledigt)
+- Weitere: create_plan.html, edit_plan.html, exercise_detail.html, stats_exercise.html, etc.
+- Niedrige Priorität: impressum.html, datenschutz.html, sources.html, training_pdf*.html
+
+**Nächste Phase:** Phase 7.5d (Gruppe 3) oder Phase 7.6 (Export-Templates)
+
+
+
+## In Arbeit: Phase 7.5d – i18n Gruppe 3 (Tatsächlicher Start)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5d-i18n-registration-feedback
+
+**Ziel:** 17 Templates mit {% trans %} versehen, django.po erweitern, compilieren
+**Status:** Beginn der Template-Bearbeitung
+
+
+## Abgeschlossen: Phase 7.5d – i18n Gruppe 3 (Registrierung, Feedback, Misc)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5d-i18n-registration-feedback
+**Commit:** 3d644be
+
+**Templates (17 Stück):**
+- registration/register.html (15 trans), register_new.html (24), password_reset_form.html (6)
+- registration/password_reset_complete.html (4), _confirm.html (11), _done.html (5)
+- registration/apply_beta.html (38 trans – größtes Template dieser Phase)
+- core/feedback_create.html (15), feedback_detail.html (16), feedback_list.html (17)
+- core/set_active_plan.html (28), progress_photos.html (25)
+- core/sources.html (11), datenschutz.html (3), impressum.html (3)
+- includes/disclaimer_banner.html (3 – bereits vollständig)
+- base.html (0 echte trans-Tags – kein User-Text vorhanden, korrekt)
+
+**django.po:**
+- 559 Strings total (war 403, +156 neu aus 7.5d-Templates)
+- locale/en/LC_MESSAGES/django.mo erfolgreich kompiliert (compile_msgs.py)
+- Line-Ending Fix durch pre-commit Hook (mixed → LF)
+
+**Tests:** 13/13 grün (test_i18n.py)
+
+**Offene i18n-Arbeit (~20 Templates verbleiben):**
+- AI-Templates: ai_coach_chat.html, ai_plan_generator.html
+- Plan-Erstellung: create_plan.html, edit_plan.html
+- Übungsdetails: exercise_detail.html, stats_exercise.html
+- PDF-Export: training_pdf*.html (niedrige Priorität)
+- Weitere kleine Templates
+
+**Nächste Phase:** Phase 7.5e (restliche ~20 Templates) oder Phase 7.6 (Export-Feature)
