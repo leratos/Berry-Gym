@@ -1593,3 +1593,18 @@ Alle {% trans "TEXT" %} in double-quoted HTML-Attributen wurden durch
 {% trans 'TEXT' %} ersetzt (einfache Quotes im trans-Tag).
 
 Commit: af52157 (29 Dateien, 27 Templates + .gitignore)
+
+## Nachtrag fix/timer (20.02.2026) - Commit 41a6dc2
+
+Zweiter Folgefehler durch fix_trans_attrs.py: das Skript hatte
+{% trans "z.B. 'A', 'B'" %} zu {% trans 'z.B. 'A', 'B'' %} umgewandelt -
+Django-Template-Parser kann keine einfachen Quotes parsen die den String
+gleichzeitig begrenzen und im Inhalt vorkommen.
+
+Betroffene Dateien:
+- progress_photos.html: "z.B. 'Start', 'Nach 3 Monaten'" → apostrophfrei
+- feedback_create.html: langer Placeholder mit Apostrophen → apostrophfrei
+- django.po: beide msgids entsprechend angepasst
+
+Lektion: fix_trans_attrs.py darf nicht blind ersetzen wenn der trans-Wert
+selbst einfache Quotes enthält. Apostrophe im Placeholder-Text meiden.
