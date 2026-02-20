@@ -30,7 +30,7 @@
             <i class="bi bi-arrow-left"></i> {% trans "Dashboard" %}
         </a>
         <span class="navbar-text">{% trans "Übungs-Bibliothek" %}</span>
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans 'Theme wechseln' %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -62,7 +62,7 @@
 
     <div class="row mb-4">
         <div class="col-md-4">
-            <input type="text" id="searchExercises" class="form-control" placeholder="{% trans "Übung suchen..." %}">
+            <input type="text" id="searchExercises" class="form-control" placeholder="{% trans 'Übung suchen...' %}">
         </div>
         <div class="col-md-4">
             <select class="form-select" id="tagFilter">
@@ -103,7 +103,7 @@
                                 </h5>
                                 <button class="btn btn-sm btn-outline-warning border-0 favorit-btn {% if user in uebung.favoriten.all %}active{% endif %}"
                                         onclick="event.preventDefault(); event.stopPropagation(); toggleFavorit({{ uebung.id }}, this);"
-                                        title="{% if user in uebung.favoriten.all %}{% trans "Aus Favoriten entfernen" %}{% else %}{% trans "Zu Favoriten hinzufügen" %}{% endif %}">
+                                        title="{% if user in uebung.favoriten.all %}{% trans 'Aus Favoriten entfernen' %}{% else %}{% trans 'Zu Favoriten hinzufügen' %}{% endif %}">
                                     <i class="bi {% if user in uebung.favoriten.all %}bi-star-fill{% else %}bi-star{% endif %} text-warning"></i>
                                 </button>
                             </div>
@@ -167,7 +167,7 @@
                     <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>{% trans "Erstelle eine eigene Übung, die nur für dich sichtbar ist." %}</div>
                     <div class="mb-3">
                         <label for="exerciseName" class="form-label">{% trans "Name der Übung" %} *</label>
-                        <input type="text" class="form-control" id="exerciseName" name="bezeichnung" required placeholder="{% trans "​z.B. Meine Variation für Bizeps" %}">
+                        <input type="text" class="form-control" id="exerciseName" name="bezeichnung" required placeholder="{% trans '​z.B. Meine Variation für Bizeps' %}">
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -182,7 +182,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="hilfsmuskeln" class="form-label">{% trans "Hilfsmuskelgruppen" %}</label>
-                            <input type="text" class="form-control" id="hilfsmuskeln" name="hilfsmuskeln" placeholder="{% trans "z.B. Trizeps, Schultern" %}">
+                            <input type="text" class="form-control" id="hilfsmuskeln" name="hilfsmuskeln" placeholder="{% trans 'z.B. Trizeps, Schultern' %}">
                             <small class="form-text text-muted">{% trans "Optional, kommagetrennt" %}</small>
                         </div>
                     </div>
@@ -214,7 +214,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="beschreibung" class="form-label">{% trans "Beschreibung" %}</label>
-                        <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3" placeholder="{% trans "Optionale Notizen..." %}"></textarea>
+                        <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3" placeholder="{% trans 'Optionale Notizen...' %}"></textarea>
                     </div>
                     <div id="customExerciseError" class="alert alert-danger d-none"></div>
                     <div id="customExerciseSuccess" class="alert alert-success d-none"></div>

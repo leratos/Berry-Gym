@@ -26,7 +26,7 @@
     </a>
     <span class="navbar-text page-title fw-bold">{% trans "Aktiver Plan" %}</span>
     <div style="width: 40px;">
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans 'Theme wechseln' %}">
           <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -108,7 +108,7 @@
         </small>
         <div class="d-flex align-items-center gap-3">
           <input type="number" name="current_week" class="form-control" style="max-width: 100px;"
-                 min="1" max="12" placeholder="{% trans "z.B. 3" %}">
+                 min="1" max="12" placeholder="{% trans 'z.B. 3' %}">
           <small class="text-muted">{% blocktrans with n=current_cycle_length %}Woche 1 – {{ n }}{% endblocktrans %}</small>
         </div>
       </div>

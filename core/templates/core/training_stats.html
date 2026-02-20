@@ -16,13 +16,13 @@
     </a>
     <span class="navbar-text page-title fw-bold">{% trans "Statistiken" %}</span>
     <div>
-        <a href="{% url 'export_training_pdf' %}" class="btn btn-outline-danger border-0 me-2" title="{% trans "Als PDF exportieren" %}">
+        <a href="{% url 'export_training_pdf' %}" class="btn btn-outline-danger border-0 me-2" title="{% trans 'Als PDF exportieren' %}">
             <i class="bi bi-file-pdf"></i> PDF
         </a>
-        <a href="{% url 'export_training_csv' %}" class="btn btn-outline-success border-0" title="{% trans "Als CSV exportieren" %}">
+        <a href="{% url 'export_training_csv' %}" class="btn btn-outline-success border-0" title="{% trans 'Als CSV exportieren' %}">
             <i class="bi bi-file-earmark-spreadsheet"></i> CSV
         </a>
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans "Theme wechseln" %}">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans 'Theme wechseln' %}">
           <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>

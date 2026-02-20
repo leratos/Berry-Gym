@@ -39,7 +39,7 @@
             <h1 class="display-4 mb-0">{{ uebung.bezeichnung }}</h1>
             <button class="btn btn-outline-warning btn-lg border-0 favorite-btn"
                     onclick="toggleFavorite({{ uebung.id }})"
-                    id="favoriteBtn" title="{% trans "Zu Favoriten hinzufügen" %}">
+                    id="favoriteBtn" title="{% trans 'Zu Favoriten hinzufügen' %}">
                 <i class="bi bi-star{% if request.user in uebung.favoriten.all %}-fill text-warning{% endif %}" id="favoriteIcon"></i>
             </button>
         </div>
