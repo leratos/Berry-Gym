@@ -1627,3 +1627,19 @@ Setup: Übung mit gewichts_typ=KOERPERGEWICHT, koerpergewicht_faktor=0.5,
 TrainingseinheitFactory, lang_override("de").
 
 17/17 Tests grün lokal. Commit: a2058b3
+
+## In Arbeit: feature/remove-public-filter-training-select (20.02.2026)
+
+Ziel: "Öffentlich"-Tab in training_select_plan.html entfernen.
+Öffentliche Pläne sind bereits über /plan-library/ erreichbar (Footer-Link).
+Dateien: training_select_plan.html, ggf. views/plan_management.py
+
+## Abgeschlossen: feature/remove-public-filter-training-select (20.02.2026)
+
+- training_select_plan.html: "Öffentlich"-Tab entfernt (3-Button-Gruppe -> 2)
+- Empty-State: else-Zweig für public entfernt
+- Autor-Hinweis "von {{ plan.user.username }}" bei public-Filter entfernt
+- training_session.py: filter=public redirectet jetzt auf filter=eigene
+- test_training_views.py: test_public_plaene_filter auf 302-Redirect aktualisiert
+
+18/18 Tests grün. Commit: 549c34f
