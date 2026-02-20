@@ -33,7 +33,8 @@
             <input type="number" name="groesse" value="{{ standard_groesse|default:'' }}"
                    class="form-control bg-dark text-white border-secondary"
                    placeholder="z.B. 182" min="100" max="250">
-            <small class="text-muted">{% blocktrans %}Einmalig im <a href="{% url 'profile' %}">Profil</a> hinterlegen um das nicht jedes Mal einzugeben{% endblocktrans %}</small>
+            {% url 'profile' as profile_url %}
+            <small class="text-muted">{% blocktrans with profile_url=profile_url %}Einmalig im <a href="{{ profile_url }}">Profil</a> hinterlegen um das nicht jedes Mal einzugeben{% endblocktrans %}</small>
         {% endif %}
     </div>
 
