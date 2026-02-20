@@ -147,3 +147,7 @@ fix_po_dupes.py
 add_translations.py
 debug_timer.py
 check_trans.py
+check_trans2.py
+check_attrs.py
+check_all_templates.py
+fix_trans_attrs.py

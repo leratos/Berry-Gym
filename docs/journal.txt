@@ -1576,3 +1576,20 @@ Dadurch wurde der nachfolgende `<script>`-Block nicht korrekt geparst → alle J
 - .gitignore: debug_timer.py, check_trans.py ergänzt
 
 **Commit:** fix/timer-inserttag-quote-escaping
+
+## Erweiterung fix/timer (20.02.2026)
+
+Scope-Erweiterung nach weiterem Konsolenfehler (setTimerDuration not defined):
+
+**Ursache 2:** Gleiches Problem in Includes von training_session.html:
+- exercise_info_modal.html:11 aria-label="{% trans "Schließen" %}"
+- ai_coach_chat.html:103 title="{% trans "KI-Coach fragen" %}"
+- ai_coach_chat.html:153 placeholder="{% trans "Frag den KI-Coach..." %}"
+
+**Projektweiter Fix:** check_all_templates.py fand 27 weitere Templates mit
+dem gleichen Muster. fix_trans_attrs.py hat alle automatisch korrigiert.
+
+Alle {% trans "TEXT" %} in double-quoted HTML-Attributen wurden durch
+{% trans 'TEXT' %} ersetzt (einfache Quotes im trans-Tag).
+
+Commit: af52157 (29 Dateien, 27 Templates + .gitignore)
