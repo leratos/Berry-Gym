@@ -1389,7 +1389,7 @@ Da makemessages nicht verfügbar: {% trans %} Tags manuell in Template → Eintr
 **Nächste Phase:** Phase 7.5c (Gruppe 2) oder Phase 7.6 (Export-Templates)
 
 
-## In Arbeit: Phase 7.5c – i18n Gruppe 2 (Sekundärer User-Flow)
+## Abgeschlossen: Phase 7.5c – i18n Gruppe 2 (Sekundärer User-Flow)
 **Datum:** 2026-02-20
 **Branch:** feature/phase-7-5c-i18n-secondary-flow
 
@@ -1404,4 +1404,45 @@ Da makemessages nicht verfügbar: {% trans %} Tags manuell in Template → Eintr
 - workout_recommendations.html (128 Zeilen)
 
 **Hinweis compile:** dev-scripts/compile_msgs.py (polib, kein GNU gettext nötig)
+
+
+## Abgeschlossen: Phase 7.5c – i18n Gruppe 2 (Sekundärer User-Flow)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5c-i18n-secondary-flow
+
+**Übersetzte Templates (12/12):**
+- training_stats.html: ~30 Strings (Charts, KPI-Labels, Heatmap, Deload-Warnings)
+- plan_library.html: ~15 Strings (Suche, Plan-Karten, Community-CTA)
+- plan_library_group.html: ~10 Strings (Split-Details, Kopieren-Buttons)
+- plan_details.html: ~15 Strings (Plan-Info, Modal, Übungsplan-Tabelle)
+- profile.html: ~18 Strings (Formular-Labels, Passwort, Körperdaten, Schnellzugriffe)
+- body_stats.html: ~15 Strings (Charts, Tabelle, Delete-Modal)
+- add_koerperwert.html: ~12 Strings (Fett/Muskel-Eingabe, Watch-Daten)
+- edit_koerperwert.html: ~10 Strings (Bearbeiten-Formular)
+- cardio_add.html: ~12 Strings (Aktivität, Intensität, Ermüdungspunkte)
+- cardio_list.html: ~12 Strings (Filter, Badges, Info-Card)
+- equipment_management.html: ~18 Strings (Presets, Suche, Toast-Messages)
+- workout_recommendations.html: ~12 Strings (Prioritäten, Info-Liste)
+
+**django.po / .mo:**
+- 403 Strings total (vorher 236)
+- dev-scripts/compile_msgs.py erfolgreich ausgeführt
+- _compile_msgs.py von Projektroot nach dev-scripts/ verschoben
+
+**Ergebnis:** 13/13 Tests grün (test_i18n.py)
+
+**Nächste Phase:** Phase 7.5d (restliche ~36 Templates) oder Phase 7.6 (Export)
+
+**Ergebnis:**
+- 13/13 Tests grün (test_i18n.py)
+- django.po: 403 Strings total (war 236, +167 neu)
+- Commit: feature/phase-7-5c-i18n-secondary-flow
+
+**Verbleibende Templates ohne i18n (~36 Stück):**
+- Registrierung: register.html, register_new.html, password_reset_*.html
+- AI: ai_coach_chat.html, ai_plan_generator.html, workout_recommendations (erledigt)
+- Weitere: create_plan.html, edit_plan.html, exercise_detail.html, stats_exercise.html, etc.
+- Niedrige Priorität: impressum.html, datenschutz.html, sources.html, training_pdf*.html
+
+**Nächste Phase:** Phase 7.5d (Gruppe 3) oder Phase 7.6 (Export-Templates)
 
