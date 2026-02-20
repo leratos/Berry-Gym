@@ -1,10 +1,10 @@
-{% load static %}
+{% load i18n static %}
 <!doctype html>
 <html lang="de" data-bs-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Registrierung - HomeGym</title>
+    <title>{% trans "Registrierung" %} - HomeGym</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
@@ -32,13 +32,13 @@
                     <h1 class="display-4 fw-bold">
                         <i class="bi bi-heart-pulse-fill text-danger"></i> HomeGym
                     </h1>
-                    <p class="text-muted">Erstelle deinen Beta-Account</p>
+                    <p class="text-muted">{% trans "Erstelle deinen Beta-Account" %}</p>
                 </div>
 
                 <!-- Register Card -->
                 <div class="card register-card shadow-lg">
                     <div class="card-body p-4">
-                        <h5 class="card-title mb-4 text-center">Registrierung mit Einladungscode</h5>
+                        <h5 class="card-title mb-4 text-center">{% trans "Registrierung mit Einladungscode" %}</h5>
 
                         {% if messages %}
                             {% for message in messages %}
@@ -55,66 +55,66 @@
                             <!-- Einladungscode -->
                             <div class="mb-3">
                                 <label for="invite_code" class="form-label">
-                                    <i class="bi bi-key-fill text-primary"></i> Einladungscode *
+                                    <i class="bi bi-key-fill text-primary"></i> {% trans "Einladungscode" %} *
                                 </label>
                                 <input type="text" class="form-control" id="invite_code" name="invite_code"
                                        value="{{ invite_code|default:'' }}" required
-                                       placeholder="z.B. BETA8F3A2C9D1E4B"
+                                       placeholder="{% trans "z.B. BETA8F3A2C9D1E4B" %}"
                                        style="text-transform: uppercase;">
-                                <div class="form-text">Den Code hast du per E-Mail erhalten</div>
+                                <div class="form-text">{% trans "Den Code hast du per E-Mail erhalten" %}</div>
                             </div>
 
                             <!-- Benutzername -->
                             <div class="mb-3">
                                 <label for="username" class="form-label">
-                                    <i class="bi bi-person-fill"></i> Benutzername *
+                                    <i class="bi bi-person-fill"></i> {% trans "Benutzername" %} *
                                 </label>
                                 <input type="text" class="form-control" id="username" name="username"
                                        value="{{ username|default:'' }}" required
-                                       placeholder="Wähle einen eindeutigen Namen">
+                                       placeholder="{% trans "Wähle einen eindeutigen Namen" %}">
                             </div>
 
                             <!-- E-Mail -->
                             <div class="mb-3">
                                 <label for="email" class="form-label">
-                                    <i class="bi bi-envelope-fill"></i> E-Mail-Adresse *
+                                    <i class="bi bi-envelope-fill"></i> {% trans "E-Mail-Adresse" %} *
                                 </label>
                                 <input type="email" class="form-control" id="email" name="email"
                                        value="{{ email|default:'' }}" required
-                                       placeholder="deine@email.de">
+                                       placeholder="{% trans "deine@email.de" %}">
                             </div>
 
                             <!-- Passwort -->
                             <div class="mb-3">
                                 <label for="password1" class="form-label">
-                                    <i class="bi bi-lock-fill"></i> Passwort *
+                                    <i class="bi bi-lock-fill"></i> {% trans "Passwort" %} *
                                 </label>
                                 <input type="password" class="form-control" id="password1" name="password1" required
-                                       placeholder="Mindestens 8 Zeichen">
+                                       placeholder="{% trans "Mindestens 8 Zeichen" %}">
                             </div>
 
                             <!-- Passwort wiederholen -->
                             <div class="mb-4">
                                 <label for="password2" class="form-label">
-                                    <i class="bi bi-lock-fill"></i> Passwort wiederholen *
+                                    <i class="bi bi-lock-fill"></i> {% trans "Passwort wiederholen" %} *
                                 </label>
                                 <input type="password" class="form-control" id="password2" name="password2" required
-                                       placeholder="Nochmal eingeben">
+                                       placeholder="{% trans "Nochmal eingeben" %}">
                             </div>
 
                             <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
-                                <i class="bi bi-check-circle"></i> Account erstellen
+                                <i class="bi bi-check-circle"></i> {% trans "Account erstellen" %}
                             </button>
 
                             <div class="text-center">
                                 <small class="text-muted">
-                                    Noch kein Code?
-                                    <a href="{% url 'apply_beta' %}" class="text-decoration-none">Jetzt bewerben</a>
+                                    {% trans "Noch kein Code?" %}
+                                    <a href="{% url 'apply_beta' %}" class="text-decoration-none">{% trans "Jetzt bewerben" %}</a>
                                 </small>
                                 <br>
                                 <small class="text-muted">
-                                    Account vorhanden?
-                                    <a href="{% url 'login' %}" class="text-decoration-none">Zum Login</a>
+                                    {% trans "Account vorhanden?" %}
+                                    <a href="{% url 'login' %}" class="text-decoration-none">{% trans "Zum Login" %}</a>
                                 </small>
                             </div>
                         </form>
@@ -123,11 +123,11 @@
 
                 <!-- Info Box -->
                 <div class="alert alert-info mt-4">
-                    <i class="bi bi-info-circle"></i> <strong>Wichtig:</strong>
+                    <i class="bi bi-info-circle"></i> <strong>{% trans "Wichtig:" %}</strong>
                     <ul class="mb-0 mt-2">
-                        <li>Einladungscodes sind 30 Tage gültig</li>
-                        <li>Ein Code kann nur einmal verwendet werden</li>
-                        <li>Alle Felder sind Pflichtfelder</li>
+                        <li>{% trans "Einladungscodes sind 30 Tage gültig" %}</li>
+                        <li>{% trans "Ein Code kann nur einmal verwendet werden" %}</li>
+                        <li>{% trans "Alle Felder sind Pflichtfelder" %}</li>
                     </ul>
                 </div>
 

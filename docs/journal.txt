@@ -310,7 +310,7 @@ Hauptsächlich:
 - Beweglichkeits-/Mobility-Übungen
 
 ### Qualitätsbewertung
-**Vorher:** 8.5/10  
+**Vorher:** 8.5/10
 **Nachher:** 9.0/10
 
 **Stärken:**
@@ -424,7 +424,7 @@ Hauptsächlich:
 **Problem:** Equipment "Brustpresse Maschine" war nicht in /equipment/ auswählbar
 
 ### Ursache
-Die 5 neuen Übungen (IDs 112-116) waren zwar in initial_exercises.json, 
+Die 5 neuen Übungen (IDs 112-116) waren zwar in initial_exercises.json,
 aber die Equipment-Verknüpfungen waren nicht in der Datenbank gesetzt.
 
 ### Lösung
@@ -455,8 +455,8 @@ Zugeordnete Übungen: 1 (Brustpresse (Maschine))
 ✅ Brustpresse Maschine jetzt in /equipment/ verfügbar
 ✅ Alle 5 neuen Übungen korrekt verknüpft
 
-**Hinweis:** Dieses Problem trat auf, weil initial_exercises.json eine 
-Fixture ist, die Equipment als String-Namen speichert. Bei manueller 
+**Hinweis:** Dieses Problem trat auf, weil initial_exercises.json eine
+Fixture ist, die Equipment als String-Namen speichert. Bei manueller
 Erstellung müssen Equipment-Objekte explizit verknüpft werden.
 
 ## Management Command zum Sync der Equipment-Verknüpfungen
@@ -468,7 +468,7 @@ Erstellung müssen Equipment-Objekte explizit verknüpft werden.
 ### Problem
 Equipment "Brustpresse Maschine" war auf gym.last-strawberry.com nicht in /equipment/ auswählbar.
 
-**Ursache:** Die Equipment-Verknüpfungen für die 5 neuen Übungen (IDs 112-116) 
+**Ursache:** Die Equipment-Verknüpfungen für die 5 neuen Übungen (IDs 112-116)
 wurden nur lokal gesetzt, aber nicht auf dem Server.
 
 ### Lösung: Management Command
@@ -532,7 +532,7 @@ Equipment ist jetzt verfügbar!
 **Commit:** 4945725
 
 ### Problem
-"Brustpresse Maschine" erschien NICHT in der Equipment-Auswahl-UI 
+"Brustpresse Maschine" erschien NICHT in der Equipment-Auswahl-UI
 (/equipment/), obwohl sie:
 - In der Datenbank existiert (Equipment-Objekt vorhanden)
 - Mit der Übung verknüpft ist (via Admin verifiziert)
@@ -541,7 +541,7 @@ Equipment ist jetzt verfügbar!
 ### Ursache
 **View-Kategorisierung fehlte!**
 
-In `core/views/exercise_management.py` (Zeile 56-67) wird die Equipment-UI 
+In `core/views/exercise_management.py` (Zeile 56-67) wird die Equipment-UI
 in Kategorien aufgeteilt. Die "Maschinen"-Kategorie hatte:
 ```python
 "equipment": [
@@ -1433,6 +1433,23 @@ Da makemessages nicht verfügbar: {% trans %} Tags manuell in Template → Eintr
 
 **Nächste Phase:** Phase 7.5d (restliche ~36 Templates) oder Phase 7.6 (Export)
 
+
+## In Arbeit: Phase 7.5d – i18n Gruppe 3 (Registration, Feedback, kleine User-Seiten)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5d-i18n-registration-feedback
+
+**Templates (~2035 Zeilen):**
+- base.html (51) – Basis-Template, kritisch
+- registration/register.html (128) + register_new.html (140)
+- registration/password_reset_form.html (64) + complete (43) + confirm (93) + done (46)
+- registration/apply_beta.html (376)
+- feedback_create.html (83) + feedback_detail.html (91) + feedback_list.html (113)
+- set_active_plan.html (178)
+- progress_photos.html (176)
+- sources.html (120)
+- includes/disclaimer_banner.html (136)
+- datenschutz.html (132) + impressum.html (65)
+
 **Ergebnis:**
 - 13/13 Tests grün (test_i18n.py)
 - django.po: 403 Strings total (war 236, +167 neu)
@@ -1446,3 +1463,11 @@ Da makemessages nicht verfügbar: {% trans %} Tags manuell in Template → Eintr
 
 **Nächste Phase:** Phase 7.5d (Gruppe 3) oder Phase 7.6 (Export-Templates)
 
+
+
+## In Arbeit: Phase 7.5d – i18n Gruppe 3 (Tatsächlicher Start)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5d-i18n-registration-feedback
+
+**Ziel:** 17 Templates mit {% trans %} versehen, django.po erweitern, compilieren
+**Status:** Beginn der Template-Bearbeitung

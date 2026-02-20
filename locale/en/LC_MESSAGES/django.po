@@ -1244,3 +1244,472 @@ msgstr "Evaluates your training intensity based on your average RPE"
 
 msgid "Analysiert dein Trainingsvolumen (Wiederholungen × RPE) pro Muskelgruppe"
 msgstr "Analyzes your training volume (reps × RPE) per muscle group"
+
+
+msgid "2-3 Sätze reichen"
+msgstr "2-3 Sätze reichen"
+
+msgid "Abgelehnt"
+msgstr "Abgelehnt"
+
+msgid "Account erstellen"
+msgstr "Account erstellen"
+
+msgid "Account vorhanden?"
+msgstr "Account vorhanden?"
+
+msgid "Aktiv"
+msgstr "Aktiv"
+
+msgid "Aktiven Plan setzen"
+msgstr "Aktiven Plan setzen"
+
+msgid "Aktuell aktiv:"
+msgstr "Aktuell aktiv:"
+
+msgid "Aktuelles Gewicht (optional)"
+msgstr "Aktuelles Gewicht (optional)"
+
+msgid "Alle Felder sind Pflichtfelder"
+msgstr "Alle Felder sind Pflichtfelder"
+
+msgid "Alle Pläne werden gleichwertig angezeigt"
+msgstr "Alle Pläne werden gleichwertig angezeigt"
+
+msgid "Alle Quellen"
+msgstr "Alle Quellen"
+
+msgid "Alle Quellen anzeigen"
+msgstr "Alle Quellen anzeigen"
+
+msgid "Analyse & Statistiken"
+msgstr "Analyse & Statistiken"
+
+msgid "Anfänger (< 1 Jahr Training)"
+msgstr "Anfänger (< 1 Jahr Training)"
+
+msgid "Angenommen"
+msgstr "Angenommen"
+
+msgid "Antwort erhalten"
+msgstr "Antwort erhalten"
+
+msgid "Antwort vom HomeGym Team"
+msgstr "Antwort vom HomeGym Team"
+
+msgid "Bereits registriert?"
+msgstr "Bereits registriert?"
+
+msgid "Beschreibe dein Feedback..."
+msgstr "Beschreibe dein Feedback..."
+
+msgid "Beta-Bewerbung"
+msgstr "Beta-Bewerbung"
+
+msgid "Beta-Tester Feedback"
+msgstr "Beta-Tester Feedback"
+
+msgid "Beta-Zugang beantragen"
+msgstr "Beta-Zugang beantragen"
+
+msgid "Bewerbung absenden"
+msgstr "Bewerbung absenden"
+
+msgid "Bugreport"
+msgstr "Bugreport"
+
+msgid "Datei zu groß! Max. 5MB"
+msgstr "Datei zu groß! Max. 5MB"
+
+msgid "Datenschutzerklärung"
+msgstr "Datenschutzerklärung"
+
+msgid "Datum"
+msgstr "Datum"
+
+msgid "Dein Feedback hilft uns, HomeGym zu verbessern. Wir prüfen jeden Vorschlag und antworten dir über diese Seite."
+msgstr "Dein Feedback hilft uns, HomeGym zu verbessern. Wir prüfen jeden Vorschlag und antworten dir über diese Seite."
+
+msgid "Dein Passwort wurde erfolgreich geändert. Du kannst dich jetzt mit deinem neuen Passwort anmelden."
+msgstr "Dein Passwort wurde erfolgreich geändert. Du kannst dich jetzt mit deinem neuen Passwort anmelden."
+
+msgid "Deine Nachricht"
+msgstr "Deine Nachricht"
+
+msgid "Deload-Einstellungen"
+msgstr "Deload-Einstellungen"
+
+msgid "Den Code hast du per E-Mail erhalten"
+msgstr "Den Code hast du per E-Mail erhalten"
+
+msgid "Detaillierte Beschreibung"
+msgstr "Detaillierte Beschreibung"
+
+msgid "Die Algorithmen und Empfehlungen in HomeGym basieren auf peer-reviewter Forschungsliteratur. Hier findest du alle verwendeten Quellen."
+msgstr "Die Algorithmen und Empfehlungen in HomeGym basieren auf peer-reviewter Forschungsliteratur. Hier findest du alle verwendeten Quellen."
+
+msgid "Die ℹ-Icons in der App verweisen auf diese Seite. Wissenschaftliche Empfehlungen sind Richtwerte – individuelle Faktoren (Genetik, Erholung, Ernährung) beeinflussen das Ergebnis. Diese App ersetzt keine professionelle Trainingsberatung."
+msgstr "Die ℹ-Icons in der App verweisen auf diese Seite. Wissenschaftliche Empfehlungen sind Richtwerte – individuelle Faktoren (Genetik, Erholung, Ernährung) beeinflussen das Ergebnis. Diese App ersetzt keine professionelle Trainingsberatung."
+
+msgid "Dieser Link ist abgelaufen oder wurde bereits verwendet."
+msgstr "Dieser Link ist abgelaufen oder wurde bereits verwendet."
+
+msgid "Dokumentiere deine Transformation mit Before/After Fotos!"
+msgstr "Dokumentiere deine Transformation mit Before/After Fotos!"
+
+msgid "Du erhältst deinen Einladungscode hier"
+msgstr "Du erhältst deinen Einladungscode hier"
+
+msgid "E-Mail gesendet"
+msgstr "E-Mail gesendet"
+
+msgid "E-Mail gesendet!"
+msgstr "E-Mail gesendet!"
+
+msgid "E-Mail-Adresse"
+msgstr "E-Mail-Adresse"
+
+msgid "Ein Code kann nur einmal verwendet werden"
+msgstr "Ein Code kann nur einmal verwendet werden"
+
+msgid "Einladungscode"
+msgstr "Einladungscode"
+
+msgid "Einladungscodes sind 30 Tage gültig"
+msgstr "Einladungscodes sind 30 Tage gültig"
+
+msgid "Erfahren (> 3 Jahre)"
+msgstr "Erfahren (> 3 Jahre)"
+
+msgid "Erstelle deinen Beta-Account"
+msgstr "Erstelle deinen Beta-Account"
+
+msgid "Erstelle deinen kostenlosen Account"
+msgstr "Erstelle deinen kostenlosen Account"
+
+msgid "Erstelle zuerst Trainingspläne und gruppiere sie, um diese Funktion zu nutzen."
+msgstr "Erstelle zuerst Trainingspläne und gruppiere sie, um diese Funktion zu nutzen."
+
+msgid "Erstes Foto hochladen"
+msgstr "Erstes Foto hochladen"
+
+msgid "Falls du mitten in einem Zyklus auf diesen Plan wechselst, gib hier deine aktuelle Woche an. Leer lassen = Zyklus startet ab heute bei Woche 1."
+msgstr "Falls du mitten in einem Zyklus auf diesen Plan wechselst, gib hier deine aktuelle Woche an. Leer lassen = Zyklus startet ab heute bei Woche 1."
+
+msgid "Falls ein Account mit dieser E-Mail existiert, haben wir dir einen Link zum Zurücksetzen deines Passworts gesendet."
+msgstr "Falls ein Account mit dieser E-Mail existiert, haben wir dir einen Link zum Zurücksetzen deines Passworts gesendet."
+
+msgid "Feedback absenden"
+msgstr "Feedback absenden"
+
+msgid "Feedback einreichen"
+msgstr "Feedback einreichen"
+
+msgid "Feedback-Details"
+msgstr "Feedback-Details"
+
+msgid "Fehler bei der Registrierung:"
+msgstr "Fehler bei der Registrierung:"
+
+msgid "Fortgeschritten (1-3 Jahre)"
+msgstr "Fortgeschritten (1-3 Jahre)"
+
+msgid "Fortschrittsfoto"
+msgstr "Fortschrittsfoto"
+
+msgid "Foto"
+msgstr "Foto"
+
+msgid "Foto auswählen"
+msgstr "Foto auswählen"
+
+msgid "Foto wirklich löschen?"
+msgstr "Foto wirklich löschen?"
+
+msgid "Frage"
+msgstr "Frage"
+
+msgid "Frage stellen"
+msgstr "Frage stellen"
+
+msgid "Für Community-Features & Contributions"
+msgstr "Für Community-Features & Contributions"
+
+msgid "Gesamt Fotos"
+msgstr "Gesamt Fotos"
+
+msgid "Gewicht:"
+msgstr "Gewicht:"
+
+msgid "Gib dein neues Passwort ein."
+msgstr "Gib dein neues Passwort ein."
+
+msgid "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen."
+msgstr "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen."
+
+msgid "GitHub Username (optional)"
+msgstr "GitHub Username (optional)"
+
+msgid "Hast du bereits einen Code?"
+msgstr "Hast du bereits einen Code?"
+
+msgid "Hast du einen Bug gefunden oder eine Idee für eine Verbesserung?"
+msgstr "Hast du einen Bug gefunden oder eine Idee für eine Verbesserung?"
+
+msgid "Hinweis:"
+msgstr "Hinweis:"
+
+msgid "Hochladen"
+msgstr "Hochladen"
+
+msgid "In Bearbeitung"
+msgstr "In Bearbeitung"
+
+msgid "Info"
+msgstr "Info"
+
+msgid "Jetzt anmelden"
+msgstr "Jetzt anmelden"
+
+msgid "Jetzt bewerben"
+msgstr "Jetzt bewerben"
+
+msgid "Jetzt registrieren"
+msgstr "Jetzt registrieren"
+
+msgid "KI-Trainingspläne"
+msgstr "KI-Trainingspläne"
+
+msgid "KI-gestütztes Trainingstracking für ambitionierte Athleten"
+msgstr "KI-gestütztes Trainingstracking für ambitionierte Athleten"
+
+msgid "Kein Link"
+msgstr "Kein Link"
+
+msgid "Kein aktiver Plan"
+msgstr "Kein aktiver Plan"
+
+msgid "Keine Plan-Gruppen gefunden!"
+msgstr "Keine Plan-Gruppen gefunden!"
+
+msgid "Keine Quellen in dieser Kategorie gefunden."
+msgstr "Keine Quellen in dieser Kategorie gefunden."
+
+msgid "Kurzbeschreibung"
+msgstr "Kurzbeschreibung"
+
+msgid "Körperwerte"
+msgstr "Körperwerte"
+
+msgid "Laufende Woche"
+msgstr "Laufende Woche"
+
+msgid "Letzte Woche = Deload"
+msgstr "Letzte Woche = Deload"
+
+msgid "Link"
+msgstr "Link"
+
+msgid "Link senden"
+msgstr "Link senden"
+
+msgid "Link ungültig"
+msgstr "Link ungültig"
+
+msgid "Live verfügbar!"
+msgstr "Live verfügbar!"
+
+msgid "Max. 200 Zeichen"
+msgstr "Max. 200 Zeichen"
+
+msgid "Max. 5MB, JPG/PNG"
+msgstr "Max. 5MB, JPG/PNG"
+
+msgid "Mein Feedback"
+msgstr "Mein Feedback"
+
+msgid "Mesozyklus-Länge"
+msgstr "Mesozyklus-Länge"
+
+msgid "Muskelmasse"
+msgstr "Muskelmasse"
+
+msgid "Neu"
+msgstr "Neu"
+
+msgid "Neuen Link anfordern"
+msgstr "Neuen Link anfordern"
+
+msgid "Neues Foto hochladen"
+msgstr "Neues Foto hochladen"
+
+msgid "Neues Passwort setzen"
+msgstr "Neues Passwort setzen"
+
+msgid "Nicht umsetzbar"
+msgstr "Nicht umsetzbar"
+
+msgid "Noch kein Code?"
+msgstr "Noch kein Code?"
+
+msgid "Noch kein Feedback"
+msgstr "Noch kein Feedback"
+
+msgid "Noch keine Antwort"
+msgstr "Noch keine Antwort"
+
+msgid "Noch keine Fortschrittsfotos"
+msgstr "Noch keine Fortschrittsfotos"
+
+msgid "Noch nicht geprüft"
+msgstr "Noch nicht geprüft"
+
+msgid "Nochmal eingeben"
+msgstr "Nochmal eingeben"
+
+msgid "Notiz:"
+msgstr "Notiz:"
+
+msgid "Open-Source / Entwicklung"
+msgstr "Open-Source / Entwicklung"
+
+msgid "Passwort geändert"
+msgstr "Passwort geändert"
+
+msgid "Passwort geändert!"
+msgstr "Passwort geändert!"
+
+msgid "Passwort speichern"
+msgstr "Passwort speichern"
+
+msgid "Passwort wiederholen"
+msgstr "Passwort wiederholen"
+
+msgid "Passwort zurücksetzen"
+msgstr "Passwort zurücksetzen"
+
+msgid "Passwort ändern"
+msgstr "Passwort ändern"
+
+msgid "Plan aktivieren"
+msgstr "Plan aktivieren"
+
+msgid "Pläne verwalten"
+msgstr "Pläne verwalten"
+
+msgid "Prüfe auch deinen Spam-Ordner."
+msgstr "Prüfe auch deinen Spam-Ordner."
+
+msgid "Push Notifications werden geladen... Bitte versuche es in wenigen Sekunden erneut."
+msgstr "Push Notifications werden geladen... Bitte versuche es in wenigen Sekunden erneut."
+
+msgid "Registrierung"
+msgstr "Registrierung"
+
+msgid "Registrierung mit Einladungscode"
+msgstr "Registrierung mit Einladungscode"
+
+msgid "Trainingserfahrung"
+msgstr "Trainingserfahrung"
+
+msgid "Trainingstracking"
+msgstr "Trainingstracking"
+
+msgid "Typ"
+msgstr "Typ"
+
+msgid "Umgesetzt"
+msgstr "Umgesetzt"
+
+msgid "Verbesserungsvorschlag"
+msgstr "Verbesserungsvorschlag"
+
+msgid "Verstanden"
+msgstr "Verstanden"
+
+msgid "Warum Einladung nötig?"
+msgstr "Warum Einladung nötig?"
+
+msgid "Warum möchtest du HomeGym nutzen?"
+msgstr "Warum möchtest du HomeGym nutzen?"
+
+msgid "Was bedeutet der Status?"
+msgstr "Was bedeutet der Status?"
+
+msgid "Was dich erwartet"
+msgstr "Was dich erwartet"
+
+msgid "Was interessiert dich? (Mehrfachauswahl)"
+msgstr "Was interessiert dich? (Mehrfachauswahl)"
+
+msgid "Was ist HomeGym?"
+msgstr "Was ist HomeGym?"
+
+msgid "Was passiert jetzt?"
+msgstr "Was passiert jetzt?"
+
+msgid "Weiteres Feedback"
+msgstr "Weiteres Feedback"
+
+msgid "Werden automatisch in der Deload-Woche angewendet. KI-Pläne setzen diese Werte automatisch."
+msgstr "Werden automatisch in der Deload-Woche angewendet. KI-Pläne setzen diese Werte automatisch."
+
+msgid "Wichtig:"
+msgstr "Wichtig:"
+
+msgid "Wiedereinstieg nach Pause"
+msgstr "Wiedereinstieg nach Pause"
+
+msgid "Wir prüfen dein Feedback und antworten dir hier, sobald wir es bearbeitet haben."
+msgstr "Wir prüfen dein Feedback und antworten dir hier, sobald wir es bearbeitet haben."
+
+msgid "Wird entwickelt"
+msgstr "Wird entwickelt"
+
+msgid "Wird umgesetzt"
+msgstr "Wird umgesetzt"
+
+msgid "Wissenschaftliche Quellen"
+msgstr "Wissenschaftliche Quellen"
+
+msgid "Wähle einen eindeutigen Namen"
+msgstr "Wähle einen eindeutigen Namen"
+
+msgid "Zeitraum"
+msgstr "Zeitraum"
+
+msgid "Zum Login"
+msgstr "Zum Login"
+
+msgid "Zurück zum Login"
+msgstr "Zurück zum Login"
+
+msgid "dein Krafttraining besser zu planen. Leichtes Cardio fördert die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
+msgstr "dein Krafttraining besser zu planen. Leichtes Cardio fördert die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
+
+msgid "deine@email.de"
+msgstr "deine@email.de"
+
+msgid "insgesamt."
+msgstr "insgesamt."
+
+msgid "optional"
+msgstr "optional"
+
+msgid "z.B. 'Start', 'Nach 3 Monaten'"
+msgstr "z.B. 'Start', 'Nach 3 Monaten'"
+
+msgid "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
+msgstr "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
+
+msgid "z.B. 3"
+msgstr "z.B. 3"
+
+msgid "z.B. BETA8F3A2C9D1E4B"
+msgstr "z.B. BETA8F3A2C9D1E4B"
+
+msgid "z.B. Ich trainiere seit 2 Jahren und suche einen intelligenten Tracker..."
+msgstr "z.B. Ich trainiere seit 2 Jahren und suche einen intelligenten Tracker..."
+
+msgid "z.B. leratos"
+msgstr "z.B. leratos"

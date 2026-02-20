@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Scientific Disclaimer Banner Component.
 
@@ -34,16 +35,16 @@ Requires: core.context_processors.disclaimers in settings.py
         <div class="disclaimer-actions">
             <button class="btn btn-sm btn-primary disclaimer-acknowledge"
                     data-disclaimer-id="{{ disclaimer.id }}">
-                Verstanden
+                {% trans "Verstanden" %}
             </button>
             <a href="{% url 'sources_list' %}" class="btn btn-sm btn-outline-secondary ms-2">
-                <i class="bi bi-journal-bookmark me-1"></i>Alle Quellen
+                <i class="bi bi-journal-bookmark me-1"></i>{% trans "Alle Quellen" %}
             </a>
         </div>
         {% else %}
         <div class="disclaimer-actions">
             <a href="{% url 'sources_list' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-journal-bookmark me-1"></i>Alle Quellen
+                <i class="bi bi-journal-bookmark me-1"></i>{% trans "Alle Quellen" %}
             </a>
         </div>
         {% endif %}

@@ -1,35 +1,35 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load i18n static %}
 
-{% block title %}Mein Feedback - HomeGym{% endblock %}
+{% block title %}{% trans "Mein Feedback" %} - HomeGym{% endblock %}
 
 {% block page_nav %}
 <nav class="navbar navbar-page border-bottom mb-4">
     <div class="container-fluid">
         <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-            <i class="bi bi-arrow-left"></i> Dashboard
+            <i class="bi bi-arrow-left"></i> {% trans "Dashboard" %}
         </a>
         <span class="navbar-text page-title fw-bold">
-            <i class="bi bi-chat-dots me-1"></i>Mein Feedback
+            <i class="bi bi-chat-dots me-1"></i>{% trans "Mein Feedback" %}
         </span>
         <div class="dropdown">
             <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="bi bi-plus-lg"></i> Neu
+                <i class="bi bi-plus-lg"></i> {% trans "Neu" %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li>
                     <a class="dropdown-item" href="{% url 'feedback_create' %}?type=BUG">
-                        <i class="bi bi-bug text-danger"></i> Bugreport
+                        <i class="bi bi-bug text-danger"></i> {% trans "Bugreport" %}
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item" href="{% url 'feedback_create' %}?type=FEATURE">
-                        <i class="bi bi-lightbulb text-warning"></i> Verbesserungsvorschlag
+                        <i class="bi bi-lightbulb text-warning"></i> {% trans "Verbesserungsvorschlag" %}
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item" href="{% url 'feedback_create' %}?type=QUESTION">
-                        <i class="bi bi-question-circle text-info"></i> Frage
+                        <i class="bi bi-question-circle text-info"></i> {% trans "Frage" %}
                     </a>
                 </li>
             </ul>
@@ -56,11 +56,11 @@
             <div class="card bg-dark border-secondary mb-4">
                 <div class="card-body py-2">
                     <small class="text-muted">
-                        <span class="badge bg-info me-1">🆕 Neu</span>
-                        <span class="badge bg-success me-1">✅ Angenommen</span>
-                        <span class="badge bg-warning text-dark me-1">🔄 In Bearbeitung</span>
-                        <span class="badge bg-primary me-1">🎉 Umgesetzt</span>
-                        <span class="badge bg-danger">❌ Abgelehnt</span>
+                        <span class="badge bg-info me-1">🆕 {% trans "Neu" %}</span>
+                        <span class="badge bg-success me-1">✅ {% trans "Angenommen" %}</span>
+                        <span class="badge bg-warning text-dark me-1">🔄 {% trans "In Bearbeitung" %}</span>
+                        <span class="badge bg-primary me-1">🎉 {% trans "Umgesetzt" %}</span>
+                        <span class="badge bg-danger">❌ {% trans "Abgelehnt" %}</span>
                     </small>
                 </div>
             </div>
@@ -92,7 +92,7 @@
                     </div>
                     {% if feedback.admin_response %}
                     <div class="mt-2">
-                        <small class="text-success"><i class="bi bi-reply"></i> Antwort erhalten</small>
+                        <small class="text-success"><i class="bi bi-reply"></i> {% trans "Antwort erhalten" %}</small>
                     </div>
                     {% endif %}
                 </a>
@@ -101,17 +101,17 @@
             {% else %}
             <div class="text-center py-5">
                 <i class="bi bi-chat-dots display-1 text-muted"></i>
-                <h5 class="mt-3 text-muted">Noch kein Feedback</h5>
-                <p class="text-muted">Hast du einen Bug gefunden oder eine Idee für eine Verbesserung?</p>
+                <h5 class="mt-3 text-muted">{% trans "Noch kein Feedback" %}</h5>
+                <p class="text-muted">{% trans "Hast du einen Bug gefunden oder eine Idee für eine Verbesserung?" %}</p>
                 <a href="{% url 'feedback_create' %}" class="btn btn-success">
-                    <i class="bi bi-plus-lg"></i> Feedback einreichen
+                    <i class="bi bi-plus-lg"></i> {% trans "Feedback einreichen" %}
                 </a>
             </div>
             {% endif %}
 
             <div class="mt-4">
                 <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Zurück zum Dashboard
+                    <i class="bi bi-arrow-left"></i> {% trans "Zurück zum Dashboard" %}
                 </a>
             </div>
 
