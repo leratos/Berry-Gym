@@ -1608,3 +1608,22 @@ Betroffene Dateien:
 
 Lektion: fix_trans_attrs.py darf nicht blind ersetzen wenn der trans-Wert
 selbst einfache Quotes enthält. Apostrophe im Placeholder-Text meiden.
+
+## In Arbeit: L10N-Decimal-Regression-Tests (20.02.2026)
+
+Ziel: Test der Regression "kgFaktor mit Komma bricht JS in DE-Locale".
+Datei: core/tests/test_i18n.py - neue Klasse L10nJsDecimalTest
+
+## Abgeschlossen: L10N-Decimal-Regression-Tests (20.02.2026)
+
+2 neue Tests in core/tests/test_i18n.py - Klasse L10nJsDecimalTest:
+
+- test_kgfaktor_kein_komma_in_js_de_locale: Prüft dass kein "0,5"-Muster
+  im JS-Block vorkommt wenn DE-Locale aktiv ist
+- test_kgfaktor_enthaelt_dezimalpunkt_in_js: Positiv-Test dass "0.5" mit
+  Punkt im JS-Block vorhanden ist
+
+Setup: Übung mit gewichts_typ=KOERPERGEWICHT, koerpergewicht_faktor=0.5,
+TrainingseinheitFactory, lang_override("de").
+
+17/17 Tests grün lokal. Commit: a2058b3
