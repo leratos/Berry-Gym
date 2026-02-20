@@ -9,24 +9,28 @@
         </a>
 
         <!-- Language Switcher -->
+        {% get_current_language as LANGUAGE_CODE %}
+        {% if LANGUAGE_CODE == 'de' %}
         <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center me-2">
             {% csrf_token %}
             <input name="next" type="hidden" value="{{ request.path }}">
-            {% get_current_language as LANGUAGE_CODE %}
-            {% if LANGUAGE_CODE == 'de' %}
             <button type="submit" name="language" value="en"
                     class="btn btn-sm btn-outline-secondary border-0 px-2 py-1"
                     title="Switch to English">
                 <span class="small fw-bold text-muted">EN</span>
             </button>
-            {% else %}
+        </form>
+        {% else %}
+        <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center me-2">
+            {% csrf_token %}
+            <input name="next" type="hidden" value="{{ request.path|slice:'3:' }}">
             <button type="submit" name="language" value="de"
                     class="btn btn-sm btn-outline-secondary border-0 px-2 py-1"
                     title="Auf Deutsch wechseln">
                 <span class="small fw-bold text-muted">DE</span>
             </button>
-            {% endif %}
         </form>
+        {% endif %}
 
         <!-- User Dropdown -->
         <div class="dropdown">

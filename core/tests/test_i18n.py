@@ -62,6 +62,38 @@ class LanguageSwitcherTest(TestCase):
         )
         self.assertEqual(response.status_code, 302)
 
+    def test_switch_en_to_de_strips_en_prefix(self):
+        """
+        Regression: EN→DE Wechsel darf nicht auf /en/... URL redirecten.
+        next muss vom Template schon ohne /en/-Prefix übergeben werden
+        (/en/dashboard/ -> [3:] -> /dashboard/).
+        """
+        # Simuliert: User ist auf englischer Seite, klickt DE
+        # Das Template sendet request.path|slice:'3:' = '/accounts/login/'
+        response = self.client.post(
+            "/i18n/setlang/",
+            {"language": "de", "next": "/accounts/login/"},
+        )
+        self.assertEqual(response.status_code, 302)
+        redirect_url = response["Location"]
+        self.assertFalse(
+            redirect_url.startswith("/en/"),
+            f"EN→DE Redirect sollte kein /en/-Prefix haben, aber war: {redirect_url}",
+        )
+
+    def test_switch_de_to_en_next_is_en_url(self):
+        """
+        DE→EN Wechsel: Redirect landet auf der englischen URL (/en/...).
+        """
+        response = self.client.post(
+            "/i18n/setlang/",
+            {"language": "en", "next": "/accounts/login/"},
+        )
+        self.assertEqual(response.status_code, 302)
+        redirect_url = response["Location"]
+        # Django set_language redirectet zur `next` URL direkt (translate_url ist no-op hier)
+        self.assertIn("login", redirect_url)
+
 
 class LoginPageTranslationTest(TestCase):
     """Testet ob Übersetzungen auf der Login-Seite aktiv sind."""
