@@ -19,12 +19,18 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.conf.urls.i18n import i18n_patterns
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("accounts/", include("django.contrib.auth.urls")),  # Login, Logout, Password Reset
-    path("", include("core.urls")),
+    path("i18n/", include("django.conf.urls.i18n")),  # set_language endpoint
 ]
+
+urlpatterns += i18n_patterns(
+    path("admin/", admin.site.urls),
+    path("accounts/", include("django.contrib.auth.urls")),
+    path("", include("core.urls")),
+    prefix_default_language=False,  # DE ohne /de/ Präfix, EN mit /en/
+)
 
 # Media files in development
 if settings.DEBUG:

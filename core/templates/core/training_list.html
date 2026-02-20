@@ -1,15 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Trainings-Logbuch{% endblock %}
+{% block title %}{% trans "Trainings-Logbuch" %}{% endblock %}
 
 {% block page_nav %}
 <nav class="navbar navbar-page border-bottom">
   <div class="container-fluid">
     <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-        <i class="bi bi-arrow-left"></i> Dashboard
+        <i class="bi bi-arrow-left"></i> {% trans "Dashboard" %}
     </a>
-    <span class="navbar-text page-title fw-bold">Dein Verlauf</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Dein Verlauf" %}</span>
     <div style="width: 40px;">
         <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
@@ -25,8 +26,8 @@
   {% if not trainings_data %}
     <div class="text-center py-5 text-muted">
         <i class="bi bi-journal-x display-1 opacity-25"></i>
-        <p class="mt-3">Noch keine Trainings absolviert.</p>
-        <a href="{% url 'training_select_plan' %}" class="btn btn-primary mt-2">Jetzt starten!</a>
+        <p class="mt-3">{% trans "Noch keine Trainings absolviert." %}</p>
+        <a href="{% url 'training_select_plan' %}" class="btn btn-primary mt-2">{% trans "Jetzt starten!" %}</a>
     </div>
   {% else %}
 
@@ -49,7 +50,7 @@
                         </small>
                         <div class="mt-2">
                             <span class="badge bg-secondary me-1">
-                                <i class="bi bi-layers-half"></i> {{ data.arbeitssaetze }} Sätze
+                                <i class="bi bi-layers-half"></i> {{ data.arbeitssaetze }} {% trans "Sätze" %}
                             </span>
                             <span class="badge bg-success">
                                 <i class="bi bi-bar-chart-fill"></i> {{ data.volumen|floatformat:0 }} kg
@@ -86,30 +87,30 @@
     <div class="modal-content bg-dark text-white border-danger">
       <div class="modal-header border-danger">
         <h5 class="modal-title text-danger">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>Training löschen?
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{% trans "Training löschen?" %}
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-2">Möchtest du dieses Training wirklich unwiderruflich löschen?</p>
+        <p class="mb-2">{% trans "Möchtest du dieses Training wirklich unwiderruflich löschen?" %}</p>
         <div class="alert alert-secondary mb-0">
             <strong id="deleteTrainingDate"></strong><br>
             <small class="text-muted">
-                <i class="bi bi-layers-half"></i> <span id="deleteTrainingSets"></span> Sätze &bull;
+                <i class="bi bi-layers-half"></i> <span id="deleteTrainingSets"></span> {% trans "Sätze" %} &bull;
                 <i class="bi bi-bar-chart-fill"></i> <span id="deleteTrainingVolume"></span> kg
             </small>
         </div>
         <p class="text-warning small mt-3 mb-0">
-            <i class="bi bi-info-circle"></i> Alle Sätze gehen verloren!
+            <i class="bi bi-info-circle"></i> {% trans "Alle Sätze gehen verloren!" %}
         </p>
       </div>
       <div class="modal-footer border-secondary">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Abbrechen" %}</button>
         <!-- POST-Form statt GET-Link: Verhindert versehentliches Löschen durch Prefetching -->
         <form id="deleteTrainingForm" method="post" action="" class="d-inline m-0">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger">
-                <i class="bi bi-trash-fill me-1"></i> Ja, unwiderruflich löschen
+                <i class="bi bi-trash-fill me-1"></i> {% trans "Ja, unwiderruflich löschen" %}
             </button>
         </form>
       </div>

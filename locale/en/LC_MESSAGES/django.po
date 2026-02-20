@@ -1,0 +1,133 @@
+# HomeGym - English translations
+# Copyright (C) 2026
+# This file is distributed under the same license as the HomeGym package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: HomeGym 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-19 22:02+0100\n"
+"PO-Revision-Date: 2026-02-19 22:02+0100\n"
+"Last-Translator: HomeGym Team\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\core\templates\core\includes\global_header.html:54
+msgid "Admin-Panel"
+msgstr "Admin Panel"
+
+#: .\core\templates\core\includes\global_header.html:61
+msgid "Profil bearbeiten"
+msgstr "Edit Profile"
+
+#: .\core\templates\core\includes\global_header.html:66
+msgid "Equipment"
+msgstr "Equipment"
+
+#: .\core\templates\core\includes\global_header.html:71
+msgid "Statistiken"
+msgstr "Statistics"
+
+#: .\core\templates\core\includes\global_header.html:79
+msgid "Abmelden"
+msgstr "Sign Out"
+
+#: .\core\templates\core\training_list.html:5
+msgid "Trainings-Logbuch"
+msgstr "Training Log"
+
+#: .\core\templates\core\training_list.html:11
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: .\core\templates\core\training_list.html:13
+msgid "Dein Verlauf"
+msgstr "Your History"
+
+#: .\core\templates\core\training_list.html:29
+msgid "Noch keine Trainings absolviert."
+msgstr "No workouts logged yet."
+
+#: .\core\templates\core\training_list.html:30
+msgid "Jetzt starten!"
+msgstr "Start now!"
+
+#: .\core\templates\core\training_list.html:53
+#: .\core\templates\core\training_list.html:99
+msgid "Sätze"
+msgstr "Sets"
+
+#: .\core\templates\core\training_list.html:90
+msgid "Training löschen?"
+msgstr "Delete Workout?"
+
+#: .\core\templates\core\training_list.html:95
+msgid "Möchtest du dieses Training wirklich unwiderruflich löschen?"
+msgstr "Do you really want to permanently delete this workout?"
+
+#: .\core\templates\core\training_list.html:104
+msgid "Alle Sätze gehen verloren!"
+msgstr "All sets will be lost!"
+
+#: .\core\templates\core\training_list.html:108
+msgid "Abbrechen"
+msgstr "Cancel"
+
+#: .\core\templates\core\training_list.html:113
+msgid "Ja, unwiderruflich löschen"
+msgstr "Yes, delete permanently"
+
+#: .\core\templates\registration\login.html:7
+msgid "Login"
+msgstr "Login"
+
+#: .\core\templates\registration\login.html:22
+msgid "Dein persönliches Trainingstagebuch"
+msgstr "Your personal training journal"
+
+#: .\core\templates\registration\login.html:28
+#: .\core\templates\registration\login.html:85
+msgid "Anmelden"
+msgstr "Sign In"
+
+#: .\core\templates\registration\login.html:33
+msgid "Ungültiger Benutzername oder Passwort."
+msgstr "Invalid username or password."
+
+#: .\core\templates\registration\login.html:40
+msgid "Dein Account hat keine Berechtigung für diese Seite."
+msgstr "Your account does not have permission for this page."
+
+#: .\core\templates\registration\login.html:50
+#: .\core\templates\registration\login.html:57
+msgid "Benutzername"
+msgstr "Username"
+
+#: .\core\templates\registration\login.html:65
+#: .\core\templates\registration\login.html:72
+msgid "Passwort"
+msgstr "Password"
+
+#: .\core\templates\registration\login.html:77
+msgid "Passwort vergessen?"
+msgstr "Forgot password?"
+
+#: .\core\templates\registration\login.html:92
+msgid "Noch keinen Account?"
+msgstr "No account yet?"
+
+#: .\core\templates\registration\login.html:94
+msgid "Für Beta bewerben"
+msgstr "Apply for Beta"
+
+#: .\core\templates\registration\login.html:105
+msgid "Impressum"
+msgstr "Legal Notice"
+
+#: .\core\templates\registration\login.html:107
+msgid "Datenschutz"
+msgstr "Privacy Policy"
