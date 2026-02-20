@@ -2,6 +2,7 @@
 {% load static %}
 {% load custom_filters %}
 {% load i18n %}
+{% load l10n %}
 {# === HEAD: nur page-spezifisches CSS === #}
 {% block extra_head %}
 <!-- Toast Notification System -->
@@ -620,7 +621,7 @@
                 name: "{{ uebung.bezeichnung|escapejs }}",
                 muscleKey: "{{ uebung.muskelgruppe|escapejs }}",
                 gewichtsTyp: "{{ uebung.gewichts_typ }}",
-                kgFaktor: {{ uebung.koerpergewicht_faktor }}
+                kgFaktor: {% localize off %}{{ uebung.koerpergewicht_faktor }}{% endlocalize %}
             },
             {% endfor %}
         ];
