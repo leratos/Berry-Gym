@@ -16,13 +16,13 @@
     </a>
     <span class="navbar-text page-title fw-bold">{% trans "Körperwerte" %}</span>
     <div>
-        <a class="btn btn-outline-info border-0 me-2" href="{% url 'progress_photos' %}" title="{% trans "Fortschrittsfotos" %}">
+        <a class="btn btn-outline-info border-0 me-2" href="{% url 'progress_photos' %}" title="{% trans 'Fortschrittsfotos' %}">
             <i class="bi bi-camera"></i>
         </a>
         <a class="btn btn-primary border-0" href="{% url 'add_koerperwert' %}">
             <i class="bi bi-plus-lg"></i>
         </a>
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans 'Theme wechseln' %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -121,12 +121,12 @@
                             <td>{{ wert.ffmi|default:"--" }}</td>
                             <td>{{ wert.koerperfett_prozent|default:"--" }}{% if wert.koerperfett_prozent %}%{% endif %}</td>
                             <td class="text-end">
-                                <a href="{% url 'edit_koerperwert' wert.id %}" class="btn btn-sm btn-outline-primary border-0" title="{% trans "Bearbeiten" %}">
+                                <a href="{% url 'edit_koerperwert' wert.id %}" class="btn btn-sm btn-outline-primary border-0" title="{% trans 'Bearbeiten' %}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <button class="btn btn-sm btn-outline-danger border-0"
                                         onclick="confirmDelete({{ wert.id }}, '{% url 'delete_koerperwert' wert.id %}')"
-                                        title="{% trans "Löschen" %}">
+                                        title="{% trans 'Löschen' %}">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>

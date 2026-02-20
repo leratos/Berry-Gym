@@ -59,7 +59,7 @@
                                 </label>
                                 <input type="text" class="form-control" id="invite_code" name="invite_code"
                                        value="{{ invite_code|default:'' }}" required
-                                       placeholder="{% trans "z.B. BETA8F3A2C9D1E4B" %}"
+                                       placeholder="{% trans 'z.B. BETA8F3A2C9D1E4B' %}"
                                        style="text-transform: uppercase;">
                                 <div class="form-text">{% trans "Den Code hast du per E-Mail erhalten" %}</div>
                             </div>
@@ -71,7 +71,7 @@
                                 </label>
                                 <input type="text" class="form-control" id="username" name="username"
                                        value="{{ username|default:'' }}" required
-                                       placeholder="{% trans "Wähle einen eindeutigen Namen" %}">
+                                       placeholder="{% trans 'Wähle einen eindeutigen Namen' %}">
                             </div>
 
                             <!-- E-Mail -->
@@ -81,7 +81,7 @@
                                 </label>
                                 <input type="email" class="form-control" id="email" name="email"
                                        value="{{ email|default:'' }}" required
-                                       placeholder="{% trans "deine@email.de" %}">
+                                       placeholder="{% trans 'deine@email.de' %}">
                             </div>
 
                             <!-- Passwort -->
@@ -90,7 +90,7 @@
                                     <i class="bi bi-lock-fill"></i> {% trans "Passwort" %} *
                                 </label>
                                 <input type="password" class="form-control" id="password1" name="password1" required
-                                       placeholder="{% trans "Mindestens 8 Zeichen" %}">
+                                       placeholder="{% trans 'Mindestens 8 Zeichen' %}">
                             </div>
 
                             <!-- Passwort wiederholen -->
@@ -99,7 +99,7 @@
                                     <i class="bi bi-lock-fill"></i> {% trans "Passwort wiederholen" %} *
                                 </label>
                                 <input type="password" class="form-control" id="password2" name="password2" required
-                                       placeholder="{% trans "Nochmal eingeben" %}">
+                                       placeholder="{% trans 'Nochmal eingeben' %}">
                             </div>
 
                             <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
