@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}{{ uebung.bezeichnung }} - HomeGym{% endblock %}
 
@@ -20,7 +20,7 @@
 <nav class="navbar navbar-page border-bottom mb-4">
   <div class="container-fluid">
     <a class="btn btn-outline-secondary border-0" href="{% url 'muscle_map' %}">
-        <i class="bi bi-arrow-left"></i> Muscle-Map
+        <i class="bi bi-arrow-left"></i> {% trans "Muscle-Map" %}
     </a>
     <span class="navbar-text page-title fw-bold text-truncate" style="max-width: 180px;">{{ uebung.bezeichnung }}</span>
     <div style="width: 40px;">
@@ -39,7 +39,7 @@
             <h1 class="display-4 mb-0">{{ uebung.bezeichnung }}</h1>
             <button class="btn btn-outline-warning btn-lg border-0 favorite-btn"
                     onclick="toggleFavorite({{ uebung.id }})"
-                    id="favoriteBtn" title="Zu Favoriten hinzufügen">
+                    id="favoriteBtn" title="{% trans "Zu Favoriten hinzufügen" %}">
                 <i class="bi bi-star{% if request.user in uebung.favoriten.all %}-fill text-warning{% endif %}" id="favoriteIcon"></i>
             </button>
         </div>
@@ -53,11 +53,11 @@
     <div class="row g-4">
         <div class="col-lg-7">
             <div class="svg-container">
-                <h5 class="mb-3 text-center">Anatomische Darstellung</h5>
+                <h5 class="mb-3 text-center">{% trans "Anatomische Darstellung" %}</h5>
                 <div class="text-center mb-4">
-                    <div class="legend-item"><div class="legend-color" style="background-color: #dc3545;"></div><span>Hauptmuskel</span></div>
-                    <div class="legend-item"><div class="legend-color" style="background-color: #0d6efd;"></div><span>Hilfsmuskeln</span></div>
-                    <div class="legend-item"><div class="legend-color" style="background-color: #d9d9d9;"></div><span>Inaktiv</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: #dc3545;"></div><span>{% trans "Hauptmuskel" %}</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: #0d6efd;"></div><span>{% trans "Hilfsmuskeln" %}</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: #d9d9d9;"></div><span>{% trans "Inaktiv" %}</span></div>
                 </div>
                 <div id="svgWrapper"></div>
             </div>
@@ -65,19 +65,19 @@
                 <div class="col-md-4">
                     <div class="stats-card">
                         <div class="stats-value">{{ max_gewicht }}kg</div>
-                        <div class="stats-label">Max Gewicht</div>
+                        <div class="stats-label">{% trans "Max Gewicht" %}</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="stats-card">
                         <div class="stats-value">{{ total_volumen }}</div>
-                        <div class="stats-label">Gesamt Volumen (kg)</div>
+                        <div class="stats-label">{% trans "Gesamt Volumen (kg)" %}</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="stats-card">
                         <div class="stats-value">{{ anzahl_saetze }}</div>
-                        <div class="stats-label">Sätze Absolviert</div>
+                        <div class="stats-label">{% trans "Sätze Absolviert" %}</div>
                     </div>
                 </div>
             </div>
@@ -86,7 +86,7 @@
         <div class="col-lg-5">
             <div class="card card-stat border-secondary">
                 <div class="card-header bg-secondary">
-                    <h5 class="mb-0">Übungsbeschreibung</h5>
+                    <h5 class="mb-0">{% trans "Übungsbeschreibung" %}</h5>
                 </div>
                 <div class="card-body">
                     {% if uebung.bild %}
@@ -99,31 +99,31 @@
                     {% if uebung.beschreibung %}
                     <p class="text-light">{{ uebung.beschreibung }}</p>
                     {% else %}
-                    <p class="text-muted fst-italic">Keine Beschreibung verfügbar</p>
+                    <p class="text-muted fst-italic">{% trans "Keine Beschreibung verfügbar" %}</p>
                     {% endif %}
 
                     {% if uebung.video_link %}
                     <div class="mb-3">
                         <a href="{{ uebung.video_link }}" target="_blank" class="btn btn-outline-danger btn-sm">
-                            <i class="bi bi-play-circle"></i> Video Tutorial ansehen
+                            <i class="bi bi-play-circle"></i> {% trans "Video Tutorial ansehen" %}
                         </a>
                     </div>
                     {% endif %}
 
                     <hr class="border-secondary">
-                    <h6 class="mb-3">Details</h6>
+                    <h6 class="mb-3">{% trans "Details" %}</h6>
                     <ul class="list-unstyled">
-                        <li class="mb-2"><strong class="text-primary">Hauptmuskelgruppe:</strong> <span>{{ uebung.get_muskelgruppe_display }}</span></li>
-                        <li class="mb-2"><strong class="text-primary">Bewegungstyp:</strong> <span>{{ uebung.get_bewegungstyp_display }}</span></li>
-                        <li class="mb-2"><strong class="text-primary">Gewichtstyp:</strong> <span>{{ uebung.get_gewichts_typ_display }}</span></li>
+                        <li class="mb-2"><strong class="text-primary">{% trans "Hauptmuskelgruppe:" %}</strong> <span>{{ uebung.get_muskelgruppe_display }}</span></li>
+                        <li class="mb-2"><strong class="text-primary">{% trans "Bewegungstyp:" %}</strong> <span>{{ uebung.get_bewegungstyp_display }}</span></li>
+                        <li class="mb-2"><strong class="text-primary">{% trans "Gewichtstyp:" %}</strong> <span>{{ uebung.get_gewichts_typ_display }}</span></li>
                         {% if uebung.hilfsmuskeln %}
-                        <li class="mb-2"><strong class="text-primary">Hilfsmuskeln:</strong> <div class="mt-1">{{ uebung.hilfsmuskeln }}</div></li>
+                        <li class="mb-2"><strong class="text-primary">{% trans "Hilfsmuskeln:" %}</strong> <div class="mt-1">{{ uebung.hilfsmuskeln }}</div></li>
                         {% endif %}
                     </ul>
                     <hr class="border-secondary">
                     <div class="d-grid gap-2">
-                        <a href="{% url 'exercise_stats' uebung.id %}" class="btn btn-primary">📊 Statistiken ansehen</a>
-                        <a href="{% url 'muscle_map' %}?muskelgruppe={{ uebung.muskelgruppe }}" class="btn btn-outline-secondary">Ähnliche Übungen</a>
+                        <a href="{% url 'exercise_stats' uebung.id %}" class="btn btn-primary">📊 {% trans "Statistiken ansehen" %}</a>
+                        <a href="{% url 'muscle_map' %}?muskelgruppe={{ uebung.muskelgruppe }}" class="btn btn-outline-secondary">{% trans "Ähnliche Übungen" %}</a>
                     </div>
                 </div>
             </div>

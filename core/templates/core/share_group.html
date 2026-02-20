@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Gruppe teilen: {{ gruppe_name }}{% endblock %}
+{% block title %}{% trans "Gruppe teilen" %}: {{ gruppe_name }}{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'core/css/toast.css' %}">
@@ -11,11 +11,11 @@
 <nav class="navbar navbar-page border-bottom">
   <div class="container-fluid">
     <a class="btn btn-outline-secondary border-0" href="{% url 'training_select_plan' %}">
-        <i class="bi bi-arrow-left"></i> Zurück
+        <i class="bi bi-arrow-left"></i> {% trans "Zurück" %}
     </a>
-    <span class="navbar-text page-title fw-bold">Gruppe teilen</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Gruppe teilen" %}</span>
     <div style="width: 40px;">
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans "Theme wechseln" %}">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -32,12 +32,12 @@
                 <h3 class="mb-0">{{ gruppe_name }}</h3>
             </div>
             <div class="d-flex justify-content-center mb-3 gap-2">
-                <span class="badge bg-info">{{ plans|length }} Trainingstage</span>
+                <span class="badge bg-info">{{ plans|length }} {% trans "Trainingstage" %}</span>
                 {% with first_plan=plans.first %}
                 {% if first_plan.is_public %}
-                <span class="badge bg-success"><i class="bi bi-globe"></i> Öffentlich</span>
+                <span class="badge bg-success"><i class="bi bi-globe"></i> {% trans "Öffentlich" %}</span>
                 {% else %}
-                <span class="badge bg-warning text-dark"><i class="bi bi-lock-fill"></i> Privat</span>
+                <span class="badge bg-warning text-dark"><i class="bi bi-lock-fill"></i> {% trans "Privat" %}</span>
                 {% endif %}
                 {% endwith %}
             </div>
@@ -45,7 +45,7 @@
                 {% for plan in plans %}
                 <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom border-secondary{% endif %}">
                     <span><i class="bi bi-calendar3 me-2 text-muted"></i>{{ plan.name }}</span>
-                    <span class="badge bg-secondary">{{ plan.uebungen.count }} Übungen</span>
+                    <span class="badge bg-secondary">{{ plan.uebungen.count }} {% trans "Übungen" %}</span>
                 </div>
                 {% endfor %}
             </div>
@@ -53,9 +53,9 @@
             {% if not first_plan.is_public %}
             <div class="alert alert-warning mt-3 mb-0">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                <strong>Achtung:</strong> Diese Gruppe ist privat.
+                <strong>{% trans "Achtung:" %}</strong> {% trans "Diese Gruppe ist privat." %}
                 <a href="{% url 'toggle_group_public' gruppe_id %}" class="btn btn-sm btn-success ms-2">
-                    <i class="bi bi-globe me-1"></i>Öffentlich machen
+                    <i class="bi bi-globe me-1"></i>{% trans "Öffentlich machen" %}
                 </a>
             </div>
             {% endif %}{% endwith %}{% endif %}
@@ -64,29 +64,29 @@
 
     <div class="card card-stat mb-4">
         <div class="card-body text-center">
-            <h5 class="mb-3"><i class="bi bi-qr-code me-2"></i>QR-Code</h5>
+            <h5 class="mb-3"><i class="bi bi-qr-code me-2"></i>{% trans "QR-Code" %}</h5>
             {% if qr_base64 %}
             <div class="bg-white d-inline-block p-3 rounded mb-3">
                 <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR-Code" class="img-fluid" style="max-width: 200px;">
             </div>
-            <p class="text-muted small">Scanne diesen Code, um die Gruppe anzusehen</p>
+            <p class="text-muted small">{% trans "Scanne diesen Code, um die Gruppe anzusehen" %}</p>
             {% else %}
-            <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>QR-Code Generator nicht verfügbar.</div>
+            <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>{% trans "QR-Code Generator nicht verfügbar." %}</div>
             {% endif %}
         </div>
     </div>
 
     <div class="card card-stat mb-4">
         <div class="card-body">
-            <h5 class="mb-3"><i class="bi bi-link-45deg me-2"></i>Direkter Link</h5>
+            <h5 class="mb-3"><i class="bi bi-link-45deg me-2"></i>{% trans "Direkter Link" %}</h5>
             <div class="input-group mb-3">
                 <input type="text" class="form-control" id="share-url" value="{{ share_url }}" readonly>
                 <button class="btn btn-primary" onclick="copyToClipboard()">
-                    <i class="bi bi-clipboard"></i> Kopieren
+                    <i class="bi bi-clipboard"></i> {% trans "Kopieren" %}
                 </button>
             </div>
             <div id="copy-success" class="alert alert-success d-none">
-                <i class="bi bi-check-circle me-2"></i>Link in die Zwischenablage kopiert!
+                <i class="bi bi-check-circle me-2"></i>{% trans "Link in die Zwischenablage kopiert!" %}
             </div>
         </div>
     </div>
@@ -94,19 +94,19 @@
     {% if is_owner %}
     <div class="card card-stat border-primary mb-4">
         <div class="card-body">
-            <h5 class="mb-3"><i class="bi bi-people-fill me-2 text-primary"></i>Mit Trainingspartner teilen</h5>
-            <p class="text-muted small mb-3">Teile diese Gruppe privat (alle {{ plans.count }} Pläne werden geteilt).</p>
+            <h5 class="mb-3"><i class="bi bi-people-fill me-2 text-primary"></i>{% trans "Mit Trainingspartner teilen" %}</h5>
+            <p class="text-muted small mb-3">{% blocktrans with count=plans.count %}Teile diese Gruppe privat (alle {{ count }} Pläne werden geteilt).{% endblocktrans %}</p>
             <div class="input-group mb-3">
-                <input type="text" class="form-control" id="partner-search" placeholder="Username eingeben..." autocomplete="off">
+                <input type="text" class="form-control" id="partner-search" placeholder="{% trans "Username eingeben..." %}" autocomplete="off">
                 <button class="btn btn-primary" onclick="searchAndSharePartner()">
-                    <i class="bi bi-person-plus"></i> Einladen
+                    <i class="bi bi-person-plus"></i> {% trans "Einladen" %}
                 </button>
             </div>
             <div id="search-results" class="list-group mb-3 d-none"></div>
             <div id="shared-with-container">
-                <h6 class="text-muted mb-2"><i class="bi bi-check2-circle me-1"></i>Bereits geteilt mit:</h6>
+                <h6 class="text-muted mb-2"><i class="bi bi-check2-circle me-1"></i>{% trans "Bereits geteilt mit:" %}</h6>
                 <div id="shared-with-list" class="d-flex flex-wrap gap-2">
-                    <span class="text-muted small">Lade...</span>
+                    <span class="text-muted small">{% trans "Lade..." %}</span>
                 </div>
             </div>
         </div>
@@ -115,14 +115,14 @@
 
     <div class="card card-stat mb-4">
         <div class="card-body">
-            <h5 class="mb-3"><i class="bi bi-share me-2"></i>Teilen via</h5>
+            <h5 class="mb-3"><i class="bi bi-share me-2"></i>{% trans "Teilen via" %}</h5>
             <div class="d-grid gap-2">
                 <a href="https://api.whatsapp.com/send?text=Check%20dir%20meinen%20Trainingsplan%3A%20{{ share_url|urlencode }}"
                    target="_blank" class="btn btn-success"><i class="bi bi-whatsapp me-2"></i>WhatsApp</a>
                 <a href="https://t.me/share/url?url={{ share_url|urlencode }}&text=Check%20dir%20meinen%20Trainingsplan!"
                    target="_blank" class="btn btn-info"><i class="bi bi-telegram me-2"></i>Telegram</a>
                 <a href="mailto:?subject=Mein%20Trainingsplan&body=Hey!%0A%0ACheck%20dir%20meinen%20Trainingsplan%3A%0A{{ share_url|urlencode }}"
-                   class="btn btn-secondary"><i class="bi bi-envelope me-2"></i>E-Mail</a>
+                   class="btn btn-secondary"><i class="bi bi-envelope me-2"></i>{% trans "E-Mail" %}</a>
             </div>
         </div>
     </div>
@@ -130,12 +130,12 @@
     {% if is_owner %}
     <div class="d-grid gap-2 mb-4">
         <a href="{% url 'duplicate_group' gruppe_id %}" class="btn btn-outline-primary">
-            <i class="bi bi-copy me-2"></i>Gruppe duplizieren
+            <i class="bi bi-copy me-2"></i>{% trans "Gruppe duplizieren" %}
         </a>
         {% with first_plan=plans.first %}
         <a href="{% url 'toggle_group_public' gruppe_id %}" class="btn btn-outline-{% if first_plan.is_public %}warning{% else %}success{% endif %}">
-            {% if first_plan.is_public %}<i class="bi bi-lock-fill me-2"></i>Privat machen
-            {% else %}<i class="bi bi-globe me-2"></i>Öffentlich machen{% endif %}
+            {% if first_plan.is_public %}<i class="bi bi-lock-fill me-2"></i>{% trans "Privat machen" %}
+            {% else %}<i class="bi bi-globe me-2"></i>{% trans "Öffentlich machen" %}{% endif %}
         </a>
         {% endwith %}
     </div>

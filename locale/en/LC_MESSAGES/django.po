@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: HomeGym 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-20 12:00+0100\n"
+"POT-Creation-Date: 2026-02-20 20:24+0100\n"
 "PO-Revision-Date: 2026-02-20 12:00+0100\n"
 "Last-Translator: HomeGym Team\n"
 "Language-Team: English\n"
@@ -16,1700 +16,3814 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-# === global_header.html ===
-msgid "Admin-Panel"
-msgstr "Admin Panel"
-
-msgid "Profil bearbeiten"
-msgstr "Edit Profile"
-
-msgid "Equipment"
-msgstr "Equipment"
-
-msgid "Statistiken"
-msgstr "Statistics"
-
-msgid "Abmelden"
-msgstr "Sign Out"
-
-# === global_footer.html ===
-msgid "Dein persönliches Fitness-Tracking"
-msgstr "Your personal fitness tracking"
-
-msgid "Plan-Bibliothek"
-msgstr "Plan Library"
-
-msgid "Cardio"
-msgstr "Cardio"
-
-msgid "Feedback"
-msgstr "Feedback"
-
-msgid "Datenschutz"
-msgstr "Privacy Policy"
-
-msgid "Impressum"
-msgstr "Legal Notice"
-
-msgid "Quellen"
-msgstr "Sources"
-
-# === training_list.html ===
-msgid "Trainings-Logbuch"
-msgstr "Training Log"
-
-msgid "Dashboard"
-msgstr "Dashboard"
-
-msgid "Dein Verlauf"
-msgstr "Your History"
-
-msgid "Noch keine Trainings absolviert."
-msgstr "No workouts logged yet."
-
-msgid "Jetzt starten!"
-msgstr "Start now!"
-
-msgid "Sätze"
-msgstr "Sets"
-
-msgid "Training löschen?"
-msgstr "Delete Workout?"
-
-msgid "Möchtest du dieses Training wirklich unwiderruflich löschen?"
-msgstr "Do you really want to permanently delete this workout?"
-
-msgid "Alle Sätze gehen verloren!"
-msgstr "All sets will be lost!"
-
-msgid "Abbrechen"
-msgstr "Cancel"
-
-msgid "Ja, unwiderruflich löschen"
-msgstr "Yes, delete permanently"
-
-# === login.html ===
-msgid "Login"
-msgstr "Login"
-
-msgid "Dein persönliches Trainingstagebuch"
-msgstr "Your personal training journal"
-
-msgid "Anmelden"
-msgstr "Sign In"
-
-msgid "Ungültiger Benutzername oder Passwort."
-msgstr "Invalid username or password."
-
-msgid "Dein Account hat keine Berechtigung für diese Seite."
-msgstr "Your account does not have permission for this page."
-
-msgid "Benutzername"
-msgstr "Username"
-
-msgid "Passwort"
-msgstr "Password"
-
-msgid "Passwort vergessen?"
-msgstr "Forgot password?"
-
-msgid "Noch keinen Account?"
-msgstr "No account yet?"
-
-msgid "Für Beta bewerben"
-msgstr "Apply for Beta"
-
-# === training_finish.html ===
-msgid "Training abschließen"
-msgstr "Finish Workout"
-
-msgid "Training beenden"
-msgstr "Finish Workout"
-
-msgid "Zurück"
-msgstr "Back"
-
-msgid "Theme wechseln"
-msgstr "Toggle Theme"
-
-msgid "Gut gemacht!"
-msgstr "Well done!"
-
-msgid "Du hast es geschafft – hier ist deine Zusammenfassung"
-msgstr "You did it – here's your summary"
-
-msgid "Arbeitssätze"
-msgstr "Work Sets"
-
-msgid "Übungen"
-msgstr "Exercises"
-
-msgid "Gesamtvolumen"
-msgstr "Total Volume"
-
-msgid "Gewicht × Wiederholungen (ohne Warmup)"
-msgstr "Weight × Reps (excluding warm-up)"
-
-msgid "Aufwärmsätze"
-msgstr "Warm-up Sets"
-
-msgid "AI-Trainings-Tipp"
-msgstr "AI Training Tip"
-
-msgid "Empfehlung"
-msgstr "Recommendation"
-
-msgid "Trainingsdauer"
-msgstr "Workout Duration"
-
-msgid "Minuten"
-msgstr "Minutes"
-
-msgid "Wie lief's? (optional)"
-msgstr "How did it go? (optional)"
-
-msgid "z.B. Gutes Pump-Gefühl, Schulter etwas müde..."
-msgstr "e.g. Great pump, shoulder a bit tired..."
-
-msgid "Training speichern"
-msgstr "Save Workout"
-
-msgid "Nochmal anpassen"
-msgstr "Adjust Again"
-
-# === training_select_plan.html ===
-msgid "Training wählen"
-msgstr "Choose Workout"
-
-msgid "Modus wählen"
-msgstr "Choose Mode"
-
-msgid "Freies Training"
-msgstr "Free Workout"
-
-msgid "Ohne Vorlage starten und Übungen spontan wählen."
-msgstr "Start without a template and choose exercises freely."
-
-msgid "TRAININGSPLÄNE"
-msgstr "TRAINING PLANS"
-
-msgid "Meine"
-msgstr "Mine"
-
-msgid "Geteilt"
-msgstr "Shared"
-
-msgid "Öffentlich"
-msgstr "Public"
-
-msgid "Neuen Plan erstellen"
-msgstr "Create New Plan"
-
-msgid "Aktiven Plan festlegen"
-msgstr "Set Active Plan"
-
-msgid "Pläne ausgewählt"
-msgstr "Plans selected"
-
-msgid "Gruppenname"
-msgstr "Group Name"
-
-msgid "Gruppieren"
-msgstr "Group"
-
-msgid "Noch keine Pläne erstellt. Erstelle deinen ersten Plan!"
-msgstr "No plans created yet. Create your first plan!"
-
-msgid "Noch keine Pläne mit dir geteilt."
-msgstr "No plans shared with you yet."
-
-msgid "Trainingspartner können Pläne über die Teilen-Funktion mit dir teilen."
-msgstr "Training partners can share plans with you using the share function."
-
-msgid "Noch keine öffentlichen Pläne verfügbar."
-msgstr "No public plans available yet."
-
-msgid "Trainingstage"
-msgstr "Training Days"
-
-msgid "Umbenennen"
-msgstr "Rename"
-
-msgid "Aktiver Plan"
-msgstr "Active Plan"
-
-msgid "Alle löschen"
-msgstr "Delete All"
-
-msgid "WEITERE PLÄNE"
-msgstr "MORE PLANS"
-
-msgid "Duplizieren"
-msgstr "Duplicate"
-
-msgid "Teilen"
-msgstr "Share"
-
-msgid "Mehr anzeigen"
-msgstr "Show more"
-
-msgid "Weniger"
-msgstr "Less"
-
-msgid "Starten"
-msgstr "Start"
-
-msgid "Details"
-msgstr "Details"
-
-msgid "Bearbeiten"
-msgstr "Edit"
-
-msgid "Kopieren"
-msgstr "Copy"
-
-msgid "von"
-msgstr "by"
-
-msgid "Gruppe auflösen? Pläne werden einzeln angezeigt."
-msgstr "Disband group? Plans will be shown individually."
-
-msgid "Fehler"
-msgstr "Error"
-
-msgid "Fehler aufgetreten."
-msgstr "An error occurred."
-
-msgid "Plan wirklich löschen? Nicht rückgängig machbar."
-msgstr "Really delete plan? This cannot be undone."
-
-msgid "Alle Pläne der Gruppe löschen? NICHT rückgängig machbar!"
-msgstr "Delete all plans in the group? This CANNOT be undone!"
-
-msgid "Bist du WIRKLICH sicher?"
-msgstr "Are you REALLY sure?"
-
-msgid "Neue Gruppe"
-msgstr "New Group"
-
-msgid "Mindestens 2 Pläne auswählen."
-msgstr "Select at least 2 plans."
-
-msgid "Neuer Gruppenname:"
-msgstr "New group name:"
-
-msgid "Gruppe umbenannt"
-msgstr "Group renamed"
-
-# === dashboard.html ===
-msgid "TRAINING"
-msgstr "TRAINING"
-
-msgid "Offenes Training fortsetzen"
-msgstr "Continue open workout"
-
-msgid "Fortsetzen"
-msgstr "Continue"
-
-msgid "Ausrüstung verwalten"
-msgstr "Manage Equipment"
-
-msgid "Push-Benachrichtigungen"
-msgstr "Push Notifications"
-
-msgid "Alle anzeigen"
-msgstr "Show All"
-
-msgid "Aufräumen"
-msgstr "Clean Up"
-
-msgid "Diese Woche"
-msgstr "This Week"
-
-msgid "Trainings"
-msgstr "Workouts"
-
-msgid "Wochen"
-msgstr "Weeks"
-
-msgid "Aktiver Plan"
-msgstr "Active Plan"
-
-msgid "Plan wechseln"
-msgstr "Switch Plan"
-
-msgid "Woche"
-msgstr "Week"
-
-msgid "Volumen"
-msgstr "Volume"
-
-msgid "Gewicht"
-msgstr "Weight"
-
-msgid "Ziel-RPE"
-msgstr "Target RPE"
-
-msgid "Deine aktive Plan-Gruppe existiert nicht mehr."
-msgstr "Your active plan group no longer exists."
-
-msgid "Neu wählen"
-msgstr "Choose New"
-
-msgid "Kein aktiver Plan gesetzt"
-msgstr "No active plan set"
-
-msgid "Aktiven Trainingsplan festlegen"
-msgstr "Set Active Training Plan"
-
-msgid "Performance Form-Index"
-msgstr "Performance Form Index"
-
-msgid "Wie wird das berechnet?"
-msgstr "How is this calculated?"
-
-msgid "Basiert auf Frequenz, Konsistenz, RPE und Volumen-Trends"
-msgstr "Based on frequency, consistency, RPE and volume trends"
-
-msgid "AI Performance-Analyse"
-msgstr "AI Performance Analysis"
-
-msgid "Automatische Erkennung von Plateau, Rückschritt und Stagnation"
-msgstr "Automatic detection of plateau, regression and stagnation"
-
-msgid "Plateau"
-msgstr "Plateau"
-
-msgid "Rückschritt"
-msgstr "Regression"
-
-msgid "Stagnation"
-msgstr "Stagnation"
-
-msgid "Tipp"
-msgstr "Tip"
-
-msgid "Powered by AI-Algorithmus • Analysiert deine letzten 4 Wochen"
-msgstr "Powered by AI algorithm • Analyzes your last 4 weeks"
-
-msgid "Letztes Workout"
-msgstr "Last Workout"
-
-msgid "Noch kein Eintrag"
-msgstr "No entry yet"
-
-msgid "Deine Top 3 Übungen"
-msgstr "Your Top 3 Exercises"
-
-msgid "TRAININGS-HISTORIE"
-msgstr "TRAINING HISTORY"
-
-msgid "Letzte 12 Monate"
-msgstr "Last 12 Months"
-
-msgid "Gesamt"
-msgstr "Total"
-
-msgid "Weniger"
-msgstr "Less"
-
-msgid "Mehr"
-msgstr "More"
-
-msgid "KÖRPER & VITALWERTE"
-msgstr "BODY & VITALS"
-
-msgid "Aktuelles Gewicht"
-msgstr "Current Weight"
-
-msgid "Verlauf anzeigen"
-msgstr "Show History"
-
-msgid "Wöchentliches Volumen"
-msgstr "Weekly Volume"
-
-msgid "Cardio diese Woche"
-msgstr "Cardio This Week"
-
-msgid "Ermüdungs-Index"
-msgstr "Fatigue Index"
-
-msgid "Faktoren"
-msgstr "Factors"
-
-msgid "Muskeln"
-msgstr "Muscle Mass"
-
-msgid "KFA / Fett"
-msgstr "BF% / Fat"
-
-msgid "Training starten"
-msgstr "Start Workout"
-
-msgid "Cardio hinzufügen"
-msgstr "Add Cardio"
-
-msgid "KI-Plan erstellen"
-msgstr "Create AI Plan"
-
-msgid "Trainingsempfehlungen (AI)"
-msgstr "Workout Recommendations (AI)"
-
-msgid "ML Vorhersage-Modelle"
-msgstr "ML Prediction Models"
-
-msgid "Muskelgruppen & Übungen"
-msgstr "Muscle Groups & Exercises"
-
-msgid "Werte eintragen"
-msgstr "Log Values"
-
-msgid "Push-Benachrichtigungen deaktivieren?"
-msgstr "Disable push notifications?"
-
-msgid "Push-Benachrichtigungen deaktiviert"
-msgstr "Push notifications disabled"
-
-msgid "Push-Benachrichtigungen aktiviert!"
-msgstr "Push notifications enabled!"
-
-msgid "Push-Notifications werden geladen... Bitte versuche es in wenigen Sekunden erneut."
-msgstr "Push notifications are loading... Please try again in a few seconds."
-
-msgid "Fehler beim Aktivieren der Benachrichtigungen"
-msgstr "Error enabling notifications"
-
-msgid "Push-Benachrichtigungen aktiv"
-msgstr "Push notifications active"
-
-msgid "Push-Benachrichtigungen aktivieren"
-msgstr "Enable push notifications"
-
-# === training_session.html ===
-msgid "Training"
-msgstr "Workout"
-
-msgid "Pausenuhr starten"
-msgstr "Start Rest Timer"
-
-msgid "Timer-Dauer wählen"
-msgstr "Choose Timer Duration"
-
-msgid "Timer-Dauer"
-msgstr "Timer Duration"
-
-msgid "Pausendauer"
-msgstr "Rest Duration"
-
-msgid "Sekunden"
-msgstr "Seconds"
-
-msgid "Sound-Einstellungen"
-msgstr "Sound Settings"
-
-msgid "Sound aktiv"
-msgstr "Sound On"
-
-msgid "Lautstärke"
-msgstr "Volume"
-
-msgid "Fertig"
-msgstr "Done"
-
-msgid "Deload-Training"
-msgstr "Deload Workout"
-
-msgid "Wird nicht in Statistik gezählt"
-msgstr "Not counted in statistics"
-
-msgid "Empfohlene Deload-Woche – zählt aktuell zur Statistik"
-msgstr "Recommended deload week – currently counted in statistics"
-
-msgid "Zählt für Statistik"
-msgstr "Counts for statistics"
-
-msgid "Gesamtvolumen heute"
-msgstr "Total Volume Today"
-
-msgid "Drück auf +, um loszulegen!"
-msgstr "Press + to get started!"
-
-msgid "Übungsdetails anzeigen"
-msgstr "Show Exercise Details"
-
-msgid "Ziel"
-msgstr "Goal"
-
-msgid "ML-Empfehlung"
-msgstr "ML Recommendation"
-
-msgid "Pause aus KI-Plan"
-msgstr "Rest from AI Plan"
-
-msgid "Berechnete Pause"
-msgstr "Calculated Rest"
-
-msgid "Klick zum Starten"
-msgstr "Click to Start"
-
-msgid "Wdh / Sek"
-msgstr "Reps / Sec"
-
-msgid "Aktion"
-msgstr "Action"
-
-msgid "Weiteren Satz hinzufügen"
-msgstr "Add Another Set"
-
-msgid "Neuer Personal Record!"
-msgstr "New Personal Record!"
-
-msgid "Pause"
-msgstr "Rest"
-
-msgid "Satz hinzufügen"
-msgstr "Add Set"
-
-msgid "Satz bearbeiten"
-msgstr "Edit Set"
-
-msgid "Übung suchen"
-msgstr "Search Exercise"
-
-msgid "Bankdrücken, Kniebeugen, ..."
-msgstr "Bench Press, Squats, ..."
-
-msgid "1. Muskelgruppe"
-msgstr "1. Muscle Group"
-
-msgid "-- Bitte wählen --"
-msgstr "-- Please select --"
-
-msgid "2. Übung"
-msgstr "2. Exercise"
-
-msgid "-- Erst Muskelgruppe wählen --"
-msgstr "-- Select muscle group first --"
-
+#: .\core\templates\core\add_koerperwert.html:4
+#: .\core\templates\core\body_stats.html:5
+#: .\core\templates\core\body_stats.html:17
+#: .\core\templates\core\profile.html:163
+msgid "Körperwerte"
+msgstr "Körperwerte"
+
+# === add_koerperwert.html ===
+#: .\core\templates\core\add_koerperwert.html:12
+msgid "Watch-Daten erfassen"
+msgstr "Log Watch Data"
+
+#: .\core\templates\core\add_koerperwert.html:27
+msgid "Körpergröße"
+msgstr "Height"
+
+#: .\core\templates\core\add_koerperwert.html:27
+msgid "aus Profil"
+msgstr "from profile"
+
+#: .\core\templates\core\add_koerperwert.html:28
+msgid "ändern"
+msgstr "change"
+
+#: .\core\templates\core\add_koerperwert.html:32
+#: .\core\templates\core\edit_koerperwert.html:29
+msgid "Größe (cm)"
+msgstr "Height (cm)"
+
+#: .\core\templates\core\add_koerperwert.html:37
+#, python-format
+msgid ""
+"Einmalig im <a href=\"%(profile_url)s\">Profil</a> hinterlegen um das nicht "
+"jedes Mal einzugeben"
+msgstr ""
+
+#: .\core\templates\core\add_koerperwert.html:43
+#: .\core\templates\core\body_stats.html:182
+#: .\core\templates\core\edit_koerperwert.html:38
+#: .\core\templates\core\training_session.html:495
+#: .\core\templates\core\training_session.html:662
 msgid "Gewicht (kg)"
 msgstr "Weight (kg)"
 
-msgid "Zusatzgewicht (kg)"
-msgstr "Additional Weight (kg)"
+#: .\core\templates\core\add_koerperwert.html:50
+#: .\core\templates\core\edit_koerperwert.html:45
+msgid "Daten von der Uhr"
+msgstr "Data from Watch"
 
-msgid "Wdh. / Sek."
-msgstr "Reps / Sec."
+#: .\core\templates\core\add_koerperwert.html:56
+#: .\core\templates\core\edit_koerperwert.html:51
+msgid "FETTMASSE"
+msgstr "FAT MASS"
 
-msgid "Keine"
-msgstr "None"
+#: .\core\templates\core\add_koerperwert.html:57
+#: .\core\templates\core\add_koerperwert.html:81
+#: .\core\templates\core\edit_koerperwert.html:52
+#: .\core\templates\core\edit_koerperwert.html:78
+msgid "eines eingeben → anderes wird berechnet"
+msgstr "enter one → other is calculated"
 
-msgid "Aufwärmsatz"
-msgstr "Warm-up Set"
+#: .\core\templates\core\add_koerperwert.html:80
+#: .\core\templates\core\edit_koerperwert.html:77
+msgid "MUSKELMASSE"
+msgstr "MUSCLE MASS"
 
-msgid "Notiz (optional)"
-msgstr "Note (optional)"
+#: .\core\templates\core\add_koerperwert.html:103
+msgid "Wasser (kg)"
+msgstr "Water (kg)"
 
-msgid "Perfekt"
-msgstr "Perfect"
+#: .\core\templates\core\add_koerperwert.html:110
+msgid "Notiz (z.B. Nüchtern)"
+msgstr "Note (e.g. Fasted)"
 
-msgid "Gut"
-msgstr "Good"
+#: .\core\templates\core\add_koerperwert.html:115
+msgid "Speichern & Berechnen"
+msgstr "Save & Calculate"
 
-msgid "Schwierig"
-msgstr "Difficult"
+#: .\core\templates\core\ai_coach_chat.html:103
+#, fuzzy
+#| msgid "KI-Coach"
+msgid "KI-Coach fragen"
+msgstr "AI Coach"
 
-msgid "Mit Hilfe"
-msgstr "With Help"
+#: .\core\templates\core\ai_coach_chat.html:113
+#: .\core\templates\core\cardio_list.html:127
+msgid "KI-Coach"
+msgstr "AI Coach"
 
-msgid "Schmerz"
-msgstr "Pain"
+#: .\core\templates\core\ai_coach_chat.html:122
+#, fuzzy
+#| msgid "Aktuelles Gewicht"
+msgid "Aktueller Context"
+msgstr "Current Weight"
 
-msgid "Stärker"
-msgstr "Stronger"
+#: .\core\templates\core\ai_coach_chat.html:125
+msgid "Lade Context..."
+msgstr "Loading context..."
 
-msgid "Müde"
-msgstr "Tired"
+#: .\core\templates\core\ai_coach_chat.html:153
+msgid "Frag den KI-Coach..."
+msgstr "Ask the AI coach..."
 
-msgid "z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', '🎯 PR'..."
-msgstr "e.g. 'Last 2 reps with help', 'Grip too narrow', '🎯 PR'..."
+#: .\core\templates\core\ai_coach_chat.html:160
+msgid "Tipp: Sei spezifisch für bessere Antworten"
+msgstr "Tip: Be specific for better answers"
 
-msgid "Zeichen"
-msgstr "Characters"
+#: .\core\templates\core\ai_plan_generator.html:68
+#, fuzzy
+#| msgid "KI-Plan erstellen"
+msgid "KI-Trainingsplan erstellen"
+msgstr "Create AI Plan"
 
+#: .\core\templates\core\ai_plan_generator.html:76
+msgid ""
+"Die KI analysiert deine letzten Trainings und erstellt einen "
+"personalisierten Plan"
+msgstr ""
+
+#: .\core\templates\core\ai_plan_generator.html:84
+#, fuzzy
+#| msgid "Trainingsfrequenz"
+msgid "Trainingsfrequenz pro Woche"
+msgstr "Training Frequency"
+
+#: .\core\templates\core\ai_plan_generator.html:87
+#, fuzzy
+#| msgid "-- Bitte wählen --"
+msgid "– Bitte wählen –"
+msgstr "-- Please select --"
+
+#: .\core\templates\core\ai_plan_generator.html:88
+msgid "2x pro Woche"
+msgstr "2x per week"
+
+#: .\core\templates\core\ai_plan_generator.html:89
+msgid "3x pro Woche"
+msgstr "3x per week"
+
+#: .\core\templates\core\ai_plan_generator.html:90
+msgid "4x pro Woche"
+msgstr "4x per week"
+
+#: .\core\templates\core\ai_plan_generator.html:91
+msgid "5x pro Woche"
+msgstr "5x per week"
+
+#: .\core\templates\core\ai_plan_generator.html:92
+msgid "6x pro Woche"
+msgstr "6x per week"
+
+#: .\core\templates\core\ai_plan_generator.html:100
+msgid "Plan-Typ"
+msgstr "Plan Type"
+
+#: .\core\templates\core\ai_plan_generator.html:102
+#, fuzzy
+#| msgid "Empfehlung"
+msgid "Empfohlen"
+msgstr "Recommendation"
+
+#: .\core\templates\core\ai_plan_generator.html:106
+msgid "3er-Split (3x/Woche)"
+msgstr "3-day Split (3x/week)"
+
+#: .\core\templates\core\ai_plan_generator.html:107
+msgid "2er-Split (2x/Woche)"
+msgstr "2-day Split (2x/week)"
+
+#: .\core\templates\core\ai_plan_generator.html:108
+msgid "4er-Split (4x/Woche)"
+msgstr "4-day Split (4x/week)"
+
+#: .\core\templates\core\ai_plan_generator.html:109
+msgid "Push-Pull-Beine (3x/Woche)"
+msgstr "Push-Pull-Legs (3x/week)"
+
+#: .\core\templates\core\ai_plan_generator.html:110
+msgid "Ganzkörper (2-3x/Woche)"
+msgstr "Full Body (2-3x/week)"
+
+#: .\core\templates\core\ai_plan_generator.html:112
+msgid "Wie oft trainierst du pro Woche?"
+msgstr "How often do you train per week?"
+
+#: .\core\templates\core\ai_plan_generator.html:118
+#, fuzzy
+#| msgid "Ø pro Training"
+msgid "Sätze pro Trainingstag:"
+msgstr "Avg per Workout"
+
+#: .\core\templates\core\ai_plan_generator.html:123
+msgid "Kurz"
+msgstr "Short"
+
+#: .\core\templates\core\ai_plan_generator.html:124
+msgid "Optimal"
+msgstr "Optimal"
+
+#: .\core\templates\core\ai_plan_generator.html:125
+msgid "Lang"
+msgstr "Long"
+
+# === training_stats.html ===
+#: .\core\templates\core\ai_plan_generator.html:132
+#, fuzzy
+#| msgid "Trainingsstatistiken"
+msgid "Trainingshistorie analysieren"
+msgstr "Training Statistics"
+
+#: .\core\templates\core\ai_plan_generator.html:135
+#, fuzzy
+#| msgid "Letzte 12 Monate"
+msgid "Letzte 2 Wochen"
+msgstr "Last 12 Months"
+
+#: .\core\templates\core\ai_plan_generator.html:136
+#, fuzzy
+#| msgid "Letzte 12 Monate"
+msgid "Letzter Monat"
+msgstr "Last 12 Months"
+
+#: .\core\templates\core\ai_plan_generator.html:137
+#, fuzzy
+#| msgid "Letzte 12 Monate"
+msgid "Letzte 2 Monate"
+msgstr "Last 12 Months"
+
+#: .\core\templates\core\ai_plan_generator.html:144
+#, fuzzy
+#| msgid "Registrierung"
+msgid "Periodisierung"
+msgstr "Registrierung"
+
+#: .\core\templates\core\ai_plan_generator.html:147
+msgid "Linear (Progressive Steigerung)"
+msgstr "Linear (Progressive Overload)"
+
+#: .\core\templates\core\ai_plan_generator.html:148
+msgid "Wellenförmig (Heavy/Medium/Light)"
+msgstr "Undulating (Heavy/Medium/Light)"
+
+#: .\core\templates\core\ai_plan_generator.html:149
+msgid "Block (Volumen → Kraft → Peak)"
+msgstr "Block (Volume → Strength → Peak)"
+
+#: .\core\templates\core\ai_plan_generator.html:151
+msgid "12 Wochen mit Deload in Woche 4/8/12"
+msgstr "12 weeks with deload in week 4/8/12"
+
+#: .\core\templates\core\ai_plan_generator.html:157
+#, fuzzy
+#| msgid "Trainings"
+msgid "Trainingsziel"
+msgstr "Workouts"
+
+#: .\core\templates\core\ai_plan_generator.html:160
+msgid "Kraft (3-6 Wdh, RPE 7.5-9)"
+msgstr "Strength (3-6 reps, RPE 7.5-9)"
+
+#: .\core\templates\core\ai_plan_generator.html:161
+msgid "Muskelaufbau (6-12 Wdh, RPE 7-8.5)"
+msgstr "Hypertrophy (6-12 reps, RPE 7-8.5)"
+
+#: .\core\templates\core\ai_plan_generator.html:162
+msgid "Definition (10-15 Wdh, RPE 6.5-8)"
+msgstr "Definition (10-15 reps, RPE 6.5-8)"
+
+#: .\core\templates\core\ai_plan_generator.html:164
+msgid "Bestimmt RPE- und Wiederholungs-Zonen"
+msgstr "Determines RPE and rep ranges"
+
+#: .\core\templates\core\ai_plan_generator.html:171
+#, fuzzy
+#| msgid "Account erstellen"
+msgid "Vorschau erstellen"
+msgstr "Account erstellen"
+
+#: .\core\templates\core\ai_plan_generator.html:173
+#, fuzzy
+#| msgid "Änderungen speichern"
+msgid "Plan generieren & speichern"
+msgstr "Save Changes"
+
+#: .\core\templates\core\ai_plan_generator.html:178
+msgid "Lokale KI - Plan wird direkt gespeichert"
+msgstr "Local AI - plan will be saved directly"
+
+#: .\core\templates\core\ai_plan_generator.html:186
+msgid "Plan-Vorschau"
+msgstr "Plan Preview"
+
+#: .\core\templates\core\ai_plan_generator.html:192
+#, fuzzy
+#| msgid "Training speichern"
+msgid "Plan speichern"
+msgstr "Save Workout"
+
+#: .\core\templates\core\ai_plan_generator.html:195
+#: .\core\templates\core\body_stats.html:155
+#: .\core\templates\core\cardio_add.html:96
+#: .\core\templates\core\edit_koerperwert.html:103
+#: .\core\templates\core\edit_plan.html:141
+#: .\core\templates\core\feedback_create.html:85
+#: .\core\templates\core\plan_details.html:179
+#: .\core\templates\core\set_active_plan.html:158
+#: .\core\templates\core\training_list.html:108
+#: .\core\templates\core\training_select_plan.html:30
+#: .\core\templates\core\training_session.html:188
+#: .\core\templates\core\training_session.html:189
+#: .\core\templates\core\training_session.html:596
+#: .\core\templates\core\uebungen_auswahl.html:223
+msgid "Abbrechen"
+msgstr "Cancel"
+
+#: .\core\templates\core\ai_plan_generator.html:201
+#, fuzzy
+#| msgid "Aktiven Plan setzen"
+msgid "Als aktiven Plan setzen"
+msgstr "Aktiven Plan setzen"
+
+#: .\core\templates\core\ai_plan_generator.html:203
+msgid ""
+"Ersetzt den aktuellen Wochenzyklus. Deaktivieren um den neuen Plan nur zu "
+"speichern, ohne den laufenden Zyklus zu ändern."
+msgstr ""
+
+#: .\core\templates\core\ai_plan_generator.html:218
+msgid "Starte Generierung..."
+msgstr "Starting generation..."
+
+#: .\core\templates\core\ai_plan_generator.html:224
+msgid "Erfolg!"
+msgstr "Success!"
+
+#: .\core\templates\core\ai_plan_generator.html:230
+#, fuzzy
+#| msgid "Fehler"
+msgid "Fehler!"
+msgstr "Error"
+
+#: .\core\templates\core\ai_plan_generator.html:235
+#: .\core\templates\core\exercise_detail.html:237
+#: .\core\templates\core\exercise_info_modal.html:11
+#: .\core\templates\core\exercise_info_modal.html:100
+#: .\core\templates\core\plan_optimization_modal.html:34
+msgid "Schließen"
+msgstr "Close"
+
+#: .\core\templates\core\body_stats.html:19
+#: .\core\templates\core\progress_photos.html:4
+#: .\core\templates\core\progress_photos.html:31
+msgid "Fortschrittsfotos"
+msgstr "Progress Photos"
+
+#: .\core\templates\core\body_stats.html:25
+#: .\core\templates\core\create_plan.html:55
+#: .\core\templates\core\dashboard.html:111
+#: .\core\templates\core\equipment_management.html:28
+#: .\core\templates\core\exercise_detail.html:29
+#: .\core\templates\core\ml_dashboard.html:14
+#: .\core\templates\core\muscle_map.html:39
+#: .\core\templates\core\plan_details.html:26
+#: .\core\templates\core\plan_library.html:37
+#: .\core\templates\core\plan_library_group.html:27
+#: .\core\templates\core\set_active_plan.html:29
+#: .\core\templates\core\share_group.html:18
+#: .\core\templates\core\share_plan.html:18
+#: .\core\templates\core\stats_exercise.html:20
+#: .\core\templates\core\training_finish.html:45
+#: .\core\templates\core\training_session.html:234
+#: .\core\templates\core\training_stats.html:25
+#: .\core\templates\core\uebungen_auswahl.html:33
+msgid "Theme wechseln"
+msgstr "Toggle Theme"
+
+# === body_stats.html ===
+#: .\core\templates\core\body_stats.html:39
+msgid "Noch keine Körperwerte erfasst."
+msgstr "No body measurements recorded yet."
+
+#: .\core\templates\core\body_stats.html:40
+msgid "Jetzt eintragen"
+msgstr "Log now"
+
+#: .\core\templates\core\body_stats.html:47
+msgid "Aktuell"
+msgstr "Current"
+
+#: .\core\templates\core\body_stats.html:54
+msgid "Veränderung"
+msgstr "Change"
+
+#: .\core\templates\core\body_stats.html:66
+msgid "Gewichtsverlauf"
+msgstr "Weight History"
+
+#: .\core\templates\core\body_stats.html:75
+msgid "BMI & FFMI Verlauf"
+msgstr "BMI & FFMI History"
+
+#: .\core\templates\core\body_stats.html:84
+msgid "Körperfettanteil"
+msgstr "Body Fat %"
+
+#: .\core\templates\core\body_stats.html:93
+msgid "Muskelmasse"
+msgstr "Muskelmasse"
+
+#: .\core\templates\core\body_stats.html:101
+msgid "Alle Messungen"
+msgstr "All Measurements"
+
+#: .\core\templates\core\body_stats.html:107
+#: .\core\templates\core\cardio_add.html:38
+#: .\core\templates\core\edit_koerperwert.html:25
+msgid "Datum"
+msgstr "Datum"
+
+#: .\core\templates\core\body_stats.html:108
+#: .\core\templates\core\dashboard.html:184
+#: .\core\templates\core\set_active_plan.html:132
+msgid "Gewicht"
+msgstr "Weight"
+
+#: .\core\templates\core\body_stats.html:112
+#: .\core\templates\core\ml_dashboard.html:103
+#: .\core\templates\core\ml_dashboard.html:129
+msgid "Aktionen"
+msgstr "Actions"
+
+#: .\core\templates\core\body_stats.html:124
+#: .\core\templates\core\plan_details.html:69
+#: .\core\templates\core\training_select_plan.html:261
+#: .\core\templates\core\uebungen_auswahl.html:141
+msgid "Bearbeiten"
+msgstr "Edit"
+
+#: .\core\templates\core\body_stats.html:129
+#: .\core\templates\core\body_stats.html:158
+#: .\core\templates\core\plan_details.html:79
+#: .\core\templates\core\plan_details.html:183
+#: .\core\templates\core\training_session.html:556
 msgid "Löschen"
 msgstr "Delete"
 
+#: .\core\templates\core\body_stats.html:148
+msgid "Körperwert löschen"
+msgstr "Delete Body Measurement"
+
+#: .\core\templates\core\body_stats.html:152
+msgid ""
+"Möchtest du diesen Körperwert wirklich löschen? Diese Aktion kann nicht "
+"rückgängig gemacht werden."
+msgstr ""
+"Do you really want to delete this body measurement? This action cannot be "
+"undone."
+
+#: .\core\templates\core\body_stats.html:204
+#, fuzzy, python-format
+#| msgid "Körperfett (%)"
+msgid "Körperfett (%%)"
+msgstr "Body Fat (%)"
+
+#: .\core\templates\core\body_stats.html:214
+msgid "Muskelmasse (kg)"
+msgstr "Muscle Mass (kg)"
+
+#: .\core\templates\core\cardio_add.html:5
+#: .\core\templates\core\cardio_add.html:20
+#: .\core\templates\core\dashboard.html:570
+msgid "Cardio hinzufügen"
+msgstr "Add Cardio"
+
+#: .\core\templates\core\cardio_add.html:44
+msgid "Aktivität"
+msgstr "Activity"
+
+#: .\core\templates\core\cardio_add.html:46
+#: .\core\templates\registration\apply_beta.html:284
+msgid "Bitte wählen..."
+msgstr "Please select..."
+
+#: .\core\templates\core\cardio_add.html:54
+msgid "Dauer (Minuten)"
+msgstr "Duration (Minutes)"
+
+#: .\core\templates\core\cardio_add.html:60
+msgid "Wie lange hast du trainiert?"
+msgstr "How long did you train?"
+
+#: .\core\templates\core\cardio_add.html:64
+msgid "Intensität"
+msgstr "Intensity"
+
+#: .\core\templates\core\cardio_add.html:86
+#: .\core\templates\core\progress_photos.html:66
+#: .\core\templates\core\training_session.html:537
+msgid "Notiz (optional)"
+msgstr "Note (optional)"
+
+#: .\core\templates\core\cardio_add.html:88
+msgid "z.B. Brustschwimmen, Intervalle, etc."
+msgstr "e.g. Breaststroke, intervals, etc."
+
+#: .\core\templates\core\cardio_add.html:93
+#: .\core\templates\core\profile.html:79 .\core\templates\core\profile.html:134
+#: .\core\templates\core\training_session.html:571
+#: .\core\templates\core\training_session.html:1156
+#: .\core\templates\core\training_session.html:1171
+#: .\core\templates\core\training_session.html:1183
+#: .\core\templates\core\training_session.html:1221
+#: .\core\templates\core\training_session.html:1258
 msgid "Speichern"
 msgstr "Save"
 
-msgid "Satz löschen?"
-msgstr "Delete Set?"
+#: .\core\templates\core\cardio_add.html:105
+#: .\core\templates\core\cardio_list.html:98
+msgid "Ermüdungspunkte"
+msgstr "Fatigue Points"
 
-msgid "Möchtest du diesen Satz wirklich löschen?"
-msgstr "Do you really want to delete this set?"
+#: .\core\templates\core\cardio_add.html:108
+#: .\core\templates\core\cardio_list.html:92
+msgid "Leicht"
+msgstr "Easy"
 
-msgid "Ja, löschen"
-msgstr "Yes, delete"
+#: .\core\templates\core\cardio_add.html:109
+#: .\core\templates\core\cardio_add.html:113
+#: .\core\templates\core\cardio_add.html:117
+msgid "pro Minute"
+msgstr "per minute"
 
-msgid "gelöscht"
-msgstr "deleted"
+#: .\core\templates\core\cardio_add.html:109
+#: .\core\templates\core\cardio_add.html:113
+#: .\core\templates\core\cardio_add.html:117
+msgid "Punkte"
+msgstr "points"
 
-msgid "Wdh"
-msgstr "Reps"
+#: .\core\templates\core\cardio_add.html:112
+#: .\core\templates\core\cardio_list.html:94
+msgid "Moderat"
+msgstr "Moderate"
 
-msgid "Rückgängig"
-msgstr "Undo"
+#: .\core\templates\core\cardio_add.html:116
+#: .\core\templates\core\cardio_list.html:96
+msgid "Intensiv"
+msgstr "Intense"
 
-msgid "Satz wiederhergestellt"
-msgstr "Set restored"
+# === cardio_list.html ===
+#: .\core\templates\core\cardio_list.html:5
+msgid "Cardio-Übersicht"
+msgstr "Cardio Overview"
 
-msgid "Fehler beim Löschen"
-msgstr "Error deleting"
+#: .\core\templates\core\cardio_list.html:21
+msgid "Cardio-Tracking"
+msgstr "Cardio Tracking"
 
-msgid "Netzwerkfehler beim Löschen"
-msgstr "Network error while deleting"
+#: .\core\templates\core\cardio_list.html:24
+msgid "Hinzufügen"
+msgstr "Add"
 
-msgid "Körpergewicht-Übung · ca."
-msgstr "Bodyweight exercise · approx."
+#: .\core\templates\core\cardio_list.html:38
+msgid "Einheiten"
+msgstr "Sessions"
 
-msgid "KG wirkt als Last"
-msgstr "bodyweight acts as load"
+#: .\core\templates\core\cardio_list.html:38
+msgid "Tage"
+msgstr "days"
 
-msgid "Körpergewicht-Übung · isometrisch (kein Heben)"
-msgstr "Bodyweight exercise · isometric (no lifting)"
+#: .\core\templates\core\cardio_list.html:46
+msgid "Minuten gesamt"
+msgstr "Total minutes"
 
-msgid "-- Übung wählen --"
+#: .\core\templates\core\cardio_list.html:55
+msgid "Nur letzte 30 Tage"
+msgstr "Last 30 days only"
+
+#: .\core\templates\core\cardio_list.html:59
+#: .\core\templates\core\dashboard.html:118
+#: .\core\templates\core\plan_library.html:81
+msgid "Alle anzeigen"
+msgstr "Show All"
+
+#: .\core\templates\core\cardio_list.html:102
+msgid "wirklich löschen?"
+msgstr "really delete?"
+
+#: .\core\templates\core\cardio_list.html:114
+msgid "Noch keine Cardio-Einheiten erfasst."
+msgstr "No cardio sessions logged yet."
+
+#: .\core\templates\core\cardio_list.html:117
+msgid "Erste Cardio-Einheit hinzufügen"
+msgstr "Add first cardio session"
+
+#: .\core\templates\core\cardio_list.html:124
+msgid "Info"
+msgstr "Info"
+
+#: .\core\templates\core\cardio_list.html:126
+msgid "Cardio-Einheiten werden im"
+msgstr "Cardio sessions are factored into the"
+
+#: .\core\templates\core\cardio_list.html:126
+#: .\core\templates\core\dashboard.html:492
+msgid "Ermüdungs-Index"
+msgstr "Fatigue Index"
+
+#: .\core\templates\core\cardio_list.html:126
+msgid "berücksichtigt und helfen dem"
+msgstr "and help the"
+
+#: .\core\templates\core\cardio_list.html:127
+msgid ""
+"dein Krafttraining besser zu planen. Leichtes Cardio fördert die "
+"Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
+msgstr ""
+"dein Krafttraining besser zu planen. Leichtes Cardio fördert die "
+"Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
+
+#: .\core\templates\core\create_plan.html:4
+#: .\core\templates\core\training_select_plan.html:71
+msgid "Neuen Plan erstellen"
+msgstr "Create New Plan"
+
+#: .\core\templates\core\create_plan.html:52
+#: .\core\templates\core\edit_plan.html:31
+#: .\core\templates\core\feedback_list.html:10
+#: .\core\templates\core\ml_dashboard.html:10
+#: .\core\templates\core\muscle_map.html:35
+#: .\core\templates\core\training_list.html:11
+#: .\core\templates\core\uebungen_auswahl.html:30
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: .\core\templates\core\create_plan.html:54
+#, fuzzy
+#| msgid "2 Trainings"
+msgid "Neuer Trainingsplan"
+msgstr "2 workouts"
+
+#: .\core\templates\core\create_plan.html:76
+msgid "Von Template starten"
+msgstr "Start from Template"
+
+#: .\core\templates\core\create_plan.html:78
+msgid "Oder erstelle einen Plan von Grund auf:"
+msgstr "Or create a plan from scratch:"
+
+#: .\core\templates\core\create_plan.html:87
+#: .\core\templates\core\edit_plan.html:55
+#, fuzzy
+#| msgid "-- Übung wählen --"
+msgid "Übungen auswählen"
 msgstr "-- Choose Exercise --"
 
-msgid "Körpergewicht-Übung: Ziel +1–2 Wdh."
-msgstr "Bodyweight exercise: target +1–2 reps"
+#: .\core\templates\core\create_plan.html:89
+msgid "Klicke auf Übungen, um sie zum Plan hinzuzufügen"
+msgstr "Click on exercises to add them to the plan"
 
-msgid "Letztes Mal"
-msgstr "Last time"
+#: .\core\templates\core\create_plan.html:93
+#: .\core\templates\core\edit_plan.html:57
+#: .\core\templates\core\uebungen_auswahl.html:65
+#, fuzzy
+#| msgid "Übung suchen"
+msgid "Übung suchen..."
+msgstr "Search Exercise"
 
-msgid "Offline-Änderungen werden angezeigt"
-msgstr "Offline changes are shown"
+#: .\core\templates\core\create_plan.html:148
+#, fuzzy
+#| msgid "Aktiver Plan"
+msgid "Neuer Plan"
+msgstr "Active Plan"
 
-msgid "Serverfehler beim Speichern"
-msgstr "Server error while saving"
+#: .\core\templates\core\create_plan.html:155
+#: .\core\templates\core\edit_plan.html:117
+msgid "Name des Plans"
+msgstr "Plan Name"
 
-msgid "Serverfehler"
-msgstr "Server error"
+#: .\core\templates\core\create_plan.html:160
+#: .\core\templates\core\edit_plan.html:121
+#: .\core\templates\core\exercise_detail.html:62
+#: .\core\templates\core\uebungen_auswahl.html:216
+#, fuzzy
+#| msgid "Kurzbeschreibung"
+msgid "Beschreibung"
+msgstr "Kurzbeschreibung"
 
-msgid "Satz konnte nicht gespeichert werden"
-msgstr "Set could not be saved"
+# === plan_details.html ===
+#: .\core\templates\core\create_plan.html:168
+#: .\core\templates\core\edit_plan.html:128
+#, fuzzy
+#| msgid "Dieser Plan ist öffentlich"
+msgid "Plan öffentlich machen"
+msgstr "This plan is public"
 
-msgid "Fehler beim Speichern"
-msgstr "Error saving"
+#: .\core\templates\core\create_plan.html:169
+#: .\core\templates\core\edit_plan.html:129
+msgid "Andere User können diesen Plan sehen und kopieren"
+msgstr "Other users can view and copy this plan"
 
-msgid "Speichern..."
-msgstr "Saving..."
+#: .\core\templates\core\create_plan.html:177
+#: .\core\templates\core\edit_plan.html:134
+#, fuzzy
+#| msgid "Gesperrte Übungen"
+msgid "Ausgewählte Übungen"
+msgstr "Locked Exercises"
 
-msgid "Änderung offline gespeichert - wird synchronisiert"
-msgstr "Change saved offline – will be synced"
+#: .\core\templates\core\create_plan.html:190
+#, fuzzy
+#| msgid "KI-Plan erstellen"
+msgid "Plan erstellen"
+msgstr "Create AI Plan"
 
-msgid "Satz offline gespeichert - wird synchronisiert"
-msgstr "Set saved offline – will be synced"
+#: .\core\templates\core\create_plan.html:207
+msgid "Aus Template starten"
+msgstr "Start from Template"
 
-msgid "Offline-Speicherung fehlgeschlagen."
-msgstr "Offline saving failed."
+#: .\core\templates\core\create_plan.html:213
+msgid ""
+"Wähle ein vorgefertigtes Template basierend auf bewährten "
+"Trainingsprinzipien. Die Übungen werden automatisch an dein verfügbares "
+"Equipment angepasst."
+msgstr ""
 
-msgid "Pause vorbei!"
-msgstr "Rest over!"
+#: .\core\templates\core\create_plan.html:220
+#: .\core\templates\core\exercise_info_modal.html:16
+msgid "Lädt..."
+msgstr "Loading..."
 
-msgid "Bereit für den nächsten Satz?"
-msgstr "Ready for the next set?"
+#: .\core\templates\core\create_plan.html:228
+#, fuzzy
+#| msgid "Zurück zur Übersicht"
+msgid "Zurück zur Auswahl"
+msgstr "Back to overview"
 
-msgid "Satz"
-msgstr "Set"
+# === dashboard.html ===
+#: .\core\templates\core\dashboard.html:95
+msgid "TRAINING"
+msgstr "TRAINING"
 
-msgid "offline gespeichert"
-msgstr "saved offline"
+#: .\core\templates\core\dashboard.html:100
+msgid "Offenes Training fortsetzen"
+msgstr "Continue open workout"
 
-msgid "Werden automatisch synchronisiert wenn du wieder online bist"
-msgstr "Will be synced automatically when you're back online"
+#: .\core\templates\core\dashboard.html:102
+msgid "Fortsetzen"
+msgstr "Continue"
 
-msgid "Übung"
-msgstr "Exercise"
+#: .\core\templates\core\dashboard.html:105
+#: .\core\templates\core\equipment_management.html:5
+msgid "Ausrüstung verwalten"
+msgstr "Manage Equipment"
 
-# === training_stats.html ===
-msgid "Trainingsstatistiken"
-msgstr "Training Statistics"
+#: .\core\templates\core\dashboard.html:106
+#: .\core\templates\core\includes\global_header.html:70
+#: .\core\templates\core\profile.html:148
+msgid "Equipment"
+msgstr "Equipment"
 
-msgid "Als PDF exportieren"
-msgstr "Export as PDF"
+#: .\core\templates\core\dashboard.html:108
+msgid "Push-Benachrichtigungen"
+msgstr "Push Notifications"
 
-msgid "Als CSV exportieren"
-msgstr "Export as CSV"
+#: .\core\templates\core\dashboard.html:115
+#: .\core\templates\core\includes\global_header.html:75
+#: .\core\templates\core\profile.html:153
+#: .\core\templates\core\training_stats.html:17
+msgid "Statistiken"
+msgstr "Statistics"
 
-msgid "Noch keine Trainings-Daten vorhanden."
-msgstr "No training data available yet."
+#: .\core\templates\core\dashboard.html:128
+#, python-format
+msgid ""
+"Du hast <strong>%(count)s nicht abgeschlossene Trainings</strong>. Nur das "
+"neueste wird zum Fortsetzen angezeigt."
+msgstr ""
 
-msgid "Jetzt trainieren"
-msgstr "Start training now"
+#: .\core\templates\core\dashboard.html:130
+msgid "Aufräumen"
+msgstr "Clean Up"
 
+#: .\core\templates\core\dashboard.html:139
+#: .\core\templates\core\dashboard.html:226
+msgid "Diese Woche"
+msgstr "This Week"
+
+#: .\core\templates\core\dashboard.html:141
+#: .\core\templates\core\dashboard.html:230
+#: .\core\templates\core\training_stats.html:47
+msgid "Trainings"
+msgstr "Workouts"
+
+#: .\core\templates\core\dashboard.html:150
+msgid "Wochen"
+msgstr "Weeks"
+
+#: .\core\templates\core\dashboard.html:166
+#: .\core\templates\core\set_active_plan.html:27
+#: .\core\templates\core\training_select_plan.html:111
+msgid "Aktiver Plan"
+msgstr "Active Plan"
+
+#: .\core\templates\core\dashboard.html:173
+#, python-format
+msgid "Woche %(w)s/%(l)s"
+msgstr "Week %(w)s/%(l)s"
+
+#: .\core\templates\core\dashboard.html:176
+msgid "Plan wechseln"
+msgstr "Switch Plan"
+
+#: .\core\templates\core\dashboard.html:184
+msgid "Woche"
+msgstr "Week"
+
+#: .\core\templates\core\dashboard.html:184
+#: .\core\templates\core\set_active_plan.html:123
+msgid "Volumen"
+msgstr "Volume"
+
+#: .\core\templates\core\dashboard.html:184
+#: .\core\templates\core\set_active_plan.html:141
+msgid "Ziel-RPE"
+msgstr "Target RPE"
+
+#: .\core\templates\core\dashboard.html:200
+msgid "Deine aktive Plan-Gruppe existiert nicht mehr."
+msgstr "Your active plan group no longer exists."
+
+#: .\core\templates\core\dashboard.html:202
+msgid "Neu wählen"
+msgstr "Choose New"
+
+#: .\core\templates\core\dashboard.html:212
+msgid "Kein aktiver Plan gesetzt"
+msgstr "No active plan set"
+
+#: .\core\templates\core\dashboard.html:213
+#: .\core\templates\core\set_active_plan.html:40
+msgid "Aktiven Trainingsplan festlegen"
+msgstr "Set Active Training Plan"
+
+#: .\core\templates\core\dashboard.html:288
+msgid "Performance Form-Index"
+msgstr "Performance Form Index"
+
+#: .\core\templates\core\dashboard.html:289
+#: .\core\templates\core\dashboard.html:493
+msgid "Wie wird das berechnet?"
+msgstr "How is this calculated?"
+
+#: .\core\templates\core\dashboard.html:314
+msgid "Basiert auf Frequenz, Konsistenz, RPE und Volumen-Trends"
+msgstr "Based on frequency, consistency, RPE and volume trends"
+
+#: .\core\templates\core\dashboard.html:326
+msgid "AI Performance-Analyse"
+msgstr "AI Performance Analysis"
+
+#: .\core\templates\core\dashboard.html:330
+msgid "Automatische Erkennung von Plateau, Rückschritt und Stagnation"
+msgstr "Automatic detection of plateau, regression and stagnation"
+
+#: .\core\templates\core\dashboard.html:341
+msgid "Plateau"
+msgstr "Plateau"
+
+#: .\core\templates\core\dashboard.html:342
+msgid "Rückschritt"
+msgstr "Regression"
+
+#: .\core\templates\core\dashboard.html:343
+#: .\core\templates\core\workout_recommendations.html:127
+msgid "Stagnation"
+msgstr "Stagnation"
+
+#: .\core\templates\core\dashboard.html:350
+#: .\core\templates\core\training_session.html:565
+#: .\core\templates\core\training_stats.html:181
+msgid "Tipp"
+msgstr "Tip"
+
+#: .\core\templates\core\dashboard.html:359
+msgid "Powered by AI-Algorithmus • Analysiert deine letzten 4 Wochen"
+msgstr "Powered by AI algorithm • Analyzes your last 4 weeks"
+
+#: .\core\templates\core\dashboard.html:370
+msgid "Letztes Workout"
+msgstr "Last Workout"
+
+#: .\core\templates\core\dashboard.html:375
+#, python-format
+msgid "vor %(t)s"
+msgstr "%(t)s ago"
+
+#: .\core\templates\core\dashboard.html:375
+msgid "Noch kein Eintrag"
+msgstr "No entry yet"
+
+#: .\core\templates\core\dashboard.html:389
+msgid "Deine Top 3 Übungen"
+msgstr "Your Top 3 Exercises"
+
+#: .\core\templates\core\dashboard.html:407
+msgid "TRAININGS-HISTORIE"
+msgstr "TRAINING HISTORY"
+
+#: .\core\templates\core\dashboard.html:408
+msgid "Letzte 12 Monate"
+msgstr "Last 12 Months"
+
+#: .\core\templates\core\dashboard.html:412
+msgid "Gesamt"
+msgstr "Total"
+
+#: .\core\templates\core\dashboard.html:417
+#: .\core\templates\core\training_select_plan.html:253
+msgid "Weniger"
+msgstr "Less"
+
+#: .\core\templates\core\dashboard.html:423
+msgid "Mehr"
+msgstr "More"
+
+#: .\core\templates\core\dashboard.html:429
+msgid "KÖRPER & VITALWERTE"
+msgstr "BODY & VITALS"
+
+#: .\core\templates\core\dashboard.html:434
+msgid "Aktuelles Gewicht"
+msgstr "Current Weight"
+
+#: .\core\templates\core\dashboard.html:440
+msgid "Verlauf anzeigen"
+msgstr "Show History"
+
+#: .\core\templates\core\dashboard.html:449
+msgid "Wöchentliches Volumen"
+msgstr "Weekly Volume"
+
+#: .\core\templates\core\dashboard.html:473
+msgid "Cardio diese Woche"
+msgstr "Cardio This Week"
+
+#: .\core\templates\core\dashboard.html:474
+#, python-format
+msgid "%(count)s Einheit"
+msgstr "%(count)s session"
+
+#: .\core\templates\core\dashboard.html:478
+#: .\core\templates\core\training_finish.html:122
+msgid "Minuten"
+msgstr "Minutes"
+
+#: .\core\templates\core\dashboard.html:507
+msgid "Faktoren"
+msgstr "Factors"
+
+#: .\core\templates\core\dashboard.html:542
+msgid "Muskeln"
+msgstr "Muscle Mass"
+
+#: .\core\templates\core\dashboard.html:550
+msgid "KFA / Fett"
+msgstr "BF% / Fat"
+
+#: .\core\templates\core\dashboard.html:567
+#: .\core\templates\core\plan_details.html:64
+msgid "Training starten"
+msgstr "Start Workout"
+
+#: .\core\templates\core\dashboard.html:574
+msgid "KI-Plan erstellen"
+msgstr "Create AI Plan"
+
+#: .\core\templates\core\dashboard.html:577
+msgid "Trainingsempfehlungen (AI)"
+msgstr "Workout Recommendations (AI)"
+
+#: .\core\templates\core\dashboard.html:580
+msgid "ML Vorhersage-Modelle"
+msgstr "ML Prediction Models"
+
+#: .\core\templates\core\dashboard.html:583
+msgid "Muskelgruppen & Übungen"
+msgstr "Muscle Groups & Exercises"
+
+#: .\core\templates\core\dashboard.html:586
+msgid "Werte eintragen"
+msgstr "Log Values"
+
+#: .\core\templates\core\dashboard.html:605
+msgid ""
+"Push Notifications werden geladen... Bitte versuche es in wenigen Sekunden "
+"erneut."
+msgstr ""
+"Push Notifications werden geladen... Bitte versuche es in wenigen Sekunden "
+"erneut."
+
+#: .\core\templates\core\dashboard.html:611
+msgid "Push-Benachrichtigungen deaktivieren?"
+msgstr "Disable push notifications?"
+
+#: .\core\templates\core\dashboard.html:617
+msgid "Push-Benachrichtigungen deaktiviert"
+msgstr "Push notifications disabled"
+
+#: .\core\templates\core\dashboard.html:627
+msgid "Push-Benachrichtigungen aktiviert!"
+msgstr "Push notifications enabled!"
+
+#: .\core\templates\core\dashboard.html:629
+#: .\core\templates\core\training_select_plan.html:316
+#: .\core\templates\core\training_select_plan.html:323
+#: .\core\templates\core\training_select_plan.html:331
+#: .\core\templates\core\training_select_plan.html:352
+#: .\core\templates\core\training_select_plan.html:365
+#: .\core\templates\core\training_select_plan.html:372
+msgid "Fehler"
+msgstr "Error"
+
+#: .\core\templates\core\dashboard.html:636
+msgid "Fehler beim Aktivieren der Benachrichtigungen"
+msgstr "Error enabling notifications"
+
+#: .\core\templates\core\dashboard.html:651
+msgid "Push-Benachrichtigungen aktiv"
+msgstr "Push notifications active"
+
+#: .\core\templates\core\dashboard.html:655
+msgid "Push-Benachrichtigungen aktivieren"
+msgstr "Enable push notifications"
+
+#: .\core\templates\core\datenschutz.html:4
+msgid "Datenschutzerklärung"
+msgstr "Datenschutzerklärung"
+
+#: .\core\templates\core\datenschutz.html:137
+#: .\core\templates\core\impressum.html:4
+#: .\core\templates\core\includes\global_footer.html:32
+#: .\core\templates\registration\apply_beta.html:353
+#: .\core\templates\registration\login.html:106
+#: .\core\templates\registration\register.html:104
+msgid "Impressum"
+msgstr "Legal Notice"
+
+#: .\core\templates\core\datenschutz.html:140
+#: .\core\templates\core\exercise_detail.html:20
+#: .\core\templates\core\impressum.html:63
+#: .\core\templates\core\plan_details.html:22
+#: .\core\templates\core\progress_photos.html:29
+#: .\core\templates\core\set_active_plan.html:25
+#: .\core\templates\core\share_group.html:14
+#: .\core\templates\core\share_plan.html:14
+#: .\core\templates\core\stats_exercise.html:14
+#: .\core\templates\core\training_finish.html:41
+msgid "Zurück"
+msgstr "Back"
+
+# === edit_koerperwert.html ===
+#: .\core\templates\core\edit_koerperwert.html:4
+#: .\core\templates\core\edit_koerperwert.html:12
+msgid "Körperwert bearbeiten"
+msgstr "Edit Body Measurement"
+
+#: .\core\templates\core\edit_koerperwert.html:32
+msgid "leer = Profil-Wert wird verwendet"
+msgstr "empty = profile value is used"
+
+#: .\core\templates\core\edit_koerperwert.html:33
+msgid "Leer lassen = Größe aus Profil verwenden"
+msgstr "Leave empty = use height from profile"
+
+#: .\core\templates\core\edit_koerperwert.html:101
+#: .\core\templates\core\edit_plan.html:138
+msgid "Änderungen speichern"
+msgstr "Save Changes"
+
+#: .\core\templates\core\edit_plan.html:4
+#: .\core\templates\core\edit_plan.html:33
+#: .\core\templates\core\edit_plan.html:113
+#, fuzzy
+#| msgid "Profil bearbeiten"
+msgid "Plan bearbeiten"
+msgstr "Edit Profile"
+
+#: .\core\templates\core\edit_plan.html:103
+#, fuzzy
+#| msgid "Verbesserungsvorschlag"
+msgid "Optimierungsvorschläge"
+msgstr "Verbesserungsvorschlag"
+
+#: .\core\templates\core\edit_plan.html:106
+#, fuzzy
+#| msgid "Training starten"
+msgid "KI-Optimierung starten"
+msgstr "Start Workout"
+
+#: .\core\templates\core\equipment_management.html:27
+msgid "Equipment Manager"
+msgstr "Equipment Manager"
+
+#: .\core\templates\core\equipment_management.html:39
+msgid "Meine Ausrüstung"
+msgstr "My Equipment"
+
+#: .\core\templates\core\equipment_management.html:42
+msgid "Wähle deine verfügbare Ausrüstung aus."
+msgstr "Select your available equipment."
+
+#: .\core\templates\core\equipment_management.html:43
+msgid ""
+"Übungen werden automatisch gefiltert und der AI Coach berücksichtigt nur "
+"verfügbares Equipment."
+msgstr ""
+"Exercises are filtered automatically and the AI Coach only considers "
+"available equipment."
+
+#: .\core\templates\core\equipment_management.html:54
+msgid "Verfügbare Übungen"
+msgstr "Available Exercises"
+
+#: .\core\templates\core\equipment_management.html:63
+msgid "Gesperrte Übungen"
+msgstr "Locked Exercises"
+
+#: .\core\templates\core\equipment_management.html:72
+msgid "Gesamt Übungen"
+msgstr "Total Exercises"
+
+#: .\core\templates\core\equipment_management.html:80
+msgid "Schnell-Auswahl"
+msgstr "Quick Select"
+
+#: .\core\templates\core\equipment_management.html:85
+msgid "Home Gym Basic"
+msgstr "Home Gym Basic"
+
+#: .\core\templates\core\equipment_management.html:88
+msgid "Home Gym Advanced"
+msgstr "Home Gym Advanced"
+
+#: .\core\templates\core\equipment_management.html:91
+msgid "Fitnessstudio"
+msgstr "Gym"
+
+#: .\core\templates\core\equipment_management.html:94
+msgid "Nur Körpergewicht"
+msgstr "Bodyweight Only"
+
+#: .\core\templates\core\equipment_management.html:97
+msgid "Alles abwählen"
+msgstr "Deselect All"
+
+#: .\core\templates\core\equipment_management.html:106
+msgid "Equipment suchen..."
+msgstr "Search equipment..."
+
+#: .\core\templates\core\equipment_management.html:110
+msgid "Alle Kategorien"
+msgstr "All Categories"
+
+#: .\core\templates\core\equipment_management.html:160
+msgid "Keine Equipment-Typen gefunden. Versuche einen anderen Suchbegriff."
+msgstr "No equipment types found. Try a different search term."
+
+#: .\core\templates\core\equipment_management.html:169
+msgid "hinzugefügt"
+msgstr "added"
+
+#: .\core\templates\core\equipment_management.html:170
+msgid "entfernt"
+msgstr "removed"
+
+#: .\core\templates\core\equipment_management.html:171
+msgid "Preset bereits aktiv"
+msgstr "Preset already active"
+
+#: .\core\templates\core\equipment_management.html:172
+msgid "Fehler beim Aktualisieren des Equipments"
+msgstr "Error updating equipment"
+
+#: .\core\templates\core\exercise_detail.html:26
+#: .\core\templates\core\uebungen_auswahl.html:106
+msgid "Aus Favoriten entfernen"
+msgstr "Remove from favorites"
+
+#: .\core\templates\core\exercise_detail.html:26
+#: .\core\templates\core\uebung_detail.html:42
+#: .\core\templates\core\uebungen_auswahl.html:106
+#, fuzzy
+#| msgid "Cardio hinzufügen"
+msgid "Zu Favoriten hinzufügen"
+msgstr "Add Cardio"
+
+#: .\core\templates\core\exercise_detail.html:69
+#, fuzzy
+#| msgid "Übungsplan"
+msgid "Übungsdarstellung"
+msgstr "Exercise Plan"
+
+#: .\core\templates\core\exercise_detail.html:78
+msgid "Video-Anleitung"
+msgstr "Video Tutorial"
+
+#: .\core\templates\core\exercise_detail.html:95
+#: .\core\templates\core\exercise_info_modal.html:61
+#: .\core\templates\core\uebungen_auswahl.html:207
+#, fuzzy
+#| msgid "Equipment"
+msgid "Benötigtes Equipment"
+msgstr "Equipment"
+
+#: .\core\templates\core\exercise_detail.html:106
+#: .\core\templates\core\exercise_info_modal.html:84
+#: .\core\templates\core\uebung_detail.html:59
+#, fuzzy
+#| msgid "Muskeln"
+msgid "Hilfsmuskeln"
+msgstr "Muscle Mass"
+
+#: .\core\templates\core\exercise_detail.html:115
+#, fuzzy
+#| msgid "Alle Quellen anzeigen"
+msgid "Alternative Übungen anzeigen"
+msgstr "Alle Quellen anzeigen"
+
+#: .\core\templates\core\exercise_detail.html:120
+#, fuzzy
+#| msgid "Statistiken"
+msgid "Deine Statistiken"
+msgstr "Statistics"
+
+#: .\core\templates\core\exercise_detail.html:125
+#: .\core\templates\core\stats_exercise.html:80
+msgid "Est. 1RM Max"
+msgstr "Est. 1RM Max"
+
+#: .\core\templates\core\exercise_detail.html:132
+#: .\core\templates\core\stats_exercise.html:87
+msgid "Schwerster Satz"
+msgstr "Heaviest Set"
+
+#: .\core\templates\core\exercise_detail.html:139
+#: .\core\templates\core\training_stats.html:53
 msgid "Gesamt-Volumen"
 msgstr "Total Volume"
 
-msgid "Ø pro Training"
-msgstr "Avg per Workout"
+#: .\core\templates\core\exercise_detail.html:146
+#, fuzzy
+#| msgid "Minuten gesamt"
+msgid "Sätze gesamt"
+msgstr "Total minutes"
 
-msgid "Volumen-Progression (pro Training)"
-msgstr "Volume Progression (per Workout)"
+#: .\core\templates\core\exercise_detail.html:148
+#: .\core\templates\core\training_finish.html:65
+#: .\core\templates\core\training_session.html:277
+msgid "Arbeitssätze"
+msgstr "Work Sets"
 
-msgid "Wöchentliches Volumen (letzte 12 Wochen)"
-msgstr "Weekly Volume (last 12 weeks)"
+#: .\core\templates\core\exercise_detail.html:156
+msgid "Durchschnittliches RPE"
+msgstr "Average RPE"
 
-msgid "Volumen-Analyse"
-msgstr "Volume Analysis"
+#: .\core\templates\core\exercise_detail.html:160
+msgid "von 10"
+msgstr "of 10"
 
-msgid "Anstieg"
-msgstr "increase"
+#: .\core\templates\core\exercise_detail.html:165
+msgid "Besser werdend"
+msgstr "Improving"
 
-msgid "Rückgang"
-msgstr "decrease"
+#: .\core\templates\core\exercise_detail.html:166
+msgid "RPE sinkt"
+msgstr "RPE decreasing"
 
-msgid "Achte auf ausreichende Regeneration! Bei zu schnellem Volumen-Anstieg steigt das Verletzungsrisiko."
-msgstr "Make sure you recover adequately! Rapid volume increases raise the risk of injury."
+#: .\core\templates\core\exercise_detail.html:168
+#, fuzzy
+#| msgid "Schwierig"
+msgid "Schwieriger"
+msgstr "Difficult"
 
-msgid "Starker Volumen-Rückgang erkannt. Achte auf Motivation und Regeneration."
-msgstr "Significant volume drop detected. Pay attention to motivation and recovery."
+#: .\core\templates\core\exercise_detail.html:169
+msgid "RPE steigt"
+msgstr "RPE increasing"
 
-msgid "Muskelgruppen-Balance"
-msgstr "Muscle Group Balance"
+#: .\core\templates\core\exercise_detail.html:171
+msgid "Stabil"
+msgstr "Stable"
 
-msgid "Belastungsverteilung"
-msgstr "Load Distribution"
+#: .\core\templates\core\exercise_detail.html:172
+msgid "Konstant"
+msgstr "Consistent"
 
-msgid "Niedrig → Hoch"
-msgstr "Low → High"
+#: .\core\templates\core\exercise_detail.html:183
+msgid "1RM Progression"
+msgstr "1RM Progression"
 
-msgid "Trainings-Aktivität (letzte 90 Tage)"
-msgstr "Training Activity (last 90 days)"
+#: .\core\templates\core\exercise_detail.html:191
+#, fuzzy
+#| msgid "Freies Training"
+msgid "Letztes Training:"
+msgstr "Free Workout"
 
-msgid "Kein Training"
-msgstr "No workout"
+#: .\core\templates\core\exercise_detail.html:202
+#, fuzzy
+#| msgid "Statistiken"
+msgid "Noch keine Statistiken"
+msgstr "Statistics"
 
-msgid "1 Training"
-msgstr "1 workout"
+#: .\core\templates\core\exercise_detail.html:203
+msgid "Trainiere diese Übung, um deine Fortschritte zu sehen!"
+msgstr "Train this exercise to see your progress!"
 
-msgid "2 Trainings"
-msgstr "2 workouts"
+#: .\core\templates\core\exercise_detail.html:214
+#, fuzzy
+#| msgid "Gesamt Übungen"
+msgid "Alternative Übungen"
+msgstr "Total Exercises"
 
-msgid "3+ Trainings"
-msgstr "3+ workouts"
+#: .\core\templates\core\exercise_detail.html:220
+msgid "Suche passende Alternativen..."
+msgstr "Finding matching alternatives..."
 
-msgid "Muskelgruppen-Details"
-msgstr "Muscle Group Details"
+#: .\core\templates\core\exercise_detail.html:224
+msgid "Gefunden basierend auf Bewegungstyp, Muskelgruppe und deinem Equipment"
+msgstr "Found based on movement type, muscle group and your equipment"
 
-msgid "Muskelgruppe"
-msgstr "Muscle Group"
+#: .\core\templates\core\exercise_detail.html:229
+#, fuzzy
+#| msgid "Keine öffentlichen Pläne gefunden."
+msgid "Keine passenden Alternativen gefunden"
+msgstr "No public plans found."
 
-msgid "Eff. Wiederholungen"
-msgstr "Eff. Reps"
-
-msgid "Schaue auch bei einzelnen Übungen für detaillierte Progressions-Analysen!"
-msgstr "Also check individual exercises for detailed progression analyses!"
-
-msgid "Volumen (kg)"
-msgstr "Volume (kg)"
-
-msgid "Wochenvolumen (kg)"
-msgstr "Weekly Volume (kg)"
-
-msgid "Effektive Wiederholungen"
-msgstr "Effective Reps"
-
-msgid "Fehler beim Laden der SVG"
+#: .\core\templates\core\exercise_detail.html:233
+#, fuzzy
+#| msgid "Fehler beim Laden der SVG"
+msgid "Fehler beim Laden der Alternativen"
 msgstr "Error loading SVG"
 
+#: .\core\templates\core\exercise_info_modal.html:9
+#, fuzzy
+#| msgid "Übungsdetails anzeigen"
+msgid "Übungsdetails"
+msgstr "Show Exercise Details"
+
+#: .\core\templates\core\exercise_info_modal.html:33
+#, fuzzy
+#| msgid "Live verfügbar!"
+msgid "Keine Grafik verfügbar"
+msgstr "Live verfügbar!"
+
+#: .\core\templates\core\exercise_info_modal.html:51
+#, fuzzy
+#| msgid "In Bearbeitung"
+msgid "Anleitung"
+msgstr "In Bearbeitung"
+
+#: .\core\templates\core\exercise_info_modal.html:74
+#: .\core\templates\core\uebungen_auswahl.html:191
+#, fuzzy
+#| msgid "Gewicht"
+msgid "Gewichtstyp"
+msgstr "Weight"
+
+#: .\core\templates\core\feedback_create.html:4
+#: .\core\templates\core\feedback_list.html:107
+msgid "Feedback einreichen"
+msgstr "Feedback einreichen"
+
+#: .\core\templates\core\feedback_create.html:13
+#: .\core\templates\core\feedback_list.html:22
+msgid "Bugreport"
+msgstr "Bugreport"
+
+#: .\core\templates\core\feedback_create.html:14
+msgid "Frage stellen"
+msgstr "Frage stellen"
+
+#: .\core\templates\core\feedback_create.html:15
+#: .\core\templates\core\feedback_list.html:27
+msgid "Verbesserungsvorschlag"
+msgstr "Verbesserungsvorschlag"
+
+#: .\core\templates\core\feedback_create.html:39
+msgid "Typ"
+msgstr "Typ"
+
+#: .\core\templates\core\feedback_create.html:51
+#: .\core\templates\core\feedback_list.html:32
+msgid "Frage"
+msgstr "Frage"
+
+#: .\core\templates\core\feedback_create.html:57
+msgid "Kurzbeschreibung"
+msgstr "Kurzbeschreibung"
+
+#: .\core\templates\core\feedback_create.html:60
+msgid "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
+msgstr "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
+
+#: .\core\templates\core\feedback_create.html:63
+msgid "Max. 200 Zeichen"
+msgstr "Max. 200 Zeichen"
+
+#: .\core\templates\core\feedback_create.html:67
+msgid "Detaillierte Beschreibung"
+msgstr "Detaillierte Beschreibung"
+
+#: .\core\templates\core\feedback_create.html:71
+msgid "Beschreibe dein Feedback..."
+msgstr "Beschreibe dein Feedback..."
+
+#: .\core\templates\core\feedback_create.html:76
+msgid "Beta-Tester Feedback"
+msgstr "Beta-Tester Feedback"
+
+#: .\core\templates\core\feedback_create.html:77
+msgid ""
+"Dein Feedback hilft uns, HomeGym zu verbessern. Wir prüfen jeden Vorschlag "
+"und antworten dir über diese Seite."
+msgstr ""
+"Dein Feedback hilft uns, HomeGym zu verbessern. Wir prüfen jeden Vorschlag "
+"und antworten dir über diese Seite."
+
+#: .\core\templates\core\feedback_create.html:82
+msgid "Feedback absenden"
+msgstr "Feedback absenden"
+
+#: .\core\templates\core\feedback_detail.html:4
+#: .\core\templates\core\includes\global_footer.html:25
+msgid "Feedback"
+msgstr "Feedback"
+
+#: .\core\templates\core\feedback_detail.html:12
+msgid "Feedback-Details"
+msgstr "Feedback-Details"
+
+#: .\core\templates\core\feedback_detail.html:31
+#, python-format
+msgid "Eingereicht am %(date)s Uhr"
+msgstr "Submitted on %(date)s"
+
+#: .\core\templates\core\feedback_detail.html:41
+msgid "Deine Nachricht"
+msgstr "Deine Nachricht"
+
+#: .\core\templates\core\feedback_detail.html:57
+msgid "Antwort vom HomeGym Team"
+msgstr "Antwort vom HomeGym Team"
+
+#: .\core\templates\core\feedback_detail.html:63
+#, python-format
+msgid "Zuletzt aktualisiert: %(date)s Uhr"
+msgstr "Last updated: %(date)s"
+
+#: .\core\templates\core\feedback_detail.html:70
+msgid "Noch keine Antwort"
+msgstr "Noch keine Antwort"
+
+#: .\core\templates\core\feedback_detail.html:71
+msgid ""
+"Wir prüfen dein Feedback und antworten dir hier, sobald wir es bearbeitet "
+"haben."
+msgstr ""
+"Wir prüfen dein Feedback und antworten dir hier, sobald wir es bearbeitet "
+"haben."
+
+#: .\core\templates\core\feedback_detail.html:77
+msgid "Was bedeutet der Status?"
+msgstr "Was bedeutet der Status?"
+
+#: .\core\templates\core\feedback_detail.html:79
+#: .\core\templates\core\feedback_list.html:17
+#: .\core\templates\core\feedback_list.html:59
+msgid "Neu"
+msgstr "Neu"
+
+#: .\core\templates\core\feedback_detail.html:79
+msgid "Noch nicht geprüft"
+msgstr "Noch nicht geprüft"
+
+#: .\core\templates\core\feedback_detail.html:80
+#: .\core\templates\core\feedback_list.html:60
+msgid "Angenommen"
+msgstr "Angenommen"
+
+#: .\core\templates\core\feedback_detail.html:80
+msgid "Wird umgesetzt"
+msgstr "Wird umgesetzt"
+
+#: .\core\templates\core\feedback_detail.html:81
+#: .\core\templates\core\feedback_list.html:61
+msgid "In Bearbeitung"
+msgstr "In Bearbeitung"
+
+#: .\core\templates\core\feedback_detail.html:81
+msgid "Wird entwickelt"
+msgstr "Wird entwickelt"
+
+#: .\core\templates\core\feedback_detail.html:82
+#: .\core\templates\core\feedback_list.html:62
+msgid "Umgesetzt"
+msgstr "Umgesetzt"
+
+#: .\core\templates\core\feedback_detail.html:82
+msgid "Live verfügbar!"
+msgstr "Live verfügbar!"
+
+#: .\core\templates\core\feedback_detail.html:83
+#: .\core\templates\core\feedback_list.html:63
+msgid "Abgelehnt"
+msgstr "Abgelehnt"
+
+#: .\core\templates\core\feedback_detail.html:83
+msgid "Nicht umsetzbar"
+msgstr "Nicht umsetzbar"
+
+#: .\core\templates\core\feedback_detail.html:90
+#: .\core\templates\core\plan_details.html:88
+msgid "Zurück zur Übersicht"
+msgstr "Back to overview"
+
+#: .\core\templates\core\feedback_detail.html:93
+msgid "Weiteres Feedback"
+msgstr "Weiteres Feedback"
+
+#: .\core\templates\core\feedback_list.html:4
+#: .\core\templates\core\feedback_list.html:13
+msgid "Mein Feedback"
+msgstr "Mein Feedback"
+
+#: .\core\templates\core\feedback_list.html:95
+msgid "Antwort erhalten"
+msgstr "Antwort erhalten"
+
+#: .\core\templates\core\feedback_list.html:104
+msgid "Noch kein Feedback"
+msgstr "Noch kein Feedback"
+
+#: .\core\templates\core\feedback_list.html:105
+msgid "Hast du einen Bug gefunden oder eine Idee für eine Verbesserung?"
+msgstr "Hast du einen Bug gefunden oder eine Idee für eine Verbesserung?"
+
+#: .\core\templates\core\feedback_list.html:114
+#: .\core\templates\core\metriken_help.html:16
+#: .\core\templates\core\profile.html:30
+msgid "Zurück zum Dashboard"
+msgstr "Back to Dashboard"
+
+#: .\core\templates\core\impressum.html:60
+#: .\core\templates\core\includes\global_footer.html:29
+#: .\core\templates\registration\apply_beta.html:355
+#: .\core\templates\registration\login.html:108
+#: .\core\templates\registration\register.html:106
+msgid "Datenschutz"
+msgstr "Privacy Policy"
+
+# === global_footer.html ===
+#: .\core\templates\core\includes\global_footer.html:13
+msgid "Dein persönliches Fitness-Tracking"
+msgstr "Your personal fitness tracking"
+
+#: .\core\templates\core\includes\global_footer.html:18
+#: .\core\templates\core\plan_library.html:5
+#: .\core\templates\core\plan_library.html:35
+#: .\core\templates\core\plan_library_group.html:5
+msgid "Plan-Bibliothek"
+msgstr "Plan Library"
+
+#: .\core\templates\core\includes\global_footer.html:22
+msgid "Cardio"
+msgstr "Cardio"
+
+#: .\core\templates\core\includes\global_footer.html:35
+msgid "Quellen"
+msgstr "Sources"
+
+# === global_header.html ===
+#: .\core\templates\core\includes\global_header.html:58
+msgid "Admin-Panel"
+msgstr "Admin Panel"
+
+#: .\core\templates\core\includes\global_header.html:65
+#: .\core\templates\core\profile.html:62
+msgid "Profil bearbeiten"
+msgstr "Edit Profile"
+
+#: .\core\templates\core\includes\global_header.html:83
+#: .\core\templates\core\profile.html:174
+msgid "Abmelden"
+msgstr "Sign Out"
+
+#: .\core\templates\core\metriken_help.html:4
+msgid "Metriken & Kennzahlen"
+msgstr "Metrics & Stats"
+
+#: .\core\templates\core\metriken_help.html:29
+msgid "Metriken & Kennzahlen erklärt"
+msgstr "Metrics & Stats explained"
+
+#: .\core\templates\core\metriken_help.html:30
+msgid "Verstehe deine Trainingsmetriken und wie sie berechnet werden"
+msgstr "Understand your training metrics and how they are calculated"
+
+#: .\core\templates\core\metriken_help.html:222
+#, fuzzy
+#| msgid "Zurück zum Dashboard"
+msgid "← Zurück zum Dashboard"
+msgstr "Back to Dashboard"
+
+#: .\core\templates\core\ml_dashboard.html:4
+#: .\core\templates\core\ml_dashboard.html:12
+#, fuzzy
+#| msgid "Dashboard"
+msgid "ML Dashboard"
+msgstr "Dashboard"
+
+#: .\core\templates\core\ml_dashboard.html:26
+msgid "ML Prediction Dashboard"
+msgstr "ML Prediction Dashboard"
+
+#: .\core\templates\core\ml_dashboard.html:27
+#, python-format
+msgid ""
+"Machine Learning Modelle für Gewichtsvorhersagen (100%% lokal, CPU-only)"
+msgstr ""
+
+#: .\core\templates\core\ml_dashboard.html:33
+msgid "Was macht das ML-System?"
+msgstr "What does the ML system do?"
+
+#: .\core\templates\core\ml_dashboard.html:66
+msgid "Zuverlässig"
+msgstr "Reliable"
+
+#: .\core\templates\core\ml_dashboard.html:68
+msgid "R² ≥ 0.5, ≥ 15 Sätze"
+msgstr "R² ≥ 0.5, ≥ 15 sets"
+
+#: .\core\templates\core\ml_dashboard.html:75
+msgid "Unzuverlässig"
+msgstr "Unreliable"
+
+#: .\core\templates\core\ml_dashboard.html:77
+msgid "Zu wenig Daten oder R² < 0.5"
+msgstr "Too little data or R² < 0.5"
+
+#: .\core\templates\core\ml_dashboard.html:84
+msgid "Total"
+msgstr "Total"
+
+#: .\core\templates\core\ml_dashboard.html:86
+#: .\core\templates\core\ml_dashboard.html:115
+msgid "Trainierte Modelle"
+msgstr "Trained Models"
+
+#: .\core\templates\core\ml_dashboard.html:93
+#: .\core\templates\core\ml_dashboard.html:165
+#, fuzzy
+#| msgid "Jetzt trainieren"
+msgid "Neu trainieren"
+msgstr "Start training now"
+
+#: .\core\templates\core\ml_dashboard.html:95
+#, fuzzy
+#| msgid "ML Vorhersage-Modelle"
+msgid "Veraltete Modelle"
+msgstr "ML Prediction Models"
+
+#: .\core\templates\core\ml_dashboard.html:105
+#, fuzzy
+#| msgid "Alle Quellen anzeigen"
+msgid "Alle Modelle trainieren"
+msgstr "Alle Quellen anzeigen"
+
+#: .\core\templates\core\ml_dashboard.html:108
+#, fuzzy
+#| msgid "Duplizieren"
+msgid "Aktualisieren"
+msgstr "Duplicate"
+
+#: .\core\templates\core\ml_dashboard.html:123
+#: .\core\templates\core\plan_library_group.html:78
+#: .\core\templates\core\training_session.html:1189
+#: .\core\templates\core\training_session.html:1271
+msgid "Übung"
+msgstr "Exercise"
+
+#: .\core\templates\core\ml_dashboard.html:124
+msgid "Status"
+msgstr "Status"
+
+#: .\core\templates\core\ml_dashboard.html:125
+msgid "Samples"
+msgstr "Samples"
+
+#: .\core\templates\core\ml_dashboard.html:126
+msgid "R² Score"
+msgstr "R² Score"
+
+#: .\core\templates\core\ml_dashboard.html:127
+msgid "MAE (kg)"
+msgstr "MAE (kg)"
+
+#: .\core\templates\core\ml_dashboard.html:128
+#, fuzzy
+#| msgid "Trainingstage"
+msgid "Trainiert am"
+msgstr "Training Days"
+
+#: .\core\templates\core\ml_dashboard.html:175
+#, fuzzy
+#| msgid "Noch nie trainiert"
+msgid "Noch keine Modelle trainiert."
+msgstr "Never trained"
+
+#: .\core\templates\core\ml_dashboard.html:176
+msgid "Klicke auf Alle Modelle trainieren um zu starten."
+msgstr "Click Train All Models to get started."
+
+#: .\core\templates\core\muscle_map.html:4
+#: .\core\templates\core\muscle_map.html:37
+#: .\core\templates\core\uebungen_auswahl.html:111
+#, fuzzy
+#| msgid "Muskelgruppe"
+msgid "Muskelgruppen"
+msgstr "Muscle Group"
+
+#: .\core\templates\core\muscle_map.html:50
+msgid "Klicke auf eine Muskelgruppe, um Übungen zu sehen"
+msgstr "Click on a muscle group to see exercises"
+
+#: .\core\templates\core\muscle_map.html:63
+#, fuzzy
+#| msgid "Übungen"
+msgid "Übung(en)"
+msgstr "Exercises"
+
+#: .\core\templates\core\muscle_map.html:90
+#, fuzzy
+#| msgid "1. Muskelgruppe"
+msgid "Wähle eine Muskelgruppe"
+msgstr "1. Muscle Group"
+
+#: .\core\templates\core\muscle_map.html:92
+msgid ""
+"Klicke auf eine Muskelgruppe in der Grafik, um die verfügbaren Übungen zu "
+"sehen."
+msgstr ""
+
+#: .\core\templates\core\muscle_map.html:100
+#, fuzzy
+#| msgid "Schnell-Auswahl"
+msgid "Schnellauswahl"
+msgstr "Quick Select"
+
+#: .\core\templates\core\muscle_map.html:109
+#, fuzzy
+#| msgid "Alle Quellen anzeigen"
+msgid "Alle Übungen anzeigen"
+msgstr "Alle Quellen anzeigen"
+
+#: .\core\templates\core\plan_details.html:5
+#: .\core\templates\core\plan_library.html:121
+#: .\core\templates\core\plan_library.html:155
+#: .\core\templates\core\plan_library_group.html:101
+#: .\core\templates\core\training_select_plan.html:260
+#: .\core\templates\core\training_select_plan.html:266
+#: .\core\templates\core\uebung_detail.html:114
+msgid "Details"
+msgstr "Details"
+
+#: .\core\templates\core\plan_details.html:46
+#: .\core\templates\core\plan_library.html:111
+#: .\core\templates\core\plan_library.html:147
+#: .\core\templates\core\plan_library_group.html:69
+#: .\core\templates\core\share_group.html:48
+#: .\core\templates\core\share_plan.html:35
+#: .\core\templates\core\training_finish.html:71
+#: .\core\templates\core\training_select_plan.html:129
+#: .\core\templates\core\training_select_plan.html:198
+#: .\core\templates\core\training_select_plan.html:245
+#: .\core\templates\core\uebungen_auswahl.html:4
+msgid "Übungen"
+msgstr "Exercises"
+
+# === plan_details.html ===
+#: .\core\templates\core\plan_details.html:57
+msgid "Dieser Plan ist öffentlich"
+msgstr "This plan is public"
+
+#: .\core\templates\core\plan_details.html:85
+msgid "In meine Pläne kopieren"
+msgstr "Copy to my plans"
+
+#: .\core\templates\core\plan_details.html:95
+msgid "Übungsplan"
+msgstr "Exercise Plan"
+
+#: .\core\templates\core\plan_details.html:109
+#: .\core\templates\core\training_session.html:298
+msgid "Übungsdetails anzeigen"
+msgstr "Show Exercise Details"
+
+#: .\core\templates\core\plan_details.html:125
+msgid "SÄTZE"
+msgstr "SETS"
+
+#: .\core\templates\core\plan_details.html:131
+msgid "WDH"
+msgstr "REPS"
+
+#: .\core\templates\core\plan_details.html:137
+msgid "TYP"
+msgstr "TYPE"
+
+#: .\core\templates\core\plan_details.html:145
+#: .\core\templates\core\training_session.html:820
+#: .\core\templates\core\training_session.html:822
+msgid "Letztes Mal"
+msgstr "Last time"
+
+#: .\core\templates\core\plan_details.html:147
+#: .\core\templates\core\training_session.html:856
+#: .\core\templates\core\training_session.html:1311
+msgid "Wdh"
+msgstr "Reps"
+
+#: .\core\templates\core\plan_details.html:152
+msgid "Noch nie trainiert"
+msgstr "Never trained"
+
+#: .\core\templates\core\plan_details.html:167
+msgid "Plan löschen?"
+msgstr "Delete plan?"
+
+#: .\core\templates\core\plan_details.html:172
+#, fuzzy, python-format
+#| msgid "Möchtest du diesen Satz wirklich löschen?"
+msgid ""
+"Möchtest du den Trainingsplan <strong>\"%(name)s\"</strong> wirklich löschen?"
+msgstr "Do you really want to delete this set?"
+
+#: .\core\templates\core\plan_details.html:175
+msgid "Vergangene Trainings mit diesem Plan bleiben erhalten."
+msgstr "Past workouts with this plan will be kept."
+
 # === plan_library.html ===
+#: .\core\templates\core\plan_library.html:48
 msgid "Öffentliche Plan-Bibliothek"
 msgstr "Public Plan Library"
 
-msgid "Entdecke Trainingspläne von anderen Nutzern und kopiere sie in deine Sammlung."
-msgstr "Discover training plans from other users and copy them to your collection."
+#: .\core\templates\core\plan_library.html:49
+msgid ""
+"Entdecke Trainingspläne von anderen Nutzern und kopiere sie in deine "
+"Sammlung."
+msgstr ""
+"Discover training plans from other users and copy them to your collection."
 
+#: .\core\templates\core\plan_library.html:58
 msgid "Suche nach Plänen..."
 msgstr "Search for plans..."
 
+#: .\core\templates\core\plan_library.html:59
 msgid "Suchen"
 msgstr "Search"
 
+#: .\core\templates\core\plan_library.html:71
 msgid "öffentliche Pläne"
 msgstr "public plans"
 
+#: .\core\templates\core\plan_library.html:71
 msgid "verfügbar"
 msgstr "available"
 
+#: .\core\templates\core\plan_library.html:72
+#, python-format
+msgid "für \"%(q)s\""
+msgstr ""
+
+#: .\core\templates\core\plan_library.html:79
 msgid "Keine öffentlichen Pläne gefunden."
 msgstr "No public plans found."
 
+#: .\core\templates\core\plan_library.html:96
+#: .\core\templates\core\plan_library_group.html:58
+#: .\core\templates\core\share_group.html:35
+#: .\core\templates\core\training_select_plan.html:104
+#: .\core\templates\core\training_select_plan.html:175
+msgid "Trainingstage"
+msgstr "Training Days"
+
+#: .\core\templates\core\plan_library.html:96
+#: .\core\templates\core\plan_library.html:147
+#: .\core\templates\core\training_select_plan.html:245
+msgid "von"
+msgstr "by"
+
+#: .\core\templates\core\plan_library.html:125
 msgid "Komplett kopieren"
 msgstr "Copy all"
 
+#: .\core\templates\core\plan_library.html:129
+#: .\core\templates\core\plan_library_group.html:52
 msgid "Anmelden zum Kopieren"
 msgstr "Sign in to copy"
 
+#: .\core\templates\core\plan_library.html:159
+#: .\core\templates\core\share_group.html:85
+#: .\core\templates\core\share_plan.html:74
+#: .\core\templates\core\training_select_plan.html:267
+msgid "Kopieren"
+msgstr "Copy"
+
+#: .\core\templates\core\plan_library.html:176
 msgid "Teile deine Pläne!"
 msgstr "Share your plans!"
 
+#: .\core\templates\core\plan_library.html:177
 msgid "Hilf der Community und mache deine besten Trainingspläne öffentlich."
 msgstr "Help the community and make your best training plans public."
 
+#: .\core\templates\core\plan_library.html:179
 msgid "Zu meinen Plänen"
 msgstr "My Plans"
 
 # === plan_library_group.html ===
+#: .\core\templates\core\plan_library_group.html:23
 msgid "Bibliothek"
 msgstr "Library"
 
+#: .\core\templates\core\plan_library_group.html:44
+#, python-format
+msgid "Split-Plan mit %(count)s Trainingstagen • von %(user)s"
+msgstr "Split plan with %(count)s training days • by %(user)s"
+
+#: .\core\templates\core\plan_library_group.html:48
 msgid "Komplett in meine Pläne kopieren"
 msgstr "Copy all to my plans"
 
+#: .\core\templates\core\plan_library_group.html:66
 msgid "Tag"
 msgstr "Day"
 
+#: .\core\templates\core\plan_library_group.html:79
+#: .\core\templates\core\training_list.html:53
+#: .\core\templates\core\training_list.html:99
+#: .\core\templates\core\training_session.html:317
+#: .\core\templates\core\training_stats.html:158
+msgid "Sätze"
+msgstr "Sets"
+
+#: .\core\templates\core\plan_library_group.html:80
 msgid "Wiederholungen"
 msgstr "Reps"
 
+#: .\core\templates\core\plan_library_group.html:105
 msgid "Nur diesen"
 msgstr "This one only"
 
+#: .\core\templates\core\plan_library_group.html:117
 msgid "Gefällt dir dieser Split?"
 msgstr "Like this split?"
 
+#: .\core\templates\core\plan_library_group.html:119
+#, fuzzy, python-format
+#| msgid "In meine Pläne kopieren"
+msgid "Alle %(count)s Pläne kopieren"
+msgstr "Copy to my plans"
+
+#: .\core\templates\core\plan_library_group.html:122
 msgid "Melde dich an, um diesen Split zu kopieren."
 msgstr "Sign in to copy this split."
 
-# === plan_details.html ===
-msgid "Dieser Plan ist öffentlich"
-msgstr "This plan is public"
+#: .\core\templates\core\plan_library_group.html:124
+#: .\core\templates\registration\login.html:29
+#: .\core\templates\registration\login.html:86
+msgid "Anmelden"
+msgstr "Sign In"
 
-msgid "Training starten"
-msgstr "Start Workout"
+#: .\core\templates\core\plan_optimization_modal.html:8
+msgid "KI-Optimierungsvorschläge"
+msgstr "AI Optimization Suggestions"
 
-msgid "In meine Pläne kopieren"
-msgstr "Copy to my plans"
+#: .\core\templates\core\plan_optimization_modal.html:17
+msgid "Analyse abgeschlossen"
+msgstr "Analysis complete"
 
-msgid "Zurück zur Übersicht"
-msgstr "Back to overview"
+#: .\core\templates\core\plan_optimization_modal.html:28
+msgid "Keine Optimierungen nötig!"
+msgstr "No optimizations needed!"
 
-msgid "Übungsplan"
-msgstr "Exercise Plan"
+#: .\core\templates\core\plan_optimization_modal.html:29
+msgid "Dein Plan ist bereits gut ausbalanciert."
+msgstr "Your plan is already well balanced."
 
-msgid "SÄTZE"
-msgstr "SETS"
-
-msgid "WDH"
-msgstr "REPS"
-
-msgid "TYP"
-msgstr "TYPE"
-
-msgid "Noch nie trainiert"
-msgstr "Never trained"
-
-msgid "Plan löschen?"
-msgstr "Delete plan?"
-
-msgid "Vergangene Trainings mit diesem Plan bleiben erhalten."
-msgstr "Past workouts with this plan will be kept."
+#: .\core\templates\core\plan_optimization_modal.html:37
+msgid "Ausgewählte übernehmen"
+msgstr "Apply Selected"
 
 # === profile.html ===
+#: .\core\templates\core\profile.html:5
 msgid "Profil"
 msgstr "Profile"
 
-msgid "Zurück zum Dashboard"
-msgstr "Back to Dashboard"
-
+#: .\core\templates\core\profile.html:38
 msgid "Keine E-Mail hinterlegt"
 msgstr "No email stored"
 
+#: .\core\templates\core\profile.html:39
 msgid "Mitglied seit"
 msgstr "Member since"
 
+#: .\core\templates\core\profile.html:69
+#: .\core\templates\registration\login.html:51
+#: .\core\templates\registration\login.html:58
+#: .\core\templates\registration\register.html:52
+#: .\core\templates\registration\register_new.html:70
+msgid "Benutzername"
+msgstr "Username"
+
+#: .\core\templates\core\profile.html:74
+#: .\core\templates\core\share_group.html:125
+#: .\core\templates\core\share_plan.html:114
 msgid "E-Mail"
 msgstr "Email"
 
-msgid "Aktuelles Passwort"
-msgstr "Current Password"
-
-msgid "Neues Passwort"
-msgstr "New Password"
-
-msgid "Mindestens 8 Zeichen"
-msgstr "At least 8 characters"
-
-msgid "Passwort bestätigen"
-msgstr "Confirm Password"
-
-msgid "Körperdaten"
-msgstr "Body Data"
-
-msgid "Körpergröße (cm)"
-msgstr "Height (cm)"
-
-msgid "Wird für BMI- und FFMI-Berechnung verwendet"
-msgstr "Used for BMI and FFMI calculation"
-
-msgid "Schnellzugriffe"
-msgstr "Quick Access"
-
-msgid "Fotos"
-msgstr "Photos"
-
-# === body_stats.html ===
-msgid "Noch keine Körperwerte erfasst."
-msgstr "No body measurements recorded yet."
-
-msgid "Jetzt eintragen"
-msgstr "Log now"
-
-msgid "Fortschrittsfotos"
-msgstr "Progress Photos"
-
-msgid "Aktuell"
-msgstr "Current"
-
-msgid "Veränderung"
-msgstr "Change"
-
-msgid "Gewichtsverlauf"
-msgstr "Weight History"
-
-msgid "BMI & FFMI Verlauf"
-msgstr "BMI & FFMI History"
-
-msgid "Körperfettanteil"
-msgstr "Body Fat %"
-
-msgid "Alle Messungen"
-msgstr "All Measurements"
-
-msgid "Aktionen"
-msgstr "Actions"
-
-msgid "Körperwert löschen"
-msgstr "Delete Body Measurement"
-
-msgid "Möchtest du diesen Körperwert wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
-msgstr "Do you really want to delete this body measurement? This action cannot be undone."
-
-msgid "Gewicht (kg)"
-msgstr "Weight (kg)"
-
-msgid "Körperfett (%)"
-msgstr "Body Fat (%)"
-
-msgid "Muskelmasse (kg)"
-msgstr "Muscle Mass (kg)"
-
-# === add_koerperwert.html ===
-msgid "Watch-Daten erfassen"
-msgstr "Log Watch Data"
-
-msgid "Körpergröße"
-msgstr "Height"
-
-msgid "aus Profil"
-msgstr "from profile"
-
-msgid "ändern"
-msgstr "change"
-
-msgid "Größe (cm)"
-msgstr "Height (cm)"
-
-msgid "Daten von der Uhr"
-msgstr "Data from Watch"
-
-msgid "FETTMASSE"
-msgstr "FAT MASS"
-
-msgid "eines eingeben → anderes wird berechnet"
-msgstr "enter one → other is calculated"
-
-msgid "MUSKELMASSE"
-msgstr "MUSCLE MASS"
-
-msgid "Wasser (kg)"
-msgstr "Water (kg)"
-
-msgid "Notiz (z.B. Nüchtern)"
-msgstr "Note (e.g. Fasted)"
-
-msgid "Speichern & Berechnen"
-msgstr "Save & Calculate"
-
-# === edit_koerperwert.html ===
-msgid "Körperwert bearbeiten"
-msgstr "Edit Body Measurement"
-
-msgid "leer = Profil-Wert wird verwendet"
-msgstr "empty = profile value is used"
-
-msgid "Leer lassen = Größe aus Profil verwenden"
-msgstr "Leave empty = use height from profile"
-
-msgid "Änderungen speichern"
-msgstr "Save Changes"
-
-# === cardio_add.html ===
-msgid "Cardio hinzufügen"
-msgstr "Add Cardio"
-
-msgid "Aktivität"
-msgstr "Activity"
-
-msgid "Bitte wählen..."
-msgstr "Please select..."
-
-msgid "Dauer (Minuten)"
-msgstr "Duration (Minutes)"
-
-msgid "Wie lange hast du trainiert?"
-msgstr "How long did you train?"
-
-msgid "Intensität"
-msgstr "Intensity"
-
-msgid "z.B. Brustschwimmen, Intervalle, etc."
-msgstr "e.g. Breaststroke, intervals, etc."
-
-msgid "Ermüdungspunkte"
-msgstr "Fatigue Points"
-
-msgid "Leicht"
-msgstr "Easy"
-
-msgid "Moderat"
-msgstr "Moderate"
-
-msgid "Intensiv"
-msgstr "Intense"
-
-msgid "pro Minute"
-msgstr "per minute"
-
-msgid "Punkte"
-msgstr "points"
-
-# === cardio_list.html ===
-msgid "Cardio-Übersicht"
-msgstr "Cardio Overview"
-
-msgid "Cardio-Tracking"
-msgstr "Cardio Tracking"
-
-msgid "Hinzufügen"
-msgstr "Add"
-
-msgid "Einheiten"
-msgstr "Sessions"
-
-msgid "Tage"
-msgstr "days"
-
-msgid "Minuten gesamt"
-msgstr "Total minutes"
-
-msgid "Nur letzte 30 Tage"
-msgstr "Last 30 days only"
-
-msgid "Noch keine Cardio-Einheiten erfasst."
-msgstr "No cardio sessions logged yet."
-
-msgid "Erste Cardio-Einheit hinzufügen"
-msgstr "Add first cardio session"
-
-msgid "Cardio-Einheiten werden im"
-msgstr "Cardio sessions are factored into the"
-
-msgid "berücksichtigt und helfen dem"
-msgstr "and help the"
-
-msgid "KI-Coach"
-msgstr "AI Coach"
-
-msgid ", dein Krafttraining besser zu planen. Leichtes Cardio fördert die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
-msgstr "to better plan your strength training. Light cardio supports recovery, while intense cardio adds additional fatigue."
-
-msgid "wirklich löschen?"
-msgstr "really delete?"
-
-# === equipment_management.html ===
-msgid "Ausrüstung verwalten"
-msgstr "Manage Equipment"
-
-msgid "Equipment Manager"
-msgstr "Equipment Manager"
-
-msgid "Meine Ausrüstung"
-msgstr "My Equipment"
-
-msgid "Wähle deine verfügbare Ausrüstung aus."
-msgstr "Select your available equipment."
-
-msgid "Übungen werden automatisch gefiltert und der AI Coach berücksichtigt nur verfügbares Equipment."
-msgstr "Exercises are filtered automatically and the AI Coach only considers available equipment."
-
-msgid "Verfügbare Übungen"
-msgstr "Available Exercises"
-
-msgid "Gesperrte Übungen"
-msgstr "Locked Exercises"
-
-msgid "Gesamt Übungen"
-msgstr "Total Exercises"
-
-msgid "Schnell-Auswahl"
-msgstr "Quick Select"
-
-msgid "Home Gym Basic"
-msgstr "Home Gym Basic"
-
-msgid "Home Gym Advanced"
-msgstr "Home Gym Advanced"
-
-msgid "Fitnessstudio"
-msgstr "Gym"
-
-msgid "Nur Körpergewicht"
-msgstr "Bodyweight Only"
-
-msgid "Alles abwählen"
-msgstr "Deselect All"
-
-msgid "Equipment suchen..."
-msgstr "Search equipment..."
-
-msgid "Alle Kategorien"
-msgstr "All Categories"
-
-msgid "Keine Equipment-Typen gefunden. Versuche einen anderen Suchbegriff."
-msgstr "No equipment types found. Try a different search term."
-
-msgid "hinzugefügt"
-msgstr "added"
-
-msgid "entfernt"
-msgstr "removed"
-
-msgid "Preset bereits aktiv"
-msgstr "Preset already active"
-
-msgid "Fehler beim Aktualisieren des Equipments"
-msgstr "Error updating equipment"
-
-# === workout_recommendations.html ===
-msgid "Trainingsempfehlungen"
-msgstr "Workout Recommendations"
-
-msgid "Hohe Priorität"
-msgstr "High Priority"
-
-msgid "Mittlere Priorität"
-msgstr "Medium Priority"
-
-msgid "Niedrige Priorität"
-msgstr "Low Priority"
-
-msgid "Vorgeschlagene Übungen"
-msgstr "Suggested Exercises"
-
-msgid "Wie funktionieren die Empfehlungen?"
-msgstr "How do recommendations work?"
-
-msgid "Push/Pull-Ratio"
-msgstr "Push/Pull Ratio"
-
-msgid "Prüft die Balance zwischen Druck- und Zugübungen"
-msgstr "Checks the balance between push and pull exercises"
-
-msgid "Erkennt Übungen ohne Fortschritt über mehrere Trainings"
-msgstr "Detects exercises with no progress over multiple workouts"
-
-msgid "Trainingsfrequenz"
-msgstr "Training Frequency"
-
-msgid "Überwacht deine wöchentliche Trainingskonsistenz"
-msgstr "Monitors your weekly training consistency"
-
-msgid "RPE-Analyse"
-msgstr "RPE Analysis"
-
-msgid "Bewertet deine Trainingsintensität basierend auf deinem durchschnittlichen RPE"
-msgstr "Evaluates your training intensity based on your average RPE"
-
-msgid "Analysiert dein Trainingsvolumen (Wiederholungen × RPE) pro Muskelgruppe"
-msgstr "Analyzes your training volume (reps × RPE) per muscle group"
-
-
-msgid "2-3 Sätze reichen"
-msgstr "2-3 Sätze reichen"
-
-msgid "Abgelehnt"
-msgstr "Abgelehnt"
-
-msgid "Account erstellen"
-msgstr "Account erstellen"
-
-msgid "Account vorhanden?"
-msgstr "Account vorhanden?"
-
-msgid "Aktiv"
-msgstr "Aktiv"
-
-msgid "Aktiven Plan setzen"
-msgstr "Aktiven Plan setzen"
-
-msgid "Aktuell aktiv:"
-msgstr "Aktuell aktiv:"
-
-msgid "Aktuelles Gewicht (optional)"
-msgstr "Aktuelles Gewicht (optional)"
-
-msgid "Alle Felder sind Pflichtfelder"
-msgstr "Alle Felder sind Pflichtfelder"
-
-msgid "Alle Pläne werden gleichwertig angezeigt"
-msgstr "Alle Pläne werden gleichwertig angezeigt"
-
-msgid "Alle Quellen"
-msgstr "Alle Quellen"
-
-msgid "Alle Quellen anzeigen"
-msgstr "Alle Quellen anzeigen"
-
-msgid "Analyse & Statistiken"
-msgstr "Analyse & Statistiken"
-
-msgid "Anfänger (< 1 Jahr Training)"
-msgstr "Anfänger (< 1 Jahr Training)"
-
-msgid "Angenommen"
-msgstr "Angenommen"
-
-msgid "Antwort erhalten"
-msgstr "Antwort erhalten"
-
-msgid "Antwort vom HomeGym Team"
-msgstr "Antwort vom HomeGym Team"
-
-msgid "Bereits registriert?"
-msgstr "Bereits registriert?"
-
-msgid "Beschreibe dein Feedback..."
-msgstr "Beschreibe dein Feedback..."
-
-msgid "Beta-Bewerbung"
-msgstr "Beta-Bewerbung"
-
-msgid "Beta-Tester Feedback"
-msgstr "Beta-Tester Feedback"
-
-msgid "Beta-Zugang beantragen"
-msgstr "Beta-Zugang beantragen"
-
-msgid "Bewerbung absenden"
-msgstr "Bewerbung absenden"
-
-msgid "Bugreport"
-msgstr "Bugreport"
-
-msgid "Datei zu groß! Max. 5MB"
-msgstr "Datei zu groß! Max. 5MB"
-
-msgid "Datenschutzerklärung"
-msgstr "Datenschutzerklärung"
-
-msgid "Datum"
-msgstr "Datum"
-
-msgid "Dein Feedback hilft uns, HomeGym zu verbessern. Wir prüfen jeden Vorschlag und antworten dir über diese Seite."
-msgstr "Dein Feedback hilft uns, HomeGym zu verbessern. Wir prüfen jeden Vorschlag und antworten dir über diese Seite."
-
-msgid "Dein Passwort wurde erfolgreich geändert. Du kannst dich jetzt mit deinem neuen Passwort anmelden."
-msgstr "Dein Passwort wurde erfolgreich geändert. Du kannst dich jetzt mit deinem neuen Passwort anmelden."
-
-msgid "Deine Nachricht"
-msgstr "Deine Nachricht"
-
-msgid "Deload-Einstellungen"
-msgstr "Deload-Einstellungen"
-
-msgid "Den Code hast du per E-Mail erhalten"
-msgstr "Den Code hast du per E-Mail erhalten"
-
-msgid "Detaillierte Beschreibung"
-msgstr "Detaillierte Beschreibung"
-
-msgid "Die Algorithmen und Empfehlungen in HomeGym basieren auf peer-reviewter Forschungsliteratur. Hier findest du alle verwendeten Quellen."
-msgstr "Die Algorithmen und Empfehlungen in HomeGym basieren auf peer-reviewter Forschungsliteratur. Hier findest du alle verwendeten Quellen."
-
-msgid "Die ℹ-Icons in der App verweisen auf diese Seite. Wissenschaftliche Empfehlungen sind Richtwerte – individuelle Faktoren (Genetik, Erholung, Ernährung) beeinflussen das Ergebnis. Diese App ersetzt keine professionelle Trainingsberatung."
-msgstr "Die ℹ-Icons in der App verweisen auf diese Seite. Wissenschaftliche Empfehlungen sind Richtwerte – individuelle Faktoren (Genetik, Erholung, Ernährung) beeinflussen das Ergebnis. Diese App ersetzt keine professionelle Trainingsberatung."
-
-msgid "Dieser Link ist abgelaufen oder wurde bereits verwendet."
-msgstr "Dieser Link ist abgelaufen oder wurde bereits verwendet."
-
-msgid "Dokumentiere deine Transformation mit Before/After Fotos!"
-msgstr "Dokumentiere deine Transformation mit Before/After Fotos!"
-
-msgid "Du erhältst deinen Einladungscode hier"
-msgstr "Du erhältst deinen Einladungscode hier"
-
-msgid "E-Mail gesendet"
-msgstr "E-Mail gesendet"
-
-msgid "E-Mail gesendet!"
-msgstr "E-Mail gesendet!"
-
-msgid "E-Mail-Adresse"
-msgstr "E-Mail-Adresse"
-
-msgid "Ein Code kann nur einmal verwendet werden"
-msgstr "Ein Code kann nur einmal verwendet werden"
-
-msgid "Einladungscode"
-msgstr "Einladungscode"
-
-msgid "Einladungscodes sind 30 Tage gültig"
-msgstr "Einladungscodes sind 30 Tage gültig"
-
-msgid "Erfahren (> 3 Jahre)"
-msgstr "Erfahren (> 3 Jahre)"
-
-msgid "Erstelle deinen Beta-Account"
-msgstr "Erstelle deinen Beta-Account"
-
-msgid "Erstelle deinen kostenlosen Account"
-msgstr "Erstelle deinen kostenlosen Account"
-
-msgid "Erstelle zuerst Trainingspläne und gruppiere sie, um diese Funktion zu nutzen."
-msgstr "Erstelle zuerst Trainingspläne und gruppiere sie, um diese Funktion zu nutzen."
-
-msgid "Erstes Foto hochladen"
-msgstr "Erstes Foto hochladen"
-
-msgid "Falls du mitten in einem Zyklus auf diesen Plan wechselst, gib hier deine aktuelle Woche an. Leer lassen = Zyklus startet ab heute bei Woche 1."
-msgstr "Falls du mitten in einem Zyklus auf diesen Plan wechselst, gib hier deine aktuelle Woche an. Leer lassen = Zyklus startet ab heute bei Woche 1."
-
-msgid "Falls ein Account mit dieser E-Mail existiert, haben wir dir einen Link zum Zurücksetzen deines Passworts gesendet."
-msgstr "Falls ein Account mit dieser E-Mail existiert, haben wir dir einen Link zum Zurücksetzen deines Passworts gesendet."
-
-msgid "Feedback absenden"
-msgstr "Feedback absenden"
-
-msgid "Feedback einreichen"
-msgstr "Feedback einreichen"
-
-msgid "Feedback-Details"
-msgstr "Feedback-Details"
-
-msgid "Fehler bei der Registrierung:"
-msgstr "Fehler bei der Registrierung:"
-
-msgid "Fortgeschritten (1-3 Jahre)"
-msgstr "Fortgeschritten (1-3 Jahre)"
-
-msgid "Fortschrittsfoto"
-msgstr "Fortschrittsfoto"
-
-msgid "Foto"
-msgstr "Foto"
-
-msgid "Foto auswählen"
-msgstr "Foto auswählen"
-
-msgid "Foto wirklich löschen?"
-msgstr "Foto wirklich löschen?"
-
-msgid "Frage"
-msgstr "Frage"
-
-msgid "Frage stellen"
-msgstr "Frage stellen"
-
-msgid "Für Community-Features & Contributions"
-msgstr "Für Community-Features & Contributions"
-
-msgid "Gesamt Fotos"
-msgstr "Gesamt Fotos"
-
-msgid "Gewicht:"
-msgstr "Gewicht:"
-
-msgid "Gib dein neues Passwort ein."
-msgstr "Gib dein neues Passwort ein."
-
-msgid "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen."
-msgstr "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen."
-
-msgid "GitHub Username (optional)"
-msgstr "GitHub Username (optional)"
-
-msgid "Hast du bereits einen Code?"
-msgstr "Hast du bereits einen Code?"
-
-msgid "Hast du einen Bug gefunden oder eine Idee für eine Verbesserung?"
-msgstr "Hast du einen Bug gefunden oder eine Idee für eine Verbesserung?"
-
-msgid "Hinweis:"
-msgstr "Hinweis:"
-
-msgid "Hochladen"
-msgstr "Hochladen"
-
-msgid "In Bearbeitung"
-msgstr "In Bearbeitung"
-
-msgid "Info"
-msgstr "Info"
-
-msgid "Jetzt anmelden"
-msgstr "Jetzt anmelden"
-
-msgid "Jetzt bewerben"
-msgstr "Jetzt bewerben"
-
-msgid "Jetzt registrieren"
-msgstr "Jetzt registrieren"
-
-msgid "KI-Trainingspläne"
-msgstr "KI-Trainingspläne"
-
-msgid "KI-gestütztes Trainingstracking für ambitionierte Athleten"
-msgstr "KI-gestütztes Trainingstracking für ambitionierte Athleten"
-
-msgid "Kein Link"
-msgstr "Kein Link"
-
-msgid "Kein aktiver Plan"
-msgstr "Kein aktiver Plan"
-
-msgid "Keine Plan-Gruppen gefunden!"
-msgstr "Keine Plan-Gruppen gefunden!"
-
-msgid "Keine Quellen in dieser Kategorie gefunden."
-msgstr "Keine Quellen in dieser Kategorie gefunden."
-
-msgid "Kurzbeschreibung"
-msgstr "Kurzbeschreibung"
-
-msgid "Körperwerte"
-msgstr "Körperwerte"
-
-msgid "Laufende Woche"
-msgstr "Laufende Woche"
-
-msgid "Letzte Woche = Deload"
-msgstr "Letzte Woche = Deload"
-
-msgid "Link"
-msgstr "Link"
-
-msgid "Link senden"
-msgstr "Link senden"
-
-msgid "Link ungültig"
-msgstr "Link ungültig"
-
-msgid "Live verfügbar!"
-msgstr "Live verfügbar!"
-
-msgid "Max. 200 Zeichen"
-msgstr "Max. 200 Zeichen"
-
-msgid "Max. 5MB, JPG/PNG"
-msgstr "Max. 5MB, JPG/PNG"
-
-msgid "Mein Feedback"
-msgstr "Mein Feedback"
-
-msgid "Mesozyklus-Länge"
-msgstr "Mesozyklus-Länge"
-
-msgid "Muskelmasse"
-msgstr "Muskelmasse"
-
-msgid "Neu"
-msgstr "Neu"
-
-msgid "Neuen Link anfordern"
-msgstr "Neuen Link anfordern"
-
-msgid "Neues Foto hochladen"
-msgstr "Neues Foto hochladen"
-
-msgid "Neues Passwort setzen"
-msgstr "Neues Passwort setzen"
-
-msgid "Nicht umsetzbar"
-msgstr "Nicht umsetzbar"
-
-msgid "Noch kein Code?"
-msgstr "Noch kein Code?"
-
-msgid "Noch kein Feedback"
-msgstr "Noch kein Feedback"
-
-msgid "Noch keine Antwort"
-msgstr "Noch keine Antwort"
-
-msgid "Noch keine Fortschrittsfotos"
-msgstr "Noch keine Fortschrittsfotos"
-
-msgid "Noch nicht geprüft"
-msgstr "Noch nicht geprüft"
-
-msgid "Nochmal eingeben"
-msgstr "Nochmal eingeben"
-
-msgid "Notiz:"
-msgstr "Notiz:"
-
-msgid "Open-Source / Entwicklung"
-msgstr "Open-Source / Entwicklung"
-
-msgid "Passwort geändert"
-msgstr "Passwort geändert"
-
-msgid "Passwort geändert!"
-msgstr "Passwort geändert!"
-
-msgid "Passwort speichern"
-msgstr "Passwort speichern"
-
-msgid "Passwort wiederholen"
-msgstr "Passwort wiederholen"
-
-msgid "Passwort zurücksetzen"
-msgstr "Passwort zurücksetzen"
-
+#: .\core\templates\core\profile.html:89 .\core\templates\core\profile.html:110
 msgid "Passwort ändern"
 msgstr "Passwort ändern"
 
-msgid "Plan aktivieren"
-msgstr "Plan aktivieren"
+#: .\core\templates\core\profile.html:96
+msgid "Aktuelles Passwort"
+msgstr "Current Password"
 
-msgid "Pläne verwalten"
-msgstr "Pläne verwalten"
+#: .\core\templates\core\profile.html:100
+#: .\core\templates\registration\password_reset_confirm.html:26
+#: .\core\templates\registration\password_reset_confirm.html:36
+#: .\core\templates\registration\password_reset_confirm.html:43
+msgid "Neues Passwort"
+msgstr "New Password"
 
-msgid "Prüfe auch deinen Spam-Ordner."
-msgstr "Prüfe auch deinen Spam-Ordner."
+#: .\core\templates\core\profile.html:103
+#: .\core\templates\registration\register.html:69
+#: .\core\templates\registration\register_new.html:93
+msgid "Mindestens 8 Zeichen"
+msgstr "At least 8 characters"
 
-msgid "Push Notifications werden geladen... Bitte versuche es in wenigen Sekunden erneut."
-msgstr "Push Notifications werden geladen... Bitte versuche es in wenigen Sekunden erneut."
+#: .\core\templates\core\profile.html:106
+#: .\core\templates\registration\password_reset_confirm.html:50
+msgid "Passwort bestätigen"
+msgstr "Confirm Password"
 
-msgid "Registrierung"
-msgstr "Registrierung"
+#: .\core\templates\core\profile.html:120
+msgid "Körperdaten"
+msgstr "Body Data"
 
-msgid "Registrierung mit Einladungscode"
-msgstr "Registrierung mit Einladungscode"
+#: .\core\templates\core\profile.html:127
+msgid "Körpergröße (cm)"
+msgstr "Height (cm)"
 
-msgid "Trainingserfahrung"
-msgstr "Trainingserfahrung"
+#: .\core\templates\core\profile.html:131
+msgid "Wird für BMI- und FFMI-Berechnung verwendet"
+msgstr "Used for BMI and FFMI calculation"
 
-msgid "Trainingstracking"
-msgstr "Trainingstracking"
+#: .\core\templates\core\profile.html:142
+msgid "Schnellzugriffe"
+msgstr "Quick Access"
 
-msgid "Typ"
-msgstr "Typ"
+#: .\core\templates\core\profile.html:158
+msgid "Fotos"
+msgstr "Photos"
 
-msgid "Umgesetzt"
-msgstr "Umgesetzt"
+#: .\core\templates\core\progress_photos.html:33
+msgid "Foto"
+msgstr "Foto"
 
-msgid "Verbesserungsvorschlag"
-msgstr "Verbesserungsvorschlag"
+#: .\core\templates\core\progress_photos.html:47
+msgid "Neues Foto hochladen"
+msgstr "Neues Foto hochladen"
 
-msgid "Verstanden"
-msgstr "Verstanden"
+#: .\core\templates\core\progress_photos.html:54
+msgid "Foto auswählen"
+msgstr "Foto auswählen"
 
-msgid "Warum Einladung nötig?"
-msgstr "Warum Einladung nötig?"
+#: .\core\templates\core\progress_photos.html:56
+msgid "Max. 5MB, JPG/PNG"
+msgstr "Max. 5MB, JPG/PNG"
 
-msgid "Warum möchtest du HomeGym nutzen?"
-msgstr "Warum möchtest du HomeGym nutzen?"
+#: .\core\templates\core\progress_photos.html:59
+msgid "Aktuelles Gewicht (optional)"
+msgstr "Aktuelles Gewicht (optional)"
 
-msgid "Was bedeutet der Status?"
-msgstr "Was bedeutet der Status?"
-
-msgid "Was dich erwartet"
-msgstr "Was dich erwartet"
-
-msgid "Was interessiert dich? (Mehrfachauswahl)"
-msgstr "Was interessiert dich? (Mehrfachauswahl)"
-
-msgid "Was ist HomeGym?"
-msgstr "Was ist HomeGym?"
-
-msgid "Was passiert jetzt?"
-msgstr "Was passiert jetzt?"
-
-msgid "Weiteres Feedback"
-msgstr "Weiteres Feedback"
-
-msgid "Werden automatisch in der Deload-Woche angewendet. KI-Pläne setzen diese Werte automatisch."
-msgstr "Werden automatisch in der Deload-Woche angewendet. KI-Pläne setzen diese Werte automatisch."
-
-msgid "Wichtig:"
-msgstr "Wichtig:"
-
-msgid "Wiedereinstieg nach Pause"
-msgstr "Wiedereinstieg nach Pause"
-
-msgid "Wir prüfen dein Feedback und antworten dir hier, sobald wir es bearbeitet haben."
-msgstr "Wir prüfen dein Feedback und antworten dir hier, sobald wir es bearbeitet haben."
-
-msgid "Wird entwickelt"
-msgstr "Wird entwickelt"
-
-msgid "Wird umgesetzt"
-msgstr "Wird umgesetzt"
-
-msgid "Wissenschaftliche Quellen"
-msgstr "Wissenschaftliche Quellen"
-
-msgid "Wähle einen eindeutigen Namen"
-msgstr "Wähle einen eindeutigen Namen"
-
-msgid "Zeitraum"
-msgstr "Zeitraum"
-
-msgid "Zum Login"
-msgstr "Zum Login"
-
-msgid "Zurück zum Login"
-msgstr "Zurück zum Login"
-
-msgid "dein Krafttraining besser zu planen. Leichtes Cardio fördert die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
-msgstr "dein Krafttraining besser zu planen. Leichtes Cardio fördert die Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
-
-msgid "deine@email.de"
-msgstr "deine@email.de"
-
-msgid "insgesamt."
-msgstr "insgesamt."
-
-msgid "optional"
-msgstr "optional"
-
+#: .\core\templates\core\progress_photos.html:67
 msgid "z.B. 'Start', 'Nach 3 Monaten'"
 msgstr "z.B. 'Start', 'Nach 3 Monaten'"
 
-msgid "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
-msgstr "z.B. 'Timer funktioniert nicht' oder 'Wunsch: Export als Excel'"
+#: .\core\templates\core\progress_photos.html:70
+msgid "Hochladen"
+msgstr "Hochladen"
 
+#: .\core\templates\core\progress_photos.html:92
+msgid "Noch keine Fortschrittsfotos"
+msgstr "Noch keine Fortschrittsfotos"
+
+#: .\core\templates\core\progress_photos.html:93
+msgid "Dokumentiere deine Transformation mit Before/After Fotos!"
+msgstr "Dokumentiere deine Transformation mit Before/After Fotos!"
+
+#: .\core\templates\core\progress_photos.html:95
+msgid "Erstes Foto hochladen"
+msgstr "Erstes Foto hochladen"
+
+#: .\core\templates\core\progress_photos.html:102
+msgid "Gesamt Fotos"
+msgstr "Gesamt Fotos"
+
+#: .\core\templates\core\progress_photos.html:108
+msgid "Zeitraum"
+msgstr "Zeitraum"
+
+#: .\core\templates\core\progress_photos.html:122
+#: .\core\templates\core\progress_photos.html:158
+msgid "Fortschrittsfoto"
+msgstr "Fortschrittsfoto"
+
+#: .\core\templates\core\progress_photos.html:137
+msgid "Foto wirklich löschen?"
+msgstr "Foto wirklich löschen?"
+
+#: .\core\templates\core\progress_photos.html:162
+msgid "Gewicht:"
+msgstr "Gewicht:"
+
+#: .\core\templates\core\progress_photos.html:163
+msgid "Notiz:"
+msgstr "Notiz:"
+
+#: .\core\templates\core\progress_photos.html:182
+msgid "Datei zu groß! Max. 5MB"
+msgstr "Datei zu groß! Max. 5MB"
+
+#: .\core\templates\core\set_active_plan.html:4
+msgid "Aktiven Plan setzen"
+msgstr "Aktiven Plan setzen"
+
+#: .\core\templates\core\set_active_plan.html:46
+msgid "Aktuell aktiv:"
+msgstr "Aktuell aktiv:"
+
+#: .\core\templates\core\set_active_plan.html:62
+msgid "Kein aktiver Plan"
+msgstr "Kein aktiver Plan"
+
+#: .\core\templates\core\set_active_plan.html:63
+msgid "Alle Pläne werden gleichwertig angezeigt"
+msgstr "Alle Pläne werden gleichwertig angezeigt"
+
+#: .\core\templates\core\set_active_plan.html:77
+#, fuzzy, python-format
+#| msgid "Trainingstage"
+msgid "%(count)s Trainingstage"
+msgstr "Training Days"
+
+#: .\core\templates\core\set_active_plan.html:80
+msgid "Aktiv"
+msgstr "Aktiv"
+
+#: .\core\templates\core\set_active_plan.html:89
+msgid "Mesozyklus-Länge"
+msgstr "Mesozyklus-Länge"
+
+#: .\core\templates\core\set_active_plan.html:94
+#, python-format
+msgid "%(w)s Wochen (%(dw)s + 1 Deload)"
+msgstr "%(w)s weeks (%(dw)s + 1 deload)"
+
+#: .\core\templates\core\set_active_plan.html:98
+msgid "Letzte Woche = Deload"
+msgstr "Letzte Woche = Deload"
+
+#: .\core\templates\core\set_active_plan.html:105
+msgid "Laufende Woche"
+msgstr "Laufende Woche"
+
+#: .\core\templates\core\set_active_plan.html:105
+msgid "optional"
+msgstr "optional"
+
+#: .\core\templates\core\set_active_plan.html:107
+msgid ""
+"Falls du mitten in einem Zyklus auf diesen Plan wechselst, gib hier deine "
+"aktuelle Woche an. Leer lassen = Zyklus startet ab heute bei Woche 1."
+msgstr ""
+"Falls du mitten in einem Zyklus auf diesen Plan wechselst, gib hier deine "
+"aktuelle Woche an. Leer lassen = Zyklus startet ab heute bei Woche 1."
+
+#: .\core\templates\core\set_active_plan.html:111
 msgid "z.B. 3"
 msgstr "z.B. 3"
 
+#: .\core\templates\core\set_active_plan.html:112
+#, python-format
+msgid "Woche 1 – %(n)s"
+msgstr "Week 1 – %(n)s"
+
+#: .\core\templates\core\set_active_plan.html:119
+msgid "Deload-Einstellungen"
+msgstr "Deload-Einstellungen"
+
+#: .\core\templates\core\set_active_plan.html:120
+msgid ""
+"Werden automatisch in der Deload-Woche angewendet. KI-Pläne setzen diese "
+"Werte automatisch."
+msgstr ""
+"Werden automatisch in der Deload-Woche angewendet. KI-Pläne setzen diese "
+"Werte automatisch."
+
+#: .\core\templates\core\set_active_plan.html:155
+msgid "Plan aktivieren"
+msgstr "Plan aktivieren"
+
+#: .\core\templates\core\set_active_plan.html:165
+msgid "Keine Plan-Gruppen gefunden!"
+msgstr "Keine Plan-Gruppen gefunden!"
+
+#: .\core\templates\core\set_active_plan.html:166
+msgid ""
+"Erstelle zuerst Trainingspläne und gruppiere sie, um diese Funktion zu "
+"nutzen."
+msgstr ""
+"Erstelle zuerst Trainingspläne und gruppiere sie, um diese Funktion zu "
+"nutzen."
+
+#: .\core\templates\core\set_active_plan.html:169
+msgid "Pläne verwalten"
+msgstr "Pläne verwalten"
+
+#: .\core\templates\core\share_group.html:4
+#: .\core\templates\core\share_group.html:16
+#, fuzzy
+#| msgid "Gruppieren"
+msgid "Gruppe teilen"
+msgstr "Group"
+
+#: .\core\templates\core\share_group.html:38
+#: .\core\templates\core\share_plan.html:37
+#: .\core\templates\core\training_select_plan.html:65
+msgid "Öffentlich"
+msgstr "Public"
+
+#: .\core\templates\core\share_group.html:40
+#: .\core\templates\core\share_plan.html:39
+msgid "Privat"
+msgstr "Private"
+
+#: .\core\templates\core\share_group.html:56
+#: .\core\templates\core\share_plan.html:45
+msgid "Achtung:"
+msgstr "Warning:"
+
+#: .\core\templates\core\share_group.html:56
+msgid "Diese Gruppe ist privat."
+msgstr "This group is private."
+
+#: .\core\templates\core\share_group.html:58
+#: .\core\templates\core\share_group.html:138
+#: .\core\templates\core\share_plan.html:47
+#: .\core\templates\core\share_plan.html:126
+#, fuzzy
+#| msgid "Öffentlich"
+msgid "Öffentlich machen"
+msgstr "Public"
+
+#: .\core\templates\core\share_group.html:67
+#: .\core\templates\core\share_plan.html:56
+msgid "QR-Code"
+msgstr "QR Code"
+
+#: .\core\templates\core\share_group.html:72
+msgid "Scanne diesen Code, um die Gruppe anzusehen"
+msgstr "Scan this code to view the group"
+
+#: .\core\templates\core\share_group.html:74
+#: .\core\templates\core\share_plan.html:63
+msgid "QR-Code Generator nicht verfügbar."
+msgstr "QR code generator not available."
+
+#: .\core\templates\core\share_group.html:81
+#: .\core\templates\core\share_plan.html:70
+msgid "Direkter Link"
+msgstr "Direct Link"
+
+#: .\core\templates\core\share_group.html:89
+#: .\core\templates\core\share_plan.html:78
+msgid "Link in die Zwischenablage kopiert!"
+msgstr "Link copied to clipboard!"
+
+#: .\core\templates\core\share_group.html:97
+#: .\core\templates\core\share_plan.html:86
+#, fuzzy
+#| msgid "Aktiven Trainingsplan festlegen"
+msgid "Mit Trainingspartner teilen"
+msgstr "Set Active Training Plan"
+
+#: .\core\templates\core\share_group.html:98
+#, python-format
+msgid "Teile diese Gruppe privat (alle %(count)s Pläne werden geteilt)."
+msgstr "Share this group privately (all %(count)s plans will be shared)."
+
+#: .\core\templates\core\share_group.html:100
+#: .\core\templates\core\share_plan.html:89
+msgid "Username eingeben..."
+msgstr "Enter username..."
+
+#: .\core\templates\core\share_group.html:102
+#: .\core\templates\core\share_plan.html:91
+#, fuzzy
+#| msgid "Einladungscode"
+msgid "Einladen"
+msgstr "Einladungscode"
+
+#: .\core\templates\core\share_group.html:107
+#: .\core\templates\core\share_plan.html:96
+#, fuzzy
+#| msgid "Bereits registriert?"
+msgid "Bereits geteilt mit:"
+msgstr "Bereits registriert?"
+
+#: .\core\templates\core\share_group.html:109
+#: .\core\templates\core\share_plan.html:98
+msgid "Lade..."
+msgstr "Loading..."
+
+#: .\core\templates\core\share_group.html:118
+#: .\core\templates\core\share_plan.html:107
+#, fuzzy
+#| msgid "Teilen"
+msgid "Teilen via"
+msgstr "Share"
+
+#: .\core\templates\core\share_group.html:133
+#, fuzzy
+#| msgid "Gruppieren"
+msgid "Gruppe duplizieren"
+msgstr "Group"
+
+#: .\core\templates\core\share_group.html:137
+#: .\core\templates\core\share_plan.html:125
+msgid "Privat machen"
+msgstr "Make Private"
+
+#: .\core\templates\core\share_plan.html:4
+#: .\core\templates\core\share_plan.html:16
+#, fuzzy
+#| msgid "KI-Plan erstellen"
+msgid "Plan teilen"
+msgstr "Create AI Plan"
+
+#: .\core\templates\core\share_plan.html:45
+msgid "Dieser Plan ist privat. Andere können den Link nicht öffnen."
+msgstr "This plan is private. Others cannot open the link."
+
+#: .\core\templates\core\share_plan.html:61
+msgid "Scanne diesen Code, um den Plan zu öffnen"
+msgstr "Scan this code to open the plan"
+
+#: .\core\templates\core\share_plan.html:87
+msgid "Teile diesen Plan privat mit deinem Trainingspartner."
+msgstr "Share this plan privately with your training partner."
+
+#: .\core\templates\core\share_plan.html:122
+#, fuzzy
+#| msgid "Duplizieren"
+msgid "Plan duplizieren"
+msgstr "Duplicate"
+
+#: .\core\templates\core\sources.html:4 .\core\templates\core\sources.html:14
+msgid "Wissenschaftliche Quellen"
+msgstr "Wissenschaftliche Quellen"
+
+#: .\core\templates\core\sources.html:17
+msgid ""
+"Die Algorithmen und Empfehlungen in HomeGym basieren auf peer-reviewter "
+"Forschungsliteratur. Hier findest du alle verwendeten Quellen."
+msgstr ""
+"Die Algorithmen und Empfehlungen in HomeGym basieren auf peer-reviewter "
+"Forschungsliteratur. Hier findest du alle verwendeten Quellen."
+
+#: .\core\templates\core\sources.html:18
+#, fuzzy, python-format
+#| msgid "Quellen"
+msgid "%(n)s Quellen"
+msgstr "Sources"
+
+#: .\core\templates\core\sources.html:18
+msgid "insgesamt."
+msgstr "insgesamt."
+
+#: .\core\templates\core\sources.html:28
+#, python-format
+msgid "Alle (%(n)s)"
+msgstr "All (%(n)s)"
+
+#: .\core\templates\core\sources.html:102
+msgid "Link"
+msgstr "Link"
+
+#: .\core\templates\core\sources.html:105
+msgid "Kein Link"
+msgstr "Kein Link"
+
+#: .\core\templates\core\sources.html:118
+msgid "Keine Quellen in dieser Kategorie gefunden."
+msgstr "Keine Quellen in dieser Kategorie gefunden."
+
+#: .\core\templates\core\sources.html:119
+msgid "Alle Quellen anzeigen"
+msgstr "Alle Quellen anzeigen"
+
+#: .\core\templates\core\sources.html:126
+msgid "Hinweis:"
+msgstr "Hinweis:"
+
+#: .\core\templates\core\sources.html:127
+msgid ""
+"Die ℹ-Icons in der App verweisen auf diese Seite. Wissenschaftliche "
+"Empfehlungen sind Richtwerte – individuelle Faktoren (Genetik, Erholung, "
+"Ernährung) beeinflussen das Ergebnis. Diese App ersetzt keine professionelle "
+"Trainingsberatung."
+msgstr ""
+"Die ℹ-Icons in der App verweisen auf diese Seite. Wissenschaftliche "
+"Empfehlungen sind Richtwerte – individuelle Faktoren (Genetik, Erholung, "
+"Ernährung) beeinflussen das Ergebnis. Diese App ersetzt keine professionelle "
+"Trainingsberatung."
+
+#: .\core\templates\core\stats_exercise.html:4
+#, fuzzy
+#| msgid "Statistiken"
+msgid "Statistik"
+msgstr "Statistics"
+
+#: .\core\templates\core\stats_exercise.html:34
+#, fuzzy
+#| msgid "Noch keine Trainings-Daten vorhanden."
+msgid "Noch keine Daten für diese Übung."
+msgstr "No training data available yet."
+
+#: .\core\templates\core\stats_exercise.html:35
+msgid "Trainiere erst einmal, damit wir etwas auswerten können!"
+msgstr "Train first, then we can analyze your data!"
+
+#: .\core\templates\core\stats_exercise.html:44
+msgid "Est. 1RM (effektiv)"
+msgstr "Est. 1RM (effective)"
+
+#: .\core\templates\core\stats_exercise.html:51
+#, fuzzy
+#| msgid "Aktuelles Gewicht"
+msgid "Bestes Satz-Gewicht"
+msgstr "Current Weight"
+
+#: .\core\templates\core\stats_exercise.html:53
+msgid "kg effektiv"
+msgstr "kg effective"
+
+#: .\core\templates\core\stats_exercise.html:61
+#, fuzzy
+#| msgid "Wiederholungen"
+msgid "Wiederholungs-Rekord"
+msgstr "Reps"
+
+#: .\core\templates\core\stats_exercise.html:63
+msgid "Wdh. (ohne Zusatz)"
+msgstr "Reps (without added weight)"
+
+#: .\core\templates\core\stats_exercise.html:68
+#, fuzzy
+#| msgid "Nur Körpergewicht"
+msgid "Körpergewicht-Faktor"
+msgstr "Bodyweight Only"
+
+# === training_finish.html ===
+#: .\core\templates\core\training_finish.html:5
+msgid "Training abschließen"
+msgstr "Finish Workout"
+
+#: .\core\templates\core\training_finish.html:43
+#: .\core\templates\core\training_session.html:231
+msgid "Training beenden"
+msgstr "Finish Workout"
+
+#: .\core\templates\core\training_finish.html:58
+msgid "Gut gemacht!"
+msgstr "Well done!"
+
+#: .\core\templates\core\training_finish.html:59
+msgid "Du hast es geschafft – hier ist deine Zusammenfassung"
+msgstr "You did it – here's your summary"
+
+#: .\core\templates\core\training_finish.html:77
+msgid "Gesamtvolumen"
+msgstr "Total Volume"
+
+#: .\core\templates\core\training_finish.html:79
+msgid "Gewicht × Wiederholungen (ohne Warmup)"
+msgstr "Weight × Reps (excluding warm-up)"
+
+#: .\core\templates\core\training_finish.html:85
+msgid "Aufwärmsätze"
+msgstr "Warm-up Sets"
+
+#: .\core\templates\core\training_finish.html:98
+msgid "AI-Trainings-Tipp"
+msgstr "AI Training Tip"
+
+#: .\core\templates\core\training_finish.html:105
+#: .\core\templates\core\workout_recommendations.html:95
+msgid "Empfehlung"
+msgstr "Recommendation"
+
+#: .\core\templates\core\training_finish.html:117
+msgid "Trainingsdauer"
+msgstr "Workout Duration"
+
+#: .\core\templates\core\training_finish.html:125
+msgid "Wie lief's? (optional)"
+msgstr "How did it go? (optional)"
+
+#: .\core\templates\core\training_finish.html:128
+msgid "z.B. Gutes Pump-Gefühl, Schulter etwas müde..."
+msgstr "e.g. Great pump, shoulder a bit tired..."
+
+#: .\core\templates\core\training_finish.html:133
+msgid "Training speichern"
+msgstr "Save Workout"
+
+#: .\core\templates\core\training_finish.html:136
+msgid "Nochmal anpassen"
+msgstr "Adjust Again"
+
+# === training_list.html ===
+#: .\core\templates\core\training_list.html:5
+msgid "Trainings-Logbuch"
+msgstr "Training Log"
+
+#: .\core\templates\core\training_list.html:13
+msgid "Dein Verlauf"
+msgstr "Your History"
+
+#: .\core\templates\core\training_list.html:29
+msgid "Noch keine Trainings absolviert."
+msgstr "No workouts logged yet."
+
+#: .\core\templates\core\training_list.html:30
+msgid "Jetzt starten!"
+msgstr "Start now!"
+
+#: .\core\templates\core\training_list.html:90
+msgid "Training löschen?"
+msgstr "Delete Workout?"
+
+#: .\core\templates\core\training_list.html:95
+msgid "Möchtest du dieses Training wirklich unwiderruflich löschen?"
+msgstr "Do you really want to permanently delete this workout?"
+
+#: .\core\templates\core\training_list.html:104
+msgid "Alle Sätze gehen verloren!"
+msgstr "All sets will be lost!"
+
+#: .\core\templates\core\training_list.html:113
+msgid "Ja, unwiderruflich löschen"
+msgstr "Yes, delete permanently"
+
+# === training_select_plan.html ===
+#: .\core\templates\core\training_select_plan.html:5
+msgid "Training wählen"
+msgstr "Choose Workout"
+
+#: .\core\templates\core\training_select_plan.html:32
+msgid "Modus wählen"
+msgstr "Choose Mode"
+
+#: .\core\templates\core\training_select_plan.html:46
+msgid "Freies Training"
+msgstr "Free Workout"
+
+#: .\core\templates\core\training_select_plan.html:47
+msgid "Ohne Vorlage starten und Übungen spontan wählen."
+msgstr "Start without a template and choose exercises freely."
+
+#: .\core\templates\core\training_select_plan.html:52
+msgid "TRAININGSPLÄNE"
+msgstr "TRAINING PLANS"
+
+#: .\core\templates\core\training_select_plan.html:56
+msgid "Meine"
+msgstr "Mine"
+
+#: .\core\templates\core\training_select_plan.html:59
+msgid "Geteilt"
+msgstr "Shared"
+
+#: .\core\templates\core\training_select_plan.html:72
+msgid "Aktiven Plan festlegen"
+msgstr "Set Active Plan"
+
+#: .\core\templates\core\training_select_plan.html:76
+msgid "Pläne ausgewählt"
+msgstr "Plans selected"
+
+#: .\core\templates\core\training_select_plan.html:78
+msgid "Gruppenname"
+msgstr "Group Name"
+
+#: .\core\templates\core\training_select_plan.html:79
+msgid "Gruppieren"
+msgstr "Group"
+
+#: .\core\templates\core\training_select_plan.html:88
+msgid "Noch keine Pläne erstellt. Erstelle deinen ersten Plan!"
+msgstr "No plans created yet. Create your first plan!"
+
+#: .\core\templates\core\training_select_plan.html:89
+msgid "Noch keine Pläne mit dir geteilt."
+msgstr "No plans shared with you yet."
+
+#: .\core\templates\core\training_select_plan.html:89
+msgid "Trainingspartner können Pläne über die Teilen-Funktion mit dir teilen."
+msgstr "Training partners can share plans with you using the share function."
+
+#: .\core\templates\core\training_select_plan.html:90
+msgid "Noch keine öffentlichen Pläne verfügbar."
+msgstr "No public plans available yet."
+
+#: .\core\templates\core\training_select_plan.html:109
+#: .\core\templates\core\training_select_plan.html:180
+msgid "Umbenennen"
+msgstr "Rename"
+
+#: .\core\templates\core\training_select_plan.html:147
+#: .\core\templates\core\training_select_plan.html:262
+msgid "Duplizieren"
+msgstr "Duplicate"
+
+#: .\core\templates\core\training_select_plan.html:148
+#: .\core\templates\core\training_select_plan.html:263
+msgid "Teilen"
+msgstr "Share"
+
+#: .\core\templates\core\training_select_plan.html:156
+#: .\core\templates\core\training_select_plan.html:224
+msgid "Alle löschen"
+msgstr "Delete All"
+
+#: .\core\templates\core\training_select_plan.html:164
+msgid "WEITERE PLÄNE"
+msgstr "MORE PLANS"
+
+#: .\core\templates\core\training_select_plan.html:252
+msgid "Mehr anzeigen"
+msgstr "Show more"
+
+#: .\core\templates\core\training_select_plan.html:259
+msgid "Starten"
+msgstr "Start"
+
+#: .\core\templates\core\training_select_plan.html:314
+msgid "Gruppe auflösen? Pläne werden einzeln angezeigt."
+msgstr "Disband group? Plans will be shown individually."
+
+#: .\core\templates\core\training_select_plan.html:317
+#: .\core\templates\core\training_select_plan.html:324
+#: .\core\templates\core\training_select_plan.html:332
+#: .\core\templates\core\training_select_plan.html:353
+#: .\core\templates\core\training_select_plan.html:367
+#: .\core\templates\core\training_select_plan.html:373
+msgid "Fehler aufgetreten."
+msgstr "An error occurred."
+
+#: .\core\templates\core\training_select_plan.html:321
+msgid "Plan wirklich löschen? Nicht rückgängig machbar."
+msgstr "Really delete plan? This cannot be undone."
+
+#: .\core\templates\core\training_select_plan.html:328
+msgid "Alle Pläne der Gruppe löschen? NICHT rückgängig machbar!"
+msgstr "Delete all plans in the group? This CANNOT be undone!"
+
+#: .\core\templates\core\training_select_plan.html:329
+msgid "Bist du WIRKLICH sicher?"
+msgstr "Are you REALLY sure?"
+
+#: .\core\templates\core\training_select_plan.html:349
+msgid "Neue Gruppe"
+msgstr "New Group"
+
+#: .\core\templates\core\training_select_plan.html:350
+msgid "Mindestens 2 Pläne auswählen."
+msgstr "Select at least 2 plans."
+
+#: .\core\templates\core\training_select_plan.html:357
+msgid "Neuer Gruppenname:"
+msgstr "New group name:"
+
+#: .\core\templates\core\training_select_plan.html:364
+msgid "Gruppe umbenannt"
+msgstr "Group renamed"
+
+# === training_session.html ===
+#: .\core\templates\core\training_session.html:185
+msgid "Training"
+msgstr "Workout"
+
+#: .\core\templates\core\training_session.html:193
+#: .\core\templates\core\training_session.html:397
+msgid "Pausenuhr starten"
+msgstr "Start Rest Timer"
+
+#: .\core\templates\core\training_session.html:196
+msgid "Timer-Dauer wählen"
+msgstr "Choose Timer Duration"
+
+#: .\core\templates\core\training_session.html:197
+msgid "Timer-Dauer"
+msgstr "Timer Duration"
+
+#: .\core\templates\core\training_session.html:200
+msgid "Pausendauer"
+msgstr "Rest Duration"
+
+#: .\core\templates\core\training_session.html:202
+#: .\core\templates\core\training_session.html:205
+#: .\core\templates\core\training_session.html:208
+#: .\core\templates\core\training_session.html:211
+msgid "Sekunden"
+msgstr "Seconds"
+
+#: .\core\templates\core\training_session.html:214
+msgid "Sound-Einstellungen"
+msgstr "Sound Settings"
+
+#: .\core\templates\core\training_session.html:219
+msgid "Sound aktiv"
+msgstr "Sound On"
+
+#: .\core\templates\core\training_session.html:225
+msgid "Lautstärke"
+msgstr "Volume"
+
+#: .\core\templates\core\training_session.html:232
+msgid "Fertig"
+msgstr "Done"
+
+#: .\core\templates\core\training_session.html:253
+msgid "Deload-Training"
+msgstr "Deload Workout"
+
+#: .\core\templates\core\training_session.html:258
+#: .\core\templates\core\training_session.html:974
+msgid "Wird nicht in Statistik gezählt"
+msgstr "Not counted in statistics"
+
+#: .\core\templates\core\training_session.html:261
+msgid "Empfohlene Deload-Woche – zählt aktuell zur Statistik"
+msgstr "Recommended deload week – currently counted in statistics"
+
+#: .\core\templates\core\training_session.html:263
+#: .\core\templates\core\training_session.html:977
+msgid "Zählt für Statistik"
+msgstr "Counts for statistics"
+
+#: .\core\templates\core\training_session.html:273
+msgid "Gesamtvolumen heute"
+msgstr "Total Volume Today"
+
+#: .\core\templates\core\training_session.html:285
+msgid "Drück auf +, um loszulegen!"
+msgstr "Press + to get started!"
+
+#: .\core\templates\core\training_session.html:312
+msgid "Ziel"
+msgstr "Goal"
+
+#: .\core\templates\core\training_session.html:327
+msgid "ML-Empfehlung"
+msgstr "ML Recommendation"
+
+#: .\core\templates\core\training_session.html:330
+msgid "Pause aus KI-Plan"
+msgstr "Rest from AI Plan"
+
+#: .\core\templates\core\training_session.html:330
+msgid "Berechnete Pause"
+msgstr "Calculated Rest"
+
+#: .\core\templates\core\training_session.html:330
+msgid "Klick zum Starten"
+msgstr "Click to Start"
+
+#: .\core\templates\core\training_session.html:360
+msgid "Wdh / Sek"
+msgstr "Reps / Sec"
+
+#: .\core\templates\core\training_session.html:361
+msgid "Aktion"
+msgstr "Action"
+
+#: .\core\templates\core\training_session.html:420
+msgid "Weiteren Satz hinzufügen"
+msgstr "Add Another Set"
+
+#: .\core\templates\core\training_session.html:441
+msgid "Neuer Personal Record!"
+msgstr "New Personal Record!"
+
+#: .\core\templates\core\training_session.html:452
+msgid "Pause"
+msgstr "Rest"
+
+#: .\core\templates\core\training_session.html:463
+#: .\core\templates\core\training_session.html:716
+msgid "Satz hinzufügen"
+msgstr "Add Set"
+
+#: .\core\templates\core\training_session.html:471
+msgid "Übung suchen"
+msgstr "Search Exercise"
+
+#: .\core\templates\core\training_session.html:472
+msgid "Bankdrücken, Kniebeugen, ..."
+msgstr "Bench Press, Squats, ..."
+
+#: .\core\templates\core\training_session.html:476
+msgid "1. Muskelgruppe"
+msgstr "1. Muscle Group"
+
+#: .\core\templates\core\training_session.html:478
+msgid "-- Bitte wählen --"
+msgstr "-- Please select --"
+
+#: .\core\templates\core\training_session.html:487
+msgid "2. Übung"
+msgstr "2. Exercise"
+
+#: .\core\templates\core\training_session.html:489
+msgid "-- Erst Muskelgruppe wählen --"
+msgstr "-- Select muscle group first --"
+
+#: .\core\templates\core\training_session.html:500
+msgid "Wdh. / Sek."
+msgstr "Reps / Sec."
+
+#: .\core\templates\core\training_session.html:513
+msgid "Keine"
+msgstr "None"
+
+#: .\core\templates\core\training_session.html:528
+msgid "Aufwärmsatz"
+msgstr "Warm-up Set"
+
+#: .\core\templates\core\training_session.html:540
+msgid "Perfekt"
+msgstr "Perfect"
+
+#: .\core\templates\core\training_session.html:541
+msgid "Gut"
+msgstr "Good"
+
+#: .\core\templates\core\training_session.html:542
+msgid "Schwierig"
+msgstr "Difficult"
+
+#: .\core\templates\core\training_session.html:543
+msgid "Mit Hilfe"
+msgstr "With Help"
+
+#: .\core\templates\core\training_session.html:544
+msgid "Schmerz"
+msgstr "Pain"
+
+#: .\core\templates\core\training_session.html:545
+msgid "Stärker"
+msgstr "Stronger"
+
+#: .\core\templates\core\training_session.html:546
+msgid "Müde"
+msgstr "Tired"
+
+#: .\core\templates\core\training_session.html:551
+msgid "z.B. 'Letzte 2 Wdh. mit Hilfe', 'Grip zu eng', '🎯 PR'..."
+msgstr "e.g. 'Last 2 reps with help', 'Grip too narrow', '🎯 PR'..."
+
+#: .\core\templates\core\training_session.html:554
+#: .\core\templates\core\training_session.html:1370
+msgid "Zeichen"
+msgstr "Characters"
+
+#: .\core\templates\core\training_session.html:584
+msgid "Satz löschen?"
+msgstr "Delete Set?"
+
+#: .\core\templates\core\training_session.html:589
+msgid "Möchtest du diesen Satz wirklich löschen?"
+msgstr "Do you really want to delete this set?"
+
+#: .\core\templates\core\training_session.html:598
+msgid "Ja, löschen"
+msgstr "Yes, delete"
+
+#: .\core\templates\core\training_session.html:652
+msgid "Zusatzgewicht (kg)"
+msgstr "Additional Weight (kg)"
+
+#: .\core\templates\core\training_session.html:656
+msgid "Körpergewicht-Übung · ca."
+msgstr "Bodyweight exercise · approx."
+
+#: .\core\templates\core\training_session.html:656
+msgid "KG wirkt als Last"
+msgstr "bodyweight acts as load"
+
+#: .\core\templates\core\training_session.html:658
+msgid "Körpergewicht-Übung · isometrisch (kein Heben)"
+msgstr "Bodyweight exercise · isometric (no lifting)"
+
+#: .\core\templates\core\training_session.html:692
+msgid "-- Übung wählen --"
+msgstr "-- Choose Exercise --"
+
+#: .\core\templates\core\training_session.html:738
+msgid "Satz bearbeiten"
+msgstr "Edit Set"
+
+#: .\core\templates\core\training_session.html:776
+msgid "Offline-Änderungen werden angezeigt"
+msgstr "Offline changes are shown"
+
+#: .\core\templates\core\training_session.html:820
+msgid "Körpergewicht-Übung: Ziel +1–2 Wdh."
+msgstr "Bodyweight exercise: target +1–2 reps"
+
+#: .\core\templates\core\training_session.html:855
+msgid "gelöscht"
+msgstr "deleted"
+
+#: .\core\templates\core\training_session.html:859
+msgid "Rückgängig"
+msgstr "Undo"
+
+#: .\core\templates\core\training_session.html:903
+msgid "Satz wiederhergestellt"
+msgstr "Set restored"
+
+#: .\core\templates\core\training_session.html:917
+msgid "Fehler beim Löschen"
+msgstr "Error deleting"
+
+#: .\core\templates\core\training_session.html:921
+msgid "Netzwerkfehler beim Löschen"
+msgstr "Network error while deleting"
+
+#: .\core\templates\core\training_session.html:1090
+msgid "Pause vorbei!"
+msgstr "Rest over!"
+
+#: .\core\templates\core\training_session.html:1090
+msgid "Bereit für den nächsten Satz?"
+msgstr "Ready for the next set?"
+
+#: .\core\templates\core\training_session.html:1125
+msgid "Speichern..."
+msgstr "Saving..."
+
+#: .\core\templates\core\training_session.html:1144
+msgid "Serverfehler beim Speichern"
+msgstr "Server error while saving"
+
+#: .\core\templates\core\training_session.html:1152
+msgid "Serverfehler"
+msgstr "Server error"
+
+#: .\core\templates\core\training_session.html:1169
+msgid "Satz konnte nicht gespeichert werden"
+msgstr "Set could not be saved"
+
+#: .\core\templates\core\training_session.html:1181
+msgid "Fehler beim Speichern"
+msgstr "Error saving"
+
+#: .\core\templates\core\training_session.html:1214
+msgid "Änderung offline gespeichert - wird synchronisiert"
+msgstr "Change saved offline – will be synced"
+
+#: .\core\templates\core\training_session.html:1215
+msgid "Satz offline gespeichert - wird synchronisiert"
+msgstr "Set saved offline – will be synced"
+
+#: .\core\templates\core\training_session.html:1256
+msgid "Offline-Speicherung fehlgeschlagen."
+msgstr "Offline saving failed."
+
+#: .\core\templates\core\training_session.html:1339
+msgid "Satz"
+msgstr "Set"
+
+#: .\core\templates\core\training_session.html:1339
+msgid "offline gespeichert"
+msgstr "saved offline"
+
+#: .\core\templates\core\training_session.html:1340
+msgid "Werden automatisch synchronisiert wenn du wieder online bist"
+msgstr "Will be synced automatically when you're back online"
+
+# === training_stats.html ===
+#: .\core\templates\core\training_stats.html:5
+msgid "Trainingsstatistiken"
+msgstr "Training Statistics"
+
+#: .\core\templates\core\training_stats.html:19
+msgid "Als PDF exportieren"
+msgstr "Export as PDF"
+
+#: .\core\templates\core\training_stats.html:22
+msgid "Als CSV exportieren"
+msgstr "Export as CSV"
+
+#: .\core\templates\core\training_stats.html:39
+msgid "Noch keine Trainings-Daten vorhanden."
+msgstr "No training data available yet."
+
+#: .\core\templates\core\training_stats.html:40
+msgid "Jetzt trainieren"
+msgstr "Start training now"
+
+#: .\core\templates\core\training_stats.html:60
+msgid "Ø pro Training"
+msgstr "Avg per Workout"
+
+#: .\core\templates\core\training_stats.html:70
+msgid "Volumen-Progression (pro Training)"
+msgstr "Volume Progression (per Workout)"
+
+#: .\core\templates\core\training_stats.html:79
+msgid "Wöchentliches Volumen (letzte 12 Wochen)"
+msgstr "Weekly Volume (last 12 weeks)"
+
+#: .\core\templates\core\training_stats.html:83
+msgid "Volumen-Analyse"
+msgstr "Volume Analysis"
+
+#: .\core\templates\core\training_stats.html:88
+msgid "Anstieg"
+msgstr "increase"
+
+#: .\core\templates\core\training_stats.html:91
+msgid ""
+"Achte auf ausreichende Regeneration! Bei zu schnellem Volumen-Anstieg steigt "
+"das Verletzungsrisiko."
+msgstr ""
+"Make sure you recover adequately! Rapid volume increases raise the risk of "
+"injury."
+
+#: .\core\templates\core\training_stats.html:96
+msgid "Rückgang"
+msgstr "decrease"
+
+#: .\core\templates\core\training_stats.html:99
+msgid ""
+"Starker Volumen-Rückgang erkannt. Achte auf Motivation und Regeneration."
+msgstr ""
+"Significant volume drop detected. Pay attention to motivation and recovery."
+
+#: .\core\templates\core\training_stats.html:112
+#: .\core\templates\core\workout_recommendations.html:125
+msgid "Muskelgruppen-Balance"
+msgstr "Muscle Group Balance"
+
+#: .\core\templates\core\training_stats.html:120
+msgid "Belastungsverteilung"
+msgstr "Load Distribution"
+
+#: .\core\templates\core\training_stats.html:126
+msgid "Niedrig → Hoch"
+msgstr "Low → High"
+
+#: .\core\templates\core\training_stats.html:137
+msgid "Trainings-Aktivität (letzte 90 Tage)"
+msgstr "Training Activity (last 90 days)"
+
+#: .\core\templates\core\training_stats.html:141
+msgid "Kein Training"
+msgstr "No workout"
+
+#: .\core\templates\core\training_stats.html:142
+msgid "1 Training"
+msgstr "1 workout"
+
+#: .\core\templates\core\training_stats.html:143
+msgid "2 Trainings"
+msgstr "2 workouts"
+
+#: .\core\templates\core\training_stats.html:144
+msgid "3+ Trainings"
+msgstr "3+ workouts"
+
+#: .\core\templates\core\training_stats.html:151
+msgid "Muskelgruppen-Details"
+msgstr "Muscle Group Details"
+
+#: .\core\templates\core\training_stats.html:157
+msgid "Muskelgruppe"
+msgstr "Muscle Group"
+
+#: .\core\templates\core\training_stats.html:159
+msgid "Eff. Wiederholungen"
+msgstr "Eff. Reps"
+
+#: .\core\templates\core\training_stats.html:181
+msgid ""
+"Schaue auch bei einzelnen Übungen für detaillierte Progressions-Analysen!"
+msgstr "Also check individual exercises for detailed progression analyses!"
+
+#: .\core\templates\core\training_stats.html:207
+msgid "Volumen (kg)"
+msgstr "Volume (kg)"
+
+#: .\core\templates\core\training_stats.html:222
+msgid "Wochenvolumen (kg)"
+msgstr "Weekly Volume (kg)"
+
+#: .\core\templates\core\training_stats.html:235
+msgid "Effektive Wiederholungen"
+msgstr "Effective Reps"
+
+#: .\core\templates\core\training_stats.html:308
+msgid "Fehler beim Laden der SVG"
+msgstr "Error loading SVG"
+
+#: .\core\templates\core\uebung_detail.html:23
+msgid "Muscle-Map"
+msgstr "Muscle Map"
+
+#: .\core\templates\core\uebung_detail.html:56
+msgid "Anatomische Darstellung"
+msgstr "Anatomical View"
+
+#: .\core\templates\core\uebung_detail.html:58
+msgid "Hauptmuskel"
+msgstr "Primary Muscle"
+
+#: .\core\templates\core\uebung_detail.html:60
+#, fuzzy
+#| msgid "Sound aktiv"
+msgid "Inaktiv"
+msgstr "Sound On"
+
+#: .\core\templates\core\uebung_detail.html:68
+#, fuzzy
+#| msgid "Gewicht"
+msgid "Max Gewicht"
+msgstr "Weight"
+
+#: .\core\templates\core\uebung_detail.html:74
+#, fuzzy
+#| msgid "Gesamt-Volumen"
+msgid "Gesamt Volumen (kg)"
+msgstr "Total Volume"
+
+#: .\core\templates\core\uebung_detail.html:80
+msgid "Sätze Absolviert"
+msgstr "Sets Completed"
+
+#: .\core\templates\core\uebung_detail.html:89
+#, fuzzy
+#| msgid "Kurzbeschreibung"
+msgid "Übungsbeschreibung"
+msgstr "Kurzbeschreibung"
+
+#: .\core\templates\core\uebung_detail.html:102
+msgid "Keine Beschreibung verfügbar"
+msgstr "No description available"
+
+#: .\core\templates\core\uebung_detail.html:108
+msgid "Video Tutorial ansehen"
+msgstr "Watch Video Tutorial"
+
+#: .\core\templates\core\uebung_detail.html:116
+#, fuzzy
+#| msgid "Muskelgruppe"
+msgid "Hauptmuskelgruppe:"
+msgstr "Muscle Group"
+
+#: .\core\templates\core\uebung_detail.html:117
+msgid "Bewegungstyp:"
+msgstr "Movement Type:"
+
+#: .\core\templates\core\uebung_detail.html:118
+#, fuzzy
+#| msgid "Gewicht:"
+msgid "Gewichtstyp:"
+msgstr "Gewicht:"
+
+#: .\core\templates\core\uebung_detail.html:120
+#, fuzzy
+#| msgid "Muskeln"
+msgid "Hilfsmuskeln:"
+msgstr "Muscle Mass"
+
+#: .\core\templates\core\uebung_detail.html:125
+#, fuzzy
+#| msgid "Statistiken"
+msgid "Statistiken ansehen"
+msgstr "Statistics"
+
+#: .\core\templates\core\uebung_detail.html:126
+#, fuzzy
+#| msgid "Übungen"
+msgid "Ähnliche Übungen"
+msgstr "Exercises"
+
+#: .\core\templates\core\uebungen_auswahl.html:32
+#, fuzzy
+#| msgid "Plan-Bibliothek"
+msgid "Übungs-Bibliothek"
+msgstr "Plan Library"
+
+#: .\core\templates\core\uebungen_auswahl.html:44
+#, fuzzy
+#| msgid "Übungen"
+msgid "Alle Übungen"
+msgstr "Exercises"
+
+#: .\core\templates\core\uebungen_auswahl.html:45
+msgid "Übersicht mit Haupt- und Hilfsmuskelgruppen"
+msgstr "Overview of primary and secondary muscle groups"
+
+#: .\core\templates\core\uebungen_auswahl.html:49
+#: .\core\templates\core\uebungen_auswahl.html:161
+#, fuzzy
+#| msgid "Neuen Plan erstellen"
+msgid "Eigene Übung erstellen"
+msgstr "Create New Plan"
+
+#: .\core\templates\core\uebungen_auswahl.html:69
+#, fuzzy
+#| msgid "Alle anzeigen"
+msgid "Alle Tags"
+msgstr "Show All"
+
+#: .\core\templates\core\uebungen_auswahl.html:79
+#, fuzzy
+#| msgid "Nur diesen"
+msgid "Nur Favoriten"
+msgstr "This one only"
+
+#: .\core\templates\core\uebungen_auswahl.html:102
+msgid "Custom"
+msgstr "Custom"
+
+#: .\core\templates\core\uebungen_auswahl.html:125
+msgid "Keine Hilfsmuskeln erfasst"
+msgstr "No secondary muscles recorded"
+
+#: .\core\templates\core\uebungen_auswahl.html:167
+msgid "Erstelle eine eigene Übung, die nur für dich sichtbar ist."
+msgstr "Create a custom exercise visible only to you."
+
+#: .\core\templates\core\uebungen_auswahl.html:169
+#, fuzzy
+#| msgid "Gesperrte Übungen"
+msgid "Name der Übung"
+msgstr "Locked Exercises"
+
+#: .\core\templates\core\uebungen_auswahl.html:170
+msgid "​z.B. Meine Variation für Bizeps"
+msgstr "e.g. My bicep variation"
+
+#: .\core\templates\core\uebungen_auswahl.html:174
+#, fuzzy
+#| msgid "Muskelgruppe"
+msgid "Hauptmuskelgruppe"
+msgstr "Muscle Group"
+
+#: .\core\templates\core\uebungen_auswahl.html:176
+#, fuzzy
+#| msgid "-- Übung wählen --"
+msgid "-- Auswählen --"
+msgstr "-- Choose Exercise --"
+
+#: .\core\templates\core\uebungen_auswahl.html:184
+#, fuzzy
+#| msgid "Muskelgruppe"
+msgid "Hilfsmuskelgruppen"
+msgstr "Muscle Group"
+
+#: .\core\templates\core\uebungen_auswahl.html:185
+msgid "z.B. Trizeps, Schultern"
+msgstr "e.g. Triceps, Shoulders"
+
+#: .\core\templates\core\uebungen_auswahl.html:186
+msgid "Optional, kommagetrennt"
+msgstr "Optional, comma-separated"
+
+#: .\core\templates\core\uebungen_auswahl.html:198
+msgid "Bewegungstyp"
+msgstr "Movement Type"
+
+#: .\core\templates\core\uebungen_auswahl.html:200
+msgid "-- Keine Angabe --"
+msgstr "-- Not specified --"
+
+#: .\core\templates\core\uebungen_auswahl.html:201
+msgid "Compound (Mehrgelenkig)"
+msgstr "Compound (Multi-joint)"
+
+#: .\core\templates\core\uebungen_auswahl.html:202
+msgid "Isolation (Eingelenkig)"
+msgstr "Isolation (Single-joint)"
+
+#: .\core\templates\core\uebungen_auswahl.html:213
+msgid "Mehrfachauswahl mit Strg/Cmd + Klick"
+msgstr "Multi-select with Ctrl/Cmd + click"
+
+#: .\core\templates\core\uebungen_auswahl.html:217
+msgid "Optionale Notizen..."
+msgstr "Optional notes..."
+
+#: .\core\templates\core\uebungen_auswahl.html:224
+#, fuzzy
+#| msgid "Account erstellen"
+msgid "Übung erstellen"
+msgstr "Account erstellen"
+
+# === workout_recommendations.html ===
+#: .\core\templates\core\workout_recommendations.html:5
+#: .\core\templates\core\workout_recommendations.html:13
+#: .\core\templates\core\workout_recommendations.html:24
+msgid "Trainingsempfehlungen"
+msgstr "Workout Recommendations"
+
+#: .\core\templates\core\workout_recommendations.html:27
+#, python-format
+msgid "Intelligente Analysen basierend auf deinen letzten %(days)s Tagen"
+msgstr "Smart analysis based on your last %(days)s days"
+
+#: .\core\templates\core\workout_recommendations.html:77
+msgid "Hohe Priorität"
+msgstr "High Priority"
+
+#: .\core\templates\core\workout_recommendations.html:79
+msgid "Mittlere Priorität"
+msgstr "Medium Priority"
+
+#: .\core\templates\core\workout_recommendations.html:81
+msgid "Niedrige Priorität"
+msgstr "Low Priority"
+
+#: .\core\templates\core\workout_recommendations.html:100
+msgid "Vorgeschlagene Übungen"
+msgstr "Suggested Exercises"
+
+#: .\core\templates\core\workout_recommendations.html:122
+msgid "Wie funktionieren die Empfehlungen?"
+msgstr "How do recommendations work?"
+
+#: .\core\templates\core\workout_recommendations.html:125
+msgid ""
+"Analysiert dein Trainingsvolumen (Wiederholungen × RPE) pro Muskelgruppe"
+msgstr "Analyzes your training volume (reps × RPE) per muscle group"
+
+#: .\core\templates\core\workout_recommendations.html:126
+msgid "Push/Pull-Ratio"
+msgstr "Push/Pull Ratio"
+
+#: .\core\templates\core\workout_recommendations.html:126
+msgid "Prüft die Balance zwischen Druck- und Zugübungen"
+msgstr "Checks the balance between push and pull exercises"
+
+#: .\core\templates\core\workout_recommendations.html:127
+msgid "Erkennt Übungen ohne Fortschritt über mehrere Trainings"
+msgstr "Detects exercises with no progress over multiple workouts"
+
+#: .\core\templates\core\workout_recommendations.html:128
+msgid "Trainingsfrequenz"
+msgstr "Training Frequency"
+
+#: .\core\templates\core\workout_recommendations.html:128
+msgid "Überwacht deine wöchentliche Trainingskonsistenz"
+msgstr "Monitors your weekly training consistency"
+
+#: .\core\templates\core\workout_recommendations.html:129
+msgid "RPE-Analyse"
+msgstr "RPE Analysis"
+
+#: .\core\templates\core\workout_recommendations.html:129
+msgid ""
+"Bewertet deine Trainingsintensität basierend auf deinem durchschnittlichen "
+"RPE"
+msgstr "Evaluates your training intensity based on your average RPE"
+
+#: .\core\templates\includes\disclaimer_banner.html:38
+msgid "Verstanden"
+msgstr "Verstanden"
+
+#: .\core\templates\includes\disclaimer_banner.html:41
+#: .\core\templates\includes\disclaimer_banner.html:47
+msgid "Alle Quellen"
+msgstr "Alle Quellen"
+
+#: .\core\templates\registration\apply_beta.html:7
+msgid "Beta-Bewerbung"
+msgstr "Beta-Bewerbung"
+
+#: .\core\templates\registration\apply_beta.html:70
+msgid "KI-gestütztes Trainingstracking für ambitionierte Athleten"
+msgstr "KI-gestütztes Trainingstracking für ambitionierte Athleten"
+
+#: .\core\templates\registration\apply_beta.html:75
+msgid "Was ist HomeGym?"
+msgstr "Was ist HomeGym?"
+
+#: .\core\templates\registration\apply_beta.html:76
+msgid ""
+"HomeGym ist ein <strong>Open-Source Fitness-Tracker</strong> mit "
+"intelligenten KI-Features:"
+msgstr ""
+
+#: .\core\templates\registration\apply_beta.html:88
+msgid "Was dich erwartet"
+msgstr "Was dich erwartet"
+
+#: .\core\templates\registration\apply_beta.html:242
+msgid "Warum Einladung nötig?"
+msgstr "Warum Einladung nötig?"
+
+#: .\core\templates\registration\apply_beta.html:243
+msgid ""
+"HomeGym befindet sich in einer <strong>offenen Beta-Phase</strong>. Um "
+"Qualität, Serverstabilität und gezielte Weiterentwicklung sicherzustellen, "
+"ist die Registrierung derzeit nur mit Einladung möglich."
+msgstr ""
+
+#: .\core\templates\registration\apply_beta.html:254
+msgid "Beta-Zugang beantragen"
+msgstr "Beta-Zugang beantragen"
+
+#: .\core\templates\registration\apply_beta.html:269
+#: .\core\templates\registration\password_reset_form.html:35
+#: .\core\templates\registration\register_new.html:80
+msgid "E-Mail-Adresse"
+msgstr "E-Mail-Adresse"
+
+#: .\core\templates\registration\apply_beta.html:271
+msgid "Du erhältst deinen Einladungscode hier"
+msgstr "Du erhältst deinen Einladungscode hier"
+
+#: .\core\templates\registration\apply_beta.html:275
+msgid "Warum möchtest du HomeGym nutzen?"
+msgstr "Warum möchtest du HomeGym nutzen?"
+
+#: .\core\templates\registration\apply_beta.html:277
+msgid ""
+"z.B. Ich trainiere seit 2 Jahren und suche einen intelligenten Tracker..."
+msgstr ""
+"z.B. Ich trainiere seit 2 Jahren und suche einen intelligenten Tracker..."
+
+#: .\core\templates\registration\apply_beta.html:278
+msgid "2-3 Sätze reichen"
+msgstr "2-3 Sätze reichen"
+
+#: .\core\templates\registration\apply_beta.html:282
+msgid "Trainingserfahrung"
+msgstr "Trainingserfahrung"
+
+#: .\core\templates\registration\apply_beta.html:285
+msgid "Anfänger (< 1 Jahr Training)"
+msgstr "Anfänger (< 1 Jahr Training)"
+
+#: .\core\templates\registration\apply_beta.html:286
+msgid "Fortgeschritten (1-3 Jahre)"
+msgstr "Fortgeschritten (1-3 Jahre)"
+
+#: .\core\templates\registration\apply_beta.html:287
+msgid "Erfahren (> 3 Jahre)"
+msgstr "Erfahren (> 3 Jahre)"
+
+#: .\core\templates\registration\apply_beta.html:288
+msgid "Wiedereinstieg nach Pause"
+msgstr "Wiedereinstieg nach Pause"
+
+#: .\core\templates\registration\apply_beta.html:293
+msgid "Was interessiert dich? (Mehrfachauswahl)"
+msgstr "Was interessiert dich? (Mehrfachauswahl)"
+
+#: .\core\templates\registration\apply_beta.html:297
+msgid "KI-Trainingspläne"
+msgstr "KI-Trainingspläne"
+
+#: .\core\templates\registration\apply_beta.html:303
+msgid "Trainingstracking"
+msgstr "Trainingstracking"
+
+#: .\core\templates\registration\apply_beta.html:309
+msgid "Analyse & Statistiken"
+msgstr "Analyse & Statistiken"
+
+#: .\core\templates\registration\apply_beta.html:315
+msgid "Open-Source / Entwicklung"
+msgstr "Open-Source / Entwicklung"
+
+#: .\core\templates\registration\apply_beta.html:321
+msgid "GitHub Username (optional)"
+msgstr "GitHub Username (optional)"
+
+#: .\core\templates\registration\apply_beta.html:323
+msgid "z.B. leratos"
+msgstr "z.B. leratos"
+
+#: .\core\templates\registration\apply_beta.html:324
+msgid "Für Community-Features & Contributions"
+msgstr "Für Community-Features & Contributions"
+
+#: .\core\templates\registration\apply_beta.html:328
+msgid "Was passiert jetzt?"
+msgstr "Was passiert jetzt?"
+
+#: .\core\templates\registration\apply_beta.html:329
+msgid ""
+"Nach deiner Bewerbung wirst du innerhalb von <strong>48 Stunden</strong> "
+"automatisch approved und erhältst deinen Einladungscode per E-Mail."
+msgstr ""
+
+#: .\core\templates\registration\apply_beta.html:333
+msgid "Bewerbung absenden"
+msgstr "Bewerbung absenden"
+
+#: .\core\templates\registration\apply_beta.html:339
+msgid "Hast du bereits einen Code?"
+msgstr "Hast du bereits einen Code?"
+
+#: .\core\templates\registration\apply_beta.html:340
+msgid "Jetzt registrieren"
+msgstr "Jetzt registrieren"
+
+#: .\core\templates\registration\apply_beta.html:344
+#: .\core\templates\registration\register_new.html:116
+msgid "Account vorhanden?"
+msgstr "Account vorhanden?"
+
+#: .\core\templates\registration\apply_beta.html:345
+#: .\core\templates\registration\register.html:94
+#: .\core\templates\registration\register_new.html:117
+msgid "Zum Login"
+msgstr "Zum Login"
+
+# === login.html ===
+#: .\core\templates\registration\login.html:8
+msgid "Login"
+msgstr "Login"
+
+#: .\core\templates\registration\login.html:23
+msgid "Dein persönliches Trainingstagebuch"
+msgstr "Your personal training journal"
+
+#: .\core\templates\registration\login.html:34
+msgid "Ungültiger Benutzername oder Passwort."
+msgstr "Invalid username or password."
+
+#: .\core\templates\registration\login.html:41
+msgid "Dein Account hat keine Berechtigung für diese Seite."
+msgstr "Your account does not have permission for this page."
+
+#: .\core\templates\registration\login.html:66
+#: .\core\templates\registration\login.html:73
+#: .\core\templates\registration\register.html:65
+#: .\core\templates\registration\register_new.html:90
+msgid "Passwort"
+msgstr "Password"
+
+#: .\core\templates\registration\login.html:78
+msgid "Passwort vergessen?"
+msgstr "Forgot password?"
+
+#: .\core\templates\registration\login.html:93
+msgid "Noch keinen Account?"
+msgstr "No account yet?"
+
+#: .\core\templates\registration\login.html:95
+msgid "Für Beta bewerben"
+msgstr "Apply for Beta"
+
+#: .\core\templates\registration\password_reset_complete.html:7
+msgid "Passwort geändert"
+msgstr "Passwort geändert"
+
+#: .\core\templates\registration\password_reset_complete.html:25
+msgid "Passwort geändert!"
+msgstr "Passwort geändert!"
+
+#: .\core\templates\registration\password_reset_complete.html:27
+msgid ""
+"Dein Passwort wurde erfolgreich geändert. Du kannst dich jetzt mit deinem "
+"neuen Passwort anmelden."
+msgstr ""
+"Dein Passwort wurde erfolgreich geändert. Du kannst dich jetzt mit deinem "
+"neuen Passwort anmelden."
+
+#: .\core\templates\registration\password_reset_complete.html:33
+msgid "Jetzt anmelden"
+msgstr "Jetzt anmelden"
+
+#: .\core\templates\registration\password_reset_confirm.html:7
+msgid "Neues Passwort setzen"
+msgstr "Neues Passwort setzen"
+
+#: .\core\templates\registration\password_reset_confirm.html:27
+msgid "Gib dein neues Passwort ein."
+msgstr "Gib dein neues Passwort ein."
+
+#: .\core\templates\registration\password_reset_confirm.html:57
+#: .\core\templates\registration\register.html:77
+#: .\core\templates\registration\register_new.html:99
+msgid "Passwort wiederholen"
+msgstr "Passwort wiederholen"
+
+#: .\core\templates\registration\password_reset_confirm.html:73
+msgid "Passwort speichern"
+msgstr "Passwort speichern"
+
+#: .\core\templates\registration\password_reset_confirm.html:79
+msgid "Link ungültig"
+msgstr "Link ungültig"
+
+#: .\core\templates\registration\password_reset_confirm.html:80
+msgid "Dieser Link ist abgelaufen oder wurde bereits verwendet."
+msgstr "Dieser Link ist abgelaufen oder wurde bereits verwendet."
+
+#: .\core\templates\registration\password_reset_confirm.html:84
+msgid "Neuen Link anfordern"
+msgstr "Neuen Link anfordern"
+
+#: .\core\templates\registration\password_reset_done.html:7
+msgid "E-Mail gesendet"
+msgstr "E-Mail gesendet"
+
+#: .\core\templates\registration\password_reset_done.html:25
+msgid "E-Mail gesendet!"
+msgstr "E-Mail gesendet!"
+
+#: .\core\templates\registration\password_reset_done.html:27
+msgid ""
+"Falls ein Account mit dieser E-Mail existiert, haben wir dir einen Link zum "
+"Zurücksetzen deines Passworts gesendet."
+msgstr ""
+"Falls ein Account mit dieser E-Mail existiert, haben wir dir einen Link zum "
+"Zurücksetzen deines Passworts gesendet."
+
+#: .\core\templates\registration\password_reset_done.html:30
+msgid "Prüfe auch deinen Spam-Ordner."
+msgstr "Prüfe auch deinen Spam-Ordner."
+
+#: .\core\templates\registration\password_reset_done.html:36
+#: .\core\templates\registration\password_reset_form.html:54
+msgid "Zurück zum Login"
+msgstr "Zurück zum Login"
+
+#: .\core\templates\registration\password_reset_email.html:2
+#, python-format
+msgid "Hallo %(username)s,"
+msgstr "Hello %(username)s,"
+
+#: .\core\templates\registration\password_reset_email.html:4
+msgid "du hast angefordert, dein Passwort für HomeGym zurückzusetzen."
+msgstr "you have requested to reset your password for HomeGym."
+
+#: .\core\templates\registration\password_reset_email.html:6
+msgid "Klicke auf den folgenden Link, um ein neues Passwort zu setzen:"
+msgstr "Click the following link to set a new password:"
+
+#: .\core\templates\registration\password_reset_email.html:10
+msgid ""
+"Falls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail "
+"ignorieren. Dein Passwort bleibt unverändert."
+msgstr ""
+
+#: .\core\templates\registration\password_reset_email.html:12
+#, fuzzy
+#| msgid "Link ungültig"
+msgid "Der Link ist 24 Stunden gültig."
+msgstr "Link ungültig"
+
+#: .\core\templates\registration\password_reset_email.html:15
+#, fuzzy
+#| msgid "Antwort vom HomeGym Team"
+msgid "Dein HomeGym Team"
+msgstr "Antwort vom HomeGym Team"
+
+#: .\core\templates\registration\password_reset_form.html:7
+#: .\core\templates\registration\password_reset_form.html:26
+msgid "Passwort zurücksetzen"
+msgstr "Passwort zurücksetzen"
+
+#: .\core\templates\registration\password_reset_form.html:27
+msgid ""
+"Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen."
+msgstr ""
+"Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen."
+
+#: .\core\templates\registration\password_reset_form.html:49
+msgid "Link senden"
+msgstr "Link senden"
+
+#: .\core\templates\registration\register.html:7
+#: .\core\templates\registration\register.html:28
+#: .\core\templates\registration\register_new.html:7
+msgid "Registrierung"
+msgstr "Registrierung"
+
+#: .\core\templates\registration\register.html:22
+msgid "Erstelle deinen kostenlosen Account"
+msgstr "Erstelle deinen kostenlosen Account"
+
+#: .\core\templates\registration\register.html:33
+msgid "Fehler bei der Registrierung:"
+msgstr "Fehler bei der Registrierung:"
+
+#: .\core\templates\registration\register.html:57
+#: .\core\templates\registration\register_new.html:74
+msgid "Wähle einen eindeutigen Namen"
+msgstr "Wähle einen eindeutigen Namen"
+
+#: .\core\templates\registration\register.html:81
+#: .\core\templates\registration\register_new.html:102
+msgid "Nochmal eingeben"
+msgstr "Nochmal eingeben"
+
+#: .\core\templates\registration\register.html:88
+#: .\core\templates\registration\register_new.html:106
+msgid "Account erstellen"
+msgstr "Account erstellen"
+
+#: .\core\templates\registration\register.html:93
+msgid "Bereits registriert?"
+msgstr "Bereits registriert?"
+
+#: .\core\templates\registration\register_new.html:35
+msgid "Erstelle deinen Beta-Account"
+msgstr "Erstelle deinen Beta-Account"
+
+#: .\core\templates\registration\register_new.html:41
+msgid "Registrierung mit Einladungscode"
+msgstr "Registrierung mit Einladungscode"
+
+#: .\core\templates\registration\register_new.html:58
+msgid "Einladungscode"
+msgstr "Einladungscode"
+
+#: .\core\templates\registration\register_new.html:62
 msgid "z.B. BETA8F3A2C9D1E4B"
 msgstr "z.B. BETA8F3A2C9D1E4B"
 
-msgid "z.B. Ich trainiere seit 2 Jahren und suche einen intelligenten Tracker..."
-msgstr "z.B. Ich trainiere seit 2 Jahren und suche einen intelligenten Tracker..."
+#: .\core\templates\registration\register_new.html:64
+msgid "Den Code hast du per E-Mail erhalten"
+msgstr "Den Code hast du per E-Mail erhalten"
 
-msgid "z.B. leratos"
-msgstr "z.B. leratos"
+#: .\core\templates\registration\register_new.html:84
+msgid "deine@email.de"
+msgstr "deine@email.de"
+
+#: .\core\templates\registration\register_new.html:111
+msgid "Noch kein Code?"
+msgstr "Noch kein Code?"
+
+#: .\core\templates\registration\register_new.html:112
+msgid "Jetzt bewerben"
+msgstr "Jetzt bewerben"
+
+#: .\core\templates\registration\register_new.html:126
+msgid "Wichtig:"
+msgstr "Wichtig:"
+
+#: .\core\templates\registration\register_new.html:128
+msgid "Einladungscodes sind 30 Tage gültig"
+msgstr "Einladungscodes sind 30 Tage gültig"
+
+#: .\core\templates\registration\register_new.html:129
+msgid "Ein Code kann nur einmal verwendet werden"
+msgstr "Ein Code kann nur einmal verwendet werden"
+
+#: .\core\templates\registration\register_new.html:130
+msgid "Alle Felder sind Pflichtfelder"
+msgstr "Alle Felder sind Pflichtfelder"
+
+#: .\docs\journal.txt:1355
+msgid "..."
+msgstr "..."
+
+#~ msgid ""
+#~ "Push-Notifications werden geladen... Bitte versuche es in wenigen "
+#~ "Sekunden erneut."
+#~ msgstr ""
+#~ "Push notifications are loading... Please try again in a few seconds."
+
+#~ msgid ""
+#~ ", dein Krafttraining besser zu planen. Leichtes Cardio fördert die "
+#~ "Regeneration, während intensives Cardio zusätzliche Ermüdung verursacht."
+#~ msgstr ""
+#~ "to better plan your strength training. Light cardio supports recovery, "
+#~ "while intense cardio adds additional fatigue."

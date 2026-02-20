@@ -1503,3 +1503,58 @@ Da makemessages nicht verfügbar: {% trans %} Tags manuell in Template → Eintr
 - Weitere kleine Templates
 
 **Nächste Phase:** Phase 7.5e (restliche ~20 Templates) oder Phase 7.6 (Export-Feature)
+
+
+## In Arbeit: Phase 7.5e – i18n Gruppe 4 (restliche Templates)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5e-i18n-remaining-templates
+
+**Ziel:** 18 verbleibende Templates übersetzen (22 total, 4 ohne User-Text übersprungen)
+
+**Gruppe A – Core User Flow:**
+- create_plan.html (610 Z.), edit_plan.html (334 Z.)
+- uebungen_auswahl.html (353 Z.), uebung_detail.html (166 Z.), exercise_detail.html (291 Z.)
+- share_plan.html (197 Z.), share_group.html (210 Z.)
+- registration/password_reset_email.html
+
+**Gruppe B – AI + Stats + Modals:**
+- ai_coach_chat.html (259 Z.), ai_plan_generator.html (526 Z.)
+- stats_exercise.html (222 Z.), exercise_info_modal.html (212 Z.)
+- plan_optimization_modal.html (264 Z.), ml_dashboard.html (212 Z.)
+- metriken_help.html (214 Z.), muscle_map.html (150 Z.)
+
+**Gruppe C – PDF-Templates (niedrige Prio):**
+- training_pdf.html (512 Z.), training_pdf_simple.html (915 Z.), training_pdf_v2.html (1028 Z.)
+
+
+## Abgeschlossen: Phase 7.5e – i18n Gruppe 4 (restliche Templates)
+**Datum:** 2026-02-20
+**Branch:** feature/phase-7-5e-i18n-remaining-templates
+
+**Übersetzte Templates (16 Stück):**
+
+Gruppe A – Core User Flow:
+- create_plan.html, edit_plan.html, uebungen_auswahl.html, uebung_detail.html
+- exercise_detail.html, share_plan.html, share_group.html
+- registration/password_reset_email.html
+
+Gruppe B – AI + Stats + Modals:
+- ai_coach_chat.html (6 trans), ai_plan_generator.html (47 trans – größtes Template)
+- stats_exercise.html, exercise_info_modal.html (9 trans)
+- plan_optimization_modal.html (6 trans), ml_dashboard.html (29 trans)
+- metriken_help.html (5 trans), muscle_map.html (10 trans)
+
+Gruppe C (übersprungen – niedrige Prio):
+- training_pdf.html, training_pdf_simple.html, training_pdf_v2.html (kein EN-UI-Text)
+
+**django.po:**
+- Duplikate bereinigt (6 Duplikate entfernt via fix_po_dupes.py)
+- 130+ neue Strings extrahiert via makemessages
+- Alle Übersetzungen via add_translations.py hinzugefügt
+- compilemessages erfolgreich – django.mo aktuell
+
+**Hilfsskripte (nicht committed, können gelöscht werden):**
+- add_translations.py, fix_po_dupes.py, show_untranslated.py
+
+**Offene i18n-Arbeit:**
+- training_pdf*.html (bewusst zurückgestellt – kein EN-UI-Text)

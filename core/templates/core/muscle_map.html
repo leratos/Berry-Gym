@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Muskelgruppen - HomeGym{% endblock %}
+{% block title %}{% trans "Muskelgruppen" %} - HomeGym{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -32,11 +32,11 @@
 <nav class="navbar navbar-page border-bottom mb-4">
   <div class="container-fluid">
     <a class="btn btn-outline-secondary border-0" href="{% url 'dashboard' %}">
-        <i class="bi bi-arrow-left"></i> Dashboard
+        <i class="bi bi-arrow-left"></i> {% trans "Dashboard" %}
     </a>
-    <span class="navbar-text page-title fw-bold">Muskelgruppen</span>
+    <span class="navbar-text page-title fw-bold">{% trans "Muskelgruppen" %}</span>
     <div style="width: 40px;">
-        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="Theme wechseln">
+        <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0 ms-2" title="{% trans "Theme wechseln" %}">
           <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -47,7 +47,7 @@
 {% block content %}
 <div class="muscle-map-container">
     <div class="text-center mb-4">
-        <p class="lead text-muted opacity-75">Klicke auf eine Muskelgruppe, um Übungen zu sehen</p>
+        <p class="lead text-muted opacity-75">{% trans "Klicke auf eine Muskelgruppe, um Übungen zu sehen" %}</p>
     </div>
     <div class="row g-4">
         <div class="col-lg-7">
@@ -60,7 +60,7 @@
             <div class="card bg-dark border-secondary">
                 <div class="card-header bg-secondary">
                     <h4 class="mb-0">{{ group_label }}</h4>
-                    <small class="text-light opacity-75">{{ uebungen.count }} Übung(en)</small>
+                    <small class="text-light opacity-75">{{ uebungen.count }} {% trans "Übung(en)" %}</small>
                 </div>
                 <div class="card-body exercise-list">
                     {% for uebung in uebungen %}
@@ -87,9 +87,9 @@
             <div class="card bg-dark border-secondary text-center">
                 <div class="card-body py-5">
                     <i class="bi bi-hand-index fs-1 text-primary mb-3"></i>
-                    <h5 class="mb-2">Wähle eine Muskelgruppe</h5>
+                    <h5 class="mb-2">{% trans "Wähle eine Muskelgruppe" %}</h5>
                     <p class="text-muted mb-0">
-                        Klicke auf eine Muskelgruppe in der Grafik, um die verfügbaren Übungen zu sehen.
+                        {% trans "Klicke auf eine Muskelgruppe in der Grafik, um die verfügbaren Übungen zu sehen." %}
                     </p>
                 </div>
             </div>
@@ -97,7 +97,7 @@
 
             <div class="card bg-dark border-secondary mt-3">
                 <div class="card-header bg-secondary">
-                    <h6 class="mb-0">Schnellauswahl</h6>
+                    <h6 class="mb-0">{% trans "Schnellauswahl" %}</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-flex flex-wrap gap-2 mb-3">
@@ -106,7 +106,7 @@
                         {% endfor %}
                     </div>
                     <a href="{% url 'uebungen_auswahl' %}" class="btn btn-primary w-100">
-                        <i class="bi bi-list-ul"></i> Alle Übungen anzeigen
+                        <i class="bi bi-list-ul"></i> {% trans "Alle Übungen anzeigen" %}
                     </a>
                 </div>
             </div>
