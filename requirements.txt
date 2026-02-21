@@ -114,9 +114,8 @@ pre-commit==4.0.1
 # ============================================
 #
 # 1. Django Version:
-#    - Currently: 5.0.3
-#    - TODO: Update to 5.1.x after testing
-#    - Breaking changes: Check release notes
+#    - Currently: 5.1.15
+#    - LTS-ready: Monitor https://www.djangoproject.com/download/ for security updates
 #
 # 2. OpenAI SDK:
 #    - Version 2.15.0 (breaking changes from 1.x)
