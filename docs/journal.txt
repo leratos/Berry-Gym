@@ -1670,3 +1670,20 @@ Scope:
 - Import: Hevy-CSV → HomeGym (import/hevy-csv/, Dry-Run, Übungs-Matching)
 - Dateien: core/views/export.py, core/urls.py, core/templates/core/hevy_import.html,
   core/tests/test_export.py (erweitert), core/tests/test_hevy_import.py (neu)
+
+## Abgeschlossen: feature/phase-7-6-hevy-import-export (21.02.2026)
+
+- export.py: export_hevy_csv() – Hevy-CSV mit 14 Spalten, nur abgeschlossene Trainings
+  - Bugfix: plan.bezeichnung → plan.name (Feldname-Fehler)
+  - Bugfix: auto_now_add umgangen via .update(datum=start_dt)
+- export.py: import_hevy_csv() – Dry-Run-Modus, Übungs-Matching (exact/case-insensitive/custom)
+  - Duplikat-Schutz: ±5 Min Zeitfenster
+  - RPE-Validierung (1.0–10.0), leere Sätze (reps=0) werden übersprungen
+- urls.py: 2 neue Routen (export/hevy-csv/, import/hevy-csv/)
+- hevy_import.html: Import-Formular mit Vorschau, Spalten-Info, i18n
+- training_stats.html: Hevy-Export + Import-Button neben CSV
+- test_hevy_import.py: 23 neue Tests (8 Export, 15 Import)
+- Gesamtteststand: 840 passed, 0 failed
+
+Commits: d5d6732 (Hauptimplementierung), UI-Button-Commit folgt
+Nächste Phase: 7.7 Pre-Launch / Public Launch Vorbereitung
