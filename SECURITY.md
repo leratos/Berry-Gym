@@ -2,17 +2,17 @@
 
 ## Supported Versions
 
-Currently, only the latest version (main branch) of Ersatzteilkatalog-Generator is supported with security updates.
+Currently, only the latest version (main branch) of Berry-Gym / HomeGym is supported with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.x     | :white_check_mark: |
-| < 2.0   | :x:                |
+| 0.9.x   | :white_check_mark: |
+| < 0.9   | :x:                |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in the Ersatzteilkatalog-Generator,  
-please report it privately via a GitHub issue (mark as "Security") or by email to [your-email@example.com].
+If you discover a security vulnerability in Berry-Gym / HomeGym,  
+please report it privately via a [GitHub Security Advisory](https://github.com/leratos/Berry-Gym/security/advisories/new) or by opening a GitHub issue marked as "Security".
 
 I aim to respond within 7 days and will keep you updated about the status of your report and any planned actions.
 
