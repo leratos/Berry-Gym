@@ -210,7 +210,7 @@ class L10nJsDecimalTest(TestCase):
 
     def _get_script_blocks(self, content):
         """Extrahiert den Inhalt aller <script>-Blöcke aus dem HTML."""
-        return re.findall(r"<script[^>]*>(.*?)</script>", content, re.DOTALL)
+        return re.findall(r"<script[^>]*>(.*?)</script>", content, re.DOTALL | re.IGNORECASE)
 
     def test_kgfaktor_kein_komma_in_js_de_locale(self):
         """
