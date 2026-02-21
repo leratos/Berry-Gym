@@ -22,6 +22,12 @@
         <a href="{% url 'export_training_csv' %}" class="btn btn-outline-success border-0" title="{% trans 'Als CSV exportieren' %}">
             <i class="bi bi-file-earmark-spreadsheet"></i> CSV
         </a>
+        <a href="{% url 'export_hevy_csv' %}" class="btn btn-outline-info border-0" title="{% trans 'Als Hevy-CSV exportieren' %}">
+            <i class="bi bi-box-arrow-up"></i> Hevy
+        </a>
+        <a href="{% url 'import_hevy_csv' %}" class="btn btn-outline-secondary border-0" title="{% trans 'Hevy-CSV importieren' %}">
+            <i class="bi bi-box-arrow-in-down"></i> {% trans "Import" %}
+        </a>
         <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans 'Theme wechseln' %}">
           <i class="bi bi-moon-fill" id="themeIcon"></i>
         </button>

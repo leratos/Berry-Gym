@@ -8,9 +8,10 @@ downloadable reports of training history, statistics, and plan documentation.
 
 import base64
 import csv
+import io
 import logging
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
 from io import BytesIO
 
 from django.contrib import messages
@@ -40,7 +41,7 @@ from core.chart_generator import (
     generate_volume_chart,
 )
 
-from ..models import MUSKELGRUPPEN, KoerperWerte, Plan, PlanUebung, Satz, Trainingseinheit
+from ..models import MUSKELGRUPPEN, KoerperWerte, Plan, PlanUebung, Satz, Trainingseinheit, Uebung
 from ..utils.advanced_stats import (
     calculate_1rm_standards,
     calculate_consistency_metrics,
@@ -846,3 +847,356 @@ def export_plan_group_pdf(request: HttpRequest, gruppe_id: int) -> HttpResponse:
     )
     filename = f"gruppe_{gruppe_name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d')}.pdf"
     return _generate_and_return_pdf(request, html_template, filename, "training_select_plan")
+
+
+# ---------------------------------------------------------------------------
+# Hevy-Format Export
+# ---------------------------------------------------------------------------
+
+# Hevy CSV column order (official Hevy export format)
+_HEVY_HEADERS = [
+    "title",
+    "start_time",
+    "end_time",
+    "description",
+    "exercise_title",
+    "superset_id",
+    "exercise_notes",
+    "set_index",
+    "set_type",
+    "weight_kg",
+    "reps",
+    "distance_km",
+    "duration_seconds",
+    "rpe",
+]
+
+_HEVY_DATETIME_FMT = "%Y-%m-%d %H:%M:%S"
+
+
+@login_required
+def export_hevy_csv(request: HttpRequest) -> HttpResponse:
+    """Export all training data in Hevy-compatible CSV format.
+
+    Produces a CSV that can be imported into Hevy (and similar apps like
+    Strong). Each row represents one set. Workout title falls back to the
+    date string when no plan name is set.
+
+    Args:
+        request: Django request object
+
+    Returns:
+        HttpResponse: CSV file download
+    """
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="homegym_hevy_export.csv"'
+    response.write("\ufeff")  # UTF-8 BOM for Excel / Hevy importer
+
+    writer = csv.writer(response)
+    writer.writerow(_HEVY_HEADERS)
+
+    trainings = (
+        Trainingseinheit.objects.filter(user=request.user, abgeschlossen=True)
+        .select_related("plan")
+        .prefetch_related("saetze__uebung")
+        .order_by("datum")
+    )
+
+    for training in trainings:
+        title = training.plan.name if training.plan else training.datum.strftime("%d.%m.%Y")
+        start_time = training.datum.strftime(_HEVY_DATETIME_FMT)
+        # Hevy needs an end_time; estimate from dauer_minuten or start + 60 min
+        if training.dauer_minuten:
+            from datetime import timedelta as _td
+
+            end_dt = training.datum + _td(minutes=training.dauer_minuten)
+        else:
+            end_dt = training.datum + timedelta(hours=1)
+        end_time = end_dt.strftime(_HEVY_DATETIME_FMT)
+        description = training.kommentar or ""
+
+        # Group sets by exercise to build set_index per exercise within workout
+        sets_by_exercise: dict = {}
+        for satz in training.saetze.all():
+            key = satz.uebung.bezeichnung
+            sets_by_exercise.setdefault(key, []).append(satz)
+
+        for exercise_name, saetze in sets_by_exercise.items():
+            for idx, satz in enumerate(saetze):
+                superset_id = f"S{satz.superset_gruppe}" if satz.superset_gruppe else ""
+                set_type = "warmup" if satz.ist_aufwaermsatz else "normal"
+                weight = float(satz.gewicht) if satz.gewicht else ""
+                rpe = float(satz.rpe) if satz.rpe else ""
+                writer.writerow(
+                    [
+                        title,
+                        start_time,
+                        end_time,
+                        description,
+                        exercise_name,
+                        superset_id,
+                        satz.notiz or "",
+                        idx,  # set_index (0-based within exercise)
+                        set_type,
+                        weight,
+                        satz.wiederholungen,
+                        "",  # distance_km – not tracked
+                        "",  # duration_seconds – not tracked
+                        rpe,
+                    ]
+                )
+
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Hevy-Format Import
+# ---------------------------------------------------------------------------
+
+_REQUIRED_HEVY_COLS = {"title", "start_time", "exercise_title", "set_type", "weight_kg", "reps"}
+
+
+def _parse_hevy_datetime(raw: str) -> datetime | None:
+    """Parse Hevy datetime string. Hevy uses 'YYYY-MM-DD HH:MM:SS' or ISO."""
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(raw.strip(), fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _match_or_create_uebung(name: str, user) -> Uebung:
+    """Find an exercise by name (case-insensitive). Create a custom one if not found."""
+    # Exact match first (global)
+    uebung = Uebung.objects.filter(bezeichnung__iexact=name, created_by__isnull=True).first()
+    if uebung:
+        return uebung
+    # User's own custom exercises
+    uebung = Uebung.objects.filter(bezeichnung__iexact=name, created_by=user).first()
+    if uebung:
+        return uebung
+    # Create as custom exercise
+    uebung = Uebung.objects.create(
+        bezeichnung=name,
+        muskelgruppe="sonstige",
+        created_by=user,
+        is_custom=True,
+    )
+    logger.info("Hevy import: created custom exercise '%s' for user %s", name, user)
+    return uebung
+
+
+@login_required
+def import_hevy_csv(request: HttpRequest) -> HttpResponse:
+    """Import training data from a Hevy-compatible CSV file.
+
+    Supports GET (show form) and POST (process file).
+    POST with dry_run=1 returns a JSON preview without writing to the DB.
+
+    Args:
+        request: Django request object
+
+    Returns:
+        Rendered import form (GET) or redirect after successful import (POST)
+    """
+    from django.contrib import messages as django_messages
+    from django.shortcuts import render
+
+    if request.method == "GET":
+        return render(request, "core/hevy_import.html")
+
+    uploaded_file = request.FILES.get("hevy_csv")
+    if not uploaded_file:
+        django_messages.error(request, "Bitte eine CSV-Datei auswählen.")
+        return render(request, "core/hevy_import.html")
+
+    # Security: max 10 MB
+    if uploaded_file.size > 10 * 1024 * 1024:
+        django_messages.error(request, "Datei zu groß (max. 10 MB).")
+        return render(request, "core/hevy_import.html")
+
+    # Parse CSV
+    try:
+        raw = uploaded_file.read().decode("utf-8-sig")  # strip BOM if present
+        reader = csv.DictReader(io.StringIO(raw))
+        rows = list(reader)
+    except Exception as exc:
+        logger.warning("Hevy import CSV parse error: %s", exc)
+        django_messages.error(request, f"CSV konnte nicht gelesen werden: {exc}")
+        return render(request, "core/hevy_import.html")
+
+    if not rows:
+        django_messages.error(request, "Die CSV-Datei enthält keine Daten.")
+        return render(request, "core/hevy_import.html")
+
+    # Validate required columns
+    actual_cols = set(rows[0].keys())
+    missing = _REQUIRED_HEVY_COLS - actual_cols
+    if missing:
+        django_messages.error(request, f"Fehlende Spalten: {', '.join(sorted(missing))}")
+        return render(request, "core/hevy_import.html")
+
+    dry_run = request.POST.get("dry_run") == "1"
+
+    # Group rows by (title, start_time) → one Trainingseinheit per workout
+    workouts: dict[tuple, list] = {}
+    for row in rows:
+        key = (row["title"].strip(), row["start_time"].strip())
+        workouts.setdefault(key, []).append(row)
+
+    preview = []  # for dry-run display
+    errors = []
+    imported_count = 0
+    set_count = 0
+    new_exercises: set[str] = set()
+
+    for (title, start_str), workout_rows in workouts.items():
+        start_dt = _parse_hevy_datetime(start_str)
+        if not start_dt:
+            errors.append(f"Ungültiges Datum '{start_str}' – Workout '{title}' übersprungen.")
+            continue
+
+        # Make datetime timezone-aware (use server default timezone)
+        from django.utils.timezone import is_aware, make_aware
+
+        if not is_aware(start_dt):
+            try:
+                start_dt = make_aware(start_dt)
+            except Exception:
+                pass  # naive datetime is fine for older Django setups
+
+        # Dry-run: collect preview info only
+        exercises_in_workout = sorted({r["exercise_title"].strip() for r in workout_rows})
+        preview.append(
+            {
+                "title": title,
+                "date": start_dt.strftime("%d.%m.%Y %H:%M"),
+                "sets": len(workout_rows),
+                "exercises": exercises_in_workout,
+            }
+        )
+
+        if dry_run:
+            continue
+
+        # Check for duplicate (same user + same datetime within 5 min)
+        existing = Trainingseinheit.objects.filter(
+            user=request.user,
+            datum__range=(
+                start_dt - timedelta(minutes=5),
+                start_dt + timedelta(minutes=5),
+            ),
+        ).first()
+        if existing:
+            errors.append(
+                f"Workout '{title}' ({start_dt.strftime('%d.%m.%Y %H:%M')}) "
+                "existiert bereits – übersprungen."
+            )
+            continue
+
+        # Create Trainingseinheit
+        end_str = workout_rows[0].get("end_time", "").strip()
+        end_dt = _parse_hevy_datetime(end_str) if end_str else None
+        if end_dt and not is_aware(end_dt):
+            try:
+                end_dt = make_aware(end_dt)
+            except Exception:
+                pass
+        dauer = None
+        if end_dt and end_dt > start_dt:
+            dauer = int((end_dt - start_dt).total_seconds() / 60)
+
+        description = workout_rows[0].get("description", "").strip()
+
+        training = Trainingseinheit.objects.create(
+            user=request.user,
+            dauer_minuten=dauer,
+            kommentar=description or None,
+            abgeschlossen=True,
+        )
+        # auto_now_add ignores explicit values -> update datum separately
+        Trainingseinheit.objects.filter(pk=training.pk).update(datum=start_dt)
+        training.datum = start_dt
+
+        # Create Sätze grouped per exercise (to track satz_nr)
+        exercise_satz_counter: dict[str, int] = {}
+        for row in workout_rows:
+            ex_name = row["exercise_title"].strip()
+            if not ex_name:
+                continue
+
+            uebung = _match_or_create_uebung(ex_name, request.user)
+            if uebung.is_custom and ex_name not in new_exercises:
+                new_exercises.add(ex_name)
+
+            exercise_satz_counter[ex_name] = exercise_satz_counter.get(ex_name, 0) + 1
+            satz_nr = exercise_satz_counter[ex_name]
+
+            try:
+                gewicht = float(row.get("weight_kg") or 0)
+            except ValueError:
+                gewicht = 0.0
+            try:
+                wdh = int(float(row.get("reps") or 0))
+            except ValueError:
+                wdh = 0
+            if wdh == 0:
+                continue  # skip empty rows
+
+            set_type = row.get("set_type", "normal").strip().lower()
+            ist_warmup = set_type in ("warmup", "warm_up", "warm up")
+
+            rpe_raw = row.get("rpe", "").strip()
+            rpe = None
+            if rpe_raw:
+                try:
+                    rpe_val = float(rpe_raw)
+                    if 1.0 <= rpe_val <= 10.0:
+                        rpe = rpe_val
+                except ValueError:
+                    pass
+
+            superset_raw = row.get("superset_id", "").strip()
+            superset_gruppe = 0
+            if superset_raw.startswith("S") and superset_raw[1:].isdigit():
+                superset_gruppe = int(superset_raw[1:])
+
+            Satz.objects.create(
+                einheit=training,
+                uebung=uebung,
+                satz_nr=satz_nr,
+                gewicht=gewicht,
+                wiederholungen=wdh,
+                ist_aufwaermsatz=ist_warmup,
+                rpe=rpe,
+                notiz=row.get("exercise_notes", "").strip() or None,
+                superset_gruppe=superset_gruppe,
+            )
+            set_count += 1
+
+        imported_count += 1
+
+    if dry_run:
+        return render(
+            request,
+            "core/hevy_import.html",
+            {
+                "preview": preview,
+                "preview_count": len(preview),
+                "dry_run": True,
+            },
+        )
+
+    if imported_count:
+        msg = f"{imported_count} Training(s) mit {set_count} Sätzen importiert."
+        if new_exercises:
+            msg += f" {len(new_exercises)} neue Übung(en) angelegt: {', '.join(sorted(new_exercises))}."
+        django_messages.success(request, msg)
+    else:
+        django_messages.warning(request, "Keine neuen Trainings importiert.")
+
+    for err in errors:
+        django_messages.warning(request, err)
+
+    return redirect("dashboard")
