@@ -1643,3 +1643,22 @@ Dateien: training_select_plan.html, ggf. views/plan_management.py
 - test_training_views.py: test_public_plaene_filter auf 302-Redirect aktualisiert
 
 18/18 Tests grün. Commit: 549c34f
+
+## In Arbeit: feature/phase-7-5f-i18n-fuzzy-fix (21.02.2026)
+
+Ziel: 100 fuzzy + 12 untranslated Einträge in locale/en/LC_MESSAGES/django.po
+korrigieren. Viele fuzzy-Matches sind inhaltlich falsch (gettext-Automat).
+Dateien: locale/en/LC_MESSAGES/django.po, django.mo
+
+## Abgeschlossen: feature/phase-7-5f-i18n-fuzzy-fix (21.02.2026)
+
+100 fuzzy + 12 untranslated Eintraege in django.po korrigiert.
+Viele fuzzy-Matches waren inhaltlich falsch (gettext-Automat hatte
+z.B. "Periodisierung" -> "Registrierung" gemappt).
+
+Ergebnis: 790 translated, 0 untranslated, 0 fuzzy
+MO kompiliert via polib (GNU gettext nicht installiert).
+17/17 i18n-Tests gruen. Commit: 4750d75
+
+Phase 7.5 i18n ist damit abgeschlossen.
+Naechste Phase: 7.6 Import/Export (Hevy-Format)
