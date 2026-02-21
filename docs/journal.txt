@@ -1662,3 +1662,9 @@ MO kompiliert via polib (GNU gettext nicht installiert).
 
 Phase 7.5 i18n ist damit abgeschlossen.
 Naechste Phase: 7.6 Import/Export (Hevy-Format)
+
+## In Arbeit: docs/update-readme-roadmap (21.02.2026)
+
+Ziel: README.md aktualisieren (i18n done, aktueller Teststand, Roadmap-Status)
++ README_EN.md erstellen (englische Version)
++ PROJECT_ROADMAP.md Phase 7.5 als abgeschlossen markieren
