@@ -1668,3 +1668,14 @@ Naechste Phase: 7.6 Import/Export (Hevy-Format)
 Ziel: README.md aktualisieren (i18n done, aktueller Teststand, Roadmap-Status)
 + README_EN.md erstellen (englische Version)
 + PROJECT_ROADMAP.md Phase 7.5 als abgeschlossen markieren
+
+## Abgeschlossen: docs/update-readme-roadmap (21.02.2026)
+
+- README.md: v0.9.3-beta, 822 Tests, i18n-Badge, aktueller Feature-Stand,
+  vereinfachte Struktur (alte Detailblöcke gekürzt), Roadmap aktualisiert
+- README_EN.md: neue englische Version (416 Zeilen), vollständige Übersetzung
+- PROJECT_ROADMAP.md: Phase 7.5 als COMPLETE markiert (21.02.2026),
+  Timeline Week 9-10 auf COMPLETE gesetzt
+- Commit: 8eba88a
+
+Nächste Phase: 7.6 Import/Export (Hevy-Format)
