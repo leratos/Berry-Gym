@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Hevy Import" %} – HomeGym{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 720px;">
+
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">← {% trans "Dashboard" %}</a>
+    <h1 class="h4 mb-0">{% trans "Hevy-Import" %}</h1>
+  </div>
+
+  {# Flash messages #}
+  {% for msg in messages %}
+    <div class="alert alert-{% if msg.tags == 'error' %}danger{% elif msg.tags == 'warning' %}warning{% else %}success{% endif %} alert-dismissible fade show" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+
+  {# Dry-run preview #}
+  {% if dry_run and preview %}
+    <div class="card border-warning mb-4">
+      <div class="card-header bg-warning text-dark fw-bold">
+        🔍 {% trans "Vorschau" %} – {{ preview_count }} {% trans "Workout(s) gefunden" %}
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Name" %}</th>
+              <th>{% trans "Datum" %}</th>
+              <th class="text-center">{% trans "Sätze" %}</th>
+              <th>{% trans "Übungen" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for w in preview %}
+            <tr>
+              <td>{{ w.title }}</td>
+              <td>{{ w.date }}</td>
+              <td class="text-center">{{ w.sets }}</td>
+              <td><small class="text-muted">{{ w.exercises|join:", " }}</small></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Confirm import form – reuse the same file, therefore ask user to re-select #}
+    <div class="alert alert-info">
+      <strong>{% trans "Alles korrekt?" %}</strong>
+      {% trans "Wähle die Datei erneut aus und klicke Importieren um die Daten zu speichern." %}
+    </div>
+  {% endif %}
+
+  {# Upload form #}
+  <div class="card">
+    <div class="card-header fw-bold">📂 {% trans "CSV-Datei hochladen" %}</div>
+    <div class="card-body">
+
+      <p class="text-muted small">
+        {% trans "Exportiere deine Daten aus Hevy über Einstellungen → Daten exportieren. Die CSV-Datei wird direkt importiert." %}
+        {% trans "Bereits vorhandene Trainings (gleiche Zeit ±5 Min.) werden übersprungen." %}
+        {% trans "Unbekannte Übungen werden automatisch als Custom-Übung angelegt." %}
+      </p>
+
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label for="hevy_csv" class="form-label fw-semibold">{% trans "Hevy-Export CSV" %}</label>
+          <input type="file" class="form-control" id="hevy_csv" name="hevy_csv"
+                 accept=".csv,text/csv" required>
+          <div class="form-text">{% trans "Max. 10 MB" %}</div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" name="dry_run" value="1" class="btn btn-outline-primary">
+            🔍 {% trans "Vorschau" %}
+          </button>
+          <button type="submit" class="btn btn-success">
+            ⬆️ {% trans "Importieren" %}
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  {# Info box: Hevy column mapping #}
+  <div class="card mt-4 border-0 bg-body-secondary">
+    <div class="card-body">
+      <h6 class="fw-bold mb-2">ℹ️ {% trans "Unterstützte Spalten (Hevy-Format)" %}</h6>
+      <div class="row row-cols-2 row-cols-md-3 g-1 small text-muted">
+        <div>✅ title</div>
+        <div>✅ start_time</div>
+        <div>✅ end_time</div>
+        <div>✅ description</div>
+        <div>✅ exercise_title</div>
+        <div>✅ set_type (warmup / normal)</div>
+        <div>✅ weight_kg</div>
+        <div>✅ reps</div>
+        <div>✅ rpe</div>
+        <div>✅ exercise_notes</div>
+        <div>✅ superset_id</div>
+        <div class="text-secondary">– distance_km (ignoriert)</div>
+        <div class="text-secondary">– duration_seconds (ignoriert)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

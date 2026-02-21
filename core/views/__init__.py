@@ -82,7 +82,14 @@ from .exercise_management import (
 )
 
 # Export views
-from .export import export_plan_group_pdf, export_plan_pdf, export_training_csv, export_training_pdf
+from .export import (
+    export_hevy_csv,
+    export_plan_group_pdf,
+    export_plan_pdf,
+    export_training_csv,
+    export_training_pdf,
+    import_hevy_csv,
+)
 
 # Machine learning views
 from .machine_learning import ml_dashboard, ml_model_info, ml_predict_weight, ml_train_model
@@ -207,6 +214,8 @@ __all__ = [
     "export_training_pdf",
     "export_plan_pdf",
     "export_plan_group_pdf",
+    "export_hevy_csv",
+    "import_hevy_csv",
     # AI recommendations
     "workout_recommendations",
     "generate_plan_api",
