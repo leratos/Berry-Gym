@@ -584,6 +584,16 @@ def _validate_cycle_params(request: HttpRequest, profile: "UserProfile") -> int:
     return cycle_length
 
 
+def _ensure_gruppe_id(plan: "Plan") -> str:
+    """Gibt die gruppe_id des Plans zurück; weist eine neue zu wenn noch keine existiert."""
+    if not plan.gruppe_id:
+        new_id = uuid.uuid4()
+        Plan.objects.filter(pk=plan.pk).update(gruppe_id=new_id, gruppe_name=plan.name)
+        plan.gruppe_id = new_id
+        plan.gruppe_name = plan.name
+    return str(plan.gruppe_id)
+
+
 def _apply_gruppe_selection(
     request: HttpRequest, profile: "UserProfile", gruppe_id: str, cycle_length: int
 ) -> None:
@@ -636,11 +646,22 @@ def set_active_plan_group(request: HttpRequest) -> HttpResponse:
 
     if request.method == "POST":
         gruppe_id = request.POST.get("gruppe_id", "").strip()
+        plan_id_raw = request.POST.get("plan_id", "").strip()
         cycle_length = _validate_cycle_params(request, profile)
+
+        # Einzelplan: noch keine gruppe_id → jetzt eine zuweisen
+        if not gruppe_id and plan_id_raw:
+            try:
+                einzelplan = Plan.objects.get(pk=int(plan_id_raw), user=request.user)
+                gruppe_id = _ensure_gruppe_id(einzelplan)
+            except (Plan.DoesNotExist, ValueError):
+                messages.error(request, "Plan nicht gefunden.")
+                return redirect("set_active_plan_group")
+
         _apply_gruppe_selection(request, profile, gruppe_id, cycle_length)
         return redirect("dashboard")
 
-    # GET: Zeige alle Plan-Gruppen des Users
+    # GET: Zeige alle Plan-Gruppen UND Einzelpläne des Users
     plan_gruppen = []
     gruppen_qs = (
         Plan.objects.filter(user=request.user, gruppe_id__isnull=False)
@@ -659,11 +680,19 @@ def set_active_plan_group(request: HttpRequest) -> HttpResponse:
             }
         )
 
+    # Einzelpläne ohne gruppe_id
+    einzelplaene = list(
+        Plan.objects.filter(user=request.user, gruppe_id__isnull=True)
+        .order_by("name")
+        .values("id", "name")
+    )
+
     return render(
         request,
         "core/set_active_plan.html",
         {
             "plan_gruppen": plan_gruppen,
+            "einzelplaene": einzelplaene,
             "current_active": str(profile.active_plan_group) if profile.active_plan_group else None,
             "current_cycle_length": profile.cycle_length,
             "deload_volume_factor": profile.deload_volume_factor,
