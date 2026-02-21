@@ -49,22 +49,15 @@ class TestTrainingSelectPlan:
         assert plan_user2.name.encode() not in response.content
 
     def test_public_plaene_filter(self, client):
-        """Test: Öffentliche Pläne werden angezeigt (nicht eigene)."""
+        """Test: ?filter=public redirectet zu ?filter=eigene (öffentliche Pläne sind in /plan-library/)."""
         user1 = UserFactory()
-        user2 = UserFactory()
         client.force_login(user1)
-
-        # Öffentlicher Plan von User2
-        plan_public = Plan.objects.create(user=user2, name="Public Plan", is_public=True)
-        # Eigener Plan (sollte nicht angezeigt werden)
-        plan_own = Plan.objects.create(user=user1, name="Own Plan", is_public=True)
 
         url = reverse("training_select_plan") + "?filter=public"
         response = client.get(url)
 
-        assert response.status_code == 200
-        assert plan_public.name.encode() in response.content
-        assert plan_own.name.encode() not in response.content
+        assert response.status_code == 302
+        assert "filter=eigene" in response["Location"]
 
 
 @pytest.mark.django_db
