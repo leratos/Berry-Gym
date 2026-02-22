@@ -1884,3 +1884,10 @@ umgebaut (aus vorherigem Abbruch übernommen). Einzige ausstehende Änderung:
 
 Teststand: 40/40 test_refactoring.py grün, Commit: 8f95a21
 Branch: feature/open-registration → bereit für PR
+
+## Hotfix: axes authenticate() request-Parameter (22.02.2026)
+
+Fehler auf Production: AxesBackendRequestParameterRequired beim POST /register/
+Ursache: django-axes verlangt request als erstes Argument in authenticate()
+Fix: auth.py Zeile 113: authenticate(username=...) → authenticate(request, username=...)
+Commit: 6f741a4, Branch: feature/open-registration
