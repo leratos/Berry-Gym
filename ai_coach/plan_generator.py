@@ -61,6 +61,38 @@ class PlanGenerator:
         if self._progress_callback:
             self._progress_callback(percent, step)
 
+    def _log_ki_cost(
+        self,
+        llm_result: dict,
+        *,
+        is_retry: bool = False,
+        success: bool = True,
+        error_message: str = "",
+    ) -> None:
+        """Schreibt einen KIApiLog-Eintrag für einen LLM-Call.
+
+        Läuft im Django-Web-Kontext – wird still ignoriert wenn DB nicht
+        verfügbar ist (CLI-Modus ohne Django-Setup).
+        """
+        try:
+            from core.models import KIApiLog
+
+            usage = llm_result.get("usage", {})
+            KIApiLog.objects.create(
+                user_id=self.user_id,
+                endpoint=KIApiLog.Endpoint.PLAN_GENERATE,
+                model_name=llm_result.get("model", ""),
+                tokens_input=usage.get("prompt_tokens", 0),
+                tokens_output=usage.get("completion_tokens", 0),
+                cost_eur=llm_result.get("cost", 0.0),
+                success=success,
+                is_retry=is_retry,
+                error_message=error_message,
+            )
+        except Exception as e:
+            # Logging-Fehler dürfen nie den Plan-Generierungs-Flow unterbrechen
+            print(f"   ⚠️ KI-Cost-Logging fehlgeschlagen (non-fatal): {e}")
+
     def _get_max_tokens(self) -> int:
         """
         Gibt plan-typ-spezifisches max_tokens zurück.
@@ -182,6 +214,7 @@ class PlanGenerator:
         llm_result = llm_client.generate_training_plan(
             messages=messages, max_tokens=self._get_max_tokens(), timeout=120
         )
+        self._log_ki_cost(llm_result)
 
         # Extrahiere JSON aus Result-Dict
         plan_json = llm_result.get("response") if isinstance(llm_result, dict) else llm_result
@@ -223,6 +256,7 @@ class PlanGenerator:
                 llm_result = llm_client_or.generate_training_plan(
                     messages=messages, max_tokens=self._get_max_tokens(), timeout=120
                 )
+                self._log_ki_cost(llm_result)
                 plan_json = (
                     llm_result.get("response") if isinstance(llm_result, dict) else llm_result
                 )
@@ -555,6 +589,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
 
         try:
             result = llm_client.generate_training_plan(messages=messages, max_tokens=500)
+            self._log_ki_cost(result, is_retry=True)
 
             # generate_training_plan() gibt immer {"response": <dict>, ...} zurück
             replacements = result.get("response", {})
