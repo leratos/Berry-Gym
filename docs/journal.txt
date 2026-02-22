@@ -1710,3 +1710,38 @@ Lösung Option B: Beim Aktivieren wird dem Einzelplan automatisch eine neue grup
 - test_plan_management.py: 7 neue Tests (TestSetActiveEinzelplan)
 
 Teststand: 847 passed, 0 failed (840 + 7 neue)
+
+## In Arbeit: feature/phase-7-7-pre-launch (22.02.2026)
+
+Scope:
+1. gunicorn 22.0.0 → 25.1.0 (CVE HTTP request smuggling)
+2. pip updaten
+3. SECRET_KEY Fallback → harte Exception statt Test-Key
+4. manage.py check --deploy als pytest-Test
+5. SECURITY.md (Responsible Disclosure)
+6. RUNBOOK.md (Incident Response)
+Dateien: requirements.txt, config/settings.py, core/tests/test_deploy_check.py,
+         docs/SECURITY.md, docs/RUNBOOK.md
+
+## Abgeschlossen: feature/phase-7-7-pre-launch (22.02.2026)
+
+1. gunicorn 22.0.0 → 25.1.0 (HTTP Request Smuggling CVE, vuln-id 72809)
+   pip 24.0 → 26.0.1 (Wheel CVE, vuln-id 75180/79883)
+   requirements.txt aktualisiert inkl. Sicherheits-Changelog-Eintrag
+
+2. SECRET_KEY-Fallback war bereits sauber (RuntimeError in Production,
+   Test-Key nur wenn pytest in sys.modules). Kein Handlungsbedarf.
+
+3. core/tests/test_deploy_check.py (12 neue Tests):
+   - TestSecuritySettings: DEBUG-Default, SECRET_KEY, Security-Headers,
+     ALLOWED_HOSTS, Middleware, Session-Cookie
+   - TestDeployCheck: django check --errors, Migrationen applied/missing
+   - TestRequirements: gunicorn >= 21.2.0, Django nicht EOL
+
+4. docs/SECURITY.md: Responsible Disclosure Policy, Scope, Sicherheitsmaßnahmen-Tabelle,
+   Sicherheits-Changelog
+
+5. docs/RUNBOOK.md: Deployment-Prozess, Incident Response (5xx, DB-Fehler,
+   Sicherheitsvorfall), Routine-Aufgaben, Management Commands, Limits
+
+Teststand: 864 passed (852 + 12 neue), 0 failed
