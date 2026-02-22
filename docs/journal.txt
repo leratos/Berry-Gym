@@ -1745,3 +1745,21 @@ Dateien: requirements.txt, config/settings.py, core/tests/test_deploy_check.py,
    Sicherheitsvorfall), Routine-Aufgaben, Management Commands, Limits
 
 Teststand: 864 passed (852 + 12 neue), 0 failed
+
+## Abgeschlossen: Aufräumen Root + History-Cleanup (22.02.2026)
+
+History-Cleanup via git-filter-repo:
+- vapid_private.pem, vapid_public.pem, backup.json aus kompletter Git-History entfernt
+- backup.json zu .gitignore hinzugefügt
+- Force-Push auf GitHub, Server via git reset --hard aktualisiert
+
+Root aufgeräumt:
+- 13 Einmal-Skripte gelöscht (check_*.py, fix_*.py, add_translations.py etc.)
+- generate_vapid_keys.py → scripts/
+- format.bat, run_tests.bat, PWA_OFFLINE_GUIDE.md entfernt
+- dev-scripts/ bleibt lokal (Server-.env Backup), ist in .gitignore
+
+Offene Feature-Branches (noch nicht in main gemergt):
+- feature/phase-7-6-hevy-import-export
+- feature/phase-7-7-einzelplan-aktivieren
+- feature/phase-7-7-pre-launch
