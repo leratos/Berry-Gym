@@ -11,7 +11,6 @@ from django.utils import timezone
 
 # Django Setup
 sys.path.insert(0, str(Path(__file__).parent))
-from . import ai_config
 from .db_client import DatabaseClient
 
 
@@ -287,6 +286,16 @@ FOKUS:
         print(f"   Frage: {user_question}")
         print(f"   Chat-Historie: {len(chat_history) if chat_history else 0} Nachrichten")
 
+        # User-ID für Logging ermitteln
+        try:
+            from core.models import Trainingseinheit as _TE
+
+            _user_id = (
+                _TE.objects.filter(id=trainingseinheit_id).values_list("user_id", flat=True).first()
+            )
+        except Exception:
+            _user_id = None
+
         # 1. Context sammeln
         context = self.build_context(
             trainingseinheit_id=trainingseinheit_id,
@@ -297,77 +306,81 @@ FOKUS:
         # 2. Prompt erstellen (mit Chat-Historie)
         messages = self.generate_prompt(context, user_question, chat_history)
 
-        # 3. LLM Call
+        # 3. LLM Call – LLMClient übernimmt Ollama/OpenRouter-Routing
         llm_client = LLMClient(
-            use_openrouter=self.use_openrouter, fallback_to_openrouter=False, temperature=0.7
+            use_openrouter=self.use_openrouter,
+            fallback_to_openrouter=True,
+            temperature=0.7,
         )
 
+        llm_result = None
         try:
-            # Kurze Antwort (max 200 tokens)
-            if self.use_openrouter:
-                # OpenRouter: Nutze _generate_with_openrouter und extrahiere Text
-                import openai
-                from secrets_manager import get_openrouter_key
+            llm_result = llm_client.generate_training_plan(messages=messages, max_tokens=300)
 
-                client = openai.OpenAI(
-                    api_key=get_openrouter_key(), base_url="https://openrouter.ai/api/v1"
-                )
-
-                model = ai_config.OPENROUTER_MODEL
-
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=0.7,
-                    max_tokens=200,
-                    extra_headers={
-                        "HTTP-Referer": "https://gym.last-strawberry.com",
-                        "X-Title": "HomeGym AI Coach",
-                    },
-                )
-
-                answer = response.choices[0].message.content
-                cost = 0.002  # Geschätzte Kosten
+            # generate_training_plan parst JSON; Live Guidance gibt Freitext zurück.
+            # Falls LLM dennoch JSON liefert, nehmen wir den ersten Text-Wert.
+            response_data = llm_result.get("response", {})
+            if isinstance(response_data, dict):
+                answer = next(iter(response_data.values()), str(response_data))
             else:
-                # Ollama: Direkter Chat Call (kein JSON!)
-                import ollama
+                answer = str(response_data) if response_data else ""
 
-                response = ollama.chat(
-                    model=llm_client.model,
-                    messages=messages,
-                    options={
-                        "temperature": 0.7,
-                        "num_predict": 200,
-                    },
-                )
-
-                answer = response["message"]["content"]
-                model = llm_client.model
-                cost = 0.0  # Lokal kostenlos
+            if not answer:
+                raise ValueError("Leere Antwort vom LLM")
 
             print(f"   ✓ Antwort erhalten ({len(answer)} Zeichen)")
-            print(f"   Model: {model if self.use_openrouter else llm_client.model}")
-            print(f"   Kosten: {cost}€")
+            print(f"   Model: {llm_result.get('model', '?')}")
+            print(f"   Kosten: {llm_result.get('cost', 0.0):.4f}€")
+
+            self._log_ki_cost(_user_id, llm_result)
 
             return {
                 "answer": answer,
                 "context": context,
-                "cost": cost,
-                "model": model if self.use_openrouter else llm_client.model,
+                "cost": llm_result.get("cost", 0.0),
+                "model": llm_result.get("model", ""),
             }
 
         except Exception as e:
-            print(f"   ❌ Fehler: {e}")
             import traceback
 
-            # Log full traceback server-side for debugging, but do not expose details to the user
             traceback.print_exc()
+            print(f"   ❌ Fehler: {e}")
+            if llm_result is not None:
+                self._log_ki_cost(_user_id, llm_result, success=False, error_message=str(e))
             return {
                 "answer": "Es ist ein Fehler beim Generieren der Antwort aufgetreten. Bitte versuche es später erneut.",
                 "context": context,
                 "cost": 0.0,
                 "model": "error",
             }
+
+    def _log_ki_cost(
+        self,
+        user_id: Optional[int],
+        llm_result: dict,
+        *,
+        success: bool = True,
+        error_message: str = "",
+    ) -> None:
+        """Schreibt KIApiLog-Eintrag für diesen Live-Guidance-Call. Non-fatal."""
+        try:
+            from core.models import KIApiLog
+
+            usage = llm_result.get("usage", {})
+            KIApiLog.objects.create(
+                user_id=user_id,
+                endpoint=KIApiLog.Endpoint.LIVE_GUIDANCE,
+                model_name=llm_result.get("model", ""),
+                tokens_input=usage.get("prompt_tokens", 0),
+                tokens_output=usage.get("completion_tokens", 0),
+                cost_eur=llm_result.get("cost", 0.0),
+                success=success,
+                is_retry=False,
+                error_message=error_message,
+            )
+        except Exception as log_err:
+            print(f"   ⚠️ KI-Cost-Logging fehlgeschlagen (non-fatal): {log_err}")
 
 
 # CLI Testing

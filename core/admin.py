@@ -1,5 +1,9 @@
 ﻿from django import forms
 from django.contrib import admin
+from django.db.models import Count, Sum
+from django.template.response import TemplateResponse
+from django.urls import path
+from django.utils import timezone
 from django.utils.html import format_html
 
 from .models import (
@@ -7,6 +11,7 @@ from .models import (
     Equipment,
     Feedback,
     InviteCode,
+    KIApiLog,
     KoerperWerte,
     MLPredictionModel,
     Plan,
@@ -578,3 +583,184 @@ class TrainingSourceAdmin(admin.ModelAdmin):
         self.message_user(request, "Quellen aus Fixtures neu geladen.")
 
     reload_from_fixtures.short_description = "Quellen neu laden (load_training_sources)"
+
+
+# --- KI API LOGS ---
+
+
+class KIApiCostSummary(KIApiLog):
+    """Proxy-Modell – nur für Admin-Registrierung mit eigenem URL-Namen."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "KI API Log"
+        verbose_name_plural = "KI API Logs & Kosten-Dashboard"
+
+
+@admin.register(KIApiCostSummary)
+class KIApiLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "created_at_fmt",
+        "user",
+        "endpoint_badge",
+        "model_name",
+        "tokens_input",
+        "tokens_output",
+        "cost_eur_fmt",
+        "success_badge",
+        "is_retry",
+    )
+    list_filter = ("endpoint", "success", "is_retry", "created_at")
+    search_fields = ("user__username", "model_name", "error_message")
+    ordering = ("-created_at",)
+    readonly_fields = (
+        "user",
+        "endpoint",
+        "model_name",
+        "tokens_input",
+        "tokens_output",
+        "cost_eur",
+        "success",
+        "is_retry",
+        "error_message",
+        "created_at",
+    )
+    date_hierarchy = "created_at"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def created_at_fmt(self, obj):
+        return obj.created_at.strftime("%d.%m.%Y %H:%M")
+
+    created_at_fmt.short_description = "Zeitpunkt"
+    created_at_fmt.admin_order_field = "created_at"
+
+    def endpoint_badge(self, obj):
+        colors = {
+            "plan_generate": "#2271b1",
+            "plan_optimize": "#9c27b0",
+            "live_guidance": "#00897b",
+            "other": "#888",
+        }
+        color = colors.get(obj.endpoint, "#888")
+        return format_html(
+            '<span style="background:{};color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_endpoint_display(),
+        )
+
+    endpoint_badge.short_description = "Endpunkt"
+    endpoint_badge.admin_order_field = "endpoint"
+
+    def cost_eur_fmt(self, obj):
+        if obj.cost_eur == 0:
+            return format_html('<span style="color:#aaa;">0 €</span>')
+        color = "#c00" if obj.cost_eur > 0.01 else "#333"
+        return format_html(
+            '<span style="color:{};font-weight:600;">{:.4f} €</span>',
+            color,
+            obj.cost_eur,
+        )
+
+    cost_eur_fmt.short_description = "Kosten"
+    cost_eur_fmt.admin_order_field = "cost_eur"
+
+    def success_badge(self, obj):
+        if obj.success:
+            return format_html('<span style="color:green;">✓</span>')
+        return format_html(
+            '<span style="color:red;" title="{}">✗</span>',
+            obj.error_message[:100] if obj.error_message else "",
+        )
+
+    success_badge.short_description = "OK"
+    success_badge.admin_order_field = "success"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        extra = [
+            path(
+                "dashboard/",
+                self.admin_site.admin_view(self.dashboard_view),
+                name="ki_cost_dashboard",
+            )
+        ]
+        return extra + urls
+
+    def dashboard_view(self, request):
+        qs = KIApiLog.objects.all()
+        total_calls = qs.count()
+        total_eur = round(float(qs.aggregate(s=Sum("cost_eur"))["s"] or 0), 4)
+        error_calls = qs.filter(success=False).count()
+        retry_calls = qs.filter(is_retry=True).count()
+        error_rate = round(error_calls / total_calls * 100, 1) if total_calls else 0
+        retry_rate = round(retry_calls / total_calls * 100, 1) if total_calls else 0
+
+        # Dieser Monat
+        now = timezone.now()
+        month_qs = qs.filter(created_at__year=now.year, created_at__month=now.month)
+        this_month_calls = month_qs.count()
+        this_month_eur = round(float(month_qs.aggregate(s=Sum("cost_eur"))["s"] or 0), 4)
+
+        # Nach Endpunkt
+        by_endpoint = []
+        for ep, label in KIApiLog.Endpoint.choices:
+            ep_qs = qs.filter(endpoint=ep)
+            cnt = ep_qs.count()
+            if cnt:
+                cost = round(float(ep_qs.aggregate(s=Sum("cost_eur"))["s"] or 0), 4)
+                by_endpoint.append({"endpoint": label, "calls": cnt, "cost": cost})
+
+        # Top 10 User
+        by_user = []
+        user_agg = (
+            qs.filter(user__isnull=False)
+            .values("user__username")
+            .annotate(calls=Count("id"), cost=Sum("cost_eur"))
+            .order_by("-cost")[:10]
+        )
+        for row in user_agg:
+            by_user.append(
+                {
+                    "username": row["user__username"],
+                    "calls": row["calls"],
+                    "cost": round(float(row["cost"] or 0), 4),
+                }
+            )
+
+        # Monatsverlauf letzte 6 Monate
+        from dateutil.relativedelta import relativedelta
+
+        by_month = []
+        for i in range(5, -1, -1):
+            dt = now - relativedelta(months=i)
+            m_qs = qs.filter(created_at__year=dt.year, created_at__month=dt.month)
+            cnt = m_qs.count()
+            cost = round(float(m_qs.aggregate(s=Sum("cost_eur"))["s"] or 0), 4)
+            by_month.append({"month": dt.strftime("%b %Y"), "calls": cnt, "cost": cost})
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "KI-Kosten Dashboard",
+            "total_calls": total_calls,
+            "total_eur": total_eur,
+            "error_calls": error_calls,
+            "error_rate": error_rate,
+            "retry_calls": retry_calls,
+            "retry_rate": retry_rate,
+            "this_month_calls": this_month_calls,
+            "this_month_eur": this_month_eur,
+            "by_endpoint": by_endpoint,
+            "by_user": by_user,
+            "by_month": by_month,
+        }
+        return TemplateResponse(request, "admin/ki_cost_dashboard.html", context)
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["dashboard_url"] = "dashboard/"
+        return super().changelist_view(request, extra_context=extra_context)

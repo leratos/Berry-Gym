@@ -419,6 +419,9 @@ Bitte analysiere und schlage Optimierungen vor."""
             cost = result.get("cost", 0.0)
             model_used = result.get("model", "unknown")
 
+            # Kosten loggen
+            self._log_ki_cost(result)
+
             # Parse JSON wenn String
             if isinstance(response, str):
                 response = json.loads(response)
@@ -435,6 +438,32 @@ Bitte analysiere und schlage Optimierungen vor."""
 
             traceback.print_exc()
             return {"error": str(e), "optimizations": [], "cost": 0.0, "model": "error"}
+
+    def _log_ki_cost(
+        self,
+        llm_result: dict,
+        *,
+        success: bool = True,
+        error_message: str = "",
+    ) -> None:
+        """Schreibt KIApiLog-Eintrag für Plan-Optimierungs-Call. Non-fatal."""
+        try:
+            from core.models import KIApiLog
+
+            usage = llm_result.get("usage", {})
+            KIApiLog.objects.create(
+                user_id=self.user_id,
+                endpoint=KIApiLog.Endpoint.PLAN_OPTIMIZE,
+                model_name=llm_result.get("model", ""),
+                tokens_input=usage.get("prompt_tokens", 0),
+                tokens_output=usage.get("completion_tokens", 0),
+                cost_eur=llm_result.get("cost", 0.0),
+                success=success,
+                is_retry=False,
+                error_message=error_message,
+            )
+        except Exception as log_err:
+            print(f"   ⚠️ KI-Cost-Logging fehlgeschlagen (non-fatal): {log_err}")
 
     def _get_plan_structure(self) -> Dict[str, Any]:
         """Gibt Plan-Struktur zurück"""
