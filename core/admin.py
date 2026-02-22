@@ -661,10 +661,11 @@ class KIApiLogAdmin(admin.ModelAdmin):
         if cost == 0:
             return format_html('<span style="color:#aaa;">0 €</span>')
         color = "#c00" if cost > 0.01 else "#333"
+        cost_str = f"{cost:.4f}"
         return format_html(
-            '<span style="color:{};font-weight:600;">{:.4f} €</span>',
+            '<span style="color:{};font-weight:600;">{} €</span>',
             color,
-            cost,
+            cost_str,
         )
 
     cost_eur_fmt.short_description = "Kosten"
