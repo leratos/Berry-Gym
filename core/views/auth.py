@@ -110,7 +110,7 @@ def register(request: HttpRequest) -> HttpResponse:
         user = User.objects.create_user(username=username, email=email, password=pass1)
         send_welcome_email(user)
 
-        user = authenticate(username=username, password=pass1)
+        user = authenticate(request, username=username, password=pass1)
         login(request, user)
         messages.success(request, f"🎉 Willkommen {username}!")
         return redirect("dashboard")
