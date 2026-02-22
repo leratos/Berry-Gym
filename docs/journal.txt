@@ -2038,3 +2038,16 @@ Nächste Kandidaten (falls fortgesetzt):
   - core/views/training_session.py: finish_training-Flow, toggle_deload (noch ungedeckt)
   - core/views/auth.py: profile/feedback views (47% ungedeckt)
   - Bekannter Bug advanced_stats.py Monatsfenster – eigene Task
+
+## In Arbeit: feature/tech-debt-auth-views (22.02.2026)
+
+Branch: feature/tech-debt-auth-views
+Ziel: core/views/auth.py von 55% auf >90%
+
+Ungedeckte Zeilen (aus Gesamtlauf):
+  124-127  feedback_list
+  133-166  feedback_create (GET + POST, inkl. Validierungsfehler)
+  172-175  feedback_detail
+  182-227  profile view (actions: update_profile, change_password, update_body_data)
+
+Datei: core/tests/test_auth_views.py (erweitern, ~40 neue Tests)
