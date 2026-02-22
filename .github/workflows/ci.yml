@@ -143,7 +143,9 @@ jobs:
 
     - name: Dependency vulnerability scan (safety scan)
       # continue-on-error: neue CVEs sollen CI nicht blocken, aber sichtbar sein
-      run: safety scan --output screen
+      env:
+        SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
+      run: safety scan --output screen --key $SAFETY_API_KEY
       continue-on-error: true
 
     - name: Static security analysis (bandit)
