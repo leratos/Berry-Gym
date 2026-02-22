@@ -1858,3 +1858,10 @@ Migration + Tests.
 - 872 Tests grün, lokale Migration angewendet, Server-Deploy erfolgreich
 
 Teststand nach allen Fixes: 872 passed, 0 failed
+## In Arbeit: feature/open-registration (22.02.2026)
+
+Offene Registrierung aktivieren:
+- register() View: Invite-Code-Prüfung entfernen
+- apply_beta() View: Redirect auf register
+- register_new.html: Invite-Code-Feld entfernen, Texte anpassen
+- login.html: Link "Für Beta bewerben" → "Jetzt registrieren"

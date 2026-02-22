@@ -31,7 +31,7 @@ class TestLoginLogout:
 
     def test_login_with_valid_credentials(self, client):
         """Login mit gültigen Zugangsdaten."""
-        user = User.objects.create_user(
+        User.objects.create_user(
             username="testuser", password="testpass123", email="test@example.com"
         )
 
@@ -82,22 +82,19 @@ class TestRegistration:
         response = client.get(reverse("register"))
         assert response.status_code == 200
 
-    def test_registration_requires_beta_code(self, client):
-        """Registrierung erfordert gültigen Beta-Code."""
-        response = client.post(
+    def test_registration_open_no_code_required(self, client):
+        """Offene Registrierung – kein Invite-Code erforderlich."""
+        client.post(
             reverse("register"),
             {
                 "username": "newuser",
                 "email": "new@example.com",
                 "password1": "SecurePass123!",
                 "password2": "SecurePass123!",
-                "beta_code": "INVALID",
             },
+            follow=True,
         )
-
-        # Registrierung sollte fehlschlagen ohne gültigen Code
-        assert response.status_code == 200  # Bleibt auf Formular
-        assert User.objects.filter(username="newuser").count() == 0
+        assert User.objects.filter(username="newuser").exists()
 
     @pytest.mark.skip(reason="Registration flow may differ in implementation")
     def test_registration_with_valid_beta_code(self, client):
@@ -109,7 +106,7 @@ class TestRegistration:
             used_count=0,
         )
 
-        response = client.post(
+        client.post(
             reverse("register"),
             {
                 "username": "newuser",
@@ -132,8 +129,6 @@ class TestRegistration:
         """Registrierung mit bereits existierendem Username schlägt fehl."""
         UserFactory(username="existing")
 
-        code = InviteCode.objects.create(code="VALID")
-
         response = client.post(
             reverse("register"),
             {
@@ -141,11 +136,8 @@ class TestRegistration:
                 "email": "another@example.com",
                 "password1": "SecurePass123!",
                 "password2": "SecurePass123!",
-                "beta_code": "VALID",
             },
         )
-
-        # Sollte auf Formular bleiben
         assert response.status_code == 200
 
 
@@ -160,7 +152,7 @@ class TestPasswordReset:
 
     def test_password_reset_with_valid_email(self, client):
         """Password Reset mit gültiger Email."""
-        user = UserFactory(email="user@example.com")
+        UserFactory(email="user@example.com")
 
         response = client.post(
             reverse("password_reset"),
@@ -195,7 +187,7 @@ class TestPermissions:
     def test_user_can_only_access_own_data(self, client):
         """User kann nur eigene Trainingsdaten sehen."""
         user1 = UserFactory()
-        user2 = UserFactory()
+        UserFactory()  # zweiter User für Isolation
 
         client.force_login(user1)
 
