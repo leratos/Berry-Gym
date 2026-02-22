@@ -1687,3 +1687,26 @@ Scope:
 
 Commits: d5d6732 (Hauptimplementierung), UI-Button-Commit folgt
 Nächste Phase: 7.7 Pre-Launch / Public Launch Vorbereitung
+
+## In Arbeit: feature/phase-7-7-einzelplan-aktivieren (21.02.2026)
+
+Option B: Einzelpläne (gruppe_id=NULL) können als aktiv gesetzt werden.
+Beim Aktivieren wird automatisch eine neue gruppe_id vergeben.
+Dateien: core/views/plan_management.py, core/templates/core/set_active_plan.html,
+         core/tests/test_plan_management.py
+
+## Abgeschlossen: feature/phase-7-7-einzelplan-aktivieren (21.02.2026)
+
+Problem: Einzelpläne (gruppe_id=NULL) konnten nicht als aktiver Plan gesetzt werden.
+Lösung Option B: Beim Aktivieren wird dem Einzelplan automatisch eine neue gruppe_id zugewiesen.
+
+Änderungen:
+- plan_management.py: _ensure_gruppe_id() Hilfsfunktion (uuid4 + update)
+  POST-Handler: plan_id aus Formular → _ensure_gruppe_id → normaler Aktivierungs-Flow
+  GET-Handler: einzelplaene-QuerySet im Context
+- set_active_plan.html: neue Sektion "Einzelpläne" mit grünem Icon
+  JS: selectSinglePlan() deselektiert Gruppen-Radios und umgekehrt
+  if-Guard: {% if plan_gruppen or einzelplaene %}
+- test_plan_management.py: 7 neue Tests (TestSetActiveEinzelplan)
+
+Teststand: 847 passed, 0 failed (840 + 7 neue)

@@ -277,3 +277,115 @@ class TestTogglePlanPublic:
         # Plan bleibt private
         plan_user2.refresh_from_db()
         assert plan_user2.is_public is False
+
+
+@pytest.mark.django_db
+class TestSetActiveEinzelplan:
+    """Tests für Aktivierung von Einzelplänen (ohne gruppe_id) via Option B."""
+
+    def test_einzelplan_erscheint_in_get(self, client):
+        """Einzelplan ohne gruppe_id wird auf der Seite angezeigt."""
+        user = UserFactory()
+        plan = PlanFactory(user=user, gruppe_id=None)
+        client.force_login(user)
+
+        response = client.get(reverse("set_active_plan_group"))
+        assert response.status_code == 200
+        assert plan.name.encode() in response.content
+
+    def test_einzelplan_aktivieren_weist_gruppe_id_zu(self, client):
+        """POST mit plan_id setzt gruppe_id auf dem Plan und aktiviert ihn."""
+        user = UserFactory()
+        plan = PlanFactory(user=user, gruppe_id=None)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("set_active_plan_group"),
+            {"plan_id": plan.pk, "cycle_length": "4"},
+            follow=True,
+        )
+        assert response.status_code == 200
+
+        plan.refresh_from_db()
+        assert plan.gruppe_id is not None, "gruppe_id muss nach Aktivierung gesetzt sein"
+
+        from core.models.user_profile import UserProfile
+
+        profile = UserProfile.objects.get(user=user)
+        assert str(profile.active_plan_group) == str(plan.gruppe_id)
+
+    def test_einzelplan_aktivieren_setzt_gruppe_name(self, client):
+        """gruppe_name wird auf den Plan-Namen gesetzt."""
+        user = UserFactory()
+        plan = PlanFactory(user=user, gruppe_id=None, name="Ganzkörper A")
+        client.force_login(user)
+
+        client.post(
+            reverse("set_active_plan_group"),
+            {"plan_id": plan.pk, "cycle_length": "4"},
+        )
+        plan.refresh_from_db()
+        assert plan.gruppe_name == "Ganzkörper A"
+
+    def test_einzelplan_nochmals_aktivieren_keine_doppelte_gruppe_id(self, client):
+        """Wird ein Plan 2x aktiviert, bekommt er nicht 2 verschiedene gruppe_ids."""
+        user = UserFactory()
+        plan = PlanFactory(user=user, gruppe_id=None)
+        client.force_login(user)
+
+        client.post(
+            reverse("set_active_plan_group"),
+            {"plan_id": plan.pk, "cycle_length": "4"},
+        )
+        plan.refresh_from_db()
+        erste_gruppe_id = plan.gruppe_id
+
+        # Zweiter POST mit gleichem plan_id – gruppe_id soll gleich bleiben
+        # (Plan hat jetzt gruppe_id, also wird er als Gruppe erkannt, nicht nochmal neu erstellt)
+        client.post(
+            reverse("set_active_plan_group"),
+            {"plan_id": plan.pk, "cycle_length": "4"},
+        )
+        plan.refresh_from_db()
+        assert plan.gruppe_id == erste_gruppe_id
+
+    def test_fremder_einzelplan_nicht_aktivierbar(self, client):
+        """Ein Einzelplan eines anderen Users kann nicht aktiviert werden."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        plan = PlanFactory(user=user2, gruppe_id=None)
+        client.force_login(user1)
+
+        client.post(
+            reverse("set_active_plan_group"),
+            {"plan_id": plan.pk, "cycle_length": "4"},
+        )
+        from core.models.user_profile import UserProfile
+
+        profile, _ = UserProfile.objects.get_or_create(user=user1)
+        assert profile.active_plan_group is None
+
+    def test_ungueltige_plan_id_zeigt_fehler(self, client):
+        """Eine ungültige plan_id führt zu einem Fehler ohne Crash."""
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.post(
+            reverse("set_active_plan_group"),
+            {"plan_id": "99999", "cycle_length": "4"},
+            follow=True,
+        )
+        assert response.status_code == 200
+
+    def test_seite_zeigt_keine_einzelplaene_wenn_alle_gruppiert(self, client):
+        """Wenn alle Pläne bereits eine gruppe_id haben, wird kein Einzelplan gezeigt."""
+        user = UserFactory()
+        import uuid
+
+        PlanFactory(user=user, gruppe_id=uuid.uuid4())
+        client.force_login(user)
+
+        response = client.get(reverse("set_active_plan_group"))
+        assert response.status_code == 200
+        # einzelplaene im Context leer
+        assert response.context["einzelplaene"] == []
