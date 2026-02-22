@@ -1885,9 +1885,32 @@ umgebaut (aus vorherigem Abbruch übernommen). Einzige ausstehende Änderung:
 Teststand: 40/40 test_refactoring.py grün, Commit: 8f95a21
 Branch: feature/open-registration → bereit für PR
 
-## Hotfix: axes authenticate() request-Parameter (22.02.2026)
+## In Arbeit: feature/tech-debt-ai-coach-tests (22.02.2026)
 
-Fehler auf Production: AxesBackendRequestParameterRequired beim POST /register/
-Ursache: django-axes verlangt request als erstes Argument in authenticate()
-Fix: auth.py Zeile 113: authenticate(username=...) → authenticate(request, username=...)
-Commit: 6f741a4, Branch: feature/open-registration
+Branch: feature/tech-debt-ai-coach-tests
+Ziel: ai_coach Coverage von 0% auf >50% heben (live_guidance.py, plan_adapter.py)
+
+Geplante Test-Dateien:
+- ai_coach/tests/test_live_guidance.py (neu)
+- ai_coach/tests/test_plan_adapter.py (neu)
+
+## Abgeschlossen: feature/tech-debt-ai-coach-tests (22.02.2026)
+
+Branch: feature/tech-debt-ai-coach-tests
+Commits:
+  - e4090b0: test: add 33 tests for live_guidance.py (0% -> 81%)
+  - 521128c: test: add 27 tests for plan_adapter.py (0% -> 83%)
+
+Ergebnis: 60 neue Tests, beide Module von 0% auf >80% Coverage.
+
+Lerneffekt (Mock-Pattern für lokale Imports):
+  suggest_optimizations() macht 'from ai_coach.llm_client import LLMClient' intern.
+  Korrekte Lösung: BEIDE Stellen patchen gleichzeitig als gestackte Dekoratoren:
+    @patch("ai_coach.plan_adapter.LLMClient")   # für __init__
+    @patch("ai_coach.llm_client.LLMClient")     # für lokalen Import
+  Kein _make_adapter() mit eigenem with-Block verwenden (hebt äußeren Patch auf).
+
+Nächste mögliche Schritte (nach PR):
+  - core/utils/advanced_stats.py (0%, 310 Statements)
+  - core/chart_generator.py (0%, 242 Statements)
+  - core/views/* (alle 0%, Views-Integration-Tests)
