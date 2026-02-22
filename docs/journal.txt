@@ -1763,3 +1763,29 @@ Offene Feature-Branches (noch nicht in main gemergt):
 - feature/phase-7-6-hevy-import-export
 - feature/phase-7-7-einzelplan-aktivieren
 - feature/phase-7-7-pre-launch
+
+## In Arbeit: chore/docs-cleanup-readme-v1 (22.02.2026)
+
+docs/ aufräumen: 21 veraltete/einmalige Dateien löschen, 13 behalten.
+README.md + README_EN.md: Version 0.9.3 → 1.0, Tests 822 → 864,
+neue Features (Hevy Import/Export, Einzelplan-Aktivierung), Roadmap aktualisieren.
+
+## Abgeschlossen: chore/docs-cleanup-readme-v1 (22.02.2026)
+
+docs/ bereinigt: 21 → 13 Dateien
+Gelöscht: README.md.backup, README.md (stub), DEPLOY_QUICKSTART, PROJECT_STATUS,
+AI_COACH_CONCEPT, DEPLOY_AI_COACH, DEPLOY_ML_COACH, PLAN_TEMPLATES_DOCS,
+OFFLINE_INTEGRATION_LOG, OFFLINE_TESTING_GUIDE, OFFLINE_COMPLETE, SW_UPDATE_V3,
+FIX_SERVICE_WORKER_SCOPE, CODE_QUALITY_QUICKREF, CICD_QUICKSTART, GITHUB_PUSH_READY,
+GITHUB_SECRETS_SETUP, PHASE_1_3_REPORT, PHASE_1_4_REPORT, PROJEKT_ANALYSE, PDF_SETUP
+
+Behalten: journal.txt, PROJECT_ROADMAP.md, DEPLOYMENT.md, RUNBOOK.md, LOAD_TESTING.md,
+OPENROUTER_SETUP.md, PUSH_NOTIFICATIONS_SETUP.md, SECRETS_SECURITY.md, CICD_GUIDE.md,
+CODE_QUALITY.md, LOGGING_GUIDE.md, BETA_SYSTEM.md, DISCLAIMER_SYSTEM.md
+
+README.md + README_EN.md aktualisiert:
+- Version 0.9.3-beta → 1.0
+- Tests 822 → 864
+- Hevy Import/Export und Einzelplan-Aktivierung als ✅ eingetragen
+- Roadmap bereinigt (keine 🔜 doppelten Einträge)
+- Projektstruktur docs/-Sektion aktualisiert
