@@ -1884,3 +1884,12 @@ umgebaut (aus vorherigem Abbruch übernommen). Einzige ausstehende Änderung:
 
 Teststand: 40/40 test_refactoring.py grün, Commit: 8f95a21
 Branch: feature/open-registration → bereit für PR
+
+## In Arbeit: feature/tech-debt-ai-coach-tests (22.02.2026)
+
+Branch: feature/tech-debt-ai-coach-tests
+Ziel: ai_coach Coverage von 0% auf >50% heben (live_guidance.py, plan_adapter.py)
+
+Geplante Test-Dateien:
+- ai_coach/tests/test_live_guidance.py (neu)
+- ai_coach/tests/test_plan_adapter.py (neu)
