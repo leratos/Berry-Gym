@@ -1821,3 +1821,40 @@ Migration + Tests.
    - Tabellen: nach Endpunkt, Top-10-User, Monatsverlauf 6 Monate
 
 13/13 Tests grün
+
+
+## Abgeschlossen: Bugfixes + Django-Upgrade (22.02.2026)
+
+### CI: safety scan --output text → screen
+- ci.yml: safety scan --output text → --output screen (API-Änderung in neuer Safety-CLI-Version)
+- Commit: fix/ci.yml safety scan output format
+
+### Fix: Plan.name DataError (500 bei KI-Plan speichern)
+- Ursache: LLM-generierte Plannamen > 100 Zeichen → MySQL DataError
+- Plan.name: max_length 100 → 200
+- Plan.gruppe_name: max_length 100 → 200
+- _save_plan_to_db: [:200] Truncate als zusätzliche Sicherheit
+- Migration 0072_plan_name_max_length_200 erstellt und deployed
+- Branch: fix/plan-name-max-length → main
+
+### Fix: Admin KIApiLog ValueError format_html
+- Ursache: format_html konvertiert Argumente intern zu SafeString vor Formatierung,
+  {:.4f} schlägt auf SafeString fehl (nicht auf float, auch nach float()-Cast)
+- Lösung: f"{cost:.4f}" vor Übergabe an format_html formatieren
+- 2 Commits (erster Fix unvollständig, zweiter korrekt)
+
+### Safety CLI Setup
+- .safety-project.ini angelegt (in git, enthält keine Secrets)
+- Safety hatte privaten pip-Index global in pip-Konfiguration eingetragen →
+  global.index-url aus pip config entfernt
+- Safety private index -i Zeile aus requirements.txt entfernt
+- ci.yml: SAFETY_API_KEY Secret-Variable für nicht-interaktiven CI-Scan
+- GitHub Secret SAFETY_API_KEY muss unter Settings → Secrets → Actions eingetragen werden
+
+### Django EOL-Upgrade 5.1.15 → 5.2.11 (LTS)
+- Django 5.1 ist seit 31.12.2025 End-of-Life (kein Security-Support mehr)
+- Upgrade auf 5.2.11 (LTS, Security-Support bis ~2028)
+- django-stubs 5.1.2 → 5.2.0
+- 872 Tests grün, lokale Migration angewendet, Server-Deploy erfolgreich
+
+Teststand nach allen Fixes: 872 passed, 0 failed
