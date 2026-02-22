@@ -657,13 +657,14 @@ class KIApiLogAdmin(admin.ModelAdmin):
     endpoint_badge.admin_order_field = "endpoint"
 
     def cost_eur_fmt(self, obj):
-        if obj.cost_eur == 0:
+        cost = float(obj.cost_eur)
+        if cost == 0:
             return format_html('<span style="color:#aaa;">0 €</span>')
-        color = "#c00" if obj.cost_eur > 0.01 else "#333"
+        color = "#c00" if cost > 0.01 else "#333"
         return format_html(
             '<span style="color:{};font-weight:600;">{:.4f} €</span>',
             color,
-            obj.cost_eur,
+            cost,
         )
 
     cost_eur_fmt.short_description = "Kosten"
