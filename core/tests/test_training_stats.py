@@ -122,7 +122,11 @@ class TestGetFatigueRating(TestCase):
 class TestGetMotivationQuote(TestCase):
     def test_hohe_ermuedung_gibt_erholungs_quote(self):
         quote = _get_motivation_quote(form_index=80, fatigue_index=70)
-        self.assertIn(quote[0], ["🛌", "⚠️", "🧘", "💤"])
+        # Emoji kann mit oder ohne Variation Selector (U+FE0F) kommen
+        self.assertTrue(
+            any(quote.startswith(e) for e in ["🛌", "⚠", "🧘", "💤"]),
+            f"Unerwartetes Emoji: {repr(quote[:2])}",
+        )
 
     def test_hohe_form_gibt_performance_quote(self):
         quote = _get_motivation_quote(form_index=80, fatigue_index=10)
