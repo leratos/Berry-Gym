@@ -74,6 +74,9 @@ jobs:
             > "$BACKUP_FILE"
           echo "Backup gespeichert: $BACKUP_FILE"
 
+          # Nur die letzten 5 Backups behalten, ältere löschen
+          ls -t backup_*.json 2>/dev/null | tail -n +6 | xargs rm -f
+
           echo "=== [3/7] Code aktualisieren ==="
           git pull origin main
 
