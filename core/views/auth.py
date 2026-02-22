@@ -2,8 +2,7 @@
 Authentication and user management views module.
 
 This module handles:
-- Beta access applications and waitlist management
-- User registration with invite codes
+- User registration (open beta)
 - User profile management
 - User feedback (bug reports and feature requests)
 """
@@ -14,23 +13,12 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import F
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..helpers.email import send_welcome_email
-from ..models import InviteCode, WaitlistEntry
 
 logger = logging.getLogger(__name__)
-
-
-def _validate_invite_code(code_str: str) -> str | None:
-    """Prüft Einladungscode. Gibt Fehlermeldung zurück oder None wenn OK."""
-    if not code_str:
-        return "Einladungscode fehlt."
-    if not InviteCode.objects.filter(code=code_str, used_count__lt=F("max_uses")).exists():
-        return "Ungültiger oder aufgebrauchter Code."
-    return None
 
 
 def _validate_registration_fields(username: str, email: str, pass1: str, pass2: str) -> list[str]:
@@ -97,74 +85,29 @@ def _handle_change_password(
 
 
 def apply_beta(request: HttpRequest) -> HttpResponse:
-    """Bewerbungsseite für Beta-Zugang"""
-    if request.method == "POST":
-        email = request.POST.get("email", "").strip().lower()
-        reason = request.POST.get("reason", "").strip()
-        experience = request.POST.get("experience")
-        interests = request.POST.getlist("interests")
-        github_username = request.POST.get("github_username", "").strip()
-
-        if not email or not reason or not experience:
-            messages.error(request, "Bitte fülle alle Pflichtfelder aus.")
-            return render(request, "registration/apply_beta.html")
-
-        if WaitlistEntry.objects.filter(email=email).exists():
-            messages.info(request, "Diese E-Mail ist bereits auf der Warteliste.")
-            return redirect("apply_beta")
-
-        from django.contrib.auth.models import User
-
-        if User.objects.filter(email=email).exists():
-            messages.info(request, "Mit dieser E-Mail existiert bereits ein Account.")
-            return redirect("login")
-
-        WaitlistEntry.objects.create(
-            email=email,
-            reason=reason,
-            experience=experience,
-            interests=interests,
-            github_username=github_username or None,
-        )
-
-        messages.success(request, "✅ Bewerbung eingereicht! Du erhältst in 48h eine E-Mail.")
-        return redirect("login")
-
-    return render(request, "registration/apply_beta.html")
+    """Beta-Bewerbung ist nicht mehr aktiv – direkt zur offenen Registrierung."""
+    return redirect("register")
 
 
 def register(request: HttpRequest) -> HttpResponse:
-    """Registrierung mit Einladungscode"""
+    """Offene Registrierung – kein Invite-Code erforderlich."""
     if request.user.is_authenticated:
         return redirect("dashboard")
 
     if request.method == "POST":
-        code_str = request.POST.get("invite_code", "").strip().upper()
         username = request.POST.get("username", "").strip()
         email = request.POST.get("email", "").strip().lower()
         pass1 = request.POST.get("password1")
         pass2 = request.POST.get("password2")
 
-        errors = []
-        code_error = _validate_invite_code(code_str)
-        if code_error:
-            errors.append(code_error)
-        errors.extend(_validate_registration_fields(username, email, pass1, pass2))
+        errors = _validate_registration_fields(username, email, pass1, pass2)
 
         if errors:
             for e in errors:
                 messages.error(request, e)
-            return render(request, "registration/register_new.html", {"invite_code": code_str})
+            return render(request, "registration/register_new.html")
 
         user = User.objects.create_user(username=username, email=email, password=pass1)
-        invite = InviteCode.objects.get(code=code_str)
-        invite.use()
-
-        entry = WaitlistEntry.objects.filter(email=email, invite_code=invite).first()
-        if entry:
-            entry.status = "registered"
-            entry.save()
-
         send_welcome_email(user)
 
         user = authenticate(username=username, password=pass1)
@@ -172,8 +115,7 @@ def register(request: HttpRequest) -> HttpResponse:
         messages.success(request, f"🎉 Willkommen {username}!")
         return redirect("dashboard")
 
-    code_param = request.GET.get("code", "").strip().upper()
-    return render(request, "registration/register_new.html", {"invite_code": code_param})
+    return render(request, "registration/register_new.html")
 
 
 @login_required
