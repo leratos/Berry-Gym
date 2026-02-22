@@ -35,6 +35,9 @@ from .exercise import Equipment, Uebung, UebungTag  # noqa: F401
 # Feedback & Notifications
 from .feedback import Feedback, PushSubscription  # noqa: F401
 
+# KI API Logging
+from .ki_log import KIApiLog  # noqa: F401
+
 # ML
 from .ml import MLPredictionModel  # noqa: F401
 
@@ -70,6 +73,7 @@ __all__ = [
     "Equipment",
     "Feedback",
     "InviteCode",
+    "KIApiLog",
     "KoerperWerte",
     "MLPredictionModel",
     "Plan",

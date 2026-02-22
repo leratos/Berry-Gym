@@ -1789,3 +1789,10 @@ README.md + README_EN.md aktualisiert:
 - Hevy Import/Export und Einzelplan-Aktivierung als ✅ eingetragen
 - Roadmap bereinigt (keine 🔜 doppelten Einträge)
 - Projektstruktur docs/-Sektion aktualisiert
+
+## In Arbeit: feature/ki-cost-tracking (22.02.2026)
+
+Neues KIApiLog-Modell: 1 DB-Zeile pro LLM-API-Call mit User, Endpunkt,
+Tokens (in/out), Kosten in €, Modell, Erfolg/Fehler.
+plan_generator.py, live_guidance.py, plan_adapter.py loggen nach jedem Call.
+Migration + Tests.

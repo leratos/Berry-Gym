@@ -273,6 +273,10 @@ class LLMClient:
                 "cost": total_cost,
                 "model": model,
                 "tokens": tokens_used,
+                "usage": {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                },
             }
 
         except json.JSONDecodeError as e:
