@@ -1,0 +1,115 @@
+{% extends "admin/base_site.html" %}
+{% block title %}KI-Kosten Dashboard{% endblock %}
+
+{% block content %}
+<h1>KI-Kosten Dashboard</h1>
+<p style="color:#666;margin-bottom:20px;">Auswertung aller LLM-API-Calls. Ollama-Calls kosten 0 €.</p>
+
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:28px;">
+
+  <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:16px 24px;min-width:160px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Dieser Monat</div>
+    <div style="font-size:28px;font-weight:700;margin-top:4px;">{{ this_month_eur }} €</div>
+    <div style="font-size:12px;color:#aaa;margin-top:2px;">{{ this_month_calls }} Calls</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:16px 24px;min-width:160px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Gesamt</div>
+    <div style="font-size:28px;font-weight:700;margin-top:4px;">{{ total_eur }} €</div>
+    <div style="font-size:12px;color:#aaa;margin-top:2px;">{{ total_calls }} Calls</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:16px 24px;min-width:160px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Fehler-Rate</div>
+    <div style="font-size:28px;font-weight:700;margin-top:4px;color:{% if error_rate > 5 %}#c00{% else %}#333{% endif %};">{{ error_rate }}%</div>
+    <div style="font-size:12px;color:#aaa;margin-top:2px;">{{ error_calls }} fehlgeschlagen</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:16px 24px;min-width:160px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Retry-Rate</div>
+    <div style="font-size:28px;font-weight:700;margin-top:4px;color:{% if retry_rate > 10 %}#c00{% else %}#333{% endif %};">{{ retry_rate }}%</div>
+    <div style="font-size:12px;color:#aaa;margin-top:2px;">{{ retry_calls }} Retries</div>
+  </div>
+
+</div>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+
+  <div style="flex:1;min-width:260px;">
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#666;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:0;">Kosten nach Endpunkt (gesamt)</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead>
+        <tr style="background:#f8f8f8;">
+          <th style="padding:8px 6px;text-align:left;border-bottom:1px solid #ddd;">Endpunkt</th>
+          <th style="padding:8px 6px;text-align:right;border-bottom:1px solid #ddd;">Calls</th>
+          <th style="padding:8px 6px;text-align:right;border-bottom:1px solid #ddd;">Kosten</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in by_endpoint %}
+        <tr style="border-bottom:1px solid #f4f4f4;">
+          <td style="padding:7px 6px;">{{ row.endpoint }}</td>
+          <td style="padding:7px 6px;text-align:right;color:#666;">{{ row.calls }}</td>
+          <td style="padding:7px 6px;text-align:right;font-weight:600;">{{ row.cost }} €</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="padding:8px 6px;color:#aaa;">Keine Daten</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="flex:1;min-width:260px;">
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#666;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:0;">Top 10 User (gesamt)</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead>
+        <tr style="background:#f8f8f8;">
+          <th style="padding:8px 6px;text-align:left;border-bottom:1px solid #ddd;">User</th>
+          <th style="padding:8px 6px;text-align:right;border-bottom:1px solid #ddd;">Calls</th>
+          <th style="padding:8px 6px;text-align:right;border-bottom:1px solid #ddd;">Kosten</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in by_user %}
+        <tr style="border-bottom:1px solid #f4f4f4;">
+          <td style="padding:7px 6px;">{{ row.username }}</td>
+          <td style="padding:7px 6px;text-align:right;color:#666;">{{ row.calls }}</td>
+          <td style="padding:7px 6px;text-align:right;font-weight:600;">{{ row.cost }} €</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="padding:8px 6px;color:#aaa;">Keine Daten</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="flex:1;min-width:260px;">
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#666;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:0;">Monatsverlauf (letzte 6 Monate)</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead>
+        <tr style="background:#f8f8f8;">
+          <th style="padding:8px 6px;text-align:left;border-bottom:1px solid #ddd;">Monat</th>
+          <th style="padding:8px 6px;text-align:right;border-bottom:1px solid #ddd;">Calls</th>
+          <th style="padding:8px 6px;text-align:right;border-bottom:1px solid #ddd;">Kosten</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in by_month %}
+        <tr style="border-bottom:1px solid #f4f4f4;">
+          <td style="padding:7px 6px;">{{ row.month }}</td>
+          <td style="padding:7px 6px;text-align:right;color:#666;">{{ row.calls }}</td>
+          <td style="padding:7px 6px;text-align:right;font-weight:600;">{{ row.cost }} €</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="padding:8px 6px;color:#aaa;">Keine Daten</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<p style="margin-top:24px;">
+  <a href="{% url 'admin:core_kiapicostsummary_changelist' %}" class="button">&larr; Zur Log-Liste</a>
+</p>
+{% endblock %}

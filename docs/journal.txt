@@ -1796,3 +1796,28 @@ Neues KIApiLog-Modell: 1 DB-Zeile pro LLM-API-Call mit User, Endpunkt,
 Tokens (in/out), Kosten in €, Modell, Erfolg/Fehler.
 plan_generator.py, live_guidance.py, plan_adapter.py loggen nach jedem Call.
 Migration + Tests.
+
+## In Arbeit: feature/ki-cost-logging-complete (22.02.2026)
+
+1. _log_ki_cost() in live_guidance.py und plan_adapter.py einbauen
+2. Kosten-Dashboard im Django Admin (KIApiLog: nach User, Monat, Endpunkt)
+
+## Abgeschlossen: feature/ki-cost-logging-complete (22.02.2026)
+
+1. live_guidance.py: _log_ki_cost() eingebaut (Endpoint.LIVE_GUIDANCE)
+   - user_id aus Trainingseinheit-FK gelesen
+   - LLM-Call auf LLMClient.generate_training_plan() vereinheitlicht (kein
+     doppelter openai/ollama-Zweig mehr)
+   - Logging bei Erfolg und Fehlerfall
+
+2. plan_adapter.py: _log_ki_cost() eingebaut (Endpoint.PLAN_OPTIMIZE)
+   - Aufruf nach suggest_optimizations() LLM-Call
+
+3. Admin-Dashboard (core/admin.py + core/templates/admin/ki_cost_dashboard.html):
+   - KIApiCostSummary Proxy-Modell
+   - KIApiLogAdmin: list_display, Filter, readonly (kein Add/Change)
+   - /admin/core/kiapicostsummary/dashboard/ mit 4 KPIs:
+     Monat/Gesamt/Fehler-Rate/Retry-Rate
+   - Tabellen: nach Endpunkt, Top-10-User, Monatsverlauf 6 Monate
+
+13/13 Tests grün
