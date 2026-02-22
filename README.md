@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square)
 ![Database](https://img.shields.io/badge/Database-MariaDB%20%7C%20SQLite-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
-![Version](https://img.shields.io/badge/Version-0.9.3--beta-brightgreen?style=flat-square)
+![Version](https://img.shields.io/badge/Version-1.0-brightgreen?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-Ready-purple?style=flat-square)
 ![i18n](https://img.shields.io/badge/i18n-DE%20%7C%20EN-blue?style=flat-square)
 
@@ -277,7 +277,7 @@ Berry-Gym/
 │   │   ├── ai_recommendations.py # KI-Endpunkte (Rate-Limited)
 │   │   └── ...
 │   ├── templates/core/         # HTML Templates (Bootstrap 5, i18n)
-│   ├── tests/                  # 822 Tests (pytest)
+│   ├── tests/                  # 864 Tests (pytest)
 │   ├── static/core/            # CSS, JS, PWA
 │   ├── fixtures/               # initial_exercises.json, plan_templates.json
 │   ├── migrations/             # 70+ Datenbank-Migrationen
@@ -293,6 +293,9 @@ Berry-Gym/
 │   ├── journal.txt             # Entwicklungstagbuch (laufend gepflegt)
 │   ├── PROJECT_ROADMAP.md      # Phasenplanung
 │   ├── DEPLOYMENT.md           # Production Deployment Guide
+│   ├── RUNBOOK.md              # Incident Response & Operations
+│   ├── CICD_GUIDE.md           # CI/CD Pipeline Guide
+│   ├── CODE_QUALITY.md         # Code Quality Standards
 │   └── LOAD_TESTING.md         # Locust SLO-Dokumentation
 ├── README.md                   # Diese Datei (DE)
 ├── README_EN.md                # English README
@@ -330,25 +333,27 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 | Testing | pytest, factory_boy, 822 Tests, CI/CD |
 | ML | scikit-learn (lokale Gewichtsvorhersagen) |
 
-### Projekt-Statistiken (Version 0.9.3-beta, Stand Feb 2026)
+### Projekt-Statistiken (Version 1.0, Stand Feb 2026)
 
 | Metrik | Wert |
 |--------|------|
-| Tests | **822 passed**, CI/CD grün |
+| Tests | **864 passed**, CI/CD grün |
 | Übersetzungen | **790** (DE→EN, 0 fuzzy, 0 untranslated) |
 | Übungen | **113** vordefiniert + Custom Übungen |
 | Migrationen | **70+** |
 | Templates | **55+** HTML/Django |
 | Python Files | **70+** |
 | Lines of Code | **~22.000+** |
-| Development Time | **14+ Monate** |
+| Development Time | **~7 Wochen intensiv** |
 
 ---
 
 ## 🔮 Roadmap & Known Limitations
 
-### Aktuell verfügbar (v0.9.3-beta – Close Beta)
+### Aktuell verfügbar (v1.0)
 
+- ✅ **Hevy Import/Export**: CSV-Import aus Hevy/Strong mit Dry-Run, automatischem Übungs-Matching und Duplikatschutz; Export im Hevy-Format (14 Spalten)
+- ✅ **Einzelplan-Aktivierung**: Pläne ohne Gruppe direkt als aktiven Plan setzen
 - ✅ **CI/CD Pipeline**: GitHub Actions → automatischer Deploy auf Production
 - ✅ **Security**: IDOR-Fix, @login_required Guards, defusedxml, File Upload Validation
 - ✅ **Rate Limiting**: 5 KI-Endpoints abgesichert (konfigurierbar via .env)
@@ -366,8 +371,8 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 ### In Planung / Nächste Schritte
 
-- 🔜 **Import/Export (Hevy-Format)**: CSV-Export kompatibel mit Hevy/Strong – "Bring your data" für Wechsler
-- 🔜 **Public Launch**: Security Audit, Smoke Tests, Rollback-Plan
+- ✅ **Import/Export (Hevy-Format)**: CSV-Export & Import kompatibel mit Hevy/Strong – "Bring your data" für Wechsler, Dry-Run Vorschau, automatisches Übungs-Matching
+- ✅ **Einzelplan-Aktivierung**: Pläne ohne Gruppe können direkt als aktiver Plan gesetzt werden
 - 🔜 Nutrition Tracking (Makros & Kalorien)
 - 🔜 Onboarding-Tour & Feature-Discovery
 

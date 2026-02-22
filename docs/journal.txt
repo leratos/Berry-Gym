@@ -1763,3 +1763,9 @@ Offene Feature-Branches (noch nicht in main gemergt):
 - feature/phase-7-6-hevy-import-export
 - feature/phase-7-7-einzelplan-aktivieren
 - feature/phase-7-7-pre-launch
+
+## In Arbeit: chore/docs-cleanup-readme-v1 (22.02.2026)
+
+docs/ aufräumen: 21 veraltete/einmalige Dateien löschen, 13 behalten.
+README.md + README_EN.md: Version 0.9.3 → 1.0, Tests 822 → 864,
+neue Features (Hevy Import/Export, Einzelplan-Aktivierung), Roadmap aktualisieren.

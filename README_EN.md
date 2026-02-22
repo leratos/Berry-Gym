@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square)
 ![Database](https://img.shields.io/badge/Database-MariaDB%20%7C%20SQLite-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
-![Version](https://img.shields.io/badge/Version-0.9.3--beta-brightgreen?style=flat-square)
+![Version](https://img.shields.io/badge/Version-1.0-brightgreen?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-Ready-purple?style=flat-square)
 ![i18n](https://img.shields.io/badge/i18n-DE%20%7C%20EN-blue?style=flat-square)
 
@@ -260,7 +260,7 @@ Berry-Gym/
 │   ├── models/                 # Data models (split by domain)
 │   ├── views/                  # Modular views
 │   ├── templates/core/         # HTML templates (Bootstrap 5, i18n)
-│   ├── tests/                  # 822 tests (pytest)
+│   ├── tests/                  # 864 tests (pytest)
 │   ├── static/core/            # CSS, JS, PWA
 │   ├── fixtures/               # initial_exercises.json, plan_templates.json
 │   └── migrations/             # 70+ database migrations
@@ -292,27 +292,29 @@ Berry-Gym/
 | PWA | Service Worker, manifest.json |
 | PDF | xhtml2pdf, matplotlib, cairosvg, Pillow |
 | i18n | Django i18n/L10N, gettext (DE/EN) |
-| Testing | pytest, factory_boy, 822 tests, CI/CD |
+| Testing | pytest, factory_boy, 864 tests, CI/CD |
 | ML | scikit-learn (local weight predictions) |
 
-### Project Statistics (Version 0.9.3-beta, Feb 2026)
+### Project Statistics (Version 1.0, Feb 2026)
 
 | Metric | Value |
 |--------|-------|
-| Tests | **822 passed**, CI/CD green |
+| Tests | **864 passed**, CI/CD green |
 | Translations | **790** (DE→EN, 0 fuzzy, 0 untranslated) |
 | Exercises | **113** predefined + custom exercises |
 | Migrations | **70+** |
 | Templates | **55+** HTML/Django |
 | Lines of Code | **~22,000+** |
-| Development Time | **14+ months** |
+| Development Time | **~7 weeks intensive** |
 
 ---
 
 ## 🔮 Roadmap & Known Limitations
 
-### Currently Available (v0.9.3-beta – Closed Beta)
+### Currently Available (v1.0)
 
+- ✅ **Hevy Import/Export**: CSV import from Hevy/Strong with dry-run preview, automatic exercise matching and duplicate protection; export in Hevy format (14 columns)
+- ✅ **Single Plan Activation**: Activate plans without a group directly as the active plan
 - ✅ **CI/CD Pipeline**: GitHub Actions → automatic production deploy
 - ✅ **Security**: IDOR fix, @login_required guards, defusedxml, file upload validation
 - ✅ **Rate Limiting**: 5 AI endpoints secured (configurable via .env)
@@ -330,8 +332,8 @@ Berry-Gym/
 
 ### Planned / Next Steps
 
-- 🔜 **Import/Export (Hevy format)**: CSV export compatible with Hevy/Strong
-- 🔜 **Public Launch**: Security audit, smoke tests, rollback plan
+- ✅ **Import/Export (Hevy format)**: CSV export & import compatible with Hevy/Strong — "bring your data" for switchers, dry-run preview, automatic exercise matching
+- ✅ **Single Plan Activation**: Plans without a group can be set as active directly
 - 🔜 Nutrition tracking (macros & calories)
 - 🔜 Onboarding tour & feature discovery
 
