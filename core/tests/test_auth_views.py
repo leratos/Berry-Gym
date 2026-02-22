@@ -194,3 +194,249 @@ class TestRegisterView(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         mock_email.assert_not_called()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Feedback Views
+# ──────────────────────────────────────────────────────────────────────────────
+class TestFeedbackListView(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="fb_user", password="pass1234")
+        self.client.force_login(self.user)
+
+    def test_login_required(self):
+        self.client.logout()
+        response = self.client.get(reverse("feedback_list"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_get_200_leere_liste(self):
+        response = self.client.get(reverse("feedback_list"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_zeigt_nur_eigene_feedbacks(self):
+        from core.models import Feedback
+
+        other = User.objects.create_user(username="other_fb", password="pass1234")
+        Feedback.objects.create(
+            user=self.user, feedback_type="BUG", title="Mein Bug", description="Detail"
+        )
+        Feedback.objects.create(
+            user=other, feedback_type="FEATURE", title="Anderer Bug", description="Detail"
+        )
+        response = self.client.get(reverse("feedback_list"))
+        self.assertEqual(response.status_code, 200)
+        feedbacks = response.context["feedbacks"]
+        self.assertEqual(feedbacks.count(), 1)
+        self.assertEqual(feedbacks.first().user, self.user)
+
+
+class TestFeedbackCreateView(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="fbc_user", password="pass1234")
+        self.client.force_login(self.user)
+
+    def test_login_required(self):
+        self.client.logout()
+        response = self.client.get(reverse("feedback_create"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_get_200_zeigt_formular(self):
+        response = self.client.get(reverse("feedback_create"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_mit_type_parameter(self):
+        response = self.client.get(reverse("feedback_create") + "?type=BUG")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["feedback_type"], "BUG")
+
+    def test_post_erstellt_feedback(self):
+        from core.models import Feedback
+
+        response = self.client.post(
+            reverse("feedback_create"),
+            {
+                "feedback_type": "FEATURE",
+                "title": "Neues Feature",
+                "description": "Das wäre toll",
+            },
+        )
+        self.assertRedirects(response, reverse("feedback_list"), fetch_redirect_response=False)
+        self.assertTrue(Feedback.objects.filter(user=self.user, title="Neues Feature").exists())
+
+    def test_post_bug_feedback_erstellen(self):
+        from core.models import Feedback
+
+        self.client.post(
+            reverse("feedback_create"),
+            {
+                "feedback_type": "BUG",
+                "title": "Login kaputt",
+                "description": "Kommt immer 500 Fehler",
+            },
+        )
+        self.assertTrue(Feedback.objects.filter(user=self.user, feedback_type="BUG").exists())
+
+    def test_post_ohne_title_kein_feedback(self):
+        from core.models import Feedback
+
+        count_vor = Feedback.objects.filter(user=self.user).count()
+        response = self.client.post(
+            reverse("feedback_create"),
+            {"feedback_type": "BUG", "title": "", "description": "Detail"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("error", response.context)
+        self.assertEqual(Feedback.objects.filter(user=self.user).count(), count_vor)
+
+    def test_post_ohne_description_kein_feedback(self):
+        from core.models import Feedback
+
+        count_vor = Feedback.objects.filter(user=self.user).count()
+        response = self.client.post(
+            reverse("feedback_create"),
+            {"feedback_type": "FEATURE", "title": "Irgendwas", "description": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Feedback.objects.filter(user=self.user).count(), count_vor)
+
+
+class TestFeedbackDetailView(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="fbd_user", password="pass1234")
+        self.client.force_login(self.user)
+        from core.models import Feedback
+
+        self.feedback = Feedback.objects.create(
+            user=self.user,
+            feedback_type="FEATURE",
+            title="Mein Feature",
+            description="Beschreibung",
+        )
+
+    def test_login_required(self):
+        self.client.logout()
+        response = self.client.get(reverse("feedback_detail", args=[self.feedback.id]))
+        self.assertEqual(response.status_code, 302)
+
+    def test_get_200_zeigt_detail(self):
+        response = self.client.get(reverse("feedback_detail", args=[self.feedback.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["feedback"], self.feedback)
+
+    def test_fremdes_feedback_404(self):
+        other = User.objects.create_user(username="other_fbd", password="pass1234")
+        from core.models import Feedback
+
+        fremdes = Feedback.objects.create(
+            user=other, feedback_type="BUG", title="Fremd", description="x"
+        )
+        response = self.client.get(reverse("feedback_detail", args=[fremdes.id]))
+        self.assertEqual(response.status_code, 404)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Profile View
+# ──────────────────────────────────────────────────────────────────────────────
+class TestProfileView(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="profile_user", email="profile@test.de", password="altes_pw_9876"
+        )
+        self.client.force_login(self.user)
+        from core.models import UserProfile
+
+        UserProfile.objects.get_or_create(user=self.user)
+
+    def test_login_required(self):
+        self.client.logout()
+        response = self.client.get(reverse("profile"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_get_200(self):
+        response = self.client.get(reverse("profile"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_update_profile_aendert_username(self):
+        self.client.post(
+            reverse("profile"),
+            {
+                "action": "update_profile",
+                "username": "neuer_name_123",
+                "email": "profile@test.de",
+            },
+        )
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "neuer_name_123")
+
+    def test_post_update_profile_fehler_zeigt_meldung(self):
+        User.objects.create_user(username="belegt_name", password="x", email="b@b.de")
+        response = self.client.post(
+            reverse("profile"),
+            {
+                "action": "update_profile",
+                "username": "belegt_name",
+                "email": "profile@test.de",
+            },
+        )
+        self.assertRedirects(response, reverse("profile"), fetch_redirect_response=False)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "profile_user")  # unverändert
+
+    def test_post_change_password_erfolgreich(self):
+        response = self.client.post(
+            reverse("profile"),
+            {
+                "action": "change_password",
+                "current_password": "altes_pw_9876",
+                "new_password": "neues_pw_sicher_1",
+                "confirm_password": "neues_pw_sicher_1",
+            },
+        )
+        self.assertRedirects(response, reverse("profile"), fetch_redirect_response=False)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("neues_pw_sicher_1"))
+
+    def test_post_change_password_falsches_altes_pw(self):
+        response = self.client.post(
+            reverse("profile"),
+            {
+                "action": "change_password",
+                "current_password": "falsch",
+                "new_password": "neues_pw_sicher_1",
+                "confirm_password": "neues_pw_sicher_1",
+            },
+        )
+        self.assertRedirects(response, reverse("profile"), fetch_redirect_response=False)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("altes_pw_9876"))  # unverändert
+
+    def test_post_update_body_data_groesse_gesetzt(self):
+        self.client.post(
+            reverse("profile"),
+            {"action": "update_body_data", "groesse_cm": "180"},
+        )
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.groesse_cm, 180)
+
+    def test_post_update_body_data_zu_gross(self):
+        self.client.post(
+            reverse("profile"),
+            {"action": "update_body_data", "groesse_cm": "300"},
+        )
+        self.user.profile.refresh_from_db()
+        self.assertNotEqual(self.user.profile.groesse_cm, 300)
+
+    def test_post_update_body_data_kein_wert(self):
+        response = self.client.post(
+            reverse("profile"),
+            {"action": "update_body_data", "groesse_cm": ""},
+        )
+        # Redirect zurück zu profile – kein Crash
+        self.assertRedirects(response, reverse("profile"), fetch_redirect_response=False)
+
+    def test_post_update_body_data_ungueltig(self):
+        response = self.client.post(
+            reverse("profile"),
+            {"action": "update_body_data", "groesse_cm": "abc"},
+        )
+        self.assertRedirects(response, reverse("profile"), fetch_redirect_response=False)

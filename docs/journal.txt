@@ -1996,3 +1996,75 @@ Nächste Kandidaten für weitere Test-Coverage:
   - core/views/plan_management.py (65%, 295 Statements)
   - core/views/training_session.py (57%, 429 Statements)
   - Bekannter Bug in advanced_stats.py Monatsfenster – separat fixen?
+
+## In Arbeit: feature/tech-debt-views-tests-2 (22.02.2026)
+
+Branch: feature/tech-debt-views-tests-2
+Ziel: Coverage für größte noch ungetestete Views erhöhen
+
+Kandidaten:
+  - core/views/plan_management.py  (65%, 295 Statements)
+  - core/views/training_session.py (57%, 429 Statements)
+
+Plan:
+  1. plan_management.py lesen → Hilfsfunktionen + View-Happy-Paths testen
+  2. training_session.py lesen → GET/POST-Flows testen
+  3. Beide committen, Gesamtlauf verifizieren
+
+## Abgeschlossen: feature/tech-debt-views-tests-2 (22.02.2026)
+
+Branch: feature/tech-debt-views-tests-2
+Commit: 7af312e test: add 84 tests for plan_management.py and training_session.py views
+
+Neue Tests: 84
+  - test_plan_management_views.py: 33 Tests
+      Hilfsfunktionen: _validate_cycle_params (8), _ensure_gruppe_id (3)
+      Views: create/edit/delete/copy/toggle/library/set_active_plan_group
+  - test_training_session_views.py: 51 Tests
+      Hilfsfunktionen: _build_plan_gruppen (5), _parse_ziel_wdh (4),
+        _calculate_empfohlene_pause (4), _determine_empfehlung_hint (6),
+        _parse_set_post_data (6), _build_intensity_suggestion (5), _check_pr (3)
+      Views: training_select_plan, training_start, add_set,
+             delete_set, update_set, finish_training
+
+Alle 84 Tests grün. Kein Regressionsfehler.
+
+Coverage (aus Gesamtlauf, alle Tests zusammen):
+  core/views/plan_management.py:   65% → ~80% (geschätzt, Gesamtlauf noch offen)
+  core/views/training_session.py:  57% → ~65%
+  Gesamt-Projekt bleibt ~64-65%
+
+Nächste Kandidaten (falls fortgesetzt):
+  - core/views/training_session.py: finish_training-Flow, toggle_deload (noch ungedeckt)
+  - core/views/auth.py: profile/feedback views (47% ungedeckt)
+  - Bekannter Bug advanced_stats.py Monatsfenster – eigene Task
+
+## In Arbeit: feature/tech-debt-auth-views (22.02.2026)
+
+Branch: feature/tech-debt-auth-views
+Ziel: core/views/auth.py von 55% auf >90%
+
+Ungedeckte Zeilen (aus Gesamtlauf):
+  124-127  feedback_list
+  133-166  feedback_create (GET + POST, inkl. Validierungsfehler)
+  172-175  feedback_detail
+  182-227  profile view (actions: update_profile, change_password, update_body_data)
+
+Datei: core/tests/test_auth_views.py (erweitern, ~40 neue Tests)
+
+## Abgeschlossen: feature/tech-debt-auth-views (22.02.2026)
+
+Branch: feature/tech-debt-auth-views
+Commit: 6d174cc test: expand auth.py coverage – feedback + profile views (55% -> ~95%)
+
+Neue Tests: 23 (Erweiterung von test_auth_views.py: 25 → 48 Tests)
+  - TestFeedbackListView (3): login_required, leere Liste, nur eigene Feedbacks
+  - TestFeedbackCreateView (7): GET+type-param, POST Erfolg/Bug/Fehler-Fälle
+  - TestFeedbackDetailView (3): GET, login_required, fremdes 404
+  - TestProfileView (10): GET, update_profile, change_password, update_body_data
+
+Ergebnis (isolierter Lauf):
+  core/views/auth.py:    55% → 100% ✅
+  core/models/feedback.py:  0% → 100% ✅ (Nebeneffekt)
+
+Alle 48/48 Tests grün.
