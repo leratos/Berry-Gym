@@ -1949,3 +1949,50 @@ Nächste Kandidaten:
   - core/utils/logging_helper.py (0%, 34 Statements) – klein, schnell
   - core/context_processors.py (0%, 17 Statements) – sehr klein
   - core/views/* (alle 0%) – komplex, Django-Client nötig
+
+## In Arbeit: feature/tech-debt-views-tests (22.02.2026)
+
+HINWEIS: Commit de90ace (config/notifications Tests) landete versehentlich auf main
+statt auf feature/tech-debt-advanced-stats-tests. Entscheidung: belassen, ab jetzt
+neuer Branch feature/tech-debt-views-tests.
+
+Geplant:
+- core/views/training_stats.py (465 Statements, 34% durch Side-Effects)
+- core/views/cardio.py (56 Statements, 23%)
+- core/views/sources.py (13 Statements, 23%)
+
+## Abgeschlossen: feature/tech-debt-views-tests (22.02.2026)
+
+Branch: feature/tech-debt-views-tests
+Commits:
+  - de90ace: test: add 26 tests for config.py (97%) and notifications.py (88%)
+  - 97c9419: test: add 38 tests for training_stats.py (0% -> 66% coverage)
+  - d8ec3ef: fix: emoji variation selector in test_hohe_ermuedung_gibt_erholungs_quote
+
+Neue Tests: 64 (auf diesem Branch)
+Gesamtergebnis Gesamtlauf: 1097 passed, 2 failed (5 skipped)
+
+Die 2 Failures:
+  1. test_algorithm_audit.py::TestOneRMMonthWindowFix – vorbestehender Bug in advanced_stats.py
+     (Monatsfenster schaut in die Zukunft statt Vergangenheit). Kein Regressionsfehler.
+  2. War test_training_stats.py::test_hohe_ermuedung – Unicode-Variation-Selector-Problem
+     mit ⚠️ vs ⚠ – bereits gefixt in d8ec3ef.
+
+Coverage (Gesamtlauf, alle Tests):
+  core/views/config.py:         97%
+  core/views/notifications.py:  88%
+  core/views/training_stats.py: 83%
+  core/utils/advanced_stats.py: 84%
+  core/views/auth.py:           55%
+  Gesamt Projekt:               64%
+
+Stand dieser Tech-Debt-Session (beide Branches):
+  - feature/tech-debt-advanced-stats-tests: 97 Tests
+  - feature/tech-debt-views-tests:          64 Tests
+  - Gesamt neu: 161 Tests
+
+Nächste Kandidaten für weitere Test-Coverage:
+  - core/views/training_stats.py (83% → Ziel: 90%+, lohnend wegen Größe)
+  - core/views/plan_management.py (65%, 295 Statements)
+  - core/views/training_session.py (57%, 429 Statements)
+  - Bekannter Bug in advanced_stats.py Monatsfenster – separat fixen?
