@@ -70,11 +70,11 @@ class AuthViewsTest(RefactoringTestCase):
         response = self.client.get(reverse("profile"))
         self.assertEqual(response.status_code, 200)
 
-    def test_apply_beta_view_loads(self):
-        """Test beta application page loads"""
+    def test_apply_beta_redirects_to_register(self):
+        """apply_beta leitet seit offener Registrierung direkt auf register weiter."""
         self.client.logout()
         response = self.client.get(reverse("apply_beta"))
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("register"))
 
 
 class TrainingSessionViewsTest(RefactoringTestCase):
