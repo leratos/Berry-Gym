@@ -1,7 +1,7 @@
 # ============================================
 # HomeGym - Production Requirements
 # ============================================
-# Last Updated: 2026-02-11
+# Last Updated: 2026-02-22
 # Python: 3.12.3
 #
 # IMPORTANT: These are ACTUAL installed versions
@@ -12,7 +12,7 @@
 # Core Django Framework
 # ============================================
 Django==5.1.15
-gunicorn==22.0.0
+gunicorn==25.1.0
 
 # ============================================
 # Database
@@ -117,7 +117,11 @@ pre-commit==4.0.1
 #    - Currently: 5.1.15
 #    - LTS-ready: Monitor https://www.djangoproject.com/download/ for security updates
 #
-# 2. OpenAI SDK:
+# 2. Gunicorn:
+#    - Updated 2026-02-22: 22.0.0 → 25.1.0 (CVE: HTTP request smuggling via
+#      conflicting Transfer-Encoding/Content-Length headers, vuln-id 72809)
+#
+# 3. OpenAI SDK:
 #    - Version 2.15.0 (breaking changes from 1.x)
 #    - If upgrading: Update ai_coach/ code
 #
