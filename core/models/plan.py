@@ -8,7 +8,7 @@ from .exercise import Uebung
 
 class Plan(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="plaene", null=True)
-    name = models.CharField(max_length=100, verbose_name="Name des Plans")
+    name = models.CharField(max_length=200, verbose_name="Name des Plans")
     beschreibung = models.TextField(blank=True, verbose_name="Beschreibung")
     is_public = models.BooleanField(default=False, verbose_name="Öffentlich")
     erstellt_am = models.DateTimeField(auto_now_add=True)
@@ -26,7 +26,7 @@ class Plan(models.Model):
         help_text="Pläne mit gleicher ID gehören zusammen (z.B. Split-Tage)",
     )
     gruppe_name = models.CharField(
-        max_length=100,
+        max_length=200,
         blank=True,
         verbose_name="Gruppenname",
         help_text="Name der Plangruppe (z.B. 'Push/Pull/Legs Split')",

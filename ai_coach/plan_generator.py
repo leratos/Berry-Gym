@@ -413,7 +413,7 @@ class PlanGenerator:
         # Wenn mehrere Sessions (Split-Plan), generiere eine gemeinsame gruppe_id
         is_split = len(plan_json["sessions"]) > 1
         split_gruppe_id = uuid.uuid4() if is_split else None
-        split_gruppe_name = plan_json["plan_name"] if is_split else ""
+        split_gruppe_name = plan_json["plan_name"][:200] if is_split else ""
 
         # ---------------------------------------------------------------
         # Batch-Lookup: alle Übungsnamen aus plan_json auf einmal laden.
@@ -472,7 +472,7 @@ class PlanGenerator:
 
             plan = Plan.objects.create(
                 user=user,
-                name=f"{plan_json['plan_name']} - {day_name}",
+                name=f"{plan_json['plan_name']} - {day_name}"[:200],
                 beschreibung="\n\n".join([p for p in beschreibungsteile if p]),
                 erstellt_am=timezone.now(),
                 gruppe_id=split_gruppe_id,
