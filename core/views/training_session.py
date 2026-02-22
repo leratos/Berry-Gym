@@ -61,7 +61,7 @@ def training_select_plan(request: HttpRequest) -> HttpResponse:
     if filter_type == "public":
         from django.shortcuts import redirect
 
-        return redirect(f"{request.path}?filter=eigene")
+        return redirect("/training/select-plan/?filter=eigene")
 
     if filter_type == "shared":
         plaene = request.user.shared_plans.all().order_by(

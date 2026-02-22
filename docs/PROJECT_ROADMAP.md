@@ -31,7 +31,7 @@
 | Week 5-6 | Advanced & Polish       | 75%           | ✅ COMPLETE     |
 | Week 7   | Pre-Launch Prep         | 80%+          | 🔄 IN PROGRESS  |
 | Week 8   | 🚀 PUBLIC LAUNCH (DE)   | —             | 🎯 Goal         |
-| Week 9-10| Internationalization    | —             | 🌍 Expansion    |
+| Week 9-10| Internationalization    | —             | ✅ COMPLETE     |
 
 ---
 
@@ -314,12 +314,20 @@ Bugs gefunden: `delete_training` hatte keinen POST-Guard (GET löschte Daten)
 - Dashboard-Karte mit Tagesstreifen + Fortschrittsbalken
 - 15 Tests
 
-### Phase 7.5 – Internationalisierung Englisch (i18n) 🔄
+### Phase 7.5 – Internationalisierung Englisch (i18n) ✅
 
-**Status:** IN PROGRESS
-- Vorgezogen vor Export, damit Export-Strings nicht doppelt bearbeitet werden müssen
-- Scope: Framework-Setup + Core-Templates + Language-Switcher
-- AI Coach und Übungs-Beschreibungen: separater optionaler Schritt
+**Status:** COMPLETE (21.02.2026)
+
+**Ergebnis:** 790 Übersetzungen, 0 fuzzy, 0 untranslated
+
+- Framework-Setup: settings.py, LocaleMiddleware, i18n_patterns, Language-Switcher
+- 16 Templates mit {% trans %} markiert
+- django.po/mo compiliert (via polib, kein GNU gettext erforderlich)
+- L10N-Bug gefixt: Dezimalzahlen in JS mit {% localize off %} (Timer-Bug)
+- Quote-Escaping-Fix: {% trans "..." %} in HTML-Attributen → {% trans '...' %}
+- 100 fuzzy + 12 untranslated Einträge manuell korrigiert (Phase 7.5f)
+- Regression-Tests: L10nJsDecimalTest (2 Tests), LanguageSwitcherTest (7 Tests)
+- Dokumentation: README.md + README_EN.md erstellt/aktualisiert
 
 ### Phase 7.6 – Import/Export (Hevy-Format) ⏳
 
