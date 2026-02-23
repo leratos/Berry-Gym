@@ -217,18 +217,18 @@ class TestRateLimitEndpoints(TestCase):
         self.client.login(username="endpoint_user", password="pw")
 
     def test_generate_plan_api_requires_post(self):
-        response = self.client.get("/api/generate-plan/")
+        response = self.client.get("/api/generate-plan/", secure=True)
         self.assertEqual(response.status_code, 405)
 
     def test_optimize_plan_api_requires_post(self):
-        response = self.client.get("/api/optimize-plan/")
+        response = self.client.get("/api/optimize-plan/", secure=True)
         self.assertEqual(response.status_code, 405)
 
     def test_live_guidance_api_requires_post(self):
-        response = self.client.get("/api/live-guidance/")
+        response = self.client.get("/api/live-guidance/", secure=True)
         self.assertEqual(response.status_code, 405)
 
     def test_generate_plan_stream_requires_login(self):
         anon_client = Client()
-        response = anon_client.get("/api/generate-plan/stream/")
+        response = anon_client.get("/api/generate-plan/stream/", secure=True)
         self.assertIn(response.status_code, [302, 403])

@@ -291,7 +291,12 @@ def api_share_plan_with_user(request: HttpRequest) -> JsonResponse:
             )
 
         # Plan muss dem User gehören
-        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        if not plan:
+            return JsonResponse(
+                {"success": False, "error": "Plan nicht gefunden oder keine Berechtigung"},
+                status=404,
+            )
 
         # Ziel-User finden
         try:
@@ -345,7 +350,12 @@ def api_unshare_plan_with_user(request: HttpRequest) -> JsonResponse:
             )
 
         # Plan muss dem User gehören
-        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        if not plan:
+            return JsonResponse(
+                {"success": False, "error": "Plan nicht gefunden oder keine Berechtigung"},
+                status=404,
+            )
 
         # Ziel-User finden
         try:

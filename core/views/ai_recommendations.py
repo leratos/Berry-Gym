@@ -607,7 +607,9 @@ def analyze_plan_api(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "plan_id required"}, status=400)
 
         # Validierung: User darf nur eigene Pläne analysieren
-        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        if not plan:
+            return JsonResponse({"error": "Plan nicht gefunden"}, status=404)
 
         adapter = PlanAdapter(plan_id=plan.id, user_id=request.user.id)
         result = adapter.analyze_plan_performance(days=days)
@@ -663,7 +665,9 @@ def optimize_plan_api(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "plan_id required"}, status=400)
 
         # Validierung: User darf nur eigene Pläne optimieren
-        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        if not plan:
+            return JsonResponse({"error": "Plan nicht gefunden"}, status=404)
 
         adapter = PlanAdapter(plan_id=plan.id, user_id=request.user.id)
         result = adapter.suggest_optimizations(days=days)
@@ -857,7 +861,9 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "session_id und question erforderlich"}, status=400)
 
         # Prüfe ob Session dem User gehört
-        _ = get_object_or_404(Trainingseinheit, id=session_id, user=request.user)
+        session = Trainingseinheit.objects.filter(id=session_id, user=request.user).first()
+        if not session:
+            return JsonResponse({"error": "Trainingseinheit nicht gefunden"}, status=404)
 
         # Live Guidance importieren (korrekter Package-Import)
         from ai_coach.live_guidance import LiveGuidance
@@ -896,8 +902,6 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
             }
         )
 
-    except Trainingseinheit.DoesNotExist:
-        return JsonResponse({"error": "Trainingseinheit nicht gefunden"}, status=404)
     except Exception as e:
         logger.error(f"Live Feedback API Error: {e}", exc_info=True)
         return JsonResponse(
