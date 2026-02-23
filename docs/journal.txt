@@ -2379,3 +2379,36 @@ Validierung:
 Hinweis:
 - Request im Testclient mit `secure=True`, um HTTPS-Redirects in gehärteten
   Settings zu vermeiden.
+
+## In Arbeit: Sprint A – Sharing-API Coverage
+
+**Datum:** 2026-02-23
+
+Ziel: Codecov-Verbesserung durch gezielte, branch-orientierte Tests für
+`core/views/api_plan_sharing.py` (Permissions, Validierung, Idempotenz,
+Fehlerpfade).
+
+## Abgeschlossen: Sprint A – Sharing-API Coverage
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- `core/tests/test_api_endpoints.py` erweitert:
+  - Neue Klasse `TestApiShareGroupWithUser` für
+    `api_share_group_with_user`/`api_unshare_group_with_user`
+    (Login, Parameter-Validierung, Not-Found, Self-Share, Erfolgsfälle).
+  - Zusätzliche Kantenfall-Tests in `TestApiSharePlanWithUser`
+    (fremder Plan, User nicht gefunden, Login-Required).
+  - HTTPS-stabile Test-Helper ergänzt (`post_json` + `get_json` mit
+    `secure=True`) für robuste API-Tests unter gehärteten Settings.
+- `core/views/api_plan_sharing.py` korrigiert:
+  - In `api_share_plan_with_user` und `api_unshare_plan_with_user`
+    liefern fehlende/fremde Pläne jetzt korrekt `404` statt `500`.
+
+Validierung:
+- Lauf: `pytest core/tests/test_api_endpoints.py -k "TestApiSearchUsers or TestApiSharePlanWithUser or TestApiShareGroupWithUser or TestApiGetShares" -v`
+  → `32 passed, 59 deselected`.
+
+Hinweis:
+- Bestehende Warnungen unverändert (Django URLField-Transition,
+  Factory Boy Deprecation).
