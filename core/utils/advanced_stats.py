@@ -437,7 +437,7 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
             monat_start = heute - timedelta(days=30 * (6 - i))
             monat_ende = monat_start + timedelta(days=30)
             monat_saetze = uebung_saetze.filter(
-                einheit__datum__gte=monat_start, einheit__datum__lt=monat_ende
+                einheit__datum__gte=monat_start, einheit__datum__lte=monat_ende
             )
 
             monat_best_1rm = 0
