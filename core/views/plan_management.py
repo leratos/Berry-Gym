@@ -613,10 +613,21 @@ def _apply_gruppe_selection(
 
                     from django.utils import timezone
 
+                    today = timezone.now().date()
+                    monday_this_week = today - timedelta(days=today.weekday())
                     weeks_back = current_week - 1
-                    profile.cycle_start_date = (timezone.now() - timedelta(weeks=weeks_back)).date()
+                    profile.cycle_start_date = monday_this_week - timedelta(weeks=weeks_back)
             except (ValueError, TypeError):
                 pass
+
+            # Default: Ohne laufende Woche startet Zyklus am Montag der aktuellen Woche.
+            if profile.cycle_start_date is None:
+                from datetime import timedelta
+
+                from django.utils import timezone
+
+                today = timezone.now().date()
+                profile.cycle_start_date = today - timedelta(days=today.weekday())
 
             profile.save()
             gruppe_name = (

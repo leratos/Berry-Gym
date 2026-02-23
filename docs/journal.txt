@@ -2157,30 +2157,316 @@ Nächste Schritte (Post-Launch):
   - User-Feedback sammeln
   - Week 9-10 (i18n EN) ist bereits abgeschlossen
 
+## In Arbeit: Dashboard Plan-CTA Split
 
-## In Arbeit: Bugfix Körpergewicht-Faktor Display (23.02.2026)
+**Datum:** 2026-02-23
 
-Datei: core/templates/core/stats_exercise.html
-Bug: koerpergewicht_faktor wird als "1%" angezeigt statt "70%" bei Dips
-Ursache: floatformat:0 rundet 0.7 → 1
-Lösung: widthratio Template Tag (0.7 * 100 = 70)
+Ziel: Im Dashboard-Widget der aktiven Plangruppe den bisherigen Einzel-CTA in zwei Aktionen aufteilen:
+- Plan starten
+- Plan-Details ansehen (vorab lesen)
 
-Nächster Schritt: Test in core/tests/test_training_stats.py
+Geplanter Scope:
+- `core/templates/core/dashboard.html`
+- optional kleiner Regressionstest in `core/tests/` für beide Links
 
+## Abgeschlossen: Dashboard Plan-CTA Split
 
-## Abgeschlossen: Bugfix Körpergewicht-Faktor Display (23.02.2026)
+**Datum:** 2026-02-23
 
-Branch: feature/fix-bodyweight-factor-display
+Umsetzung:
+- Dashboard-Widget der aktiven Plangruppe zeigt jetzt zwei getrennte Aktionen:
+  - Plan starten (`training_start_plan`)
+  - Plan-Details ansehen (`plan_details`)
+- Regressionstest ergänzt: `test_active_plan_widget_shows_start_and_details_links`
+  in `core/tests/test_training_stats_extended.py`.
 
-Änderungen:
-  1. core/templates/core/stats_exercise.html (Zeile 69)
-     - VORHER: {{ uebung.koerpergewicht_faktor|floatformat:0 }}% → 0.7 → 1%
-     - NACHHER: {% widthratio uebung.koerpergewicht_faktor 1 100 %}% → 0.7 * 100 = 70%
+Validierung:
+- Zieltest konnte in dieser Container-Session nicht ausgeführt werden, weil Runtime-Dependencies fehlen
+  (`ModuleNotFoundError: No module named 'django'`).
+- Testkommando für lokale/CI-Validierung:
+  `pytest core/tests/test_training_stats_extended.py -k active_plan_widget_shows_start_and_details_links -v`
 
-  2. core/tests/test_training_stats.py
-     - Neuer Test: test_koerpergewicht_faktor_display
-     - Regression-Test für 70% Display bei Dips (koerpergewicht_faktor=0.7)
-     - Alle 5 exercise_stats Tests grün ✅
+## In Arbeit: Test-Hotfix Dashboard CTA (HTTPS Redirect)
 
-Bug war: floatformat:0 hat 0.7 auf 1 gerundet, daher "1%" statt "70%"
-Lösung: widthratio (Django Built-in) für saubere Prozent-Konvertierung
+**Datum:** 2026-02-23
+
+Ziel: Fix für lokalen pytest-Fail (`301` statt `200`) beim neuen Dashboard-CTA-Test.
+Ansatz: Dashboard-Request im Test als HTTPS ausführen (`secure=True`), damit
+`SECURE_SSL_REDIRECT` in Umgebungen mit `DEBUG=False` den Status nicht verfälscht.
+
+## Abgeschlossen: Test-Hotfix Dashboard CTA (HTTPS Redirect)
+
+**Datum:** 2026-02-23
+
+Ergebnis:
+- Zieltest läuft grün mit HTTPS-Request im Testclient.
+- Verifiziert mit:
+  `pytest core/tests/test_training_stats_extended.py -k "active_plan_widget_shows_start_and_details_links" -v`
+  → `1 passed, 33 deselected`.
+
+Hinweise:
+- 2 bestehende Warnings im Testlauf (Django URLField-Transition, Factory Boy Deprecation),
+  nicht Teil dieses Hotfixes.
+
+## In Arbeit: Dashboard CTA Negative Rendering Test
+
+**Datum:** 2026-02-23
+
+Ziel: Zusätzlicher Regressionstest, dass der Button „Plan-Details ansehen“ nicht
+im Dashboard gerendert wird, wenn keine aktive Plangruppe gesetzt ist.
+
+## Abgeschlossen: Dashboard CTA Negative Rendering Test
+
+**Datum:** 2026-02-23
+
+Ergebnis:
+- Negativtest ergänzt: `test_active_plan_widget_hides_details_link_without_active_group`
+  in `core/tests/test_training_stats_extended.py`.
+- Verifiziert zusammen mit dem Positivtest:
+  `pytest core/tests/test_training_stats_extended.py -k "active_plan_widget_shows_start_and_details_links or active_plan_widget_hides_details_link_without_active_group" -v`
+  → `2 passed, 33 deselected`.
+
+Hinweis:
+- Bestehende Warnings bleiben unverändert (Django URLField-Transition, Factory Boy Deprecation).
+
+## In Arbeit: Dashboard CTA UI Feinschliff (Mobile)
+
+**Datum:** 2026-02-23
+
+Ziel: Visuelle Angleichung der zwei Dashboard-CTAs (Planstart + Plan-Details)
+mit Fokus auf bessere Mobile-Tap-Targets, konsistente Abstände und Ausrichtung.
+
+## Abgeschlossen: Dashboard CTA UI Feinschliff (Mobile)
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- Responsive CTA-Styles für das aktive Plan-Widget ergänzt (`active-plan-ctas`, `active-plan-cta-btn`).
+- Einheitliche Button-Höhen, besseres Icon-Alignment und größere Tap-Targets auf Mobile.
+- Überschrift des aktiven Plans auf kleinen Screens besser lesbar skaliert (`active-plan-title`).
+
+Validierung:
+- CTA-Regressionstests erneut ausgeführt:
+  `pytest core/tests/test_training_stats_extended.py -k "active_plan_widget_shows_start_and_details_links or active_plan_widget_hides_details_link_without_active_group" -v`
+  → `2 passed, 33 deselected`.
+
+Hinweis:
+- Bestehende Warnings unverändert (Django URLField-Transition, Factory Boy Deprecation).
+
+## In Arbeit: Dashboard CTA Badge No-Wrap Feinschliff
+
+**Datum:** 2026-02-23
+
+Ziel: Sicherstellen, dass der CTA-Badge (`x/y`) auf sehr schmalen Geräten
+nicht umbricht und visuell stabil bleibt.
+
+## Abgeschlossen: Dashboard CTA Badge No-Wrap Feinschliff
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- CTA-Badge im aktiven Plan-Button auf `white-space: nowrap` gesetzt.
+- Zusätzlich `flex-shrink: 0`, damit der Badge auf kleinen Viewports nicht gequetscht wird.
+
+Datei:
+- `core/templates/core/dashboard.html`
+
+## In Arbeit: Bugfix Zyklus-Woche im Dashboard
+
+**Datum:** 2026-02-23
+
+Problem: Aktive Plan-Woche wird um 1 zu niedrig angezeigt (z.B. reale Woche 3,
+UI zeigt Woche 2).
+
+Scope:
+- Ursache in Wochenberechnung/Setzen des Zyklusstarts identifizieren
+- Off-by-one Bug beheben
+- Regressionstest ergänzen
+
+## Abgeschlossen: Bugfix Zyklus-Woche im Dashboard
+
+**Datum:** 2026-02-23
+
+Root Cause:
+- Beim Aktivieren einer Plangruppe ohne Feld `current_week` blieb `cycle_start_date = None`.
+- Dadurch startete der Zyklus erst beim ersten Training statt direkt bei Aktivierung,
+  was die Dashboard-Woche verzögert/zu niedrig erscheinen ließ.
+
+Fix:
+- In `core/views/plan_management.py` wird `cycle_start_date` beim Aktivieren jetzt
+  standardmäßig auf `heute` gesetzt, wenn keine gültige `current_week` übergeben wurde.
+- Verhalten mit `current_week` bleibt erhalten (rückwärts berechneter Zyklusstart).
+
+Tests:
+- `test_einzelplan_aktivieren_setzt_cycle_start_heute_wenn_current_week_leer`
+- `test_einzelplan_aktivieren_respektiert_current_week`
+- Lauf: `pytest core/tests/test_plan_management.py -k "cycle_start_heute or respektiert_current_week" -v`
+  → `2 passed, 23 deselected`.
+
+Hinweis:
+- In Testumgebungen mit `SECURE_SSL_REDIRECT` müssen POST-Requests im Testclient
+  ggf. mit `secure=True` ausgeführt werden, um Redirect-bedingte False-Failures zu vermeiden.
+
+## In Arbeit: Zyklusstart fix auf Montag
+
+**Datum:** 2026-02-23
+
+Ziel: `cycle_start_date` wird konsistent auf den Montag der aktuellen Woche
+ausgerichtet (auch bei gesetzter `current_week`).
+
+## Abgeschlossen: Zyklusstart fix auf Montag
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- `core/views/plan_management.py`:
+  - Ohne `current_week`: `cycle_start_date` = Montag der aktuellen Woche.
+  - Mit `current_week=n`: `cycle_start_date` = Montag der aktuellen Woche minus `n-1` Wochen.
+- `core/views/training_session.py`:
+  - Fallback bei fehlendem Zyklusstart ebenfalls auf Montag der aktuellen Woche umgestellt.
+
+Tests:
+- `test_einzelplan_aktivieren_setzt_cycle_start_montag_wenn_current_week_leer`
+- `test_einzelplan_aktivieren_respektiert_current_week`
+- Lauf: `pytest core/tests/test_plan_management.py -k "cycle_start_montag_wenn_current_week_leer or respektiert_current_week" -v`
+  → `2 passed, 23 deselected`.
+
+Hinweis:
+- Bestehende Warnings unverändert (Django URLField-Transition, Factory Boy Deprecation).
+
+## In Arbeit: Dashboard Regressionstest Zyklus-Woche
+
+**Datum:** 2026-02-23
+
+Ziel: Zusätzlicher Test, dass die Dashboard-Anzeige `cycle_week` korrekt zur
+gesetzten aktiven Plangruppe und zum berechneten Montag-basierten Zyklusstart passt.
+
+## Abgeschlossen: Dashboard Regressionstest Zyklus-Woche
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- In `core/tests/test_training_stats_extended.py` ergänzt:
+  `test_dashboard_cycle_week_matches_profile_state`.
+- Der Test setzt aktive Gruppe + Montag-basierten Zyklusstart (2 Wochen zurück)
+  und prüft `cycle_week == 3` im Dashboard-Context.
+
+Validierung:
+- Lauf: `pytest core/tests/test_training_stats_extended.py -k "dashboard_cycle_week_matches_profile_state" -v`
+  → `1 passed, 35 deselected`.
+
+## In Arbeit: Fallback-Test Zyklusstart über Session-Logik
+
+**Datum:** 2026-02-23
+
+Ziel: Testen, dass bei fehlendem `cycle_start_date` der Start einer aktiven
+Plan-Session den Zyklusstart auf Montag der aktuellen Woche setzt.
+
+## Abgeschlossen: Fallback-Test Zyklusstart über Session-Logik
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- Neuer Test in `core/tests/test_training_session_views.py`:
+  `test_startet_aktiven_plan_setzt_cycle_start_auf_montag_wenn_leer`
+- Prüft: aktive Gruppe + leeres `cycle_start_date` → Start von `training_start_plan`
+  setzt Zyklusstart auf Montag der aktuellen Woche.
+
+Validierung:
+- Lauf: `pytest core/tests/test_training_session_views.py -k "setzt_cycle_start_auf_montag_wenn_leer" -v`
+  → `1 passed, 51 deselected`.
+
+Hinweis:
+- Request im Testclient mit `secure=True`, um HTTPS-Redirects in gehärteten
+  Settings zu vermeiden.
+
+## In Arbeit: Sprint A – Sharing-API Coverage
+
+**Datum:** 2026-02-23
+
+Ziel: Codecov-Verbesserung durch gezielte, branch-orientierte Tests für
+`core/views/api_plan_sharing.py` (Permissions, Validierung, Idempotenz,
+Fehlerpfade).
+
+## Abgeschlossen: Sprint A – Sharing-API Coverage
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- `core/tests/test_api_endpoints.py` erweitert:
+  - Neue Klasse `TestApiShareGroupWithUser` für
+    `api_share_group_with_user`/`api_unshare_group_with_user`
+    (Login, Parameter-Validierung, Not-Found, Self-Share, Erfolgsfälle).
+  - Zusätzliche Kantenfall-Tests in `TestApiSharePlanWithUser`
+    (fremder Plan, User nicht gefunden, Login-Required).
+  - HTTPS-stabile Test-Helper ergänzt (`post_json` + `get_json` mit
+    `secure=True`) für robuste API-Tests unter gehärteten Settings.
+- `core/views/api_plan_sharing.py` korrigiert:
+  - In `api_share_plan_with_user` und `api_unshare_plan_with_user`
+    liefern fehlende/fremde Pläne jetzt korrekt `404` statt `500`.
+
+Validierung:
+- Lauf: `pytest core/tests/test_api_endpoints.py -k "TestApiSearchUsers or TestApiSharePlanWithUser or TestApiShareGroupWithUser or TestApiGetShares" -v`
+  → `32 passed, 59 deselected`.
+
+Hinweis:
+- Bestehende Warnungen unverändert (Django URLField-Transition,
+  Factory Boy Deprecation).
+
+## In Arbeit: CI Hotfix – Black Formatting
+
+**Datum:** 2026-02-23
+
+Ziel: Fehlgeschlagenen Code-Quality-Check beheben, indem
+`core/tests/test_ai_endpoints_extended.py` Black-konform formatiert wird.
+
+## Abgeschlossen: CI Hotfix – Black Formatting
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- `core/tests/test_ai_endpoints_extended.py` mit Black formatiert.
+
+Validierung:
+- `black --check core/tests/test_ai_endpoints_extended.py`
+  → `1 file would be left unchanged`.
+
+## In Arbeit: Sprint B – AI-Endpoints Error/Rate-Limit Coverage
+
+**Datum:** 2026-02-23
+
+Ziel: Zusätzliche branch-orientierte Tests für
+`core/views/ai_recommendations.py` mit Fokus auf Fehlerpfade,
+Methoden-/Payload-Validierung und Rate-Limit-nahe API-Verzweigungen.
+
+## Abgeschlossen: Sprint B – AI-Endpoints Error/Rate-Limit Coverage
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- Neue Tests in `core/tests/test_ai_endpoints_extended.py`:
+  - `generate_plan_api`: Parameter-Validierung (`plan_type`) + `saveCachedPlan`-Pfad
+    inkl. Verifikation, dass dieser Pfad den Rate-Limit-Check korrekt umgeht.
+  - `analyze_plan_api`: Methodencheck, `plan_id`-Validierung, Erfolgs- und
+    Foreign-Ownership-Pfad.
+  - `optimize_plan_api`: `plan_id`-Validierung, Erfolgs- und
+    Foreign-Ownership-Pfad.
+  - `live_guidance_api`: Pflichtfelder, Foreign-Session-404 und
+    Invalid-Result-Structure-500.
+  - `generate_plan_stream_api`: Rate-Limit-429 als SSE-Error-Stream.
+- `core/views/ai_recommendations.py` korrigiert:
+  - Ownership-/Existenzprüfungen in `analyze_plan_api`, `optimize_plan_api`
+    und `live_guidance_api` liefern jetzt konsistent `404` statt generischem `500`.
+- Stabilisierung bestehender Tests in `core/tests/test_rate_limiting.py`:
+  - GET-Aufrufe auf `secure=True` umgestellt, um HTTPS-Redirects in gehärteten
+    Settings zu vermeiden.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → `13 passed`.
+- `pytest core/tests/test_rate_limiting.py -v`
+  → `17 passed`.
+
+Hinweis:
+- Bestehende Warnungen unverändert (Django URLField-Transition,
+  Factory Boy Deprecation).

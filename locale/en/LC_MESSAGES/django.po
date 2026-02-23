@@ -3754,3 +3754,7 @@ msgstr "..."
 #~ msgstr ""
 #~ "to better plan your strength training. Light cardio supports recovery, while"
 #~ " intense cardio adds additional fatigue."
+
+#: .\core\templates\core\dashboard.html:230
+msgid "Plan-Details ansehen"
+msgstr "View Plan Details"
