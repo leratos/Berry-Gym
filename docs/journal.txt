@@ -2270,3 +2270,112 @@ Umsetzung:
 
 Datei:
 - `core/templates/core/dashboard.html`
+
+## In Arbeit: Bugfix Zyklus-Woche im Dashboard
+
+**Datum:** 2026-02-23
+
+Problem: Aktive Plan-Woche wird um 1 zu niedrig angezeigt (z.B. reale Woche 3,
+UI zeigt Woche 2).
+
+Scope:
+- Ursache in Wochenberechnung/Setzen des Zyklusstarts identifizieren
+- Off-by-one Bug beheben
+- Regressionstest ergänzen
+
+## Abgeschlossen: Bugfix Zyklus-Woche im Dashboard
+
+**Datum:** 2026-02-23
+
+Root Cause:
+- Beim Aktivieren einer Plangruppe ohne Feld `current_week` blieb `cycle_start_date = None`.
+- Dadurch startete der Zyklus erst beim ersten Training statt direkt bei Aktivierung,
+  was die Dashboard-Woche verzögert/zu niedrig erscheinen ließ.
+
+Fix:
+- In `core/views/plan_management.py` wird `cycle_start_date` beim Aktivieren jetzt
+  standardmäßig auf `heute` gesetzt, wenn keine gültige `current_week` übergeben wurde.
+- Verhalten mit `current_week` bleibt erhalten (rückwärts berechneter Zyklusstart).
+
+Tests:
+- `test_einzelplan_aktivieren_setzt_cycle_start_heute_wenn_current_week_leer`
+- `test_einzelplan_aktivieren_respektiert_current_week`
+- Lauf: `pytest core/tests/test_plan_management.py -k "cycle_start_heute or respektiert_current_week" -v`
+  → `2 passed, 23 deselected`.
+
+Hinweis:
+- In Testumgebungen mit `SECURE_SSL_REDIRECT` müssen POST-Requests im Testclient
+  ggf. mit `secure=True` ausgeführt werden, um Redirect-bedingte False-Failures zu vermeiden.
+
+## In Arbeit: Zyklusstart fix auf Montag
+
+**Datum:** 2026-02-23
+
+Ziel: `cycle_start_date` wird konsistent auf den Montag der aktuellen Woche
+ausgerichtet (auch bei gesetzter `current_week`).
+
+## Abgeschlossen: Zyklusstart fix auf Montag
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- `core/views/plan_management.py`:
+  - Ohne `current_week`: `cycle_start_date` = Montag der aktuellen Woche.
+  - Mit `current_week=n`: `cycle_start_date` = Montag der aktuellen Woche minus `n-1` Wochen.
+- `core/views/training_session.py`:
+  - Fallback bei fehlendem Zyklusstart ebenfalls auf Montag der aktuellen Woche umgestellt.
+
+Tests:
+- `test_einzelplan_aktivieren_setzt_cycle_start_montag_wenn_current_week_leer`
+- `test_einzelplan_aktivieren_respektiert_current_week`
+- Lauf: `pytest core/tests/test_plan_management.py -k "cycle_start_montag_wenn_current_week_leer or respektiert_current_week" -v`
+  → `2 passed, 23 deselected`.
+
+Hinweis:
+- Bestehende Warnings unverändert (Django URLField-Transition, Factory Boy Deprecation).
+
+## In Arbeit: Dashboard Regressionstest Zyklus-Woche
+
+**Datum:** 2026-02-23
+
+Ziel: Zusätzlicher Test, dass die Dashboard-Anzeige `cycle_week` korrekt zur
+gesetzten aktiven Plangruppe und zum berechneten Montag-basierten Zyklusstart passt.
+
+## Abgeschlossen: Dashboard Regressionstest Zyklus-Woche
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- In `core/tests/test_training_stats_extended.py` ergänzt:
+  `test_dashboard_cycle_week_matches_profile_state`.
+- Der Test setzt aktive Gruppe + Montag-basierten Zyklusstart (2 Wochen zurück)
+  und prüft `cycle_week == 3` im Dashboard-Context.
+
+Validierung:
+- Lauf: `pytest core/tests/test_training_stats_extended.py -k "dashboard_cycle_week_matches_profile_state" -v`
+  → `1 passed, 35 deselected`.
+
+## In Arbeit: Fallback-Test Zyklusstart über Session-Logik
+
+**Datum:** 2026-02-23
+
+Ziel: Testen, dass bei fehlendem `cycle_start_date` der Start einer aktiven
+Plan-Session den Zyklusstart auf Montag der aktuellen Woche setzt.
+
+## Abgeschlossen: Fallback-Test Zyklusstart über Session-Logik
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- Neuer Test in `core/tests/test_training_session_views.py`:
+  `test_startet_aktiven_plan_setzt_cycle_start_auf_montag_wenn_leer`
+- Prüft: aktive Gruppe + leeres `cycle_start_date` → Start von `training_start_plan`
+  setzt Zyklusstart auf Montag der aktuellen Woche.
+
+Validierung:
+- Lauf: `pytest core/tests/test_training_session_views.py -k "setzt_cycle_start_auf_montag_wenn_leer" -v`
+  → `1 passed, 51 deselected`.
+
+Hinweis:
+- Request im Testclient mit `secure=True`, um HTTPS-Redirects in gehärteten
+  Settings zu vermeiden.
