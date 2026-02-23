@@ -2072,3 +2072,87 @@ wurde nie in einen Slot eingetragen → letzter Slot immer None.
 Mit `__lte` wird today == today eingeschlossen.
 
 11/11 Tests in test_algorithm_audit.py grün (kein Regressionsfehler).
+
+## In Arbeit: Gesamtlauf + Status-Check (23.02.2026)
+
+Ziel: Aktuellen Stand nach allen gemergten Branches verifizieren.
+Branch: main (alle Tech-Debt + Fix-Branches gemergt)
+
+## Gesamtlauf + Coverage (23.02.2026)
+
+Branch: feature/fix-1rm-month-window (vor PR)
+Stand: main + tech-debt-branches gemergt + 1RM-Bugfix
+
+Ergebnis: 1104 passed, 5 skipped, 0 failed ✅
+Laufzeit: 7:35 min
+
+Coverage (core/ only):
+  Gesamt:                       57%
+  core/views/auth.py:          100%
+  core/views/config.py:        100%
+  core/views/sources.py:       100%
+  core/views/cardio.py:         96%
+  core/views/offline.py:        96%
+  core/views/body_tracking.py:  95%
+  core/helpers/exercises.py:    95%
+  core/views/plan_templates.py: 90%
+  core/views/notifications.py:  88%
+  core/views/export.py:         77%
+  core/utils/advanced_stats.py: 84%
+  core/views/training_stats.py: 83%
+  core/views/machine_learning.py: 83%
+  core/helpers/email.py:        83%
+  core/views/exercise_management.py: 80%
+  core/views/training_session.py:    72%
+  core/views/api_plan_sharing.py:    73%
+  core/views/plan_management.py:     68%
+  core/views/exercise_library.py:    55%
+  core/views/ai_recommendations.py:  32%
+  ai_coach/* (alle):             0%  (externe LLM-Clients, kein Mock-Setup)
+
+Offen / bekannte Lücken:
+  - ai_coach/: LLM-Clients ohne Mocks, realistisch nicht testbar
+  - exercise_library.py 55%: Staff-only Views (Share, Merge, Video-Upload)
+  - ai_recommendations.py 32%: KI-Flows schwer zu mocken
+  - training_session.py 72%: finish_training-Flow, toggle_deload noch ungedeckt
+
+## In Arbeit: Launch-Checkliste + Roadmap-Update (23.02.2026)
+
+Aufgaben:
+  1. Launch-Checkliste: Sentry, .env, Backup, Deployment prüfen
+  2. PROJECT_ROADMAP.md: Phase 7.6 auf ✅, Week 8 aktualisieren
+
+## Abgeschlossen: Launch-Checkliste + Roadmap-Update (23.02.2026)
+
+Branch: feature/phase-7-6-launch-prep
+
+1. docs/LAUNCH_CHECKLIST.md erstellt (159 Zeilen)
+   - 9 Abschnitte: Code/Tests, Server, HTTPS, Monitoring, E-Mail,
+     Backup, Smoke Tests, Daten, Web Push
+   - ✅ was im Code verankert ist
+   - 🔲 was manuell auf dem Server zu tun ist
+   - Konkrete Befehle (mysqldump, collectstatic, createsuperuser etc.)
+
+2. PROJECT_ROADMAP.md aktualisiert
+   - Phase 7.6 (Hevy Import/Export): ⏳ → ✅ COMPLETE
+   - Week 7 Status: IN PROGRESS → COMPLETE
+   - Week 8: konkreter Pre/Launch/Post-Launch Plan ergänzt
+
+Stand: Alle Phase-7-Aufgaben abgeschlossen.
+       Nächster Schritt: LAUNCH_CHECKLIST.md auf dem Server abarbeiten.
+
+## 🚀 PUBLIC LAUNCH (23.02.2026)
+
+Berry-Gym ist live!
+
+URL:      https://signz-vision.de/article/4-berry-gym-meine-eigene-trainings-app-jetzt-öffentlich/
+Sentry:   aktiv
+E-Mail:   SMTP konfiguriert & funktionierend
+Server:   Gunicorn + Nginx, HTTPS, MariaDB
+
+Alle Phase-7-Aufgaben abgeschlossen. Week 8 in PROJECT_ROADMAP.md auf ✅ LIVE gesetzt.
+
+Nächste Schritte (Post-Launch):
+  - Sentry-Fehler in ersten Tagen beobachten
+  - User-Feedback sammeln
+  - Week 9-10 (i18n EN) ist bereits abgeschlossen
