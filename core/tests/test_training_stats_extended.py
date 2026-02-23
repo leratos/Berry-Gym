@@ -13,7 +13,7 @@ from django.urls import reverse
 
 import pytest
 
-from .factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
+from .factories import PlanFactory, SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Dashboard Tests
@@ -205,6 +205,40 @@ class TestDashboard:
         TrainingseinheitFactory(user=user, abgeschlossen=False)
         response = client.get(self.URL)
         assert response.context["letztes_training"].id == abg.id
+
+    def test_active_plan_widget_shows_start_and_details_links(self, client):
+        """Aktive Plangruppe zeigt getrennte CTAs für Start und Plan-Details."""
+        import uuid
+
+        user = UserFactory()
+        client.force_login(user)
+
+        gruppe_id = uuid.uuid4()
+        plan = PlanFactory(
+            user=user,
+            name="Push Day",
+            gruppe_id=gruppe_id,
+            gruppe_name="PPL Split",
+            gruppe_reihenfolge=0,
+        )
+
+        profile = user.profile
+        profile.active_plan_group = gruppe_id
+        profile.save(update_fields=["active_plan_group"])
+
+        response = client.get(self.URL, secure=True)
+        assert response.status_code == 200
+        assert reverse("training_start_plan", args=[plan.id]) in response.content.decode()
+        assert reverse("plan_details", args=[plan.id]) in response.content.decode()
+
+    def test_active_plan_widget_hides_details_link_without_active_group(self, client):
+        """Ohne aktive Plangruppe wird kein Plan-Details-CTA im Widget gerendert."""
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.get(self.URL, secure=True)
+        assert response.status_code == 200
+        assert "Plan-Details ansehen" not in response.content.decode()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

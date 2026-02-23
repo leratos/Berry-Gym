@@ -78,11 +78,45 @@
     .heatmap-legend-box[data-level="2"] { background-color: #006d32; }
     .heatmap-legend-box[data-level="3"] { background-color: #26a641; }
     .heatmap-legend-box[data-level="4"] { background-color: #39d353; }
+
+    /* Active plan CTA block */
+    .active-plan-ctas {
+        gap: 0.5rem;
+    }
+    .active-plan-cta-btn {
+        min-height: 44px;
+        font-weight: 600;
+    }
+    .active-plan-cta-btn i {
+        line-height: 1;
+    }
+    .active-plan-cta-badge {
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
     @media (max-width: 768px) {
         .heatmap-day { width: 12px; height: 12px; }
         .heatmap-legend-box { width: 12px; height: 12px; }
         #training-heatmap { gap: 3px; }
         .heatmap-month, .heatmap-week { gap: 3px; }
+
+        .active-plan-title {
+            font-size: 1rem;
+            line-height: 1.2;
+        }
+        .active-plan-ctas {
+            gap: 0.625rem;
+        }
+        .active-plan-cta-btn {
+            min-height: 48px;
+            padding-top: 0.625rem;
+            padding-bottom: 0.625rem;
+            font-size: 0.95rem;
+        }
+        .active-plan-cta-btn .badge {
+            font-size: 0.7rem;
+        }
     }
 </style>
 {% endblock %}
@@ -164,7 +198,7 @@
           </div>
           <div>
             <small class="text-muted">{% trans "Aktiver Plan" %}</small>
-            <h5 class="mb-0">{{ active_plan_group_name }}</h5>
+                        <h5 class="mb-0 active-plan-title">{{ active_plan_group_name }}</h5>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -185,11 +219,17 @@
       </div>
       {% endif %}
       {% if next_plan %}
-      <a href="{% url 'training_start_plan' next_plan.id %}" class="btn {% if is_deload %}btn-warning{% else %}btn-primary{% endif %} w-100 d-flex align-items-center justify-content-center gap-2">
-        <i class="bi bi-play-fill"></i>
-        <span>{{ next_plan.name }}</span>
-        <span class="badge {% if is_deload %}bg-dark{% else %}bg-light text-primary{% endif %} ms-1">{{ next_plan_index }}/{{ group_plan_count }}</span>
-      </a>
+            <div class="d-grid active-plan-ctas">
+                <a href="{% url 'training_start_plan' next_plan.id %}" class="btn {% if is_deload %}btn-warning{% else %}btn-primary{% endif %} w-100 d-flex align-items-center justify-content-center gap-2 active-plan-cta-btn">
+                    <i class="bi bi-play-fill"></i>
+                    <span>{{ next_plan.name }}</span>
+                    <span class="badge active-plan-cta-badge {% if is_deload %}bg-dark{% else %}bg-light text-primary{% endif %} ms-1">{{ next_plan_index }}/{{ group_plan_count }}</span>
+                </a>
+                <a href="{% url 'plan_details' next_plan.id %}" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 active-plan-cta-btn">
+                    <i class="bi bi-journal-text"></i>
+                    <span>{% trans "Plan-Details ansehen" %}</span>
+                </a>
+            </div>
       {% endif %}
     </div>
   </div>
