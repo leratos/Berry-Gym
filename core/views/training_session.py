@@ -160,7 +160,10 @@ def _get_deload_config(user, plan) -> tuple[bool, float, float, float]:
             and str(plan.gruppe_id) == str(profile.active_plan_group)
         ):
             if not profile.cycle_start_date:
-                profile.cycle_start_date = timezone.now().date()
+                from datetime import timedelta
+
+                today = timezone.now().date()
+                profile.cycle_start_date = today - timedelta(days=today.weekday())
                 profile.save()
             return (
                 profile.is_deload_week(),
