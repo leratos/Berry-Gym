@@ -2156,3 +2156,117 @@ Nächste Schritte (Post-Launch):
   - Sentry-Fehler in ersten Tagen beobachten
   - User-Feedback sammeln
   - Week 9-10 (i18n EN) ist bereits abgeschlossen
+
+## In Arbeit: Dashboard Plan-CTA Split
+
+**Datum:** 2026-02-23
+
+Ziel: Im Dashboard-Widget der aktiven Plangruppe den bisherigen Einzel-CTA in zwei Aktionen aufteilen:
+- Plan starten
+- Plan-Details ansehen (vorab lesen)
+
+Geplanter Scope:
+- `core/templates/core/dashboard.html`
+- optional kleiner Regressionstest in `core/tests/` für beide Links
+
+## Abgeschlossen: Dashboard Plan-CTA Split
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- Dashboard-Widget der aktiven Plangruppe zeigt jetzt zwei getrennte Aktionen:
+  - Plan starten (`training_start_plan`)
+  - Plan-Details ansehen (`plan_details`)
+- Regressionstest ergänzt: `test_active_plan_widget_shows_start_and_details_links`
+  in `core/tests/test_training_stats_extended.py`.
+
+Validierung:
+- Zieltest konnte in dieser Container-Session nicht ausgeführt werden, weil Runtime-Dependencies fehlen
+  (`ModuleNotFoundError: No module named 'django'`).
+- Testkommando für lokale/CI-Validierung:
+  `pytest core/tests/test_training_stats_extended.py -k active_plan_widget_shows_start_and_details_links -v`
+
+## In Arbeit: Test-Hotfix Dashboard CTA (HTTPS Redirect)
+
+**Datum:** 2026-02-23
+
+Ziel: Fix für lokalen pytest-Fail (`301` statt `200`) beim neuen Dashboard-CTA-Test.
+Ansatz: Dashboard-Request im Test als HTTPS ausführen (`secure=True`), damit
+`SECURE_SSL_REDIRECT` in Umgebungen mit `DEBUG=False` den Status nicht verfälscht.
+
+## Abgeschlossen: Test-Hotfix Dashboard CTA (HTTPS Redirect)
+
+**Datum:** 2026-02-23
+
+Ergebnis:
+- Zieltest läuft grün mit HTTPS-Request im Testclient.
+- Verifiziert mit:
+  `pytest core/tests/test_training_stats_extended.py -k "active_plan_widget_shows_start_and_details_links" -v`
+  → `1 passed, 33 deselected`.
+
+Hinweise:
+- 2 bestehende Warnings im Testlauf (Django URLField-Transition, Factory Boy Deprecation),
+  nicht Teil dieses Hotfixes.
+
+## In Arbeit: Dashboard CTA Negative Rendering Test
+
+**Datum:** 2026-02-23
+
+Ziel: Zusätzlicher Regressionstest, dass der Button „Plan-Details ansehen“ nicht
+im Dashboard gerendert wird, wenn keine aktive Plangruppe gesetzt ist.
+
+## Abgeschlossen: Dashboard CTA Negative Rendering Test
+
+**Datum:** 2026-02-23
+
+Ergebnis:
+- Negativtest ergänzt: `test_active_plan_widget_hides_details_link_without_active_group`
+  in `core/tests/test_training_stats_extended.py`.
+- Verifiziert zusammen mit dem Positivtest:
+  `pytest core/tests/test_training_stats_extended.py -k "active_plan_widget_shows_start_and_details_links or active_plan_widget_hides_details_link_without_active_group" -v`
+  → `2 passed, 33 deselected`.
+
+Hinweis:
+- Bestehende Warnings bleiben unverändert (Django URLField-Transition, Factory Boy Deprecation).
+
+## In Arbeit: Dashboard CTA UI Feinschliff (Mobile)
+
+**Datum:** 2026-02-23
+
+Ziel: Visuelle Angleichung der zwei Dashboard-CTAs (Planstart + Plan-Details)
+mit Fokus auf bessere Mobile-Tap-Targets, konsistente Abstände und Ausrichtung.
+
+## Abgeschlossen: Dashboard CTA UI Feinschliff (Mobile)
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- Responsive CTA-Styles für das aktive Plan-Widget ergänzt (`active-plan-ctas`, `active-plan-cta-btn`).
+- Einheitliche Button-Höhen, besseres Icon-Alignment und größere Tap-Targets auf Mobile.
+- Überschrift des aktiven Plans auf kleinen Screens besser lesbar skaliert (`active-plan-title`).
+
+Validierung:
+- CTA-Regressionstests erneut ausgeführt:
+  `pytest core/tests/test_training_stats_extended.py -k "active_plan_widget_shows_start_and_details_links or active_plan_widget_hides_details_link_without_active_group" -v`
+  → `2 passed, 33 deselected`.
+
+Hinweis:
+- Bestehende Warnings unverändert (Django URLField-Transition, Factory Boy Deprecation).
+
+## In Arbeit: Dashboard CTA Badge No-Wrap Feinschliff
+
+**Datum:** 2026-02-23
+
+Ziel: Sicherstellen, dass der CTA-Badge (`x/y`) auf sehr schmalen Geräten
+nicht umbricht und visuell stabil bleibt.
+
+## Abgeschlossen: Dashboard CTA Badge No-Wrap Feinschliff
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- CTA-Badge im aktiven Plan-Button auf `white-space: nowrap` gesetzt.
+- Zusätzlich `flex-shrink: 0`, damit der Badge auf kleinen Viewports nicht gequetscht wird.
+
+Datei:
+- `core/templates/core/dashboard.html`
