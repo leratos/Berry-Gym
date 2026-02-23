@@ -240,6 +240,37 @@ class TestDashboard:
         assert response.status_code == 200
         assert "Plan-Details ansehen" not in response.content.decode()
 
+    def test_dashboard_cycle_week_matches_profile_state(self, client):
+        """Dashboard zeigt die korrekte Zyklus-Woche aus dem Profilkontext."""
+        import uuid
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        user = UserFactory()
+        client.force_login(user)
+
+        gruppe_id = uuid.uuid4()
+        PlanFactory(
+            user=user,
+            name="Push Day",
+            gruppe_id=gruppe_id,
+            gruppe_name="PPL Split",
+            gruppe_reihenfolge=0,
+        )
+
+        profile = user.profile
+        profile.active_plan_group = gruppe_id
+        profile.cycle_length = 4
+        today = timezone.now().date()
+        monday_this_week = today - timedelta(days=today.weekday())
+        profile.cycle_start_date = monday_this_week - timedelta(weeks=2)
+        profile.save(update_fields=["active_plan_group", "cycle_length", "cycle_start_date"])
+
+        response = client.get(self.URL, secure=True)
+        assert response.status_code == 200
+        assert response.context["cycle_week"] == 3
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Training List Tests

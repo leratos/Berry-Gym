@@ -327,6 +327,50 @@ class TestSetActiveEinzelplan:
         plan.refresh_from_db()
         assert plan.gruppe_name == "Ganzkörper A"
 
+    def test_einzelplan_aktivieren_setzt_cycle_start_montag_wenn_current_week_leer(self, client):
+        """Ohne current_week startet der Zyklus am Montag der aktuellen Woche (Woche 1)."""
+        from django.utils import timezone
+
+        user = UserFactory()
+        plan = PlanFactory(user=user, gruppe_id=None)
+        client.force_login(user)
+
+        client.post(
+            reverse("set_active_plan_group"),
+            {"plan_id": plan.pk, "cycle_length": "4", "current_week": ""},
+            secure=True,
+        )
+
+        profile = user.profile
+        profile.refresh_from_db()
+        today = timezone.now().date()
+        monday_this_week = today - timezone.timedelta(days=today.weekday())
+        assert profile.cycle_start_date == monday_this_week
+        assert profile.get_current_cycle_week() == 1
+
+    def test_einzelplan_aktivieren_respektiert_current_week(self, client):
+        """Wird current_week=3 gesetzt, zeigt Profil unmittelbar Woche 3."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        user = UserFactory()
+        plan = PlanFactory(user=user, gruppe_id=None)
+        client.force_login(user)
+
+        client.post(
+            reverse("set_active_plan_group"),
+            {"plan_id": plan.pk, "cycle_length": "4", "current_week": "3"},
+            secure=True,
+        )
+
+        profile = user.profile
+        profile.refresh_from_db()
+        today = timezone.now().date()
+        monday_this_week = today - timedelta(days=today.weekday())
+        assert profile.cycle_start_date == monday_this_week - timedelta(weeks=2)
+        assert profile.get_current_cycle_week() == 3
+
     def test_einzelplan_nochmals_aktivieren_keine_doppelte_gruppe_id(self, client):
         """Wird ein Plan 2x aktiviert, bekommt er nicht 2 verschiedene gruppe_ids."""
         user = UserFactory()
