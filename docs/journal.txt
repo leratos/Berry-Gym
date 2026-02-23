@@ -2412,3 +2412,43 @@ Validierung:
 Hinweis:
 - Bestehende Warnungen unverändert (Django URLField-Transition,
   Factory Boy Deprecation).
+
+## In Arbeit: Sprint B – AI-Endpoints Error/Rate-Limit Coverage
+
+**Datum:** 2026-02-23
+
+Ziel: Zusätzliche branch-orientierte Tests für
+`core/views/ai_recommendations.py` mit Fokus auf Fehlerpfade,
+Methoden-/Payload-Validierung und Rate-Limit-nahe API-Verzweigungen.
+
+## Abgeschlossen: Sprint B – AI-Endpoints Error/Rate-Limit Coverage
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- Neue Tests in `core/tests/test_ai_endpoints_extended.py`:
+  - `generate_plan_api`: Parameter-Validierung (`plan_type`) + `saveCachedPlan`-Pfad
+    inkl. Verifikation, dass dieser Pfad den Rate-Limit-Check korrekt umgeht.
+  - `analyze_plan_api`: Methodencheck, `plan_id`-Validierung, Erfolgs- und
+    Foreign-Ownership-Pfad.
+  - `optimize_plan_api`: `plan_id`-Validierung, Erfolgs- und
+    Foreign-Ownership-Pfad.
+  - `live_guidance_api`: Pflichtfelder, Foreign-Session-404 und
+    Invalid-Result-Structure-500.
+  - `generate_plan_stream_api`: Rate-Limit-429 als SSE-Error-Stream.
+- `core/views/ai_recommendations.py` korrigiert:
+  - Ownership-/Existenzprüfungen in `analyze_plan_api`, `optimize_plan_api`
+    und `live_guidance_api` liefern jetzt konsistent `404` statt generischem `500`.
+- Stabilisierung bestehender Tests in `core/tests/test_rate_limiting.py`:
+  - GET-Aufrufe auf `secure=True` umgestellt, um HTTPS-Redirects in gehärteten
+    Settings zu vermeiden.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → `13 passed`.
+- `pytest core/tests/test_rate_limiting.py -v`
+  → `17 passed`.
+
+Hinweis:
+- Bestehende Warnungen unverändert (Django URLField-Transition,
+  Factory Boy Deprecation).
