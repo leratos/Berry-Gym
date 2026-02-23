@@ -2413,6 +2413,24 @@ Hinweis:
 - Bestehende Warnungen unverändert (Django URLField-Transition,
   Factory Boy Deprecation).
 
+## In Arbeit: CI Hotfix – Black Formatting
+
+**Datum:** 2026-02-23
+
+Ziel: Fehlgeschlagenen Code-Quality-Check beheben, indem
+`core/tests/test_ai_endpoints_extended.py` Black-konform formatiert wird.
+
+## Abgeschlossen: CI Hotfix – Black Formatting
+
+**Datum:** 2026-02-23
+
+Umsetzung:
+- `core/tests/test_ai_endpoints_extended.py` mit Black formatiert.
+
+Validierung:
+- `black --check core/tests/test_ai_endpoints_extended.py`
+  → `1 file would be left unchanged`.
+
 ## In Arbeit: Sprint B – AI-Endpoints Error/Rate-Limit Coverage
 
 **Datum:** 2026-02-23
