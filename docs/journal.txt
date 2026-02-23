@@ -2038,3 +2038,37 @@ Nächste Kandidaten (falls fortgesetzt):
   - core/views/training_session.py: finish_training-Flow, toggle_deload (noch ungedeckt)
   - core/views/auth.py: profile/feedback views (47% ungedeckt)
   - Bekannter Bug advanced_stats.py Monatsfenster – eigene Task
+
+## In Arbeit: feature/fix-1rm-month-window (22.02.2026)
+
+Branch: feature/fix-1rm-month-window
+Datei: core/utils/advanced_stats.py, Zeile ~440
+
+Bug: Im 6-Monats-Fenster der 1RM-Entwicklung ist der letzte Slot (i=5)
+  monat_start = heute - 30 Tage
+  monat_ende  = monat_start + 30 Tage = heute (timezone.now(), ein Datetime)
+
+Der Filter lautet `einheit__datum__lt=monat_ende`. Da `datum` ein DateField ist,
+konvertiert Django `monat_ende` zum Datum-Vergleich. Ein Training von heute hat
+datum=date.today(), und `today < today` ist False → der heutige PR landet in
+keinem Slot und der letzte Slot bleibt None.
+
+Fix: `datum__lt=monat_ende` → `datum__lte=monat_ende`
+Kein Risiko für andere Slots: alle anderen Monatsgrenzen liegen in der
+Vergangenheit und haben keine Datenpunkte genau auf dem Grenzwert.
+
+## Abgeschlossen: feature/fix-1rm-month-window (22.02.2026)
+
+Branch: feature/fix-1rm-month-window
+Datei: core/utils/advanced_stats.py
+
+Fix: `einheit__datum__lt=monat_ende` → `einheit__datum__lte=monat_ende`
+
+Ein Zeichen. Der letzte Slot des 6-Monats-Fensters hatte monat_ende=heute.
+Ein Training von heute hat datum=date.today(). Django vergleicht DateField vs
+Datetime und truncated auf Datum: `today < today` ist False → heutiger PR
+wurde nie in einen Slot eingetragen → letzter Slot immer None.
+
+Mit `__lte` wird today == today eingeschlossen.
+
+11/11 Tests in test_algorithm_audit.py grün (kein Regressionsfehler).
