@@ -28,7 +28,11 @@ from .factories import PlanFactory, SatzFactory, TrainingseinheitFactory, Uebung
 
 
 def post_json(client, url, data):
-    return client.post(url, json.dumps(data), content_type="application/json")
+    return client.post(url, json.dumps(data), content_type="application/json", secure=True)
+
+
+def get_json(client, url, data=None):
+    return client.get(url, data or {}, secure=True)
 
 
 # ===========================================================================
@@ -396,20 +400,20 @@ class TestApiSearchUsers:
     URL = reverse("api_search_users")
 
     def test_login_required(self, client):
-        resp = client.get(self.URL, {"q": "test"})
+        resp = get_json(client, self.URL, {"q": "test"})
         assert resp.status_code == 302
 
     def test_query_unter_2_zeichen_gibt_leere_liste(self, client):
         user = UserFactory()
         client.force_login(user)
-        resp = client.get(self.URL, {"q": "a"})
+        resp = get_json(client, self.URL, {"q": "a"})
         assert resp.status_code == 200
         assert resp.json()["users"] == []
 
     def test_eigener_user_wird_nicht_zurueckgegeben(self, client):
         user = UserFactory(username="suchender")
         client.force_login(user)
-        resp = client.get(self.URL, {"q": "such"})
+        resp = get_json(client, self.URL, {"q": "such"})
         usernames = [u["username"] for u in resp.json()["users"]]
         assert "suchender" not in usernames
 
@@ -417,7 +421,7 @@ class TestApiSearchUsers:
         user = UserFactory()
         UserFactory(username="trainingspartner_xyz")
         client.force_login(user)
-        resp = client.get(self.URL, {"q": "trainingspartner"})
+        resp = get_json(client, self.URL, {"q": "trainingspartner"})
         assert resp.status_code == 200
         usernames = [u["username"] for u in resp.json()["users"]]
         assert "trainingspartner_xyz" in usernames
@@ -425,7 +429,7 @@ class TestApiSearchUsers:
     def test_leere_query_gibt_leere_liste(self, client):
         user = UserFactory()
         client.force_login(user)
-        resp = client.get(self.URL, {"q": ""})
+        resp = get_json(client, self.URL, {"q": ""})
         assert resp.json()["users"] == []
 
 
@@ -439,11 +443,28 @@ class TestApiSharePlanWithUser:
     SHARE_URL = reverse("api_share_plan_with_user")
     UNSHARE_URL = reverse("api_unshare_plan_with_user")
 
+    def test_login_required_share(self, client):
+        resp = post_json(client, self.SHARE_URL, {"plan_id": 1, "username": "x"})
+        assert resp.status_code == 302
+
+    def test_login_required_unshare(self, client):
+        resp = post_json(client, self.UNSHARE_URL, {"plan_id": 1, "user_id": 1})
+        assert resp.status_code == 302
+
     def test_fehlende_parameter_gibt_400(self, client):
         user = UserFactory()
         client.force_login(user)
         resp = post_json(client, self.SHARE_URL, {"plan_id": 1})
         assert resp.status_code == 400
+
+    def test_share_fremder_plan_gibt_404(self, client):
+        owner = UserFactory()
+        other_user = UserFactory()
+        partner = UserFactory()
+        plan = PlanFactory(user=owner)
+        client.force_login(other_user)
+        resp = post_json(client, self.SHARE_URL, {"plan_id": plan.id, "username": partner.username})
+        assert resp.status_code == 404
 
     def test_user_nicht_gefunden_gibt_404(self, client):
         user = UserFactory()
@@ -498,6 +519,154 @@ class TestApiSharePlanWithUser:
         resp = post_json(client, self.UNSHARE_URL, {"plan_id": 1})
         assert resp.status_code == 400
 
+    def test_unshare_fremder_plan_gibt_404(self, client):
+        owner = UserFactory()
+        other_user = UserFactory()
+        partner = UserFactory()
+        plan = PlanFactory(user=owner)
+        plan.shared_with.add(partner)
+        client.force_login(other_user)
+        resp = post_json(client, self.UNSHARE_URL, {"plan_id": plan.id, "user_id": partner.id})
+        assert resp.status_code == 404
+
+    def test_unshare_user_nicht_gefunden_gibt_404(self, client):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        client.force_login(user)
+        resp = post_json(client, self.UNSHARE_URL, {"plan_id": plan.id, "user_id": 999999})
+        assert resp.status_code == 404
+
+
+# ===========================================================================
+# api_share_group_with_user & api_unshare_group_with_user
+# ===========================================================================
+
+
+@pytest.mark.django_db
+class TestApiShareGroupWithUser:
+    SHARE_URL = reverse("api_share_group_with_user")
+    UNSHARE_URL = reverse("api_unshare_group_with_user")
+
+    def test_login_required_share(self, client):
+        resp = post_json(client, self.SHARE_URL, {"gruppe_id": str(uuid.uuid4()), "username": "x"})
+        assert resp.status_code == 302
+
+    def test_login_required_unshare(self, client):
+        resp = post_json(client, self.UNSHARE_URL, {"gruppe_id": str(uuid.uuid4()), "user_id": 1})
+        assert resp.status_code == 302
+
+    def test_share_fehlende_parameter_gibt_400(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        resp = post_json(client, self.SHARE_URL, {"gruppe_id": str(uuid.uuid4())})
+        assert resp.status_code == 400
+
+    def test_share_gruppe_nicht_gefunden_gibt_404(self, client):
+        user = UserFactory()
+        partner = UserFactory()
+        client.force_login(user)
+        resp = post_json(
+            client,
+            self.SHARE_URL,
+            {"gruppe_id": str(uuid.uuid4()), "username": partner.username},
+        )
+        assert resp.status_code == 404
+
+    def test_share_user_nicht_gefunden_gibt_404(self, client):
+        user = UserFactory()
+        gruppe_id = uuid.uuid4()
+        PlanFactory(user=user, gruppe_id=gruppe_id)
+        client.force_login(user)
+        resp = post_json(
+            client,
+            self.SHARE_URL,
+            {"gruppe_id": str(gruppe_id), "username": "nicht_gefunden_123"},
+        )
+        assert resp.status_code == 404
+
+    def test_share_mit_sich_selbst_gibt_400(self, client):
+        user = UserFactory()
+        gruppe_id = uuid.uuid4()
+        PlanFactory(user=user, gruppe_id=gruppe_id)
+        client.force_login(user)
+        resp = post_json(
+            client,
+            self.SHARE_URL,
+            {"gruppe_id": str(gruppe_id), "username": user.username},
+        )
+        assert resp.status_code == 400
+
+    def test_share_erfolgreich_teilt_alle_plaene_der_gruppe(self, client):
+        user = UserFactory()
+        partner = UserFactory()
+        gruppe_id = uuid.uuid4()
+        p1 = PlanFactory(user=user, gruppe_id=gruppe_id)
+        p2 = PlanFactory(user=user, gruppe_id=gruppe_id)
+        PlanFactory(user=user, gruppe_id=uuid.uuid4())
+        client.force_login(user)
+
+        resp = post_json(
+            client,
+            self.SHARE_URL,
+            {"gruppe_id": str(gruppe_id), "username": partner.username},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        p1.refresh_from_db()
+        p2.refresh_from_db()
+        assert p1.shared_with.filter(id=partner.id).exists()
+        assert p2.shared_with.filter(id=partner.id).exists()
+
+    def test_unshare_fehlende_parameter_gibt_400(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        resp = post_json(client, self.UNSHARE_URL, {"gruppe_id": str(uuid.uuid4())})
+        assert resp.status_code == 400
+
+    def test_unshare_gruppe_nicht_gefunden_gibt_404(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        resp = post_json(client, self.UNSHARE_URL, {"gruppe_id": str(uuid.uuid4()), "user_id": 1})
+        assert resp.status_code == 404
+
+    def test_unshare_user_nicht_gefunden_gibt_404(self, client):
+        user = UserFactory()
+        gruppe_id = uuid.uuid4()
+        PlanFactory(user=user, gruppe_id=gruppe_id)
+        client.force_login(user)
+        resp = post_json(
+            client,
+            self.UNSHARE_URL,
+            {"gruppe_id": str(gruppe_id), "user_id": 999999},
+        )
+        assert resp.status_code == 404
+
+    def test_unshare_erfolgreich_entfernt_freigabe_fuer_alle_plaene(self, client):
+        user = UserFactory()
+        partner = UserFactory()
+        gruppe_id = uuid.uuid4()
+        p1 = PlanFactory(user=user, gruppe_id=gruppe_id)
+        p2 = PlanFactory(user=user, gruppe_id=gruppe_id)
+        p1.shared_with.add(partner)
+        p2.shared_with.add(partner)
+        client.force_login(user)
+
+        resp = post_json(
+            client,
+            self.UNSHARE_URL,
+            {"gruppe_id": str(gruppe_id), "user_id": partner.id},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        p1.refresh_from_db()
+        p2.refresh_from_db()
+        assert not p1.shared_with.filter(id=partner.id).exists()
+        assert not p2.shared_with.filter(id=partner.id).exists()
+
 
 # ===========================================================================
 # api_get_plan_shares & api_get_group_shares
@@ -513,7 +682,7 @@ class TestApiGetShares:
         plan.shared_with.add(partner)
         client.force_login(user)
         url = reverse("api_get_plan_shares", args=[plan.id])
-        resp = client.get(url)
+        resp = get_json(client, url)
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
@@ -526,14 +695,14 @@ class TestApiGetShares:
         plan = PlanFactory(user=user_b)
         client.force_login(user_a)
         url = reverse("api_get_plan_shares", args=[plan.id])
-        resp = client.get(url)
+        resp = get_json(client, url)
         assert resp.status_code == 404
 
     def test_get_group_shares_gruppe_nicht_gefunden(self, client):
         user = UserFactory()
         client.force_login(user)
         url = reverse("api_get_group_shares", args=[str(uuid.uuid4())])
-        resp = client.get(url)
+        resp = get_json(client, url)
         assert resp.status_code == 404
 
     def test_get_group_shares_gibt_shared_users(self, client):
@@ -544,7 +713,7 @@ class TestApiGetShares:
         plan.shared_with.add(partner)
         client.force_login(user)
         url = reverse("api_get_group_shares", args=[str(gruppe_id)])
-        resp = client.get(url)
+        resp = get_json(client, url)
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
