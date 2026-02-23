@@ -275,6 +275,38 @@ class TestExerciseStatsView(StatsBase):
     def test_unbekannte_uebung_404(self):
         self.assertEqual(self.client.get(reverse("exercise_stats", args=[99999])).status_code, 404)
 
+    def test_koerpergewicht_faktor_display(self):
+        """Regression: koerpergewicht_faktor 0.7 sollte als '70%' angezeigt werden, nicht '1%'."""
+        dips = Uebung.objects.create(
+            bezeichnung="Dips",
+            muskelgruppe="BRUST",
+            gewichts_typ="KOERPERGEWICHT",
+            koerpergewicht_faktor=0.7,  # 70% des Körpergewichts
+        )
+        # Körperwert für den User setzen
+        from core.models import KoerperWerte
+
+        KoerperWerte.objects.create(user=self.user, gewicht=80.0, datum=timezone.now().date())
+        # Ein paar Sätze anlegen
+        for days_ago in [5, 10, 15]:
+            session = self._session(days_ago=days_ago)
+            Satz.objects.create(
+                einheit=session,
+                uebung=dips,
+                satz_nr=1,
+                gewicht=0,  # kein Zusatzgewicht
+                wiederholungen=10,
+                ist_aufwaermsatz=False,
+            )
+        response = self.client.get(reverse("exercise_stats", args=[dips.id]))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+        # Prüfen dass "70%" im HTML vorkommt (nicht "1%" oder "0%")
+        self.assertIn("70%", html, "Körpergewicht-Faktor sollte als '70%' angezeigt werden")
+        self.assertNotIn(
+            ">1%<", html, "Körpergewicht-Faktor sollte nicht als '1%' angezeigt werden"
+        )
+
 
 class TestTrainingStatsView(StatsBase):
     def test_login_required(self):

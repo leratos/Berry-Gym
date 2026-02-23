@@ -2156,3 +2156,31 @@ Nächste Schritte (Post-Launch):
   - Sentry-Fehler in ersten Tagen beobachten
   - User-Feedback sammeln
   - Week 9-10 (i18n EN) ist bereits abgeschlossen
+
+
+## In Arbeit: Bugfix Körpergewicht-Faktor Display (23.02.2026)
+
+Datei: core/templates/core/stats_exercise.html
+Bug: koerpergewicht_faktor wird als "1%" angezeigt statt "70%" bei Dips
+Ursache: floatformat:0 rundet 0.7 → 1
+Lösung: widthratio Template Tag (0.7 * 100 = 70)
+
+Nächster Schritt: Test in core/tests/test_training_stats.py
+
+
+## Abgeschlossen: Bugfix Körpergewicht-Faktor Display (23.02.2026)
+
+Branch: feature/fix-bodyweight-factor-display
+
+Änderungen:
+  1. core/templates/core/stats_exercise.html (Zeile 69)
+     - VORHER: {{ uebung.koerpergewicht_faktor|floatformat:0 }}% → 0.7 → 1%
+     - NACHHER: {% widthratio uebung.koerpergewicht_faktor 1 100 %}% → 0.7 * 100 = 70%
+
+  2. core/tests/test_training_stats.py
+     - Neuer Test: test_koerpergewicht_faktor_display
+     - Regression-Test für 70% Display bei Dips (koerpergewicht_faktor=0.7)
+     - Alle 5 exercise_stats Tests grün ✅
+
+Bug war: floatformat:0 hat 0.7 auf 1 gerundet, daher "1%" statt "70%"
+Lösung: widthratio (Django Built-in) für saubere Prozent-Konvertierung
