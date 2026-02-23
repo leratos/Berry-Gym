@@ -2140,3 +2140,19 @@ Branch: feature/phase-7-6-launch-prep
 
 Stand: Alle Phase-7-Aufgaben abgeschlossen.
        Nächster Schritt: LAUNCH_CHECKLIST.md auf dem Server abarbeiten.
+
+## 🚀 PUBLIC LAUNCH (23.02.2026)
+
+Berry-Gym ist live!
+
+URL:      https://signz-vision.de/article/4-berry-gym-meine-eigene-trainings-app-jetzt-öffentlich/
+Sentry:   aktiv
+E-Mail:   SMTP konfiguriert & funktionierend
+Server:   Gunicorn + Nginx, HTTPS, MariaDB
+
+Alle Phase-7-Aufgaben abgeschlossen. Week 8 in PROJECT_ROADMAP.md auf ✅ LIVE gesetzt.
+
+Nächste Schritte (Post-Launch):
+  - Sentry-Fehler in ersten Tagen beobachten
+  - User-Feedback sammeln
+  - Week 9-10 (i18n EN) ist bereits abgeschlossen

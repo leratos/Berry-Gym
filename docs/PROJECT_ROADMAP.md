@@ -30,7 +30,7 @@
 | Week 4   | Performance             | 60%           | ✅ COMPLETE     |
 | Week 5-6 | Advanced & Polish       | 75%           | ✅ COMPLETE     |
 | Week 7   | Pre-Launch Prep         | 80%+          | ✅ COMPLETE     |
-| Week 8   | 🚀 PUBLIC LAUNCH (DE)   | —             | 🎯 Goal         |
+| Week 8   | 🚀 PUBLIC LAUNCH (DE)   | —             | ✅ LIVE          |
 | Week 9-10| Internationalization    | —             | ✅ COMPLETE     |
 
 ---
@@ -342,19 +342,16 @@ Bugs gefunden: `delete_training` hatte keinen POST-Guard (GET löschte Daten)
 
 ---
 
-## 🌍 WEEK 8 – PUBLIC LAUNCH 🎯
+## 🌍 WEEK 8 – PUBLIC LAUNCH ✅
 
-**Status:** BEREIT – alle Pre-Launch-Aufgaben abgeschlossen  
+**Status:** LIVE seit 23.02.2026  
+**Launch-Artikel:** https://signz-vision.de/article/4-berry-gym-meine-eigene-trainings-app-jetzt-öffentlich/  
 **Checkliste:** `docs/LAUNCH_CHECKLIST.md`
 
-**Pre-Launch (T-1):**
-- git pull auf Server, migrate, collectstatic
-- Smoke Tests (LAUNCH_CHECKLIST.md Abschnitt 7)
-- Sentry-DSN in .env gesetzt
-- Datenbank-Backup vorhanden
-
-**Launch Day (T-0):** Deploy, Smoke Tests, Sentry-Dashboard offen  
-**Post-Launch (T+1):** Fehler-Rate prüfen, erste User-Registrierungen, Performance
+- Sentry: live & aktiv
+- E-Mail (SMTP): konfiguriert & funktionierend
+- Server: Gunicorn + Nginx, HTTPS, MariaDB
+- App öffentlich erreichbar
 
 ---
 
