@@ -6,7 +6,7 @@ import uuid
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from core.models import Plan, SiteSettings, Trainingseinheit
@@ -76,6 +76,7 @@ class TestUserCustomLimits(TestCase):
         self.assertEqual(profile.custom_ai_limit_analysis, 50)
 
 
+@override_settings(RATELIMIT_BYPASS=False)
 class TestAIRateLimitHierarchy(TestCase):
     """Tests für die Limit-Hierarchie: User-Custom > Site-Default > Settings-Fallback."""
 

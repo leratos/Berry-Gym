@@ -2730,3 +2730,74 @@ LLMClient crasht mit UnicodeEncodeError (Windows cp1252 kann Unicode-Emojis nich
 
 **EMPFEHLUNG:**
 ✅ **DEPLOY JETZT** - Feature ist produktionsreif, Tests sind nur Absicherung
+
+
+## ✅ VOLLSTÄNDIG ABGESCHLOSSEN: KI-Limit-Verwaltung im Admin (24.02.2026)
+
+Branch: feature/ai-limits-admin
+Commits: fc48e8d, 7bc279a, [neu]
+
+**STATUS: 9/9 TESTS GRÜN ✅ - PRODUKTIONSREIF**
+
+---
+
+**PROBLEM GELÖST:**
+
+**Test-Failures Ursache #1:**
+- PlanAdapter.__init__() hat sofort LLMClient() initialisiert
+- LLMClient crashte mit UnicodeEncodeError (Windows cp1252 vs UTF-8 Emojis)
+- **Fix:** Lazy Loading - `self.llm_client` entfernt aus __init__
+- LLMClient wird jetzt nur in suggest_optimizations() erstellt (war schon so!)
+
+**Test-Failures Ursache #2:**
+- settings.RATELIMIT_BYPASS = DEBUG (in Tests True)
+- Rate-Limits wurden in Tests komplett ignoriert
+- **Fix:** @override_settings(RATELIMIT_BYPASS=False) auf TestAIRateLimitHierarchy
+
+---
+
+**FINALE TEST-SUITE: 9/9 ✅**
+
+1. TestSiteSettings (4 Tests) ✅
+   - test_singleton_creation
+   - test_default_values
+   - test_update_values
+   - test_cannot_delete
+
+2. TestUserCustomLimits (2 Tests) ✅
+   - test_custom_limit_fields_exist
+   - test_custom_limit_can_be_set
+
+3. TestAIRateLimitHierarchy (3 Tests) ✅
+   - test_site_default_limits_used_without_custom
+   - test_user_custom_limit_overrides_site_default
+   - test_beta_user_unlimited_limits
+
+---
+
+**GEÄNDERTE DATEIEN (Final):**
+
+```
+✅ ai_coach/plan_adapter.py - Lazy Loading (LLMClient nur bei Bedarf)
+✅ core/models/site_settings.py - SiteSettings Model
+✅ core/models/user_profile.py - Custom Limit Felder
+✅ core/views/ai_recommendations.py - Limit-Hierarchie
+✅ core/admin.py - Admin + Dokumentation
+✅ core/migrations/0073_*.py + 0074_*.py
+✅ core/tests/test_ai_rate_limits_admin.py - Test-Suite
+✅ docs/journal.txt
+```
+
+---
+
+**FEATURE KOMPLETT:**
+
+1. ✅ SiteSettings Singleton (globale Defaults)
+2. ✅ UserProfile Custom Limits (per-User Overrides)
+3. ✅ Limit-Hierarchie: User > Site > Settings
+4. ✅ Admin-Interface mit Help-Texten
+5. ✅ Migrations + Data Migration
+6. ✅ 9/9 Tests grün
+7. ✅ Lazy Loading (kein Crash bei Init)
+
+**READY TO MERGE & DEPLOY!** 🚀
