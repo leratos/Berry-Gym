@@ -534,6 +534,20 @@ class UserProfileAdmin(admin.ModelAdmin):
             },
         ),
         (
+            "KI-Limits (Custom) - leer = globale Einstellungen verwenden",
+            {
+                "fields": (
+                    "custom_ai_limit_plan",
+                    "custom_ai_limit_guidance",
+                    "custom_ai_limit_analysis",
+                ),
+                "description": (
+                    "User-spezifische Limits. Leer lassen = globale Site-Einstellungen verwenden. "
+                    "Useful für Beta-Tester oder spezielle User."
+                ),
+            },
+        ),
+        (
             "KI-Nutzung (heute) - nur Anzeige",
             {
                 "fields": (
@@ -576,61 +590,6 @@ class UserProfileAdmin(admin.ModelAdmin):
         return f"{today:%d. %B %Y} (ausstehend, noch kein persistierter Reset)"
 
     ai_counter_reset_display.short_description = "Letzter Counter-Reset"
-
-    fieldsets = (
-        (
-            "User",
-            {
-                "fields": ("user", "active_plan_group", "groesse_cm", "trainings_pro_woche"),
-            },
-        ),
-        (
-            "Zyklus / Periodisierung",
-            {
-                "fields": (
-                    "cycle_length",
-                    "cycle_start_date",
-                    "deload_volume_factor",
-                    "deload_rpe_target",
-                    "deload_weight_factor",
-                ),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "KI-Limits (Custom) - leer = globale Einstellungen verwenden",
-            {
-                "fields": (
-                    "custom_ai_limit_plan",
-                    "custom_ai_limit_guidance",
-                    "custom_ai_limit_analysis",
-                ),
-                "description": (
-                    "User-spezifische Limits. Leer lassen = globale Site-Einstellungen verwenden. "
-                    "Useful für Beta-Tester oder spezielle User."
-                ),
-            },
-        ),
-        (
-            "KI-Nutzung (heute) - nur Anzeige",
-            {
-                "fields": (
-                    "ai_plan_count_today",
-                    "ai_guidance_count_today",
-                    "ai_analysis_count_today",
-                    "ai_counter_reset_date",
-                ),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-
-    readonly_fields = (
-        "ai_plan_count_today",
-        "ai_guidance_count_today",
-        "ai_analysis_count_today",
-        "ai_counter_reset_date",
-    )
 
 
 # --- SCIENTIFIC DISCLAIMER ---

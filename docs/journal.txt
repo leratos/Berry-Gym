@@ -2881,4 +2881,59 @@ Verhalten:
 Validierung:
 - `black --check core/admin.py`
   → `1 file would be left unchanged`.
+
+## In Arbeit: Coverage-Fix – Admin KI-Counter Anzeige
+
+**Datum:** 2026-02-24
+
+Ziel: Zusätzliche Tests für `UserProfileAdmin`-Anzeige der KI-Counter,
+um neue Admin-Zeilen in Coverage abzudecken und die UI-Konfiguration
+robust abzusichern.
+
+## Abgeschlossen: Coverage-Fix – Admin KI-Counter Anzeige
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/admin.py` (`UserProfileAdmin`) bereinigt:
+  - Doppelte `fieldsets`-/`readonly_fields`-Definitionen entfernt.
+  - Einheitliche Admin-Konfiguration mit den effektiven Anzeige-Feldern
+    (`ai_*_count_effective`, `ai_counter_reset_display`) beibehalten.
+  - Custom-KI-Limits als eigener Fieldset-Block integriert.
+- `core/tests/test_ai_rate_limits_admin.py` erweitert:
+  - Neue Testklasse `TestUserProfileAdminDisplay` mit 5 Tests für:
+    - effektive 0-Anzeige bei stale reset,
+    - korrekte Anzeige bei heutigem reset,
+    - Reset-Text für stale/never/today.
+
+Validierung:
+- `pytest core/tests/test_ai_rate_limits_admin.py -v`
+  → `14 passed`.
+- `black --check core/admin.py core/tests/test_ai_rate_limits_admin.py`
+  → unverändert.
+
+## In Arbeit: Regressionstest – Admin Fieldset KI-Counter
+
+**Datum:** 2026-02-24
+
+Ziel: Zusätzlicher Test, der absichert, dass im `UserProfileAdmin`-Fieldset
+„KI-Nutzung (heute) - nur Anzeige“ die effektiven Anzeige-Felder (`*_effective`)
+verwendet werden.
+
+## Abgeschlossen: Regressionstest – Admin Fieldset KI-Counter
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_ai_rate_limits_admin.py` erweitert um
+  `test_fieldset_uses_effective_counter_fields`.
+- Test prüft, dass im Fieldset „KI-Nutzung (heute) - nur Anzeige“
+  die effektiven Felder (`ai_*_count_effective`) verwendet werden
+  und nicht die rohen DB-Counter (`ai_plan_count_today`).
+
+Validierung:
+- `pytest core/tests/test_ai_rate_limits_admin.py -v`
+  → `15 passed`.
+- `black --check core/tests/test_ai_rate_limits_admin.py core/admin.py`
+  → unverändert.
   
