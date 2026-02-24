@@ -34,7 +34,6 @@ from django.contrib.auth.models import User
 from django.db.models import Avg
 from django.utils import timezone
 
-from ai_coach.llm_client import LLMClient
 from core.models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung
 
 
@@ -45,7 +44,7 @@ class PlanAdapter:
         self.plan_id = plan_id
         self.plan = Plan.objects.get(id=plan_id)
         self.user_id = user_id or self.plan.user_id
-        self.llm_client = LLMClient()
+        # LLMClient wird lazy in suggest_optimizations() erstellt
 
     def analyze_plan_performance(self, days: int = 30) -> Dict[str, Any]:
         """

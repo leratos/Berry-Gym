@@ -24,7 +24,16 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
-from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung, UserProfile
+from ..models import (
+    MUSKELGRUPPEN,
+    Plan,
+    PlanUebung,
+    Satz,
+    SiteSettings,
+    Trainingseinheit,
+    Uebung,
+    UserProfile,
+)
 
 # ---------------------------------------------------------------------------
 # Rate-Limit Helper
@@ -35,6 +44,11 @@ def _check_ai_rate_limit(request: HttpRequest, limit_type: str) -> JsonResponse 
     """
     Prüft das tägliche KI-Limit für den eingeloggten User.
 
+    Hierarchie:
+    1. User-spezifisches Custom-Limit (falls gesetzt)
+    2. Site-weites Default-Limit (aus DB)
+    3. Fallback: settings.py
+
     Gibt None zurück wenn der Request erlaubt ist.
     Gibt eine 429-JsonResponse zurück wenn das Limit erreicht ist.
     Im DEBUG/Test-Modus immer None (kein Limit).
@@ -42,18 +56,39 @@ def _check_ai_rate_limit(request: HttpRequest, limit_type: str) -> JsonResponse 
     if getattr(settings, "RATELIMIT_BYPASS", False):
         return None
 
-    limit_map = {
-        "plan": settings.AI_RATE_LIMIT_PLAN_GENERATION,
-        "guidance": settings.AI_RATE_LIMIT_LIVE_GUIDANCE,
-        "analysis": settings.AI_RATE_LIMIT_ANALYSIS,
-    }
-    limit = limit_map.get(limit_type, 10)
-
     try:
         profile = request.user.profile
     except UserProfile.DoesNotExist:
         return None  # Kein Profil → durchlassen, Fehler wird anderswo behandelt
 
+    # SCHRITT 1: User-spezifisches Custom-Limit?
+    custom_limit_map = {
+        "plan": profile.custom_ai_limit_plan,
+        "guidance": profile.custom_ai_limit_guidance,
+        "analysis": profile.custom_ai_limit_analysis,
+    }
+    limit = custom_limit_map.get(limit_type)
+
+    # SCHRITT 2: Site-Einstellungen (wenn kein Custom-Limit)
+    if limit is None:
+        site_settings = SiteSettings.load()
+        site_limit_map = {
+            "plan": site_settings.ai_limit_plan_generation,
+            "guidance": site_settings.ai_limit_live_guidance,
+            "analysis": site_settings.ai_limit_analysis,
+        }
+        limit = site_limit_map.get(limit_type)
+
+    # SCHRITT 3: Fallback auf settings.py (sollte nie nötig sein)
+    if limit is None:
+        fallback_map = {
+            "plan": settings.AI_RATE_LIMIT_PLAN_GENERATION,
+            "guidance": settings.AI_RATE_LIMIT_LIVE_GUIDANCE,
+            "analysis": settings.AI_RATE_LIMIT_ANALYSIS,
+        }
+        limit = fallback_map.get(limit_type, 10)
+
+    # Limit-Check durchführen
     allowed = profile.check_and_increment_ai_limit(limit_type, limit)
     if not allowed:
         label_map = {
