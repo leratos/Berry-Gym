@@ -3210,4 +3210,36 @@ Validierung:
   → **4 passed**
 - `pytest core/tests/test_ai_endpoints_extended.py -v`
   → **27 passed**
+
+## In Arbeit: M6.3 – generate_plan_stream_api Error-Contracts
+
+**Datum:** 2026-02-24
+
+Ziel:
+- SSE-Fehlerpfade für `generate_plan_stream_api` per Contract-Tests absichern
+  (Validierungsfehler + Generator-Exception), inklusive Event-Shape
+  (`success=false`, `error` im SSE-Payload).
+
+## Abgeschlossen: M6.3 – generate_plan_stream_api Error-Contracts
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_ai_endpoints_extended.py` erweitert um SSE-Contract-Tests:
+  - `test_generate_plan_stream_validation_error_returns_sse_event`
+  - `test_generate_plan_stream_generator_exception_returns_sse_error`
+- Validierungsfehler-Pfad abgesichert:
+  - bei `_validate_plan_gen_params`-Fehler wird ein SSE-Event mit
+    `success=false` und `error` geprüft.
+- Exception-Pfad im Generator-Thread abgesichert:
+  - bei Laufzeitfehlern wird ein SSE-Event mit fallback-Fehlertext geprüft.
+- `docs/PROJECT_ROADMAP.md` um M6.2/M6.3-Statusupdate ergänzt.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k generate_plan_stream -v`
+  → **4 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **29 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py`
+  → unverändert
   

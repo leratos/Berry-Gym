@@ -380,6 +380,40 @@ class TestAiEndpointsExtended:
         assert resp.status_code == 405
         assert "GET required" in resp.content.decode("utf-8")
 
+    @patch("core.views.ai_recommendations._validate_plan_gen_params")
+    def test_generate_plan_stream_validation_error_returns_sse_event(self, mock_validate, client):
+        user = UserFactory()
+        client.force_login(user)
+        url = reverse("generate_plan_stream_api")
+
+        mock_validate.return_value = JsonResponse({"error": "Ungültige Parameter"}, status=400)
+
+        resp = get_json(client, url, {"plan_type": "invalid"})
+
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp["Content-Type"]
+        payload = b"".join(resp.streaming_content).decode("utf-8")
+        assert '"success": false' in payload.lower()
+        event = json.loads(payload.split("data: ")[1])
+        assert event["error"] == "Ungültige Parameter"
+
+    @patch("core.views.ai_recommendations._check_ai_rate_limit", return_value=None)
+    @patch("ai_coach.plan_generator.PlanGenerator", side_effect=RuntimeError("boom"))
+    def test_generate_plan_stream_generator_exception_returns_sse_error(
+        self, _mock_generator, _mock_rate_limit, client
+    ):
+        user = UserFactory()
+        client.force_login(user)
+        url = reverse("generate_plan_stream_api")
+
+        resp = get_json(client, url)
+
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp["Content-Type"]
+        payload = b"".join(resp.streaming_content).decode("utf-8")
+        assert '"success": false' in payload.lower()
+        assert "Plan-Generierung fehlgeschlagen. Bitte erneut versuchen." in payload
+
     def test_apply_optimizations_requires_post(self, client):
         user = UserFactory()
         client.force_login(user)

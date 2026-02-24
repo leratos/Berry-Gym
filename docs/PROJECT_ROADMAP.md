@@ -200,6 +200,10 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
 **Statusupdate (24.02.2026):**
 - M6.1 umgesetzt: erste und zweite Testwelle für Method-/Error-Contracts
   (405/400/404/429/500) in `core/tests/test_ai_endpoints_extended.py` ergänzt.
+- M6.2 umgesetzt: `apply_optimizations_api` um konsistenten JSON-404-Contract
+  ergänzt und per Regressionstests abgesichert.
+- M6.3 umgesetzt: `generate_plan_stream_api` um zusätzliche SSE-Error-Contracts
+  (Validierungsfehler + Generator-Exception) testseitig gehärtet.
 
 ---
 
