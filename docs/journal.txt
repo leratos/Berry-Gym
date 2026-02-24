@@ -3255,6 +3255,38 @@ Ziel:
 
 **Datum:** 2026-02-24
 
+Ergebnis (Missing-Lines Snapshot):
+- `ai_coach/plan_generator.py` verbleibend offen:
+  `183-185, 235-387, 514, 598-599, 618-621, 625-643, 646-666, 671-704,
+   715-734, 737-744, 747-756, 759-760, 770-771, 841-843, 850, 899-903,
+   924-943, 952-1052, 1056`
+
+Phasenplan (commit-weise):
+- **Phase 1 (bereits umgesetzt):** Generate-Entry-Guardrails + leere LLM-Response
+  (`generate()` und frühe Exit-Pfade in `_generate_with_existing_django`).
+- **Phase 2:** `_generate_with_existing_django` Error-/Fallback-Pfade
+  (Schema-Mismatch, Fallback-Entscheidungen, Validierungs-Fehlerreturns,
+  Save/No-Save-Abzweige).
+- **Phase 3:** `_save_plan_to_db` + `_fix_invalid_exercises` restliche
+  Fehl-/Edge-Pfade (Not-Found-Zusammenfassung, leere/ungültige Replacements,
+  Exception-Return).
+- **Phase 4:** Periodisierungs-Helfer (`_ensure_periodization_metadata`,
+  `_get_profile_defaults`, `_build_macrocycle`, `_calculate_weekly_rpe`,
+  `_week_focus`, `_periodization_note`, `_build_microcycle_template`,
+  `_build_progression_strategy`).
+- **Phase 5:** Schwachstellen-Validierung + Makrozyklus-Formatierung
+  (`_validate_weakness_coverage`, `_format_macrocycle_summary`).
+- **Phase 6:** CLI-Einstieg (`main`) inkl. Parser-/Exit-Pfade.
+
+Commit-Strategie:
+- Genau **1 Commit pro Phase**,
+- pro Phase: zielgerichtete Tests + `pytest`-Nachweis + Format-Check,
+- danach nächste Phase.
+
+## Abgeschlossen: Coverage-Kampagne – Phase 0 (ai_coach/plan_generator.py)
+
+**Datum:** 2026-02-24
+
 Umsetzung:
 - Neuen Arbeitsbranch erstellt: `feature/coverage-plan-generator`.
 - Baseline-Coverage für `ai_coach/plan_generator.py` ermittelt via:

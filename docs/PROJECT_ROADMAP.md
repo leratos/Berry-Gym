@@ -345,3 +345,21 @@ wird nach jedem abgeschlossenen Milestone kurz aktualisiert.
 
 **Last Updated:** 2026-02-24
 **Nächster Fokus:** M6
+
+---
+
+## 📚 Coverage-Kampagne (Dateiweise)
+
+**Pilot-Datei:** `ai_coach/plan_generator.py`  
+**Vorgehen:** Missing-Lines clustern → Phase umsetzen → Testen → Commit.
+
+### Phasen für `ai_coach/plan_generator.py`
+
+1. **Phase 1:** Generate-Entry-Guardrails + leere LLM-Response
+2. **Phase 2:** `_generate_with_existing_django` Fallback-/Error-Pfade
+3. **Phase 3:** `_save_plan_to_db` + `_fix_invalid_exercises` Edge-Cases
+4. **Phase 4:** Periodisierungs-Helfer vollständig absichern
+5. **Phase 5:** Weakness-Coverage + Macrocycle-Formatting-Pfade
+6. **Phase 6:** CLI `main` (Argumente, Output, Exit-Code)
+
+**Regel:** Ein Commit pro Phase, danach erst nächste Phase.
