@@ -443,5 +443,5 @@ class TestLlmClientMainGuard:
         assert "LLMClient" in result_globals
 
     # Note: Error-Pfad im __main__-Guard (traceback.print_exc) wird nicht getestet,
-    # da runpy.run_module() Mocking-Probleme verursacht. Diese 5 Zeilen (526-530)
+    # da runpy.run_module() Mocking-Probleme verursacht. Die Zeilen 526-530
     # sind CLI-spezifisch und für Production nicht kritisch. Coverage: 98%

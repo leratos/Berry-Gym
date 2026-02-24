@@ -1098,7 +1098,7 @@ class TestPlanNameFallback:
         """Name < 10 Zeichen gilt als generisch."""
         gen = PlanGenerator(user_id=999, target_profile="definition", plan_type="ppl")
 
-        plan_json = _make_plan_json("Plan A", [])  # 6 Zeichen
+        plan_json = _make_plan_json("Plan A", [])
         result = self._apply_name_fallback(gen, plan_json)
         assert result != "Plan A"
         assert "Definition" in result
