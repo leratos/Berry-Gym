@@ -19,6 +19,7 @@ from .models import (
     ProgressPhoto,
     Satz,
     ScientificDisclaimer,
+    SiteSettings,
     Trainingseinheit,
     TrainingSource,
     Uebung,
@@ -493,11 +494,14 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = (
         "user",
         "active_plan_group",
-        "ai_plan_count_effective",
-        "ai_guidance_count_effective",
-        "ai_analysis_count_effective",
+        "custom_ai_limit_plan",
+        "custom_ai_limit_guidance",
+        "custom_ai_limit_analysis",
+        "ai_plan_count_today",
+        "ai_guidance_count_today",
+        "ai_analysis_count_today",
     )
-    search_fields = ("user__username",)
+    search_fields = ("user__username", "user__email")
     list_filter = ("active_plan_group",)
     readonly_fields = (
         "ai_plan_count_effective",
@@ -572,6 +576,61 @@ class UserProfileAdmin(admin.ModelAdmin):
         return f"{today:%d. %B %Y} (ausstehend, noch kein persistierter Reset)"
 
     ai_counter_reset_display.short_description = "Letzter Counter-Reset"
+
+    fieldsets = (
+        (
+            "User",
+            {
+                "fields": ("user", "active_plan_group", "groesse_cm", "trainings_pro_woche"),
+            },
+        ),
+        (
+            "Zyklus / Periodisierung",
+            {
+                "fields": (
+                    "cycle_length",
+                    "cycle_start_date",
+                    "deload_volume_factor",
+                    "deload_rpe_target",
+                    "deload_weight_factor",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "KI-Limits (Custom) - leer = globale Einstellungen verwenden",
+            {
+                "fields": (
+                    "custom_ai_limit_plan",
+                    "custom_ai_limit_guidance",
+                    "custom_ai_limit_analysis",
+                ),
+                "description": (
+                    "User-spezifische Limits. Leer lassen = globale Site-Einstellungen verwenden. "
+                    "Useful für Beta-Tester oder spezielle User."
+                ),
+            },
+        ),
+        (
+            "KI-Nutzung (heute) - nur Anzeige",
+            {
+                "fields": (
+                    "ai_plan_count_today",
+                    "ai_guidance_count_today",
+                    "ai_analysis_count_today",
+                    "ai_counter_reset_date",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    readonly_fields = (
+        "ai_plan_count_today",
+        "ai_guidance_count_today",
+        "ai_analysis_count_today",
+        "ai_counter_reset_date",
+    )
 
 
 # --- SCIENTIFIC DISCLAIMER ---
@@ -845,3 +904,56 @@ class KIApiLogAdmin(admin.ModelAdmin):
         extra_context = extra_context or {}
         extra_context["dashboard_url"] = "dashboard/"
         return super().changelist_view(request, extra_context=extra_context)
+
+
+# --- SITE SETTINGS (KI-LIMITS) ---
+@admin.register(SiteSettings)
+class SiteSettingsAdmin(admin.ModelAdmin):
+    """
+    Admin für globale Site-Einstellungen (Singleton).
+
+    Diese Einstellungen gelten für ALLE User, außer ein User hat custom Limits.
+    """
+
+    list_display = (
+        "id",
+        "ai_limit_plan_generation",
+        "ai_limit_live_guidance",
+        "ai_limit_analysis",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "KI-Rate-Limits (Global) - gelten für alle User",
+            {
+                "fields": (
+                    "ai_limit_plan_generation",
+                    "ai_limit_live_guidance",
+                    "ai_limit_analysis",
+                ),
+                "description": (
+                    "<strong>Wichtig:</strong> Diese Limits gelten für ALLE User. "
+                    "User können individuelle Limits im UserProfile erhalten (custom_ai_limit_*). "
+                    "Änderungen wirken sofort (kein Server-Restart nötig)."
+                ),
+            },
+        ),
+        (
+            "Metadaten",
+            {
+                "fields": ("updated_at",),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        """Singleton: Kann nicht manuell hinzugefügt werden (wird automatisch erstellt)."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Singleton: Kann nicht gelöscht werden."""
+        return False
