@@ -569,6 +569,85 @@ class TestProgressCallback:
         ], f"Nicht alle Progress-Stufen wurden gemeldet. Erhalten: {received}"
 
 
+class TestGenerateEntryPaths:
+    """Phase 1: Frühe Guard-Rail-Pfade in generate() absichern."""
+
+    def test_generate_uses_existing_django_context_without_db_client(self):
+        """Wenn Django-Kontext erkannt wird, darf kein DatabaseClient gestartet werden."""
+        gen = PlanGenerator(user_id=1)
+
+        with (
+            patch("ai_coach.plan_generator.hasattr", return_value=True),
+            patch.object(
+                gen, "_generate_with_existing_django", return_value={"success": True}
+            ) as mock_gen,
+            patch("ai_coach.plan_generator.DatabaseClient") as mock_db_client,
+        ):
+            result = gen.generate(save_to_db=False)
+
+        assert result == {"success": True}
+        mock_gen.assert_called_once_with(False)
+        mock_db_client.assert_not_called()
+
+    def test_generate_uses_database_client_in_cli_mode(self):
+        """Ohne Django-Kontext wird der DatabaseClient-Kontextmanager verwendet."""
+        gen = PlanGenerator(user_id=1)
+
+        with (
+            patch("ai_coach.plan_generator.hasattr", return_value=False),
+            patch.object(
+                gen, "_generate_with_existing_django", return_value={"success": True}
+            ) as mock_gen,
+            patch("ai_coach.plan_generator.DatabaseClient") as mock_db_client,
+        ):
+            result = gen.generate(save_to_db=False)
+
+        assert result == {"success": True}
+        mock_db_client.assert_called_once()
+        mock_gen.assert_called_once_with(False)
+
+    def test_generate_reraises_internal_errors(self):
+        """Fehler im inneren Flow werden nach Logging erneut geworfen."""
+        gen = PlanGenerator(user_id=1)
+
+        with (
+            patch("ai_coach.plan_generator.hasattr", return_value=True),
+            patch.object(gen, "_generate_with_existing_django", side_effect=RuntimeError("boom")),
+        ):
+            with pytest.raises(RuntimeError, match="boom"):
+                gen.generate(save_to_db=False)
+
+
+class TestGenerateWithExistingDjangoGuardRails:
+    """Phase 1: Frühe Exit-Pfade in _generate_with_existing_django()."""
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_empty_llm_response_returns_error_payload(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Leere LLM-Response soll als kontrollierter Fehler-Return enden."""
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [{"content": "system"}, {"content": "user"}]
+
+        mock_llm = mock_llm_cls.return_value
+        mock_llm.generate_training_plan.return_value = {"response": None, "usage": {}, "cost": 0.0}
+
+        gen = PlanGenerator(user_id=1)
+        with patch.object(gen, "_log_ki_cost") as mock_log_cost:
+            result = gen._generate_with_existing_django(save_to_db=False)
+
+        assert result["success"] is False
+        assert result["plan_data"] is None
+        assert "LLM Response war leer" in result["errors"][0]
+        mock_log_cost.assert_called_once()
+
+
 # ---------------------------------------------------------------------------
 # Phase 5.3 – Plan-Name Eindeutigkeit (inline-Logik in generate())
 # ---------------------------------------------------------------------------
