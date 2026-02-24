@@ -254,6 +254,40 @@ class TestSavePlanToDbSplitPlan:
         assert namen == ["PPL-Plan - Legs", "PPL-Plan - Pull", "PPL-Plan - Push"]
 
 
+@pytest.mark.django_db
+class TestSavePlanToDbDefaults:
+    """Default-Werte greifen, wenn optionale Felder im Exercise-JSON fehlen."""
+
+    def test_missing_optional_fields_use_defaults(self):
+        user = UserFactory()
+        exercise = UebungFactory(bezeichnung="Kabelrudern")
+
+        generator = PlanGenerator(user_id=user.id)
+        plan_json = {
+            "plan_name": "Defaults-Plan",
+            "sessions": [
+                {
+                    "day_name": "Tag A",
+                    "exercises": [
+                        {
+                            "exercise_name": "Kabelrudern",
+                        }
+                    ],
+                }
+            ],
+        }
+
+        plan_ids = generator._save_plan_to_db(plan_json)
+
+        pu = PlanUebung.objects.filter(plan_id=plan_ids[0]).first()
+        assert pu is not None
+        assert pu.uebung == exercise
+        assert pu.reihenfolge == 1
+        assert pu.saetze_ziel == 3
+        assert pu.wiederholungen_ziel == "8-10"
+        assert pu.pausenzeit == 120
+
+
 class TestOpenRouterGeminiConfig:
     """
     Stellt sicher dass _generate_with_openrouter die Gemini-2.5-Flash-spezifischen
@@ -504,6 +538,37 @@ class TestSmartRetry:
 
         mock_client = MagicMock()
         mock_client.generate_training_plan.return_value = {"response": []}
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=["Bankdrücken (Langhantel)"],
+            llm_client=mock_client,
+        )
+
+        assert result == plan_json
+
+    def test_non_dict_replacements_response_returns_original_plan(self):
+        """Nicht-Dict-Replacements werden ignoriert und geben den Plan unverändert zurück."""
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [{"exercise_name": "Fake Übung A", "sets": 3, "reps": "10-12"}],
+                }
+            ],
+        }
+        errors = [
+            "Session 1, Übung 1: 'Fake Übung A' nicht verfügbar "
+            "(Equipment fehlt oder Übung existiert nicht)"
+        ]
+
+        mock_client = MagicMock()
+        mock_client.generate_training_plan.return_value = {"response": "not-a-dict"}
 
         result = generator._fix_invalid_exercises(
             plan_json=plan_json,
@@ -896,6 +961,50 @@ class TestGenerateWithExistingDjangoPhase2:
         assert result["errors"] == ["zweite Fehlerwelle"]
         assert result["plan_data"] == plan_json
 
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_success_path_with_coverage_warnings_and_save_to_db(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Deckt Success-Pfad mit Coverage-Warnungen, generischem Namen und save_to_db=True ab."""
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": ["Bauch: Untertrainiert (0)"]}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        llm_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "trainingsplan",
+                "sessions": [{"day_name": "A", "exercises": []}],
+            },
+            "usage": {},
+            "cost": 0.01,
+        }
+        llm_client.validate_plan.return_value = (True, [])
+
+        gen = PlanGenerator(user_id=1, target_profile="hypertrophie", plan_type="3er-split")
+        with (
+            patch.object(gen, "_validate_weakness_coverage", return_value=["warn-1", "warn-2"]),
+            patch.object(gen, "_save_plan_to_db", return_value=[11]) as mock_save,
+            patch.object(gen, "_format_macrocycle_summary", return_value="summary"),
+        ):
+            result = gen._generate_with_existing_django(save_to_db=True)
+
+        assert result["success"] is True
+        assert result["plan_ids"] == [11]
+        assert "beschreibung" in result["plan_data"]
+        assert result["plan_data"]["plan_name"] != "trainingsplan"
+        assert "Hypertrophie-3ER/SPLIT" in result["plan_data"]["plan_name"]
+        assert "Fokus Bauch" in result["plan_data"]["plan_name"]
+        mock_save.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # Phase 5.3 – Plan-Name Eindeutigkeit (inline-Logik in generate())
@@ -1063,3 +1172,223 @@ class TestValidateWeaknessCoverage:
         # Bauch fehlt im Plan → mindestens 1 Warning
         assert len(warnings) >= 1
         assert any("Bauch" in w or "bauch" in w.lower() for w in warnings)
+
+    def test_weakness_without_colon_is_ignored(self):
+        """Eintrag ohne ':' wird still ignoriert (Skip-Zweig)."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json("Test", [_make_session("A", [])])
+
+        warnings = gen._validate_weakness_coverage(
+            plan_json,
+            weaknesses=["NurTextOhneDoppelpunkt"],
+        )
+
+        assert warnings == []
+
+
+class TestPhase4HelperContracts:
+    """Phase 4 (Welle 2): direkte Contracts für Mikrozyklus/Progression-Helper."""
+
+    def test_build_microcycle_template_kraft_profile(self):
+        gen = PlanGenerator(user_id=1)
+
+        result = gen._build_microcycle_template("kraft")
+
+        assert result["target_profile"] == "kraft"
+        assert result["rep_range"] == "3-6"
+        assert result["rpe_range"] == "7.5-9"
+        assert "Woche 4/8/12" in result["deload_rules"]
+        assert "Maximalkraft" in result["notes"]
+
+    def test_build_microcycle_template_unknown_profile_uses_fallback_defaults(self):
+        gen = PlanGenerator(user_id=1)
+
+        result = gen._build_microcycle_template("custom")
+
+        # target_profile bleibt Eingabe, Inhalte fallen auf hypertrophie-Defaults zurück
+        assert result["target_profile"] == "custom"
+        assert result["rep_range"] == "6-12"
+        assert result["rpe_range"] == "7-8.5"
+        assert "Muskelaufbau" in result["notes"]
+
+    def test_build_progression_strategy_uses_profile_and_sets_per_session(self):
+        gen = PlanGenerator(user_id=1, sets_per_session=22)
+
+        result = gen._build_progression_strategy("definition")
+
+        assert result["target_profile"] == "definition"
+        assert "RPE Ziel 6.5-8" in result["rpe_guardrails"]
+        assert "~22 Sätzen pro Tag" in result["volume"]
+        assert "Deload" in result["progression"]
+
+
+@pytest.mark.django_db
+class TestPhase4CoverageValidatorErrorPath:
+    """Phase 4 (Welle 2): DB-Fehlerpfad im Coverage-Validator darf nicht crashen."""
+
+    def test_validate_weakness_coverage_db_error_returns_empty_list(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("A", [_make_exercise("Bankdrücken")])],
+        )
+
+        with patch("core.models.Uebung.objects.filter", side_effect=Exception("db down")):
+            warnings = gen._validate_weakness_coverage(
+                plan_json,
+                weaknesses=["Brust: Untertrainiert (2 Sätze/Woche)"],
+            )
+
+        assert warnings == []
+
+
+class TestMacrocycleSummaryFormatting:
+    """Phase 5 (Welle 1): Abdeckung der Makrozyklus-Textformatierung."""
+
+    def test_summary_without_macro_uses_defaults(self):
+        gen = PlanGenerator(user_id=1, periodization="linear", target_profile="hypertrophie")
+
+        summary = gen._format_macrocycle_summary(
+            {
+                "duration_weeks": 10,
+                "periodization": "linear",
+                "target_profile": "hypertrophie",
+            }
+        )
+
+        assert "PLANÜBERSICHT: 10-Wochen-Plan" in summary
+        assert "Linearer Aufbau für Muskelaufbau" in summary
+        assert "DELOAD-WOCHEN (4, 8, 12)" in summary
+        assert "BEISPIEL-WOCHENPLAN:" not in summary
+
+    def test_summary_with_micro_and_macro_examples(self):
+        gen = PlanGenerator(user_id=1, periodization="block", target_profile="kraft")
+
+        summary = gen._format_macrocycle_summary(
+            {
+                "periodization": "block",
+                "target_profile": "kraft",
+                "deload_weeks": [4, 8],
+                "microcycle_template": {"rep_range": "3-5", "rpe_range": "8-9"},
+                "macrocycle": {
+                    "duration_weeks": 12,
+                    "weeks": [
+                        {
+                            "week": 1,
+                            "focus": "Volumenbasis",
+                            "volume_multiplier": 1.0,
+                            "intensity_target_rpe": 8.0,
+                            "is_deload": False,
+                        },
+                        {
+                            "week": 4,
+                            "focus": "Deload & Technik",
+                            "volume_multiplier": 0.8,
+                            "intensity_target_rpe": 7.0,
+                            "is_deload": True,
+                        },
+                        {
+                            "week": 5,
+                            "focus": "Kraft/Intensität",
+                            "volume_multiplier": 1.1,
+                            "intensity_target_rpe": 8.4,
+                            "is_deload": False,
+                        },
+                        {
+                            "week": 8,
+                            "focus": "Deload & Technik",
+                            "volume_multiplier": 0.8,
+                            "intensity_target_rpe": 7.0,
+                            "is_deload": True,
+                        },
+                        {
+                            "week": 9,
+                            "focus": "Top-Phase",
+                            "volume_multiplier": 1.15,
+                            "intensity_target_rpe": 8.7,
+                            "is_deload": False,
+                        },
+                    ],
+                },
+            }
+        )
+
+        assert "Blockperiodisierung für Maximalkraft" in summary
+        assert "ZIEL PRO SATZ: 3-5 Wiederholungen bei RPE 8-9" in summary
+        assert "DELOAD-WOCHEN (4, 8)" in summary
+        assert "BEISPIEL-WOCHENPLAN:" in summary
+        assert summary.count("   - Woche ") == 4
+
+
+class TestMainCliEntry:
+    """Phase 5 (Welle 1): CLI-Entry (`main`) mit Exit-Codes und Output-Datei."""
+
+    def test_main_success_writes_output_and_exits_zero(self, tmp_path):
+        from ai_coach import plan_generator as module
+
+        output_file = tmp_path / "result.json"
+        expected_result = {"success": True, "plan_ids": [1], "plan_data": {"plan_name": "T"}}
+
+        with (
+            patch(
+                "sys.argv",
+                [
+                    "plan_generator.py",
+                    "--user-id",
+                    "7",
+                    "--plan-type",
+                    "fullbody",
+                    "--no-save",
+                    "--output",
+                    str(output_file),
+                ],
+            ),
+            patch("ai_coach.plan_generator.PlanGenerator") as mock_generator_cls,
+        ):
+            mock_generator = mock_generator_cls.return_value
+            mock_generator.generate.return_value = expected_result
+
+            with pytest.raises(SystemExit) as exc:
+                module.main()
+
+        assert exc.value.code == 0
+        mock_generator.generate.assert_called_once_with(save_to_db=False)
+        assert output_file.exists()
+
+    def test_main_failure_exits_one(self):
+        from ai_coach import plan_generator as module
+
+        with (
+            patch(
+                "sys.argv",
+                [
+                    "plan_generator.py",
+                    "--user-id",
+                    "5",
+                    "--plan-type",
+                    "ppl",
+                    "--no-save",
+                ],
+            ),
+            patch("ai_coach.plan_generator.PlanGenerator") as mock_generator_cls,
+        ):
+            mock_generator = mock_generator_cls.return_value
+            mock_generator.generate.return_value = {"success": False, "errors": ["boom"]}
+
+            with pytest.raises(SystemExit) as exc:
+                module.main()
+
+        assert exc.value.code == 1
+        mock_generator.generate.assert_called_once_with(save_to_db=False)
+
+    def test_module_main_guard_executes_main(self):
+        """`if __name__ == '__main__'` ruft main() auf (argparse endet erwartbar mit Exit 2)."""
+        import runpy
+
+        with patch("sys.argv", ["plan_generator.py"]):
+            with pytest.raises(SystemExit) as exc:
+                runpy.run_module("ai_coach.plan_generator", run_name="__main__")
+
+        assert exc.value.code == 2
