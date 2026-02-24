@@ -648,6 +648,101 @@ class TestGenerateWithExistingDjangoGuardRails:
         mock_log_cost.assert_called_once()
 
 
+class TestGenerateWithExistingDjangoPhase2:
+    """Phase 2: Fallback- und Validierungs-Fehlerpfade in _generate_with_existing_django()."""
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_schema_mismatch_uses_openrouter_fallback(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Schema-Mismatch im ersten Call triggert OpenRouter-Fallback und nutzt zweiten Response."""
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 5
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        first_client = MagicMock()
+        first_client.generate_training_plan.return_value = {
+            "response": {"unexpected": "schema"},
+            "usage": {},
+            "cost": 0.01,
+        }
+        first_client.validate_plan.return_value = (True, [])
+
+        fallback_client = MagicMock()
+        fallback_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "Fallback Plan",
+                "sessions": [{"day_name": "A", "exercises": []}],
+                "plan_description": "desc",
+            },
+            "usage": {},
+            "cost": 0.02,
+        }
+
+        mock_llm_cls.side_effect = [first_client, fallback_client]
+
+        gen = PlanGenerator(user_id=1, use_openrouter=False, fallback_to_openrouter=True)
+        with (
+            patch.object(gen, "_log_ki_cost") as mock_log_cost,
+            patch.object(gen, "_validate_weakness_coverage", return_value=[]),
+            patch.object(gen, "_format_macrocycle_summary", return_value="summary"),
+        ):
+            result = gen._generate_with_existing_django(save_to_db=False)
+
+        assert result["success"] is True
+        assert result["plan_data"]["plan_name"] == "Fallback Plan"
+        assert mock_llm_cls.call_count == 2
+        assert mock_log_cost.call_count == 2
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_invalid_after_retry_returns_error_payload(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Wenn Plan nach Smart-Retry weiter invalid bleibt, wird success=False mit Errors geliefert."""
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        plan_json = {
+            "plan_name": "Invalid Plan",
+            "sessions": [{"day_name": "A", "exercises": [{"exercise_name": "Fake"}]}],
+        }
+        llm_client.generate_training_plan.return_value = {
+            "response": plan_json,
+            "usage": {},
+            "cost": 0.01,
+        }
+        llm_client.validate_plan.side_effect = [
+            (False, ["erste Fehlerwelle"]),
+            (False, ["zweite Fehlerwelle"]),
+        ]
+
+        gen = PlanGenerator(user_id=1)
+        with patch.object(gen, "_fix_invalid_exercises", return_value=plan_json):
+            result = gen._generate_with_existing_django(save_to_db=False)
+
+        assert result["success"] is False
+        assert result["errors"] == ["zweite Fehlerwelle"]
+        assert result["plan_data"] == plan_json
+
+
 # ---------------------------------------------------------------------------
 # Phase 5.3 – Plan-Name Eindeutigkeit (inline-Logik in generate())
 # ---------------------------------------------------------------------------

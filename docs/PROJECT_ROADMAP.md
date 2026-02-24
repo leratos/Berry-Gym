@@ -363,3 +363,8 @@ wird nach jedem abgeschlossenen Milestone kurz aktualisiert.
 6. **Phase 6:** CLI `main` (Argumente, Output, Exit-Code)
 
 **Regel:** Ein Commit pro Phase, danach erst nächste Phase.
+
+**Status (24.02.2026):**
+- ✅ Phase 1 abgeschlossen
+- ✅ Phase 2 abgeschlossen
+- ⏭️ Nächster Schritt: Phase 3

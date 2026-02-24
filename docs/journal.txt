@@ -3307,6 +3307,42 @@ Ziel:
   `_generate_with_existing_django()` testseitig absichern (leere Response,
   Schema-Mismatch mit/ohne Fallback, Re-Validation-Hardfail).
 
+## Abgeschlossen: Coverage-Kampagne – Phase 1 (plan_generator Flow-Guard-Rails)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `ai_coach/tests/test_plan_generator.py` erweitert:
+  - `TestGenerateEntryPaths` (Django-Kontext vs. CLI-Modus + Re-Raise)
+  - `TestGenerateWithExistingDjangoGuardRails::test_empty_llm_response_returns_error_payload`
+- Robustheit verbessert: kein fragiles `sys.modules`-Ersetzen, stattdessen
+  gezieltes Mocking der Django-Erkennung über `hasattr(..., "apps")`.
+
+Validierung:
+- `pytest ai_coach/tests/test_plan_generator.py -k TestGenerateEntryPaths -v`
+  → **3 passed**
+- `pytest ai_coach/tests/test_plan_generator.py -k "TestGenerateEntryPaths or TestGenerateWithExistingDjangoGuardRails" -v`
+  → **4 passed**
+
+## Abgeschlossen: Coverage-Kampagne – Phase 2 (_generate_with_existing_django)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `ai_coach/tests/test_plan_generator.py` erweitert:
+  - `test_schema_mismatch_uses_openrouter_fallback`
+  - `test_invalid_after_retry_returns_error_payload`
+- Damit sind zentrale Fallback-/Error-Pfade in
+  `_generate_with_existing_django()` abgesichert.
+
+Validierung:
+- `pytest ai_coach/tests/test_plan_generator.py -k TestGenerateWithExistingDjangoPhase2 -v`
+  → **2 passed**
+- `pytest ai_coach/tests/test_plan_generator.py -k "TestGenerateEntryPaths or TestGenerateWithExistingDjangoGuardRails or TestGenerateWithExistingDjangoPhase2" -v`
+  → **6 passed**
+- `black --check ai_coach/tests/test_plan_generator.py`
+  → unverändert
+
 ## In Arbeit: M6.4 – Malformed JSON Contract-Hardening
 
 **Datum:** 2026-02-24
