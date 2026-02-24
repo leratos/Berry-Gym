@@ -3078,4 +3078,30 @@ Validierung:
   → **9 passed**
 - `black --check core/tests/test_training_stats_extended.py`
   → unverändert
+
+## In Arbeit: M5/WP3 – Chart-Daten Contract
+
+**Datum:** 2026-02-24
+
+Ziel: Contract-Tests für Chart-Daten ergänzen (Label/Data-Längen,
+deterministische Reihenfolge, valide leere Chart-Strukturen) mit Fokus auf
+`core/chart_generator.py`.
+
+## Abgeschlossen: M5/WP3 – Chart-Daten Contract
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_chart_generator.py` erweitert um gezielte Contract-Tests:
+  - `test_contract_labels_und_werte_bleiben_konsistent`
+    (Heatmap: Label-Aufbereitung + Label/Data-Längenkonsistenz)
+  - `test_contract_reihenfolge_und_laengen_stabil`
+    (Volumen-Chart: Reihenfolge der Eingabedaten bleibt erhalten,
+    Label/Data-Längen konsistent)
+- Umsetzung mit `unittest.mock` auf Matplotlib-Aufrufe, um fragile Pixel-/Image-
+  Vergleiche zu vermeiden und den Daten-Contract direkt zu testen.
+
+Validierung:
+- `pytest core/tests/test_chart_generator.py -v` → **31 passed**
+- `black --check core/tests/test_chart_generator.py` → unverändert
   
