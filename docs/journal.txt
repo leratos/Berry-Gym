@@ -3049,4 +3049,33 @@ Umsetzung:
 Validierung:
 - `pytest core/tests/test_advanced_stats.py -v` → **43 passed**
 - `black --check core/tests/test_advanced_stats.py` → unverändert
+
+## In Arbeit: M5/WP2 – View-nahe Statistikpfade
+
+**Datum:** 2026-02-24
+
+Ziel: Edge-Case-Tests für `core/views/training_stats.py` ergänzen
+(Einzelpunkte, Zeitfenster/Heatmap, stabile Kennzahlen ohne Datenartefakte)
+in `core/tests/test_training_stats_extended.py`.
+
+## Abgeschlossen: M5/WP2 – View-nahe Statistikpfade
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_training_stats_extended.py` (`TestTrainingStats`) erweitert um
+  gezielte WP2-Regressionen für:
+  - `no_data`-Fallback bei neuem User,
+  - konsistente Einzelpunkt-Statistik (`gesamt_volumen`/`durchschnitt_volumen`),
+  - 90-Tage-Heatmap-Contract (genau 90 Einträge, stabile Struktur),
+  - Warmup-only Volumenfilter (0 Volumen),
+  - 12-Wochen-Cap für Weekly-Labels.
+- Testklasse auf HTTPS-stabile Requests umgestellt (`secure=True`),
+  um Redirect-Artefakte durch Security-Settings zu vermeiden.
+
+Validierung:
+- `pytest core/tests/test_training_stats_extended.py::TestTrainingStats -v`
+  → **9 passed**
+- `black --check core/tests/test_training_stats_extended.py`
+  → unverändert
   
