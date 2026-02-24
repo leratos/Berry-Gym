@@ -82,6 +82,13 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
 - WP3: Chart-Daten-Contract (`test_chart_generator.py`)
 - WP4: Integrations-Regressionen (`test_training_views.py`, `test_training_session_views.py`)
 
+### ✅ M5 – Coverage Sprint C (abgeschlossen, 24.02.2026)
+
+- WP1: Stats-Helpers Edge Cases (`test_advanced_stats.py`)
+- WP2: View-nahe Statistikpfade (`test_training_stats_extended.py`)
+- WP3: Chart-Daten-Contract (`test_chart_generator.py`)
+- WP4: Integrations-Regressionen (`test_training_views.py`, `test_training_session_views.py`)
+
 ---
 
 ## 3) Priorisierte nächste Meilensteine
