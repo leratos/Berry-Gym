@@ -133,6 +133,16 @@ class TestAiEndpointsExtended:
 
         assert_json_error_contract(resp, 500, require_success_false=True)
 
+    def test_generate_plan_malformed_json_returns_400(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        url = reverse("generate_plan_api")
+
+        resp = client.post(url, "{", content_type="application/json", secure=True)
+
+        assert_json_error_contract(resp, 400)
+        assert "Ungültiges JSON" in resp.json()["error"]
+
     def test_analyze_plan_requires_get(self, client):
         user = UserFactory()
         client.force_login(user)
@@ -277,6 +287,17 @@ class TestAiEndpointsExtended:
 
         assert_json_error_contract(resp, 500, require_success_false=True)
 
+    @patch("core.views.ai_recommendations._check_ai_rate_limit", return_value=None)
+    def test_optimize_plan_malformed_json_returns_400(self, _mock_rate_limit, client):
+        user = UserFactory()
+        client.force_login(user)
+        url = reverse("optimize_plan_api")
+
+        resp = client.post(url, "{", content_type="application/json", secure=True)
+
+        assert_json_error_contract(resp, 400)
+        assert "Ungültiges JSON" in resp.json()["error"]
+
     def test_live_guidance_missing_fields_returns_400(self, client):
         user = UserFactory()
         client.force_login(user)
@@ -350,6 +371,17 @@ class TestAiEndpointsExtended:
 
         assert resp.status_code == 500
         assert "Ungültige Antwort" in resp.json()["error"]
+
+    @patch("core.views.ai_recommendations._check_ai_rate_limit", return_value=None)
+    def test_live_guidance_malformed_json_returns_400(self, _mock_rate_limit, client):
+        user = UserFactory()
+        client.force_login(user)
+        url = reverse("live_guidance_api")
+
+        resp = client.post(url, "{", content_type="application/json", secure=True)
+
+        assert_json_error_contract(resp, 400)
+        assert "Ungültiges JSON" in resp.json()["error"]
 
     @patch("core.views.ai_recommendations._check_ai_rate_limit")
     def test_generate_plan_stream_rate_limited_returns_sse_429(self, mock_rate_limit, client):
@@ -460,3 +492,13 @@ class TestAiEndpointsExtended:
         )
 
         assert_json_error_contract(resp, 500, require_success_false=True)
+
+    def test_apply_optimizations_malformed_json_returns_400(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        url = reverse("apply_optimizations_api")
+
+        resp = client.post(url, "{", content_type="application/json", secure=True)
+
+        assert_json_error_contract(resp, 400)
+        assert "Ungültiges JSON" in resp.json()["error"]

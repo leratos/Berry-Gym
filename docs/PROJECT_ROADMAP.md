@@ -204,6 +204,8 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
   ergänzt und per Regressionstests abgesichert.
 - M6.3 umgesetzt: `generate_plan_stream_api` um zusätzliche SSE-Error-Contracts
   (Validierungsfehler + Generator-Exception) testseitig gehärtet.
+- M6.4 umgesetzt: Malformed-JSON-Fehlerpfade für AI-POST-Endpunkte auf
+  konsistente `400`-Contracts (`error` in JSON) gehärtet.
 
 ---
 

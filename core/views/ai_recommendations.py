@@ -561,12 +561,20 @@ def generate_plan_api(request: HttpRequest) -> JsonResponse:
 
     # Rate Limit nur für echte Generierungen (nicht für saveCachedPlan)
     # saveCachedPlan: Plan wurde bereits via Stream generiert (Counter schon erhöht)
+    malformed_json = False
     try:
         _peek = json.loads(request.body)
         _is_save_only = bool(_peek.get("saveCachedPlan") and _peek.get("plan_data"))
+    except json.JSONDecodeError:
+        _peek = None
+        _is_save_only = False
+        malformed_json = True
     except Exception:
         _peek = None
         _is_save_only = False
+
+    if malformed_json:
+        return JsonResponse({"error": "Ungültiges JSON im Request-Body"}, status=400)
 
     if not _is_save_only:
         rate_limit_response = _check_ai_rate_limit(request, "plan")
@@ -692,7 +700,11 @@ def optimize_plan_api(request: HttpRequest) -> JsonResponse:
     try:
         from ai_coach.plan_adapter import PlanAdapter
 
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Ungültiges JSON im Request-Body"}, status=400)
+
         plan_id = data.get("plan_id")
         days = int(data.get("days", 30))
 
@@ -823,7 +835,11 @@ def apply_optimizations_api(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"error": "POST request required"}, status=405)
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Ungültiges JSON im Request-Body"}, status=400)
+
         plan_id = data.get("plan_id")
         optimizations = data.get("optimizations", [])
 
@@ -886,7 +902,10 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
         return rate_limit_response
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Ungültiges JSON im Request-Body"}, status=400)
 
         session_id = data.get("session_id")
         question = data.get("question", "").strip()

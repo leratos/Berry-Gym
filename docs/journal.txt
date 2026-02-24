@@ -3242,4 +3242,37 @@ Validierung:
   → **29 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
+
+## In Arbeit: M6.4 – Malformed JSON Contract-Hardening
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Vermeidbare 500er bei ungültigem Request-JSON in AI-POST-Endpunkten
+  eliminieren und als konsistente `400`-Error-Contracts absichern.
+
+## Abgeschlossen: M6.4 – Malformed JSON Contract-Hardening
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/views/ai_recommendations.py` angepasst:
+  - `generate_plan_api`, `optimize_plan_api`, `apply_optimizations_api`,
+    `live_guidance_api` behandeln ungültiges Request-JSON jetzt explizit als
+    User-Fehler mit `400` statt generischem `500`.
+  - Einheitlicher Error-Text für diesen Pfad:
+    `{"error": "Ungültiges JSON im Request-Body"}`.
+- `core/tests/test_ai_endpoints_extended.py` erweitert um M6.4-Regressionen:
+  - `test_generate_plan_malformed_json_returns_400`
+  - `test_optimize_plan_malformed_json_returns_400`
+  - `test_live_guidance_malformed_json_returns_400`
+  - `test_apply_optimizations_malformed_json_returns_400`
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k malformed_json -v`
+  → **4 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **33 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
+  → unverändert
   
