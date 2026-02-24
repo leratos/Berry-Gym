@@ -208,6 +208,8 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
   konsistente `400`-Contracts (`error` in JSON) gehärtet.
 - M6.5 umgesetzt: `analyze_plan_api` validiert ungültige `days`-Query-Parameter
   als `400`-User-Fehler statt generischem `500`.
+- M6.6 umgesetzt: `optimize_plan_api` validiert ungültige `days`-Werte
+  (nicht numerisch / `<= 0`) als `400` statt `500`.
 
 ---
 

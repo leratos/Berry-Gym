@@ -3304,4 +3304,36 @@ Validierung:
   → **34 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
   → unverändert
+
+## In Arbeit: M6.6 – optimize_plan_api days-Validation
+
+**Datum:** 2026-02-24
+
+Ziel:
+- `optimize_plan_api` auf konsistente `400`-Contracts für ungültige `days`
+  härten (nicht numerisch / `<= 0`) statt generischem `500`.
+
+## Abgeschlossen: M6.6 – optimize_plan_api days-Validation
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/views/ai_recommendations.py` angepasst:
+  - `optimize_plan_api` validiert `days` explizit:
+    - nicht-numerisch → `400` mit `{"error": "days muss eine ganze Zahl sein"}`
+    - `<= 0` → `400` mit `{"error": "days muss größer als 0 sein"}`
+  - vermeidet dadurch erwartbare User-Fehlpfade als `500`.
+  - Korrigiert nebenbei eine versehentliche Docstring-Verschiebung im
+    Funktionsblock, sodass die Validation wieder im ausführbaren Pfad liegt.
+- `core/tests/test_ai_endpoints_extended.py` erweitert um:
+  - `test_optimize_plan_invalid_days_returns_400`
+  - `test_optimize_plan_nonpositive_days_returns_400`
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k "optimize_plan_invalid_days or optimize_plan_nonpositive_days" -v`
+  → **2 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **36 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
+  → unverändert
   

@@ -224,6 +224,28 @@ class TestAiEndpointsExtended:
         assert resp.status_code == 400
         assert "plan_id required" in resp.json()["error"]
 
+    def test_optimize_plan_invalid_days_returns_400(self, client):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        client.force_login(user)
+        url = reverse("optimize_plan_api")
+
+        resp = post_json(client, url, {"plan_id": plan.id, "days": "abc"})
+
+        assert_json_error_contract(resp, 400)
+        assert "days muss eine ganze Zahl sein" in resp.json()["error"]
+
+    def test_optimize_plan_nonpositive_days_returns_400(self, client):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        client.force_login(user)
+        url = reverse("optimize_plan_api")
+
+        resp = post_json(client, url, {"plan_id": plan.id, "days": 0})
+
+        assert_json_error_contract(resp, 400)
+        assert "days muss größer als 0 sein" in resp.json()["error"]
+
     def test_optimize_plan_requires_post(self, client):
         user = UserFactory()
         client.force_login(user)
