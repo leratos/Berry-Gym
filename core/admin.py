@@ -490,9 +490,88 @@ class MLPredictionModelAdmin(admin.ModelAdmin):
 # --- USER PROFILE ---
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "active_plan_group")
+    list_display = (
+        "user",
+        "active_plan_group",
+        "ai_plan_count_effective",
+        "ai_guidance_count_effective",
+        "ai_analysis_count_effective",
+    )
     search_fields = ("user__username",)
     list_filter = ("active_plan_group",)
+    readonly_fields = (
+        "ai_plan_count_effective",
+        "ai_guidance_count_effective",
+        "ai_analysis_count_effective",
+        "ai_counter_reset_display",
+    )
+    fieldsets = (
+        (
+            "Allgemein",
+            {
+                "fields": (
+                    "user",
+                    "active_plan_group",
+                    "cycle_length",
+                    "cycle_start_date",
+                    "trainings_pro_woche",
+                    "groesse_cm",
+                )
+            },
+        ),
+        (
+            "Deload",
+            {
+                "fields": (
+                    "deload_volume_factor",
+                    "deload_rpe_target",
+                    "deload_weight_factor",
+                )
+            },
+        ),
+        (
+            "KI-Nutzung (heute) - nur Anzeige",
+            {
+                "fields": (
+                    "ai_plan_count_effective",
+                    "ai_guidance_count_effective",
+                    "ai_analysis_count_effective",
+                    "ai_counter_reset_display",
+                ),
+                "description": "Effektive Tageswerte. Bei ausstehendem Tagesreset werden heute 0 Werte angezeigt, bis der erste KI-Request den Reset persistiert.",
+            },
+        ),
+    )
+
+    @staticmethod
+    def _is_counter_stale(obj: UserProfile) -> bool:
+        today = timezone.now().date()
+        return obj.ai_counter_reset_date != today
+
+    def ai_plan_count_effective(self, obj: UserProfile) -> int:
+        return 0 if self._is_counter_stale(obj) else obj.ai_plan_count_today
+
+    ai_plan_count_effective.short_description = "KI-Plan-Generierungen heute"
+
+    def ai_guidance_count_effective(self, obj: UserProfile) -> int:
+        return 0 if self._is_counter_stale(obj) else obj.ai_guidance_count_today
+
+    ai_guidance_count_effective.short_description = "KI-Live-Guidance-Calls heute"
+
+    def ai_analysis_count_effective(self, obj: UserProfile) -> int:
+        return 0 if self._is_counter_stale(obj) else obj.ai_analysis_count_today
+
+    ai_analysis_count_effective.short_description = "KI-Analyse-Calls heute"
+
+    def ai_counter_reset_display(self, obj: UserProfile) -> str:
+        today = timezone.now().date()
+        if obj.ai_counter_reset_date == today:
+            return f"{today:%d. %B %Y}"
+        if obj.ai_counter_reset_date:
+            return f"{today:%d. %B %Y} (ausstehend, letzter persistierter Reset: {obj.ai_counter_reset_date:%d. %B %Y})"
+        return f"{today:%d. %B %Y} (ausstehend, noch kein persistierter Reset)"
+
+    ai_counter_reset_display.short_description = "Letzter Counter-Reset"
 
 
 # --- SCIENTIFIC DISCLAIMER ---

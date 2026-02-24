@@ -2431,6 +2431,37 @@ Validierung:
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → `1 file would be left unchanged`.
 
+## In Arbeit: Admin UI Fix – KI-Counter Heute-Anzeige
+
+**Datum:** 2026-02-24
+
+Ziel: Im Admin bei `UserProfile` die KI-Nutzung für „heute“ korrekt und
+verständlich anzeigen, auch wenn heute noch kein KI-Request den DB-Reset
+persistiert hat.
+
+## Abgeschlossen: Admin UI Fix – KI-Counter Heute-Anzeige
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/admin.py` (`UserProfileAdmin`) erweitert:
+  - Neue effektive Anzeige-Felder für KI-Nutzung heute:
+    `ai_plan_count_effective`, `ai_guidance_count_effective`,
+    `ai_analysis_count_effective`.
+  - Stale-Reset-Erkennung über Tagesvergleich (`ai_counter_reset_date` vs. heute).
+  - `ai_counter_reset_display` ergänzt, um ausstehenden Tagesreset
+    verständlich zu kennzeichnen.
+  - Admin-Fieldset „KI-Nutzung (heute) - nur Anzeige“ hinzugefügt.
+
+Verhalten:
+- Kein Eingriff in Rate-Limit- oder Counter-Logik.
+- Reiner UI-/Darstellungsfix: heute wird korrekt 0 angezeigt, wenn noch kein
+  KI-Request den täglichen Reset persistiert hat.
+
+Validierung:
+- `black --check core/admin.py`
+  → `1 file would be left unchanged`.
+
 ## In Arbeit: Sprint B – AI-Endpoints Error/Rate-Limit Coverage
 
 **Datum:** 2026-02-23
