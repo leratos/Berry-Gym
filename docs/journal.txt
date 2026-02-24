@@ -3336,4 +3336,30 @@ Validierung:
   → **36 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
   → unverändert
+
+## In Arbeit: M6.7 – analyze_plan_api nonpositive-days Coverage
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Letzte fehlende Coverage-Zeile in `core/views/ai_recommendations.py`
+  schließen (`analyze_plan_api`: `days <= 0` → `400`).
+
+## Abgeschlossen: M6.7 – analyze_plan_api nonpositive-days Coverage
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_ai_endpoints_extended.py` erweitert um:
+  - `test_analyze_plan_nonpositive_days_returns_400`
+- Damit wird der Branch in `analyze_plan_api` für `days <= 0`
+  (`400` + `error`) explizit getroffen.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k analyze_plan_nonpositive_days -v`
+  → **1 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **37 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py`
+  → unverändert
   

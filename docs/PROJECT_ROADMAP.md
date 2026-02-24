@@ -210,6 +210,9 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
   als `400`-User-Fehler statt generischem `500`.
 - M6.6 umgesetzt: `optimize_plan_api` validiert ungültige `days`-Werte
   (nicht numerisch / `<= 0`) als `400` statt `500`.
+- M6.7 umgesetzt: letzte fehlende Coverage-Zeile in
+  `core/views/ai_recommendations.py` via Test für
+  `analyze_plan_api` (`days <= 0` → `400`) geschlossen.
 
 ---
 
