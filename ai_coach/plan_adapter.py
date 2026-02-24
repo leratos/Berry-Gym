@@ -407,7 +407,9 @@ Bitte analysiere und schlage Optimierungen vor."""
 
         try:
             # Nutze LLMClient mit Fallback-Logik (Ollama → OpenRouter)
-            client = LLMClient(temperature=0.3, use_openrouter=True)
+            from ai_coach.llm_client import LLMClient as RuntimeLLMClient
+
+            client = RuntimeLLMClient(temperature=0.3, use_openrouter=True)
 
             # generate_training_plan nutzt automatisch Ollama oder OpenRouter
             result = client.generate_training_plan(messages=messages, max_tokens=2000)
