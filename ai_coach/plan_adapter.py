@@ -34,6 +34,7 @@ from django.contrib.auth.models import User
 from django.db.models import Avg
 from django.utils import timezone
 
+from ai_coach.llm_client import LLMClient  # noqa: F401 - Für Tests + suggest_optimizations
 from core.models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung
 
 
@@ -406,8 +407,6 @@ Bitte analysiere und schlage Optimierungen vor."""
 
         try:
             # Nutze LLMClient mit Fallback-Logik (Ollama → OpenRouter)
-            from ai_coach.llm_client import LLMClient
-
             client = LLMClient(temperature=0.3, use_openrouter=True)
 
             # generate_training_plan nutzt automatisch Ollama oder OpenRouter
