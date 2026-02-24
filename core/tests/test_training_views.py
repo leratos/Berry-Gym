@@ -327,3 +327,22 @@ class TestFinishTraining:
 
         # Sollte 404 sein
         assert response.status_code == 404
+
+    def test_finish_training_updates_dashboard_open_and_last_training(self, client):
+        """Nach Beenden: keine offene Session mehr und letztes_training ist gesetzt."""
+        user = UserFactory()
+        client.force_login(user)
+
+        training = TrainingseinheitFactory(user=user, abgeschlossen=False)
+        uebung = UebungFactory()
+        SatzFactory(einheit=training, uebung=uebung, gewicht=80, wiederholungen=8)
+
+        finish_url = reverse("finish_training", kwargs={"training_id": training.id})
+        response = client.post(finish_url, data={"kommentar": "done"}, secure=True)
+        assert response.status_code == 302
+
+        dashboard_response = client.get(reverse("dashboard"), secure=True)
+        assert dashboard_response.status_code == 200
+        assert dashboard_response.context["offene_session"] is None
+        assert dashboard_response.context["offene_sessions_anzahl"] == 0
+        assert dashboard_response.context["letztes_training"].id == training.id

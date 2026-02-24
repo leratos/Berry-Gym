@@ -3104,4 +3104,33 @@ Umsetzung:
 Validierung:
 - `pytest core/tests/test_chart_generator.py -v` → **31 passed**
 - `black --check core/tests/test_chart_generator.py` → unverändert
+
+## In Arbeit: M5/WP4 – Integrations-Regressionen
+
+**Datum:** 2026-02-24
+
+Ziel: Bestehende User-Flows gegen Regressionen absichern
+(`training` ↔ `dashboard`) und Ownership-Schutz in
+`core/tests/test_training_views.py` sowie
+`core/tests/test_training_session_views.py` gezielt erweitern.
+
+## Abgeschlossen: M5/WP4 – Integrations-Regressionen
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_training_views.py` erweitert um
+  `test_finish_training_updates_dashboard_open_and_last_training`:
+  - absichert, dass nach `finish_training` im Dashboard keine offene Session
+    mehr angezeigt wird und `letztes_training` korrekt gesetzt ist.
+- `core/tests/test_training_session_views.py` erweitert um
+  `test_fremdes_finish_veraendert_eigene_offene_session_nicht`:
+  - Ownership-Regressionsschutz: 404 bei fremdem Training,
+    eigene offene Session bleibt unverändert.
+
+Validierung:
+- `pytest core/tests/test_training_views.py::TestFinishTraining::test_finish_training_updates_dashboard_open_and_last_training core/tests/test_training_session_views.py::TestFinishTrainingView::test_fremdes_finish_veraendert_eigene_offene_session_nicht -v`
+  → **2 passed**
+- `black --check core/tests/test_training_views.py core/tests/test_training_session_views.py`
+  → unverändert
   
