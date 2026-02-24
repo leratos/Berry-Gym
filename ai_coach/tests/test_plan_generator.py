@@ -195,6 +195,33 @@ class TestSavePlanToDbNotFound:
         assert Plan.objects.filter(id=plan_ids[0]).exists()
         assert PlanUebung.objects.filter(plan_id=plan_ids[0]).count() == 0
 
+    def test_notes_branch_is_executed_for_existing_exercise(self):
+        """Übungs-Notiz im JSON darf den Save-Pfad nicht stören (deckt notes-Branch ab)."""
+        user = UserFactory()
+        exercise = UebungFactory(bezeichnung="Rudern")
+
+        generator = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json(
+            "Notes-Branch-Test",
+            [
+                _make_session(
+                    "Tag A",
+                    [
+                        {
+                            **_make_exercise("Rudern"),
+                            "notes": "Ellbogen eng am Körper halten",
+                        }
+                    ],
+                )
+            ],
+        )
+
+        plan_ids = generator._save_plan_to_db(plan_json)
+
+        pu = PlanUebung.objects.filter(plan_id=plan_ids[0]).first()
+        assert pu is not None
+        assert pu.uebung == exercise
+
 
 @pytest.mark.django_db
 class TestSavePlanToDbSplitPlan:
@@ -225,6 +252,40 @@ class TestSavePlanToDbSplitPlan:
 
         namen = sorted(p.name for p in plans)
         assert namen == ["PPL-Plan - Legs", "PPL-Plan - Pull", "PPL-Plan - Push"]
+
+
+@pytest.mark.django_db
+class TestSavePlanToDbDefaults:
+    """Default-Werte greifen, wenn optionale Felder im Exercise-JSON fehlen."""
+
+    def test_missing_optional_fields_use_defaults(self):
+        user = UserFactory()
+        exercise = UebungFactory(bezeichnung="Kabelrudern")
+
+        generator = PlanGenerator(user_id=user.id)
+        plan_json = {
+            "plan_name": "Defaults-Plan",
+            "sessions": [
+                {
+                    "day_name": "Tag A",
+                    "exercises": [
+                        {
+                            "exercise_name": "Kabelrudern",
+                        }
+                    ],
+                }
+            ],
+        }
+
+        plan_ids = generator._save_plan_to_db(plan_json)
+
+        pu = PlanUebung.objects.filter(plan_id=plan_ids[0]).first()
+        assert pu is not None
+        assert pu.uebung == exercise
+        assert pu.reihenfolge == 1
+        assert pu.saetze_ziel == 3
+        assert pu.wiederholungen_ziel == "8-10"
+        assert pu.pausenzeit == 120
 
 
 class TestOpenRouterGeminiConfig:
@@ -456,6 +517,99 @@ class TestSmartRetry:
         # Nur 1 LLM-Call – alle Halluzinationen auf einmal
         mock_client.generate_training_plan.assert_called_once()
 
+    def test_invalid_replacements_response_returns_original_plan(self):
+        """Leere/ungültige Replacements-Response führt zu unverändertem Plan."""
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [{"exercise_name": "Fake Übung A", "sets": 3, "reps": "10-12"}],
+                }
+            ],
+        }
+        errors = [
+            "Session 1, Übung 1: 'Fake Übung A' nicht verfügbar "
+            "(Equipment fehlt oder Übung existiert nicht)"
+        ]
+
+        mock_client = MagicMock()
+        mock_client.generate_training_plan.return_value = {"response": []}
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=["Bankdrücken (Langhantel)"],
+            llm_client=mock_client,
+        )
+
+        assert result == plan_json
+
+    def test_non_dict_replacements_response_returns_original_plan(self):
+        """Nicht-Dict-Replacements werden ignoriert und geben den Plan unverändert zurück."""
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [{"exercise_name": "Fake Übung A", "sets": 3, "reps": "10-12"}],
+                }
+            ],
+        }
+        errors = [
+            "Session 1, Übung 1: 'Fake Übung A' nicht verfügbar "
+            "(Equipment fehlt oder Übung existiert nicht)"
+        ]
+
+        mock_client = MagicMock()
+        mock_client.generate_training_plan.return_value = {"response": "not-a-dict"}
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=["Bankdrücken (Langhantel)"],
+            llm_client=mock_client,
+        )
+
+        assert result == plan_json
+
+    def test_retry_exception_returns_original_plan(self):
+        """LLM-Fehler im Smart-Retry wird gefangen und gibt den ursprünglichen Plan zurück."""
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [{"exercise_name": "Fake Übung B", "sets": 3, "reps": "10-12"}],
+                }
+            ],
+        }
+        errors = [
+            "Session 1, Übung 1: 'Fake Übung B' nicht verfügbar "
+            "(Equipment fehlt oder Übung existiert nicht)"
+        ]
+
+        mock_client = MagicMock()
+        mock_client.generate_training_plan.side_effect = RuntimeError("llm down")
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=["Bankdrücken (Langhantel)"],
+            llm_client=mock_client,
+        )
+
+        assert result == plan_json
+
 
 class TestDynamicMaxTokens:
     """_get_max_tokens() gibt plan-typ-spezifische Werte zurück."""
@@ -516,6 +670,71 @@ class TestDynamicMaxTokens:
             ), f"Plan-Typ '{pt}' hat nur {tokens} Tokens – zu niedrig (min 1500)"
 
 
+class TestPeriodizationHelpers:
+    """Phase 4: Branch-Coverage für periodisierungsbezogene Helper."""
+
+    def test_calculate_weekly_rpe_deload_and_floor(self):
+        gen = PlanGenerator(user_id=1)
+
+        # Deload reduziert, aber fällt nicht unter 6.5
+        assert (
+            gen._calculate_weekly_rpe("linear", 7.0, pos_in_block=2, block=1, is_deload=True) == 6.5
+        )
+
+    def test_calculate_weekly_rpe_wellenfoermig_and_block(self):
+        gen = PlanGenerator(user_id=1)
+
+        wellen = gen._calculate_weekly_rpe(
+            "wellenfoermig", 7.8, pos_in_block=2, block=1, is_deload=False
+        )
+        block = gen._calculate_weekly_rpe("block", 7.8, pos_in_block=2, block=3, is_deload=False)
+
+        assert wellen == 8.1
+        assert block == 8.1
+
+    def test_calculate_weekly_rpe_fallback_linear(self):
+        gen = PlanGenerator(user_id=1)
+
+        rpe = gen._calculate_weekly_rpe("unbekannt", 7.5, pos_in_block=3, block=1, is_deload=False)
+        assert rpe == 7.8
+
+    def test_week_focus_variants(self):
+        gen = PlanGenerator(user_id=1)
+
+        assert (
+            gen._week_focus("linear", block=1, is_deload=True, profile="kraft")
+            == "Deload & Technik"
+        )
+        assert "Welle Block 2" in gen._week_focus(
+            "wellenfoermig", block=2, is_deload=False, profile="hypertrophie"
+        )
+        assert (
+            gen._week_focus("block", block=2, is_deload=False, profile="kraft")
+            == "Kraft/Intensität"
+        )
+        assert "Linearer Aufbau" in gen._week_focus(
+            "linear", block=3, is_deload=False, profile="definition"
+        )
+
+    def test_periodization_note_variants(self):
+        gen = PlanGenerator(user_id=1)
+
+        assert "Wellenförmig" in gen._periodization_note("wellenfoermig", block=1, pos_in_block=2)
+        assert gen._periodization_note("block", block=1, pos_in_block=2) == (
+            "Volumen priorisieren, Technik stabilisieren"
+        )
+        assert gen._periodization_note("block", block=2, pos_in_block=2) == (
+            "Kraftfokus: schwerere Compounds"
+        )
+        assert gen._periodization_note("block", block=3, pos_in_block=2) == (
+            "Top-Phase: niedrigeres Volumen, höhere RPE"
+        )
+        assert (
+            gen._periodization_note("linear", block=1, pos_in_block=2)
+            == "Progressiv +0.5 RPE / Block"
+        )
+
+
 class TestProgressCallback:
     """progress_callback wird an den richtigen Stellen aufgerufen."""
 
@@ -567,6 +786,224 @@ class TestProgressCallback:
             82,
             90,
         ], f"Nicht alle Progress-Stufen wurden gemeldet. Erhalten: {received}"
+
+
+class TestGenerateEntryPaths:
+    """Phase 1: Frühe Guard-Rail-Pfade in generate() absichern."""
+
+    def test_generate_uses_existing_django_context_without_db_client(self):
+        """Wenn Django-Kontext erkannt wird, darf kein DatabaseClient gestartet werden."""
+        gen = PlanGenerator(user_id=1)
+
+        with (
+            patch("ai_coach.plan_generator.hasattr", return_value=True),
+            patch.object(
+                gen, "_generate_with_existing_django", return_value={"success": True}
+            ) as mock_gen,
+            patch("ai_coach.plan_generator.DatabaseClient") as mock_db_client,
+        ):
+            result = gen.generate(save_to_db=False)
+
+        assert result == {"success": True}
+        mock_gen.assert_called_once_with(False)
+        mock_db_client.assert_not_called()
+
+    def test_generate_uses_database_client_in_cli_mode(self):
+        """Ohne Django-Kontext wird der DatabaseClient-Kontextmanager verwendet."""
+        gen = PlanGenerator(user_id=1)
+
+        with (
+            patch("ai_coach.plan_generator.hasattr", return_value=False),
+            patch.object(
+                gen, "_generate_with_existing_django", return_value={"success": True}
+            ) as mock_gen,
+            patch("ai_coach.plan_generator.DatabaseClient") as mock_db_client,
+        ):
+            result = gen.generate(save_to_db=False)
+
+        assert result == {"success": True}
+        mock_db_client.assert_called_once()
+        mock_gen.assert_called_once_with(False)
+
+    def test_generate_reraises_internal_errors(self):
+        """Fehler im inneren Flow werden nach Logging erneut geworfen."""
+        gen = PlanGenerator(user_id=1)
+
+        with (
+            patch("ai_coach.plan_generator.hasattr", return_value=True),
+            patch.object(gen, "_generate_with_existing_django", side_effect=RuntimeError("boom")),
+        ):
+            with pytest.raises(RuntimeError, match="boom"):
+                gen.generate(save_to_db=False)
+
+
+class TestGenerateWithExistingDjangoGuardRails:
+    """Phase 1: Frühe Exit-Pfade in _generate_with_existing_django()."""
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_empty_llm_response_returns_error_payload(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Leere LLM-Response soll als kontrollierter Fehler-Return enden."""
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [{"content": "system"}, {"content": "user"}]
+
+        mock_llm = mock_llm_cls.return_value
+        mock_llm.generate_training_plan.return_value = {"response": None, "usage": {}, "cost": 0.0}
+
+        gen = PlanGenerator(user_id=1)
+        with patch.object(gen, "_log_ki_cost") as mock_log_cost:
+            result = gen._generate_with_existing_django(save_to_db=False)
+
+        assert result["success"] is False
+        assert result["plan_data"] is None
+        assert "LLM Response war leer" in result["errors"][0]
+        mock_log_cost.assert_called_once()
+
+
+class TestGenerateWithExistingDjangoPhase2:
+    """Phase 2: Fallback- und Validierungs-Fehlerpfade in _generate_with_existing_django()."""
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_schema_mismatch_uses_openrouter_fallback(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Schema-Mismatch im ersten Call triggert OpenRouter-Fallback und nutzt zweiten Response."""
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 5
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        first_client = MagicMock()
+        first_client.generate_training_plan.return_value = {
+            "response": {"unexpected": "schema"},
+            "usage": {},
+            "cost": 0.01,
+        }
+        first_client.validate_plan.return_value = (True, [])
+
+        fallback_client = MagicMock()
+        fallback_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "Fallback Plan",
+                "sessions": [{"day_name": "A", "exercises": []}],
+                "plan_description": "desc",
+            },
+            "usage": {},
+            "cost": 0.02,
+        }
+
+        mock_llm_cls.side_effect = [first_client, fallback_client]
+
+        gen = PlanGenerator(user_id=1, use_openrouter=False, fallback_to_openrouter=True)
+        with (
+            patch.object(gen, "_log_ki_cost") as mock_log_cost,
+            patch.object(gen, "_validate_weakness_coverage", return_value=[]),
+            patch.object(gen, "_format_macrocycle_summary", return_value="summary"),
+        ):
+            result = gen._generate_with_existing_django(save_to_db=False)
+
+        assert result["success"] is True
+        assert result["plan_data"]["plan_name"] == "Fallback Plan"
+        assert mock_llm_cls.call_count == 2
+        assert mock_log_cost.call_count == 2
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_invalid_after_retry_returns_error_payload(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Wenn Plan nach Smart-Retry weiter invalid bleibt, wird success=False mit Errors geliefert."""
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        plan_json = {
+            "plan_name": "Invalid Plan",
+            "sessions": [{"day_name": "A", "exercises": [{"exercise_name": "Fake"}]}],
+        }
+        llm_client.generate_training_plan.return_value = {
+            "response": plan_json,
+            "usage": {},
+            "cost": 0.01,
+        }
+        llm_client.validate_plan.side_effect = [
+            (False, ["erste Fehlerwelle"]),
+            (False, ["zweite Fehlerwelle"]),
+        ]
+
+        gen = PlanGenerator(user_id=1)
+        with patch.object(gen, "_fix_invalid_exercises", return_value=plan_json):
+            result = gen._generate_with_existing_django(save_to_db=False)
+
+        assert result["success"] is False
+        assert result["errors"] == ["zweite Fehlerwelle"]
+        assert result["plan_data"] == plan_json
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_success_path_with_coverage_warnings_and_save_to_db(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Deckt Success-Pfad mit Coverage-Warnungen, generischem Namen und save_to_db=True ab."""
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": ["Bauch: Untertrainiert (0)"]}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        llm_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "trainingsplan",
+                "sessions": [{"day_name": "A", "exercises": []}],
+            },
+            "usage": {},
+            "cost": 0.01,
+        }
+        llm_client.validate_plan.return_value = (True, [])
+
+        gen = PlanGenerator(user_id=1, target_profile="hypertrophie", plan_type="3er-split")
+        with (
+            patch.object(gen, "_validate_weakness_coverage", return_value=["warn-1", "warn-2"]),
+            patch.object(gen, "_save_plan_to_db", return_value=[11]) as mock_save,
+            patch.object(gen, "_format_macrocycle_summary", return_value="summary"),
+        ):
+            result = gen._generate_with_existing_django(save_to_db=True)
+
+        assert result["success"] is True
+        assert result["plan_ids"] == [11]
+        assert "beschreibung" in result["plan_data"]
+        assert result["plan_data"]["plan_name"] != "trainingsplan"
+        assert "Hypertrophie-3ER/SPLIT" in result["plan_data"]["plan_name"]
+        assert "Fokus Bauch" in result["plan_data"]["plan_name"]
+        mock_save.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -735,3 +1172,223 @@ class TestValidateWeaknessCoverage:
         # Bauch fehlt im Plan → mindestens 1 Warning
         assert len(warnings) >= 1
         assert any("Bauch" in w or "bauch" in w.lower() for w in warnings)
+
+    def test_weakness_without_colon_is_ignored(self):
+        """Eintrag ohne ':' wird still ignoriert (Skip-Zweig)."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json("Test", [_make_session("A", [])])
+
+        warnings = gen._validate_weakness_coverage(
+            plan_json,
+            weaknesses=["NurTextOhneDoppelpunkt"],
+        )
+
+        assert warnings == []
+
+
+class TestPhase4HelperContracts:
+    """Phase 4 (Welle 2): direkte Contracts für Mikrozyklus/Progression-Helper."""
+
+    def test_build_microcycle_template_kraft_profile(self):
+        gen = PlanGenerator(user_id=1)
+
+        result = gen._build_microcycle_template("kraft")
+
+        assert result["target_profile"] == "kraft"
+        assert result["rep_range"] == "3-6"
+        assert result["rpe_range"] == "7.5-9"
+        assert "Woche 4/8/12" in result["deload_rules"]
+        assert "Maximalkraft" in result["notes"]
+
+    def test_build_microcycle_template_unknown_profile_uses_fallback_defaults(self):
+        gen = PlanGenerator(user_id=1)
+
+        result = gen._build_microcycle_template("custom")
+
+        # target_profile bleibt Eingabe, Inhalte fallen auf hypertrophie-Defaults zurück
+        assert result["target_profile"] == "custom"
+        assert result["rep_range"] == "6-12"
+        assert result["rpe_range"] == "7-8.5"
+        assert "Muskelaufbau" in result["notes"]
+
+    def test_build_progression_strategy_uses_profile_and_sets_per_session(self):
+        gen = PlanGenerator(user_id=1, sets_per_session=22)
+
+        result = gen._build_progression_strategy("definition")
+
+        assert result["target_profile"] == "definition"
+        assert "RPE Ziel 6.5-8" in result["rpe_guardrails"]
+        assert "~22 Sätzen pro Tag" in result["volume"]
+        assert "Deload" in result["progression"]
+
+
+@pytest.mark.django_db
+class TestPhase4CoverageValidatorErrorPath:
+    """Phase 4 (Welle 2): DB-Fehlerpfad im Coverage-Validator darf nicht crashen."""
+
+    def test_validate_weakness_coverage_db_error_returns_empty_list(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("A", [_make_exercise("Bankdrücken")])],
+        )
+
+        with patch("core.models.Uebung.objects.filter", side_effect=Exception("db down")):
+            warnings = gen._validate_weakness_coverage(
+                plan_json,
+                weaknesses=["Brust: Untertrainiert (2 Sätze/Woche)"],
+            )
+
+        assert warnings == []
+
+
+class TestMacrocycleSummaryFormatting:
+    """Phase 5 (Welle 1): Abdeckung der Makrozyklus-Textformatierung."""
+
+    def test_summary_without_macro_uses_defaults(self):
+        gen = PlanGenerator(user_id=1, periodization="linear", target_profile="hypertrophie")
+
+        summary = gen._format_macrocycle_summary(
+            {
+                "duration_weeks": 10,
+                "periodization": "linear",
+                "target_profile": "hypertrophie",
+            }
+        )
+
+        assert "PLANÜBERSICHT: 10-Wochen-Plan" in summary
+        assert "Linearer Aufbau für Muskelaufbau" in summary
+        assert "DELOAD-WOCHEN (4, 8, 12)" in summary
+        assert "BEISPIEL-WOCHENPLAN:" not in summary
+
+    def test_summary_with_micro_and_macro_examples(self):
+        gen = PlanGenerator(user_id=1, periodization="block", target_profile="kraft")
+
+        summary = gen._format_macrocycle_summary(
+            {
+                "periodization": "block",
+                "target_profile": "kraft",
+                "deload_weeks": [4, 8],
+                "microcycle_template": {"rep_range": "3-5", "rpe_range": "8-9"},
+                "macrocycle": {
+                    "duration_weeks": 12,
+                    "weeks": [
+                        {
+                            "week": 1,
+                            "focus": "Volumenbasis",
+                            "volume_multiplier": 1.0,
+                            "intensity_target_rpe": 8.0,
+                            "is_deload": False,
+                        },
+                        {
+                            "week": 4,
+                            "focus": "Deload & Technik",
+                            "volume_multiplier": 0.8,
+                            "intensity_target_rpe": 7.0,
+                            "is_deload": True,
+                        },
+                        {
+                            "week": 5,
+                            "focus": "Kraft/Intensität",
+                            "volume_multiplier": 1.1,
+                            "intensity_target_rpe": 8.4,
+                            "is_deload": False,
+                        },
+                        {
+                            "week": 8,
+                            "focus": "Deload & Technik",
+                            "volume_multiplier": 0.8,
+                            "intensity_target_rpe": 7.0,
+                            "is_deload": True,
+                        },
+                        {
+                            "week": 9,
+                            "focus": "Top-Phase",
+                            "volume_multiplier": 1.15,
+                            "intensity_target_rpe": 8.7,
+                            "is_deload": False,
+                        },
+                    ],
+                },
+            }
+        )
+
+        assert "Blockperiodisierung für Maximalkraft" in summary
+        assert "ZIEL PRO SATZ: 3-5 Wiederholungen bei RPE 8-9" in summary
+        assert "DELOAD-WOCHEN (4, 8)" in summary
+        assert "BEISPIEL-WOCHENPLAN:" in summary
+        assert summary.count("   - Woche ") == 4
+
+
+class TestMainCliEntry:
+    """Phase 5 (Welle 1): CLI-Entry (`main`) mit Exit-Codes und Output-Datei."""
+
+    def test_main_success_writes_output_and_exits_zero(self, tmp_path):
+        from ai_coach import plan_generator as module
+
+        output_file = tmp_path / "result.json"
+        expected_result = {"success": True, "plan_ids": [1], "plan_data": {"plan_name": "T"}}
+
+        with (
+            patch(
+                "sys.argv",
+                [
+                    "plan_generator.py",
+                    "--user-id",
+                    "7",
+                    "--plan-type",
+                    "fullbody",
+                    "--no-save",
+                    "--output",
+                    str(output_file),
+                ],
+            ),
+            patch("ai_coach.plan_generator.PlanGenerator") as mock_generator_cls,
+        ):
+            mock_generator = mock_generator_cls.return_value
+            mock_generator.generate.return_value = expected_result
+
+            with pytest.raises(SystemExit) as exc:
+                module.main()
+
+        assert exc.value.code == 0
+        mock_generator.generate.assert_called_once_with(save_to_db=False)
+        assert output_file.exists()
+
+    def test_main_failure_exits_one(self):
+        from ai_coach import plan_generator as module
+
+        with (
+            patch(
+                "sys.argv",
+                [
+                    "plan_generator.py",
+                    "--user-id",
+                    "5",
+                    "--plan-type",
+                    "ppl",
+                    "--no-save",
+                ],
+            ),
+            patch("ai_coach.plan_generator.PlanGenerator") as mock_generator_cls,
+        ):
+            mock_generator = mock_generator_cls.return_value
+            mock_generator.generate.return_value = {"success": False, "errors": ["boom"]}
+
+            with pytest.raises(SystemExit) as exc:
+                module.main()
+
+        assert exc.value.code == 1
+        mock_generator.generate.assert_called_once_with(save_to_db=False)
+
+    def test_module_main_guard_executes_main(self):
+        """`if __name__ == '__main__'` ruft main() auf (argparse endet erwartbar mit Exit 2)."""
+        import runpy
+
+        with patch("sys.argv", ["plan_generator.py"]):
+            with pytest.raises(SystemExit) as exc:
+                runpy.run_module("ai_coach.plan_generator", run_name="__main__")
+
+        assert exc.value.code == 2
