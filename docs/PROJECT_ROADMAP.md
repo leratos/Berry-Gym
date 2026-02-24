@@ -29,8 +29,8 @@
 | Week 3   | Refactoring & Quality   | 50%           | ✅ COMPLETE     |
 | Week 4   | Performance             | 60%           | ✅ COMPLETE     |
 | Week 5-6 | Advanced & Polish       | 75%           | ✅ COMPLETE     |
-| Week 7   | Pre-Launch Prep         | 80%+          | 🔄 IN PROGRESS  |
-| Week 8   | 🚀 PUBLIC LAUNCH (DE)   | —             | 🎯 Goal         |
+| Week 7   | Pre-Launch Prep         | 80%+          | ✅ COMPLETE     |
+| Week 8   | 🚀 PUBLIC LAUNCH (DE)   | —             | ✅ LIVE          |
 | Week 9-10| Internationalization    | —             | ✅ COMPLETE     |
 
 ---
@@ -329,19 +329,29 @@ Bugs gefunden: `delete_training` hatte keinen POST-Guard (GET löschte Daten)
 - Regression-Tests: L10nJsDecimalTest (2 Tests), LanguageSwitcherTest (7 Tests)
 - Dokumentation: README.md + README_EN.md erstellt/aktualisiert
 
-### Phase 7.6 – Import/Export (Hevy-Format) ⏳
+### Phase 7.6 – Import/Export (Hevy-Format) ✅
 
-**Status:** Planned
-- CSV-Export kompatibel mit Hevy/Strong
-- "Bring your data" für Switcher
+**Status:** COMPLETE (23.02.2026)
+- CSV-Export kompatibel mit Hevy/Strong (alle 14 Hevy-Spalten)
+- CSV-Import mit Duplikat-Schutz (±5 Min. Zeitfenster)
+- Dry-Run / Vorschau vor dem Import
+- Unbekannte Übungen → automatisch als Custom-Übung angelegt
+- Warmup-Mapping, RPE-Import, Superset-ID
+- 23 Tests (Export + Import, Edge Cases)
+- "Bring your data" für Switcher aus Hevy/Strong
 
 ---
 
-## 🌍 WEEK 8 – PUBLIC LAUNCH
+## 🌍 WEEK 8 – PUBLIC LAUNCH ✅
 
-**Pre-Launch (T-7):** Alle Tests grün, Security Audit clean, Sentry live, Backup getestet, Rollback-Plan ready
-**Launch Day (T-0):** Deploy, Smoke Tests, Error Rate monitoren, Performance prüfen
-**Post-Launch (T+7):** Sentry täglich, User Feedback, Hotfix-Prozess etabliert
+**Status:** LIVE seit 23.02.2026  
+**Launch-Artikel:** https://signz-vision.de/article/4-berry-gym-meine-eigene-trainings-app-jetzt-öffentlich/  
+**Checkliste:** `docs/LAUNCH_CHECKLIST.md`
+
+- Sentry: live & aktiv
+- E-Mail (SMTP): konfiguriert & funktionierend
+- Server: Gunicorn + Nginx, HTTPS, MariaDB
+- App öffentlich erreichbar
 
 ---
 

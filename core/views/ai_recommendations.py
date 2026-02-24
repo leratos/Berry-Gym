@@ -24,7 +24,16 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
-from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung, UserProfile
+from ..models import (
+    MUSKELGRUPPEN,
+    Plan,
+    PlanUebung,
+    Satz,
+    SiteSettings,
+    Trainingseinheit,
+    Uebung,
+    UserProfile,
+)
 
 # ---------------------------------------------------------------------------
 # Rate-Limit Helper
@@ -35,6 +44,11 @@ def _check_ai_rate_limit(request: HttpRequest, limit_type: str) -> JsonResponse 
     """
     Prüft das tägliche KI-Limit für den eingeloggten User.
 
+    Hierarchie:
+    1. User-spezifisches Custom-Limit (falls gesetzt)
+    2. Site-weites Default-Limit (aus DB)
+    3. Fallback: settings.py
+
     Gibt None zurück wenn der Request erlaubt ist.
     Gibt eine 429-JsonResponse zurück wenn das Limit erreicht ist.
     Im DEBUG/Test-Modus immer None (kein Limit).
@@ -42,18 +56,39 @@ def _check_ai_rate_limit(request: HttpRequest, limit_type: str) -> JsonResponse 
     if getattr(settings, "RATELIMIT_BYPASS", False):
         return None
 
-    limit_map = {
-        "plan": settings.AI_RATE_LIMIT_PLAN_GENERATION,
-        "guidance": settings.AI_RATE_LIMIT_LIVE_GUIDANCE,
-        "analysis": settings.AI_RATE_LIMIT_ANALYSIS,
-    }
-    limit = limit_map.get(limit_type, 10)
-
     try:
         profile = request.user.profile
     except UserProfile.DoesNotExist:
         return None  # Kein Profil → durchlassen, Fehler wird anderswo behandelt
 
+    # SCHRITT 1: User-spezifisches Custom-Limit?
+    custom_limit_map = {
+        "plan": profile.custom_ai_limit_plan,
+        "guidance": profile.custom_ai_limit_guidance,
+        "analysis": profile.custom_ai_limit_analysis,
+    }
+    limit = custom_limit_map.get(limit_type)
+
+    # SCHRITT 2: Site-Einstellungen (wenn kein Custom-Limit)
+    if limit is None:
+        site_settings = SiteSettings.load()
+        site_limit_map = {
+            "plan": site_settings.ai_limit_plan_generation,
+            "guidance": site_settings.ai_limit_live_guidance,
+            "analysis": site_settings.ai_limit_analysis,
+        }
+        limit = site_limit_map.get(limit_type)
+
+    # SCHRITT 3: Fallback auf settings.py (sollte nie nötig sein)
+    if limit is None:
+        fallback_map = {
+            "plan": settings.AI_RATE_LIMIT_PLAN_GENERATION,
+            "guidance": settings.AI_RATE_LIMIT_LIVE_GUIDANCE,
+            "analysis": settings.AI_RATE_LIMIT_ANALYSIS,
+        }
+        limit = fallback_map.get(limit_type, 10)
+
+    # Limit-Check durchführen
     allowed = profile.check_and_increment_ai_limit(limit_type, limit)
     if not allowed:
         label_map = {
@@ -607,7 +642,9 @@ def analyze_plan_api(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "plan_id required"}, status=400)
 
         # Validierung: User darf nur eigene Pläne analysieren
-        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        if not plan:
+            return JsonResponse({"error": "Plan nicht gefunden"}, status=404)
 
         adapter = PlanAdapter(plan_id=plan.id, user_id=request.user.id)
         result = adapter.analyze_plan_performance(days=days)
@@ -663,7 +700,9 @@ def optimize_plan_api(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "plan_id required"}, status=400)
 
         # Validierung: User darf nur eigene Pläne optimieren
-        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        if not plan:
+            return JsonResponse({"error": "Plan nicht gefunden"}, status=404)
 
         adapter = PlanAdapter(plan_id=plan.id, user_id=request.user.id)
         result = adapter.suggest_optimizations(days=days)
@@ -857,7 +896,9 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "session_id und question erforderlich"}, status=400)
 
         # Prüfe ob Session dem User gehört
-        _ = get_object_or_404(Trainingseinheit, id=session_id, user=request.user)
+        session = Trainingseinheit.objects.filter(id=session_id, user=request.user).first()
+        if not session:
+            return JsonResponse({"error": "Trainingseinheit nicht gefunden"}, status=404)
 
         # Live Guidance importieren (korrekter Package-Import)
         from ai_coach.live_guidance import LiveGuidance
@@ -896,8 +937,6 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
             }
         )
 
-    except Trainingseinheit.DoesNotExist:
-        return JsonResponse({"error": "Trainingseinheit nicht gefunden"}, status=404)
     except Exception as e:
         logger.error(f"Live Feedback API Error: {e}", exc_info=True)
         return JsonResponse(

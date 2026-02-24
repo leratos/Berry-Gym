@@ -34,7 +34,7 @@ from django.contrib.auth.models import User
 from django.db.models import Avg
 from django.utils import timezone
 
-from ai_coach.llm_client import LLMClient
+from ai_coach.llm_client import LLMClient  # noqa: F401 - Für Tests + suggest_optimizations
 from core.models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung
 
 
@@ -45,7 +45,7 @@ class PlanAdapter:
         self.plan_id = plan_id
         self.plan = Plan.objects.get(id=plan_id)
         self.user_id = user_id or self.plan.user_id
-        self.llm_client = LLMClient()
+        # LLMClient wird lazy in suggest_optimizations() erstellt
 
     def analyze_plan_performance(self, days: int = 30) -> Dict[str, Any]:
         """
@@ -407,9 +407,9 @@ Bitte analysiere und schlage Optimierungen vor."""
 
         try:
             # Nutze LLMClient mit Fallback-Logik (Ollama → OpenRouter)
-            from ai_coach.llm_client import LLMClient
+            from ai_coach.llm_client import LLMClient as RuntimeLLMClient
 
-            client = LLMClient(temperature=0.3, use_openrouter=True)
+            client = RuntimeLLMClient(temperature=0.3, use_openrouter=True)
 
             # generate_training_plan nutzt automatisch Ollama oder OpenRouter
             result = client.generate_training_plan(messages=messages, max_tokens=2000)
