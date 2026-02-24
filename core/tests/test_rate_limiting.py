@@ -173,6 +173,14 @@ class TestCheckAiRateLimitHelper(TestCase):
         mock_settings.AI_RATE_LIMIT_PLAN_GENERATION = 1
         mock_settings.AI_RATE_LIMIT_LIVE_GUIDANCE = 50
         mock_settings.AI_RATE_LIMIT_ANALYSIS = 10
+
+        # SiteSettings auch setzen (neue Hierarchie)
+        from core.models import SiteSettings
+
+        site_settings = SiteSettings.load()
+        site_settings.ai_limit_plan_generation = 1
+        site_settings.save()
+
         self.profile.ai_plan_count_today = 1
         self.profile.save()
 
@@ -193,6 +201,14 @@ class TestCheckAiRateLimitHelper(TestCase):
         mock_settings.AI_RATE_LIMIT_PLAN_GENERATION = 3
         mock_settings.AI_RATE_LIMIT_LIVE_GUIDANCE = 50
         mock_settings.AI_RATE_LIMIT_ANALYSIS = 10
+
+        # SiteSettings auch setzen (neue Hierarchie)
+        from core.models import SiteSettings
+
+        site_settings = SiteSettings.load()
+        site_settings.ai_limit_live_guidance = 50
+        site_settings.save()
+
         self.profile.ai_guidance_count_today = 50
         self.profile.save()
 
