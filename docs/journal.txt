@@ -2534,3 +2534,85 @@ Abdeckung:
   - Division-by-Zero Szenarien
 
 Die Test-Suite sichert Edge Cases ab und erhöht die Robustheit der Anwendung.
+
+
+## In Arbeit: KI-Limit-Verwaltung im Admin (23.02.2026)
+
+Phase: Admin-Interface für flexible KI-Rate-Limits (Beta-Phase Schutz)
+
+Problem:
+  - Aktuell: Limits nur via Environment-Variablen (3/50/10 pro Tag)
+  - Beta-User könnten Guthaben leer hauen
+  - Keine schnelle Anpassung möglich ohne Server-Restart
+
+Lösung (Option B - Erweitert):
+  1. SiteSettings Model (Singleton) - globale Defaults
+  2. UserProfile erweitern - optionale per-User Overrides
+  3. Admin Interface für beide
+  4. View-Logik: User-Override > Site-Default > Settings-Fallback
+  5. Migration mit Defaults aus aktuellen Settings
+
+Workflow:
+  - Model: core/models/site_settings.py erstellen
+  - UserProfile: custom_ai_limits Felder hinzufügen
+  - Admin: core/admin.py erweitern
+  - View: core/views/ai_recommendations.py anpassen
+  - Migration: Defaults setzen
+  - Tests: core/tests/test_rate_limiting.py erweitern
+
+
+## Teilweise Abgeschlossen: KI-Limit-Verwaltung im Admin (24.02.2026)
+
+Branch: feature/ai-limits-admin
+
+**IMPLEMENTIERT:**
+
+1. ✅ **SiteSettings Model** (Singleton für globale Limits)
+   - Datei: core/models/site_settings.py
+   - Felder: ai_limit_plan_generation, ai_limit_live_guidance, ai_limit_analysis
+   - Singleton-Pattern mit load() Klassenmethode
+   - Admin-Integration
+
+2. ✅ **UserProfile erweitert** (optionale per-User Overrides)
+   - Felder: custom_ai_limit_plan, custom_ai_limit_guidance, custom_ai_limit_analysis
+   - Alle nullable (None = nutze Site-Default)
+
+3. ✅ **View-Logik angepasst**
+   - core/views/ai_recommendations.py: _check_ai_rate_limit() nutzt jetzt Hierarchie
+   - Hierarchie: User-Custom > Site-Default > Settings-Fallback
+   - In UserProfile.check_and_increment_ai_limit() implementiert
+
+4. ✅ **Migrations erstellt**
+   - 0073_sitesettings_userprofile_custom_ai_limit_analysis_and_more.py
+   - 0074_create_initial_site_settings.py (erstellt Singleton mit Defaults)
+
+5. ✅ **Admin-Interface**
+   - SiteSettings im Admin registriert
+   - UserProfile-Admin zeigt custom limits
+
+6. ⚠️ **Tests (6/9 grün)**
+   - TestSiteSettings: 4/4 ✅
+   - TestUserCustomLimits: 2/2 ✅
+   - TestAIRateLimitHierarchy: 0/3 ❌ (HTTP 500 wegen LLMClient-Init)
+
+**PROBLEM:**
+Die 3 fehlgeschlagenen Tests rufen `analyze_plan_api` auf, die `LLMClient()` initialisiert.
+LLMClient crasht in Tests weil:
+  - Ollama nicht läuft
+  - Unicode-Encoding-Fehler (Windows cp1252 vs UTF-8 Emojis in llm_client.py)
+
+**NÄCHSTE SCHRITTE:**
+1. Mock LLMClient in Tests ODER
+2. Test-View wählen die kein LLMClient braucht ODER
+3. LLMClient-Init aus analyze_plan_api entfernen (lazy loading)
+
+**WAS FUNKTIONIERT:**
+- ✅ SiteSettings Singleton
+- ✅ User Custom Limits
+- ✅ Limit-Hierarchie in check_and_increment_ai_limit()
+- ✅ Admin kann Limits ändern ohne Server-Restart
+- ✅ Migrations + Data Migration
+
+**WAS NOCH FEHLT:**
+- Tests für Rate-Limiting Hierarchie (3 Tests fehlschlagen)
+- Dokumentation im Admin
