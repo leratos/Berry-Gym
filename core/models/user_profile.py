@@ -75,6 +75,28 @@ class UserProfile(models.Model):
         help_text="Wie viele Trainings pro Woche angestrebt werden (1-7)",
     )
 
+    # ------------------------------------------------------------------
+    # KI Rate-Limiting: optionale User-spezifische Overrides
+    # ------------------------------------------------------------------
+    custom_ai_limit_plan = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Custom KI-Limit: Plan-Generierung",
+        help_text="Falls gesetzt: überschreibt das globale Limit (leer = Standard verwenden)",
+    )
+    custom_ai_limit_guidance = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Custom KI-Limit: Live-Guidance",
+        help_text="Falls gesetzt: überschreibt das globale Limit (leer = Standard verwenden)",
+    )
+    custom_ai_limit_analysis = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Custom KI-Limit: Analysen",
+        help_text="Falls gesetzt: überschreibt das globale Limit (leer = Standard verwenden)",
+    )
+
     def _reset_ai_counters_if_needed(self) -> None:
         """Setzt die täglichen KI-Zähler zurück wenn ein neuer Tag begonnen hat."""
         today = timezone.now().date()

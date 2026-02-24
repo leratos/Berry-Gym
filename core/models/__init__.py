@@ -44,6 +44,9 @@ from .ml import MLPredictionModel  # noqa: F401
 # Plan
 from .plan import Plan, PlanUebung  # noqa: F401
 
+# Site Settings
+from .site_settings import SiteSettings  # noqa: F401
+
 # Social / Beta-Zugang
 from .social import InviteCode, WaitlistEntry  # noqa: F401
 
@@ -82,6 +85,7 @@ __all__ = [
     "PushSubscription",
     "Satz",
     "ScientificDisclaimer",
+    "SiteSettings",
     "Trainingseinheit",
     "TrainingSource",
     "Uebung",

@@ -322,6 +322,27 @@ class TestTrainingStartView(SessionBase):
             self.client.get(reverse("training_start_plan", args=[fremder.id])).status_code, 404
         )
 
+    def test_startet_aktiven_plan_setzt_cycle_start_auf_montag_wenn_leer(self):
+        """Fallback: Beim Start aktiver Gruppe wird fehlender Zyklusstart auf Montag gesetzt."""
+        import uuid
+
+        gid = uuid.uuid4()
+        self.plan.gruppe_id = gid
+        self.plan.gruppe_name = "Testgruppe"
+        self.plan.save(update_fields=["gruppe_id", "gruppe_name"])
+
+        profile = self.user.profile
+        profile.active_plan_group = gid
+        profile.cycle_start_date = None
+        profile.save(update_fields=["active_plan_group", "cycle_start_date"])
+
+        self.client.get(reverse("training_start_plan", args=[self.plan.id]), secure=True)
+
+        profile.refresh_from_db()
+        today = timezone.now().date()
+        monday_this_week = today - timedelta(days=today.weekday())
+        self.assertEqual(profile.cycle_start_date, monday_this_week)
+
 
 class TestAddSetView(SessionBase):
     def test_login_required(self):
