@@ -5,10 +5,13 @@ Tests für KI-Rate-Limiting mit Site-weiten und User-spezifischen Limits.
 import uuid
 from unittest.mock import patch
 
+from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
+from core.admin import UserProfileAdmin
 from core.models import Plan, SiteSettings, Trainingseinheit
 
 
@@ -180,3 +183,71 @@ class TestAIRateLimitHierarchy(TestCase):
                 reverse("optimize_plan_api"), payload, content_type="application/json", secure=True
             )
             self.assertEqual(resp.status_code, 200)
+
+
+class TestUserProfileAdminDisplay(TestCase):
+    """Tests für die effektive KI-Counter-Darstellung im UserProfileAdmin."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="admin_view_user", password="pass")
+        self.profile = self.user.profile
+        self.admin_obj = UserProfileAdmin(self.profile.__class__, AdminSite())
+
+    def test_effective_counts_are_zero_when_reset_is_stale(self):
+        self.profile.ai_plan_count_today = 2
+        self.profile.ai_guidance_count_today = 1
+        self.profile.ai_analysis_count_today = 3
+        self.profile.ai_counter_reset_date = timezone.now().date() - timezone.timedelta(days=1)
+        self.profile.save()
+
+        self.assertEqual(self.admin_obj.ai_plan_count_effective(self.profile), 0)
+        self.assertEqual(self.admin_obj.ai_guidance_count_effective(self.profile), 0)
+        self.assertEqual(self.admin_obj.ai_analysis_count_effective(self.profile), 0)
+
+    def test_effective_counts_show_stored_values_when_reset_is_today(self):
+        self.profile.ai_plan_count_today = 4
+        self.profile.ai_guidance_count_today = 5
+        self.profile.ai_analysis_count_today = 6
+        self.profile.ai_counter_reset_date = timezone.now().date()
+        self.profile.save()
+
+        self.assertEqual(self.admin_obj.ai_plan_count_effective(self.profile), 4)
+        self.assertEqual(self.admin_obj.ai_guidance_count_effective(self.profile), 5)
+        self.assertEqual(self.admin_obj.ai_analysis_count_effective(self.profile), 6)
+
+    def test_reset_display_marks_pending_when_stale(self):
+        self.profile.ai_counter_reset_date = timezone.now().date() - timezone.timedelta(days=1)
+        self.profile.save()
+
+        display = self.admin_obj.ai_counter_reset_display(self.profile)
+        self.assertIn("ausstehend", display)
+        self.assertIn("letzter persistierter Reset", display)
+
+    def test_reset_display_marks_pending_when_never_persisted(self):
+        self.profile.ai_counter_reset_date = None
+        self.profile.save()
+
+        display = self.admin_obj.ai_counter_reset_display(self.profile)
+        self.assertIn("ausstehend", display)
+        self.assertIn("noch kein persistierter Reset", display)
+
+    def test_reset_display_without_pending_when_today(self):
+        self.profile.ai_counter_reset_date = timezone.now().date()
+        self.profile.save()
+
+        display = self.admin_obj.ai_counter_reset_display(self.profile)
+        self.assertNotIn("ausstehend", display)
+
+    def test_fieldset_uses_effective_counter_fields(self):
+        fieldset = None
+        for name, options in self.admin_obj.fieldsets:
+            if name == "KI-Nutzung (heute) - nur Anzeige":
+                fieldset = options
+                break
+
+        self.assertIsNotNone(fieldset)
+        fields = fieldset["fields"]
+        self.assertIn("ai_plan_count_effective", fields)
+        self.assertIn("ai_guidance_count_effective", fields)
+        self.assertIn("ai_analysis_count_effective", fields)
+        self.assertNotIn("ai_plan_count_today", fields)
