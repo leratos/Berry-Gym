@@ -260,7 +260,7 @@ Berry-Gym/
 │   ├── models/                 # Data models (split by domain)
 │   ├── views/                  # Modular views
 │   ├── templates/core/         # HTML templates (Bootstrap 5, i18n)
-│   ├── tests/                  # 864 tests (pytest)
+│   ├── tests/                  # Extensive test suites (pytest)
 │   ├── static/core/            # CSS, JS, PWA
 │   ├── fixtures/               # initial_exercises.json, plan_templates.json
 │   └── migrations/             # 70+ database migrations
@@ -271,7 +271,7 @@ Berry-Gym/
 ├── deployment/                 # Production configs
 ├── docs/                       # Documentation
 │   ├── journal.txt             # Development journal
-│   ├── PROJECT_ROADMAP.md      # Phase planning
+│   ├── PROJECT_ROADMAP.md      # Milestone roadmap (current)
 │   └── DEPLOYMENT.md
 ├── README.md                   # German README
 └── README_EN.md                # This file
@@ -292,24 +292,28 @@ Berry-Gym/
 | PWA | Service Worker, manifest.json |
 | PDF | xhtml2pdf, matplotlib, cairosvg, Pillow |
 | i18n | Django i18n/L10N, gettext (DE/EN) |
-| Testing | pytest, factory_boy, 864 tests, CI/CD |
+| Testing | pytest, factory_boy, CI/CD |
 | ML | scikit-learn (local weight predictions) |
 
 ### Project Statistics (Version 1.0, Feb 2026)
 
 | Metric | Value |
 |--------|-------|
-| Tests | **864 passed**, CI/CD green |
+| Tests | **800+**, CI/CD green |
 | Translations | **790** (DE→EN, 0 fuzzy, 0 untranslated) |
 | Exercises | **113** predefined + custom exercises |
 | Migrations | **70+** |
 | Templates | **55+** HTML/Django |
 | Lines of Code | **~22,000+** |
-| Development Time | **~7 weeks intensive** |
+| Project Status | **Live since Feb 2026** |
 
 ---
 
 ## 🔮 Roadmap & Known Limitations
+
+Current prioritization and implementation status are tracked in
+**[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)**
+(milestone-based, updated 2026-02-24).
 
 ### Currently Available (v1.0)
 
@@ -332,16 +336,18 @@ Berry-Gym/
 
 ### Planned / Next Steps
 
-- ✅ **Import/Export (Hevy format)**: CSV export & import compatible with Hevy/Strong — "bring your data" for switchers, dry-run preview, automatic exercise matching
-- ✅ **Single Plan Activation**: Plans without a group can be set as active directly
-- 🔜 Nutrition tracking (macros & calories)
-- 🔜 Onboarding tour & feature discovery
+- 🔥 **M5 – Coverage Sprint C**: targeted test depth for charts/stats/helpers
+- 🧠 **M6 – AI Endpoint Contract Hardening**: consistent error contracts + edge-case tests
+- 🔐 **M7 – Security & Compliance Tightening**: security findings process and policy hardening
+- 🔜 Afterwards: operations maturity (M8) and incremental refactoring (M9)
 
 ### Known Limitations
 
 - PDF reports require Cairo for optimal body maps (Pillow fallback available)
 - AI Coach requires OpenRouter API key (~€0.003/plan)
 - Custom exercises are user-specific (no global sharing)
+
+**Last Updated:** 2026-02-24
 
 ---
 

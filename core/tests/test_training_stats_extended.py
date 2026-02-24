@@ -9,6 +9,8 @@ Abgedeckte Views:
 - exercise_stats
 """
 
+import json
+
 from django.urls import reverse
 
 import pytest
@@ -392,17 +394,30 @@ class TestTrainingStats:
 
     URL = reverse("training_stats")
 
+    def _get(self, client):
+        return client.get(self.URL, secure=True)
+
     def test_login_required(self, client):
         """Unauthentifizierter Zugriff → Redirect."""
-        response = client.get(self.URL)
+        response = self._get(client)
         assert response.status_code == 302
 
     def test_loads_without_data(self, client):
         """Stats-Seite lädt für User ohne Trainings (kein 500)."""
         user = UserFactory()
         client.force_login(user)
-        response = client.get(self.URL)
+        response = self._get(client)
         assert response.status_code == 200
+
+    def test_sets_no_data_flag_for_new_user(self, client):
+        """Neue User ohne Trainings erhalten den no_data-Context."""
+        user = UserFactory()
+        client.force_login(user)
+
+        response = self._get(client)
+
+        assert response.status_code == 200
+        assert response.context["no_data"] is True
 
     def test_loads_with_data(self, client):
         """Stats-Seite lädt korrekt mit Trainings + Sätzen."""
@@ -412,7 +427,7 @@ class TestTrainingStats:
         uebung = UebungFactory()
         for _ in range(5):
             SatzFactory(einheit=einheit, uebung=uebung, ist_aufwaermsatz=False)
-        response = client.get(self.URL)
+        response = self._get(client)
         assert response.status_code == 200
 
     def test_user_data_isolation(self, client):
@@ -427,9 +442,106 @@ class TestTrainingStats:
             SatzFactory(einheit=einheit_b, ist_aufwaermsatz=False)
 
         # user_a hat keinen Satz
-        response = client.get(self.URL)
+        response = self._get(client)
         assert response.status_code == 200
         # Keine Exception und der user_b-Satz darf nicht in Context
+
+    def test_single_training_has_consistent_volume_context(self, client):
+        """Einzelner Datenpunkt erzeugt valide Labels/Daten und stabile Kennzahlen."""
+        user = UserFactory()
+        client.force_login(user)
+
+        einheit = TrainingseinheitFactory(user=user)
+        uebung = UebungFactory()
+        SatzFactory(
+            einheit=einheit,
+            uebung=uebung,
+            ist_aufwaermsatz=False,
+            gewicht=100,
+            wiederholungen=5,
+        )
+
+        response = self._get(client)
+
+        labels = json.loads(response.context["volumen_labels_json"])
+        data = json.loads(response.context["volumen_data_json"])
+
+        assert len(labels) == 1
+        assert len(data) == 1
+        assert response.context["gesamt_volumen"] == 500.0
+        assert response.context["durchschnitt_volumen"] == 500.0
+
+    def test_heatmap_contains_exactly_90_days(self, client):
+        """90-Tage-Heatmap liefert immer genau 90 Tagespunkte."""
+        user = UserFactory()
+        client.force_login(user)
+
+        einheit = TrainingseinheitFactory(user=user)
+        uebung = UebungFactory()
+        SatzFactory(
+            einheit=einheit,
+            uebung=uebung,
+            ist_aufwaermsatz=False,
+            gewicht=60,
+            wiederholungen=8,
+        )
+
+        response = self._get(client)
+
+        heatmap = json.loads(response.context["heatmap_data_json"])
+        assert len(heatmap) == 90
+        assert all("date" in point and "count" in point for point in heatmap)
+
+    def test_warmup_only_sets_do_not_add_training_volume(self, client):
+        """Nur Aufwärmsätze führen zu 0 Volumen und 0 Durchschnitt."""
+        user = UserFactory()
+        client.force_login(user)
+
+        einheit = TrainingseinheitFactory(user=user)
+        uebung = UebungFactory()
+        SatzFactory(
+            einheit=einheit,
+            uebung=uebung,
+            ist_aufwaermsatz=True,
+            gewicht=80,
+            wiederholungen=10,
+        )
+
+        response = self._get(client)
+
+        assert response.context["gesamt_volumen"] == 0
+        assert response.context["durchschnitt_volumen"] == 0
+
+    def test_weekly_volume_is_capped_to_12_labels(self, client):
+        """Weekly-Volume-Chart ist auf maximal 12 Wochen begrenzt."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        user = UserFactory()
+        client.force_login(user)
+        uebung = UebungFactory()
+
+        for week in range(16):
+            einheit = TrainingseinheitFactory(
+                user=user,
+                datum=timezone.now() - timedelta(days=7 * week),
+            )
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                gewicht=50,
+                wiederholungen=5,
+            )
+
+        response = self._get(client)
+
+        weekly_labels = json.loads(response.context["weekly_labels_json"])
+        weekly_data = json.loads(response.context["weekly_data_json"])
+
+        assert len(weekly_labels) <= 12
+        assert len(weekly_labels) == len(weekly_data)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

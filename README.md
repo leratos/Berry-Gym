@@ -277,7 +277,7 @@ Berry-Gym/
 │   │   ├── ai_recommendations.py # KI-Endpunkte (Rate-Limited)
 │   │   └── ...
 │   ├── templates/core/         # HTML Templates (Bootstrap 5, i18n)
-│   ├── tests/                  # 864 Tests (pytest)
+│   ├── tests/                  # Umfangreiche Test-Suites (pytest)
 │   ├── static/core/            # CSS, JS, PWA
 │   ├── fixtures/               # initial_exercises.json, plan_templates.json
 │   ├── migrations/             # 70+ Datenbank-Migrationen
@@ -291,7 +291,7 @@ Berry-Gym/
 │   └── homegym.nginx           # Nginx Reverse Proxy
 ├── docs/                       # Dokumentation
 │   ├── journal.txt             # Entwicklungstagbuch (laufend gepflegt)
-│   ├── PROJECT_ROADMAP.md      # Phasenplanung
+│   ├── PROJECT_ROADMAP.md      # Milestone-Roadmap (aktuell)
 │   ├── DEPLOYMENT.md           # Production Deployment Guide
 │   ├── RUNBOOK.md              # Incident Response & Operations
 │   ├── CICD_GUIDE.md           # CI/CD Pipeline Guide
@@ -330,25 +330,29 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 | PWA | Service Worker, manifest.json |
 | PDF | xhtml2pdf, matplotlib, cairosvg, Pillow |
 | i18n | Django i18n/L10N, gettext (DE/EN) |
-| Testing | pytest, factory_boy, 822 Tests, CI/CD |
+| Testing | pytest, factory_boy, CI/CD |
 | ML | scikit-learn (lokale Gewichtsvorhersagen) |
 
 ### Projekt-Statistiken (Version 1.0, Stand Feb 2026)
 
 | Metrik | Wert |
 |--------|------|
-| Tests | **864 passed**, CI/CD grün |
+| Tests | **800+**, CI/CD grün |
 | Übersetzungen | **790** (DE→EN, 0 fuzzy, 0 untranslated) |
 | Übungen | **113** vordefiniert + Custom Übungen |
 | Migrationen | **70+** |
 | Templates | **55+** HTML/Django |
 | Python Files | **70+** |
 | Lines of Code | **~22.000+** |
-| Development Time | **~7 Wochen intensiv** |
+| Projektstatus | **Live seit Feb 2026** |
 
 ---
 
 ## 🔮 Roadmap & Known Limitations
+
+Aktuelle Priorisierung und Umsetzungsstatus stehen in
+**[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)**
+(Milestone-basiert, Stand 24.02.2026).
 
 ### Aktuell verfügbar (v1.0)
 
@@ -368,13 +372,14 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - ✅ **1RM Kraftstandards**: 4 Leistungsstufen, körpergewicht-skaliert
 - ✅ **Advanced Statistics**: Plateau, Konsistenz, RPE-Qualität, Ermüdungs-Index
 - ✅ **CSV-Export**, Cardio Lite, Video-Support, Custom Übungen, Superset, PWA
-
-### In Planung / Nächste Schritte
-
 - ✅ **Import/Export (Hevy-Format)**: CSV-Export & Import kompatibel mit Hevy/Strong – "Bring your data" für Wechsler, Dry-Run Vorschau, automatisches Übungs-Matching
 - ✅ **Einzelplan-Aktivierung**: Pläne ohne Gruppe können direkt als aktiver Plan gesetzt werden
-- 🔜 Nutrition Tracking (Makros & Kalorien)
-- 🔜 Onboarding-Tour & Feature-Discovery
+### In Planung / Nächste Schritte
+
+- 🔥 **M5 – Coverage Sprint C**: gezielte Testvertiefung für Charts/Stats/Helpers
+- 🧠 **M6 – AI Endpoint Contract Hardening**: konsistente Fehlerverträge + zusätzliche Edge-Case-Tests
+- 🔐 **M7 – Security & Compliance Tightening**: Security-Findings-Prozess und Policy-Schärfung
+- 🔜 Danach: Operations-Reife (M8) und inkrementelles Refactoring (M9)
 
 ### Bekannte Limitierungen
 
@@ -382,6 +387,8 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 - AI Coach benötigt OpenRouter API Key (Kosten: ~0.003€/Plan)
 - Custom Übungen sind user-spezifisch (kein globales Sharing)
 - GNU gettext nicht zwingend erforderlich (MO-Kompilierung via polib)
+
+**Last Updated:** 2026-02-24
 
 ---
 

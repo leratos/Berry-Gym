@@ -12,11 +12,11 @@ Wir freuen uns über Contributions aller Art - ob Bugfixes, neue Features, Dokum
 # Fork auf GitHub erstellen (Button oben rechts)
 
 # Dein Fork klonen
-git clone https://github.com/DEIN-USERNAME/homegym.git
-cd homegym
+git clone https://github.com/DEIN-USERNAME/Berry-Gym.git
+cd Berry-Gym
 
 # Upstream Remote hinzufügen
-git remote add upstream https://github.com/ORIGINAL-OWNER/homegym.git
+git remote add upstream https://github.com/leratos/Berry-Gym.git
 ```
 
 ### 2. Development Environment setup
@@ -35,7 +35,7 @@ cp .env.example .env
 
 # Datenbank setup
 python manage.py migrate
-python manage.py add_new_exercises
+python manage.py loaddata core/fixtures/initial_exercises.json
 python manage.py createsuperuser
 
 # Server starten
@@ -73,7 +73,7 @@ chore: Build-Process, Dependencies, etc.
 ```bash
 git commit -m "feat: AI Coach live guidance während Training"
 git commit -m "fix: 1RM Berechnung bei Körpergewichtsübungen"
-git commit -m "docs: Installation Guide für Ollama hinzufügen"
+git commit -m "docs: AI setup guide aktualisieren"
 ```
 
 ## 🎯 Contribution Bereiche
@@ -115,15 +115,14 @@ git commit -m "docs: Installation Guide für Ollama hinzufügen"
 ## 🧪 Testing
 
 ```bash
-# Django Tests ausführen
-python manage.py test
+# Projektstandard: pytest
+pytest
 
-# Spezifische App testen
-python manage.py test core
+# Spezifischer Testlauf
+pytest core/tests/test_training_views.py -v
 
-# Mit Coverage
-coverage run --source='.' manage.py test
-coverage report
+# Mit Coverage (wie in CI)
+pytest --cov=core --cov=ai_coach --cov-report=term-missing
 ```
 
 **Test-Erwartungen:**
@@ -195,7 +194,7 @@ async function loadTrainingData(trainingId) {
 ```
 feat: AI Coach live guidance
 fix: 1RM calculation for bodyweight exercises
-docs: add Ollama setup instructions
+docs: update AI setup instructions
 ```
 
 **Beschreibung:**
@@ -260,14 +259,15 @@ git push origin --delete feature/deine-funktion
 - **PWA:** Service Worker für Offline-Support
 
 ### AI Coach
-- **Hybrid LLM:** Ollama (lokal) → OpenRouter (Fallback)
+- **LLM Integration:** OpenRouter-basierte AI-Flows mit Kosten-/Rate-Limit-Tracking
 - **Prompt Engineering:** `ai_coach/prompt_builder.py`
 - **Cost Tracking:** Jeder LLM-Call logged Kosten
 - **Caching:** Vermeidet redundante API-Calls
 
 ## 🌍 Internationalization (i18n)
 
-Aktuell ist die App auf Deutsch. Translations sind willkommen!
+Die App unterstützt Deutsch und Englisch (vollständig integriert). Weitere
+Übersetzungen und Qualitätsverbesserungen sind willkommen.
 
 **Vorschlag:**
 1. Django i18n Framework nutzen

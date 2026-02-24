@@ -188,6 +188,11 @@ class TestConsistencyMetrics(StatsTestBase):
         result = calculate_consistency_metrics(self._alle_trainings())
         self.assertGreaterEqual(result["laengster_streak"], result["aktueller_streak"])
 
+    def test_einzel_training_hat_null_pause(self):
+        self._make_session(days_ago=0)
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["avg_pause_tage"], 0)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # calculate_fatigue_index
@@ -225,6 +230,33 @@ class TestFatigueIndex(StatsTestBase):
             volume_data, self._get_rpe_saetze(), self._alle_trainings()
         )
         self.assertFalse(result["volumen_spike"])
+
+    def test_kein_volumen_spike_wenn_vorwoche_null(self):
+        volume_data = [
+            {"woche": "KW1", "volumen": 0},
+            {"woche": "KW2", "volumen": 900},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        self.assertFalse(result["volumen_spike"])
+
+    def test_rpe_ohne_altes_vergleichsfenster_steigt_nicht(self):
+        session = self._make_session(days_ago=0)
+        for index in range(10):
+            Satz.objects.create(
+                einheit=session,
+                uebung=self.uebung,
+                satz_nr=index + 1,
+                gewicht=80,
+                wiederholungen=6,
+                rpe=9.0,
+                ist_aufwaermsatz=False,
+            )
+
+        result = calculate_fatigue_index([], self._get_rpe_saetze(), self._alle_trainings())
+
+        self.assertFalse(result["rpe_steigend"])
 
     def test_deload_empfohlen_bei_hohem_fatigue(self):
         # Täglich trainieren in letzten 7 Tagen → hoher Fatigue
@@ -315,6 +347,22 @@ class TestPlateauAnalysis(StatsTestBase):
 
     def test_leere_top_uebungen_gibt_leer(self):
         result = calculate_plateau_analysis(self._alle_saetze(), [])
+        self.assertEqual(result, [])
+
+    def test_nur_null_1rm_werte_gibt_leer(self):
+        for days_ago in [7, 0]:
+            session = self._make_session(days_ago=days_ago)
+            Satz.objects.create(
+                einheit=session,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=0,
+                wiederholungen=8,
+                rpe=7.0,
+                ist_aufwaermsatz=False,
+            )
+
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
         self.assertEqual(result, [])
 
 
