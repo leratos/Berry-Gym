@@ -368,4 +368,5 @@ wird nach jedem abgeschlossenen Milestone kurz aktualisiert.
 - ✅ Phase 1 abgeschlossen
 - ✅ Phase 2 abgeschlossen
 - 🔄 Phase 3 gestartet (Welle 1 abgeschlossen)
-- ⏭️ Nächster Schritt: Phase 3 (Welle 2)
+- 🔄 Phase 4 gestartet (Welle 1 abgeschlossen)
+- ⏭️ Nächster Schritt: Phase 3 (Welle 2) und Phase 4 (Welle 2)

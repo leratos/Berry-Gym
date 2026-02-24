@@ -3373,6 +3373,32 @@ Validierung:
 - `black --check ai_coach/tests/test_plan_generator.py`
   → unverändert
 
+## In Arbeit: Coverage-Kampagne – Phase 4 (Periodisierungs-Helfer)
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Branch-Coverage für `_calculate_weekly_rpe`, `_week_focus`,
+  `_periodization_note` gezielt erhöhen.
+
+## Abgeschlossen: Coverage-Kampagne – Phase 4 (Welle 1)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `ai_coach/tests/test_plan_generator.py` erweitert um
+  `TestPeriodizationHelpers` mit Branch-Tests für:
+  - Deload/Floor in `_calculate_weekly_rpe`
+  - wellenförmig/block/fallback-Zweige in `_calculate_weekly_rpe`
+  - Varianten in `_week_focus`
+  - Varianten in `_periodization_note`
+
+Validierung:
+- `pytest ai_coach/tests/test_plan_generator.py -k TestPeriodizationHelpers -v`
+  → **5 passed**
+- `black --check ai_coach/tests/test_plan_generator.py`
+  → unverändert
+
 ## In Arbeit: M6.4 – Malformed JSON Contract-Hardening
 
 **Datum:** 2026-02-24

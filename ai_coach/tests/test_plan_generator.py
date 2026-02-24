@@ -605,6 +605,71 @@ class TestDynamicMaxTokens:
             ), f"Plan-Typ '{pt}' hat nur {tokens} Tokens – zu niedrig (min 1500)"
 
 
+class TestPeriodizationHelpers:
+    """Phase 4: Branch-Coverage für periodisierungsbezogene Helper."""
+
+    def test_calculate_weekly_rpe_deload_and_floor(self):
+        gen = PlanGenerator(user_id=1)
+
+        # Deload reduziert, aber fällt nicht unter 6.5
+        assert (
+            gen._calculate_weekly_rpe("linear", 7.0, pos_in_block=2, block=1, is_deload=True) == 6.5
+        )
+
+    def test_calculate_weekly_rpe_wellenfoermig_and_block(self):
+        gen = PlanGenerator(user_id=1)
+
+        wellen = gen._calculate_weekly_rpe(
+            "wellenfoermig", 7.8, pos_in_block=2, block=1, is_deload=False
+        )
+        block = gen._calculate_weekly_rpe("block", 7.8, pos_in_block=2, block=3, is_deload=False)
+
+        assert wellen == 8.1
+        assert block == 8.1
+
+    def test_calculate_weekly_rpe_fallback_linear(self):
+        gen = PlanGenerator(user_id=1)
+
+        rpe = gen._calculate_weekly_rpe("unbekannt", 7.5, pos_in_block=3, block=1, is_deload=False)
+        assert rpe == 7.8
+
+    def test_week_focus_variants(self):
+        gen = PlanGenerator(user_id=1)
+
+        assert (
+            gen._week_focus("linear", block=1, is_deload=True, profile="kraft")
+            == "Deload & Technik"
+        )
+        assert "Welle Block 2" in gen._week_focus(
+            "wellenfoermig", block=2, is_deload=False, profile="hypertrophie"
+        )
+        assert (
+            gen._week_focus("block", block=2, is_deload=False, profile="kraft")
+            == "Kraft/Intensität"
+        )
+        assert "Linearer Aufbau" in gen._week_focus(
+            "linear", block=3, is_deload=False, profile="definition"
+        )
+
+    def test_periodization_note_variants(self):
+        gen = PlanGenerator(user_id=1)
+
+        assert "Wellenförmig" in gen._periodization_note("wellenfoermig", block=1, pos_in_block=2)
+        assert gen._periodization_note("block", block=1, pos_in_block=2) == (
+            "Volumen priorisieren, Technik stabilisieren"
+        )
+        assert gen._periodization_note("block", block=2, pos_in_block=2) == (
+            "Kraftfokus: schwerere Compounds"
+        )
+        assert gen._periodization_note("block", block=3, pos_in_block=2) == (
+            "Top-Phase: niedrigeres Volumen, höhere RPE"
+        )
+        assert (
+            gen._periodization_note("linear", block=1, pos_in_block=2)
+            == "Progressiv +0.5 RPE / Block"
+        )
+
+
 class TestProgressCallback:
     """progress_callback wird an den richtigen Stellen aufgerufen."""
 
