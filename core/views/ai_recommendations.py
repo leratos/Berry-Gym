@@ -831,7 +831,9 @@ def apply_optimizations_api(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "plan_id required"}, status=400)
 
         # Validierung: User darf nur eigene Pläne bearbeiten
-        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        if not plan:
+            return JsonResponse({"error": "Plan nicht gefunden"}, status=404)
 
         applied_count = 0
         errors = []

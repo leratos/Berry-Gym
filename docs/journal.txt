@@ -3133,4 +3133,81 @@ Validierung:
   → **2 passed**
 - `black --check core/tests/test_training_views.py core/tests/test_training_session_views.py`
   → unverändert
+
+## In Arbeit: M5 Abschluss + M6 Contract-Hardening Start
+
+**Datum:** 2026-02-24
+
+Ziel:
+- M5 (Coverage Sprint C) als abgeschlossen in der Roadmap markieren,
+- für M6 eine konkrete Fehlermatrix dokumentieren,
+- erste API-Contract-Regressionstests für AI-Endpunkte ergänzen.
+
+## Abgeschlossen: M5 Abschluss + M6 Contract-Hardening Start
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `docs/PROJECT_ROADMAP.md` aktualisiert:
+  - M5 als abgeschlossen markiert (inkl. WP1–WP4-Referenz),
+  - M6 als neuer Hauptfokus gesetzt,
+  - konkrete M6-Fehlermatrix (Endpoint × Case × Status × Contract) ergänzt.
+- `core/tests/test_ai_endpoints_extended.py` erweitert um erste M6-Contract-Tests:
+  - `generate_plan_api`: Method-Contract (`GET` → `405` + `error`)
+  - `optimize_plan_api`: Method-Contract (`GET` → `405` + `error`)
+  - `live_guidance_api`: Method-Contract (`GET` → `405` + `error`)
+  - `generate_plan_stream_api`: Method-Contract (`POST` → `405`, plain `GET required`)
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -v` → **17 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py` → unverändert
+
+## In Arbeit: M6.1 – Error-Shape Contract Welle 2
+
+**Datum:** 2026-02-24
+
+Ziel: Einheitliche Error-Shape-Baseline für AI-Endpunkte vertiefen
+(429/500-Pfade) und per Regressionstests auf JSON-Contract absichern.
+
+## Abgeschlossen: M6.1 – Error-Shape Contract Welle 2
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_ai_endpoints_extended.py` erweitert um zweite Contract-Welle:
+  - zentrale Helper-Assertion für JSON-Error-Contract,
+  - zusätzliche 429-Contracts für `generate_plan_api`, `optimize_plan_api`,
+    `live_guidance_api`,
+  - zusätzliche 500-Contracts für `generate_plan_api`, `analyze_plan_api`,
+    `optimize_plan_api`,
+  - bestehende Method-/Stream-Contracts weiterhin grün.
+- `docs/PROJECT_ROADMAP.md` um M6-Statusupdate ergänzt.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -v` → **23 passed**
+- `black core/tests/test_ai_endpoints_extended.py`
+- `black --check core/tests/test_ai_endpoints_extended.py` → unverändert
+
+## Abgeschlossen: M6.2 – apply_optimizations_api Contract-Hardening
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/views/ai_recommendations.py` angepasst:
+  - Ownership/Existenz-Check in `apply_optimizations_api` auf konsistenten
+    JSON-404-Contract umgestellt (`{"error": "Plan nicht gefunden"}`).
+- `core/tests/test_ai_endpoints_extended.py` erweitert um M6.2-Regressionen:
+  - `test_apply_optimizations_requires_post` (`GET` → `405` + JSON-Error),
+  - `test_apply_optimizations_missing_plan_id_returns_400`,
+  - `test_apply_optimizations_foreign_plan_returns_json_404`,
+  - `test_apply_optimizations_internal_error_contract_500`.
+- Test-Stabilisierung im 500-Pfad:
+  - Mock auf `Plan.objects.filter` statt globalem `json.loads`, damit
+    Auth/Session-Verhalten nicht beeinflusst wird.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k apply_optimizations -v`
+  → **4 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **27 passed**
   
