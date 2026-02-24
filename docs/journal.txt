@@ -2936,4 +2936,117 @@ Validierung:
   → `15 passed`.
 - `black --check core/tests/test_ai_rate_limits_admin.py core/admin.py`
   → unverändert.
+
+## In Arbeit: Projektanalyse & Roadmap-Refresh
+
+**Datum:** 2026-02-24
+
+Ziel: Vollständige Analyse des aktuellen Projektstands (Code, Tests, CI,
+Sicherheit, Betrieb) und Aktualisierung der `docs/PROJECT_ROADMAP.md` mit
+klar priorisierten Meilensteinen für die nächsten Umsetzungsphasen.
+
+## Abgeschlossen: Projektanalyse & Roadmap-Refresh
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- Vollständige Ist-Analyse über zentrale Quellen durchgeführt:
+  - `docs/PROJECT_ROADMAP.md`
+  - `docs/journal.txt`
+  - `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`
+  - `pyproject.toml`, `README.md`, `docs/CODE_QUALITY.md`
+- `docs/PROJECT_ROADMAP.md` komplett auf aktuellen Stand gebracht:
+  - historische Wochenstruktur durch milestone-basierte Steuerung ersetzt,
+  - abgeschlossene Meilensteine kompakt dokumentiert,
+  - nächste priorisierte Meilensteine M5–M9 mit Scope,
+    Akzeptanzkriterien, Reihenfolge und Qualitäts-Gates ergänzt.
+
+Ergebnis:
+- Roadmap ist wieder konsistent mit aktuellem Live-/CI-/Test-Stand.
+- Klare Priorisierung für nächste Phasen: **M5 (Coverage Sprint C)** und
+  **M6 (AI Endpoint Contract Hardening)** als unmittelbarer Fokus.
+
+## In Arbeit: M5 Sprintplanung – Coverage Sprint C
+
+**Datum:** 2026-02-24
+
+Ziel: M5 in konkrete, direkt ausführbare Arbeitspakete mit Datei- und
+Testfokus überführen (Stats/Charts/Helpers), inkl. Reihenfolge und
+Definition of Done.
+
+## Abgeschlossen: M5 Sprintplanung – Coverage Sprint C
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `docs/PROJECT_ROADMAP.md` im Abschnitt **M5** erweitert um:
+  - 4 konkrete Work Packages (WP1–WP4),
+  - betroffene Ziel-Dateien,
+  - zu ergänzende Testmodule,
+  - priorisierte Ausführungsreihenfolge,
+  - Definition of Done für den Sprint.
+
+Ergebnis:
+- M5 ist jetzt als umsetzbarer Sprint strukturiert und kann ohne weitere
+  Voranalyse abgearbeitet werden.
+
+## In Arbeit: README Refresh (DE/EN)
+
+**Datum:** 2026-02-24
+
+Ziel: `README.md` und `README_EN.md` auf den aktuellen Milestone-Stand bringen,
+veraltete Roadmap-/Statusangaben bereinigen und konsistent auf
+`docs/PROJECT_ROADMAP.md` referenzieren.
+
+## Abgeschlossen: README Refresh (DE/EN)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `README.md` bereinigt und auf Milestone-Roadmap ausgerichtet:
+  - veraltete „In Planung“-Punkte entfernt,
+  - neue Prioritäten M5/M6/M7 ergänzt,
+  - Verweis auf `docs/PROJECT_ROADMAP.md` hinzugefügt,
+  - volatile Test-/Timeline-Zahlen entschärft.
+- `README_EN.md` inhaltlich synchronisiert (gleiche Struktur/Statuslogik).
+
+Ergebnis:
+- Öffentliche Projektdoku (DE/EN) ist konsistent mit aktueller
+  Milestone-Planung und reduziert veraltete Statuswidersprüche.
+
+## Abgeschlossen: Docs-Konsistenzpass (Contributing + CI/CD Guide)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `CONTRIBUTING.md` auf aktuellen Projektstand gebracht:
+  - Setup-Befehle aktualisiert (`loaddata` statt veraltetem Command),
+  - Test-Kommandos auf `pytest`-Standard umgestellt,
+  - i18n- und AI-Beschreibung auf aktuellen Status angepasst.
+- `docs/CICD_GUIDE.md` mit realen Workflows synchronisiert:
+  - Branch-Trigger, Deploy-Trigger, Lint/Security-Gates,
+  - Artifact-Retention und Monitoring-Pfade aktualisiert.
+
+## In Arbeit: M5/WP1 – Stats-Helpers Edge Cases
+
+**Datum:** 2026-02-24
+
+Ziel: Gezielte Edge-Case-Tests für `core/utils/advanced_stats.py`
+(leere Daten, Nullwerte, stabile Fallbacks ohne Exceptions) in
+`core/tests/test_advanced_stats.py` ergänzen.
+
+## Abgeschlossen: M5/WP1 – Stats-Helpers Edge Cases
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_advanced_stats.py` erweitert um neue Edge-Case-Regressionen:
+  - `test_einzel_training_hat_null_pause` (Konsistenz-Fallback bei Einzeltraining)
+  - `test_kein_volumen_spike_wenn_vorwoche_null` (Fatigue-Index mit Volumen-Nullbasis)
+  - `test_rpe_ohne_altes_vergleichsfenster_steigt_nicht` (RPE-Trend ohne Vergleichsfenster)
+  - `test_nur_null_1rm_werte_gibt_leer` (Plateau-Analyse mit nicht-progressionsfähigen Sätzen)
+
+Validierung:
+- `pytest core/tests/test_advanced_stats.py -v` → **43 passed**
+- `black --check core/tests/test_advanced_stats.py` → unverändert
   
