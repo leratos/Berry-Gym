@@ -2470,3 +2470,67 @@ Validierung:
 Hinweis:
 - Bestehende Warnungen unverändert (Django URLField-Transition,
   Factory Boy Deprecation).
+
+
+## In Arbeit: Template Bug-Analyse TOP 3 (23.02.2026)
+
+Phase: Systematische Prüfung kritischer Template-Patterns nach Körpergewicht-Faktor Bug
+
+TOP 3 Bugs (priorisiert):
+  1. Körperfett-Prozent Display (body_stats.html) - ähnlich wie koerpergewicht_faktor
+  2. Division-by-Zero in Progress-Bars (widthratio bei empfehlung_max=0)
+  3. None-Handling bei optionalen Feldern (BMI, RPE, avg_rpe)
+
+Workflow:
+  - Bug analysieren
+  - Test schreiben (rot)
+  - Template fixen (grün)
+  - Repeat für alle 3
+
+
+## Abgeschlossen: Template Robustness Test-Suite (23.02.2026)
+
+Branch: feature/template-bug-fixes-top3
+
+Ergebnis der Bug-Analyse:
+  - Körperfett-Prozent: KEIN BUG (wird als 18.5 gespeichert, nicht 0.185)
+  - Division-by-Zero widthratio: KEIN KRITISCHER BUG (Django handled gracefully)
+  - avg_rpe None-Handling: KEIN KRITISCHER BUG (Template versteckt bei None)
+
+Keine kritischen Bugs gefunden - Templates sind robust!
+
+Stattdessen: Robustness Test-Suite erstellt (11 neue Tests)
+Datei: core/tests/test_training_stats.py (+159 Zeilen)
+
+Test-Klassen:
+  1. TestExerciseStatsRobustness (3 Tests)
+     - test_avg_rpe_none_handling ✅
+     - test_rpe_zero_edge_case ✅
+     - test_best_weight_zero_bodyweight_only ✅
+
+  2. TestTrainingStatsRobustness (2 Tests)
+     - test_empty_data_no_crash ✅
+     - test_division_by_zero_avg_volume ✅
+
+  3. TestDashboardRobustness (2 Tests)
+     - test_new_user_empty_dashboard ✅
+     - test_no_active_plan ✅
+
+  4. TestBodyStatsRobustness (2 Tests)
+     - test_no_body_data ✅
+     - test_optional_fields_none ✅
+
+  5. TestPDFExportRobustness (2 Tests)
+     - test_pdf_export_empty_data ✅
+     - test_pdf_saetze_30_tage_zero ✅
+
+Alle 11 Tests grün ✅
+
+Abdeckung:
+  - Empty data handling (neue User)
+  - None-Handling bei optionalen Feldern
+  - Boundary cases (RPE=0, saetze_30_tage=0)
+  - PDF Export mit leeren Daten
+  - Division-by-Zero Szenarien
+
+Die Test-Suite sichert Edge Cases ab und erhöht die Robustheit der Anwendung.
