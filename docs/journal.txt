@@ -3661,3 +3661,33 @@ Nächste Welle:
 - Restcluster in `ai_coach/llm_client.py` für höhere Coverage gezielt schließen
   (v. a. zusätzliche Error-Pfade in `_generate_with_openrouter`/`_extract_json`/`validate_plan`).
 
+## In Arbeit: Coverage-Kampagne – ai_coach/llm_client.py (Welle 2)
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Verbleibende Error-/Fallback-Branches in `ai_coach/llm_client.py`
+  vollständig schließen und Modul-Coverage auf 100% heben.
+
+## Abgeschlossen: Coverage-Kampagne – ai_coach/llm_client.py (Welle 2)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `ai_coach/tests/test_llm_client.py` erweitert um zusätzliche Branch-Tests für:
+  - `_check_ollama_available` (weitere Model-Shape-Varianten inkl. Objekt-Attribute),
+  - `_get_openrouter_client` ImportError-Pfad,
+  - `generate_training_plan` ohne Fallback + Strategie-3-Fallback,
+  - `_generate_with_ollama` und `_generate_with_openrouter` generische Error-Pfade,
+  - `_extract_json` Trim/Prefix/Suffix-Pfade + json-repair-ImportError-Fallback,
+  - `validate_plan` für leeres Dict, Session-/Exercise-Fehler und Duplicate-Checks,
+  - `__main__`-Error-Guard mit `traceback.print_exc`.
+
+Validierung:
+- `pytest ai_coach/tests/test_llm_client.py -q`
+  → **36 passed**
+- `pytest ai_coach/tests/test_llm_client.py --cov=ai_coach.llm_client --cov-report=term-missing -q`
+  → **36 passed**, `ai_coach/llm_client.py` bei **100%**
+- `black --check ai_coach/tests/test_llm_client.py`
+  → nach Formatierung unverändert
+
