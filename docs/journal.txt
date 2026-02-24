@@ -3275,4 +3275,33 @@ Validierung:
   → **33 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
   → unverändert
+
+## In Arbeit: M6.5 – analyze_plan_api GET-Param-Validation
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Ungültige `days`-Query-Parameter in `analyze_plan_api` als erwartbaren
+  User-Fehler (`400`) statt generischem `500` behandeln und per Test absichern.
+
+## Abgeschlossen: M6.5 – analyze_plan_api GET-Param-Validation
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/views/ai_recommendations.py` angepasst:
+  - `analyze_plan_api` validiert `days` robust:
+    - nicht-numerisch → `400` mit `{"error": "days muss eine ganze Zahl sein"}`
+    - `<= 0` → `400` mit `{"error": "days muss größer als 0 sein"}`
+  - vermeidet damit generische `500` in erwartbaren User-Fehlpfaden.
+- `core/tests/test_ai_endpoints_extended.py` erweitert um:
+  - `test_analyze_plan_invalid_days_returns_400`
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k analyze_plan_invalid_days -v`
+  → **1 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **34 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
+  → unverändert
   

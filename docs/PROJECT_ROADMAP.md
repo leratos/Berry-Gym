@@ -206,6 +206,8 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
   (Validierungsfehler + Generator-Exception) testseitig gehärtet.
 - M6.4 umgesetzt: Malformed-JSON-Fehlerpfade für AI-POST-Endpunkte auf
   konsistente `400`-Contracts (`error` in JSON) gehärtet.
+- M6.5 umgesetzt: `analyze_plan_api` validiert ungültige `days`-Query-Parameter
+  als `400`-User-Fehler statt generischem `500`.
 
 ---
 

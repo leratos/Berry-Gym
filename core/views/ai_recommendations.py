@@ -644,7 +644,13 @@ def analyze_plan_api(request: HttpRequest) -> JsonResponse:
         from ai_coach.plan_adapter import PlanAdapter
 
         plan_id = request.GET.get("plan_id")
-        days = int(request.GET.get("days", 30))
+        try:
+            days = int(request.GET.get("days", 30))
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "days muss eine ganze Zahl sein"}, status=400)
+
+        if days <= 0:
+            return JsonResponse({"error": "days muss größer als 0 sein"}, status=400)
 
         if not plan_id:
             return JsonResponse({"error": "plan_id required"}, status=400)

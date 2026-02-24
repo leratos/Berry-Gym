@@ -160,6 +160,17 @@ class TestAiEndpointsExtended:
         assert resp.status_code == 400
         assert "plan_id required" in resp.json()["error"]
 
+    def test_analyze_plan_invalid_days_returns_400(self, client):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        client.force_login(user)
+        url = reverse("analyze_plan_api")
+
+        resp = get_json(client, url, {"plan_id": plan.id, "days": "abc"})
+
+        assert_json_error_contract(resp, 400)
+        assert "days muss eine ganze Zahl sein" in resp.json()["error"]
+
     def test_analyze_plan_foreign_plan_returns_404(self, client):
         owner = UserFactory()
         other = UserFactory()
