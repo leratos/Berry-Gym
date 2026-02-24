@@ -3243,6 +3243,38 @@ Validierung:
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
 
+## In Arbeit: Coverage-Kampagne – Phase 0 (ai_coach/plan_generator.py)
+
+**Datum:** 2026-02-24
+
+Ziel:
+- `ai_coach/plan_generator.py` systematisch in Phasen aufteilen,
+  Missing-Lines präzise ermitteln und Commit-Plan pro Phase festlegen.
+
+## Abgeschlossen: Coverage-Kampagne – Phase 0 (ai_coach/plan_generator.py)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- Neuen Arbeitsbranch erstellt: `feature/coverage-plan-generator`.
+- Baseline-Coverage für `ai_coach/plan_generator.py` ermittelt via:
+  `pytest ai_coach/tests/test_plan_generator.py --cov=ai_coach.plan_generator --cov-report=term-missing -q`.
+- Missing-Lines in Cluster gruppiert und als phasenweiser Abarbeitungsplan in
+  `docs/PROJECT_ROADMAP.md` dokumentiert (Phase 1–5, mit DoD und Commit-Regel).
+
+Validierung:
+- `pytest ai_coach/tests/test_plan_generator.py --cov=ai_coach.plan_generator --cov-report=term-missing -q`
+  → **29 passed**, Baseline-Lücken für Phasenplanung erfasst.
+
+## In Arbeit: Coverage-Kampagne – Phase 1 (plan_generator Flow-Guard-Rails)
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Frühe Fehler-/Fallback-Zweige in `generate()` und
+  `_generate_with_existing_django()` testseitig absichern (leere Response,
+  Schema-Mismatch mit/ohne Fallback, Re-Validation-Hardfail).
+
 ## In Arbeit: M6.4 – Malformed JSON Contract-Hardening
 
 **Datum:** 2026-02-24

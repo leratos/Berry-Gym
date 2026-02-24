@@ -214,6 +214,47 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
   `core/views/ai_recommendations.py` via Test für
   `analyze_plan_api` (`days <= 0` → `400`) geschlossen.
 
+### Coverage-Kampagne (dateiweise) – Start mit `ai_coach/plan_generator.py`
+
+**Vorgehen (verbindlich):**
+- Eine Datei nach der anderen, keine Parallel-Baustellen.
+- Pro Phase: Tests ergänzen → zielgerichtet ausführen → Format/Lint prüfen → **1 Commit**.
+- Erst nach Abschluss aller Phasen für die Datei: PR/Review-Block.
+
+**Phase 0 (abgeschlossen): Lücken-Mapping**
+- Baseline aus lokalem Coverage-Run (`pytest ai_coach/tests/test_plan_generator.py --cov=ai_coach.plan_generator --cov-report=term-missing`).
+- Aktuelle Lückencluster in `plan_generator.py`:
+  - `92-94`, `130-158`, `165-387`
+  - `514`, `598-599`, `618-621`, `625-643`, `646-666`, `671-704`
+  - `715-734`, `737-744`, `747-756`, `759-760`, `770-771`
+  - `841-843`, `850`, `899-903`, `924-943`, `952-1052`, `1056`
+
+**Phase 1 – Generator-Flow Guard Rails**
+- Fokus: frühe Branches in `generate()` / `_generate_with_existing_django()`.
+- Testziele: leeres LLM-Result, komplett falsches Schema, Fallback-Zweig, Hard-Fail nach Re-Validation.
+
+**Phase 2 – Persistierung & Fuzzy/NotFound Kantenfälle**
+- Fokus: `_save_plan_to_db()` Restzweige.
+- Testziele: `not_found`-Aggregation/Output, Split-Metadaten, optionale Felder (`notes`, `rpe_target`) und Reihenfolge-/Defaults.
+
+**Phase 3 – Periodisierung: Profile & Makrozyklus**
+- Fokus: `_get_profile_defaults`, `_build_macrocycle`, `_calculate_weekly_rpe`, `_week_focus`, `_periodization_note`.
+- Testziele: linear/wellenförmig/block inkl. Deload-Pfade, Fallback-Pfade und Grenzwerte.
+
+**Phase 4 – Mikrozyklus/Progression + Coverage-Validator**
+- Fokus: `_build_microcycle_template`, `_build_progression_strategy`, `_validate_weakness_coverage` DB-Error-Zweig.
+- Testziele: strukturierte Dict-Contracts, Label-Mappings, DB-Exception no-crash.
+
+**Phase 5 – Makro-Textformat + CLI Entry**
+- Fokus: `_format_macrocycle_summary`, `main()`.
+- Testziele: Summary-Varianten (mit/ohne Macro), CLI `--output`, Exit-Codes (success/fail), Parser-Defaults.
+
+**Definition of Done (dateiweise):**
+- Phasenweise Commits vorhanden.
+- `pytest ai_coach/tests/test_plan_generator.py -v` grün.
+- `black --check ai_coach/tests/test_plan_generator.py ai_coach/plan_generator.py` grün.
+- Sichtbarer Coverage-Anstieg für `ai_coach/plan_generator.py` gegenüber Phase-0-Baseline.
+
 ---
 
 ## 🔐 M7 – Security & Compliance Tightening
