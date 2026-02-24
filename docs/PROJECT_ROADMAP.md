@@ -75,14 +75,20 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
 - Redirect-/HTTPS-Teststabilität verbessert
 - Zusätzliche Regressionstests für Admin-Darstellung
 
+### ✅ M5 – Coverage Sprint C (abgeschlossen, 24.02.2026)
+
+- WP1: Stats-Helpers Edge Cases (`test_advanced_stats.py`)
+- WP2: View-nahe Statistikpfade (`test_training_stats_extended.py`)
+- WP3: Chart-Daten-Contract (`test_chart_generator.py`)
+- WP4: Integrations-Regressionen (`test_training_views.py`, `test_training_session_views.py`)
+
 ---
 
 ## 3) Priorisierte nächste Meilensteine
 
-## 🔥 M5 – Coverage Sprint C (Charts/Stats/Helpers)
+## ✅ M5 – Coverage Sprint C (Charts/Stats/Helpers)
 
-**Priorität:** Hoch  
-**Zeithorizont:** Kurzfristig (1–2 Wochen)
+**Status:** Abgeschlossen (24.02.2026)
 
 **Scope:**
 - Testlücken in Statistik-/Chart-Pfaden schließen (`training_stats`,
@@ -169,6 +175,45 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
 - Testabdeckung aller zentralen Error-Branches
 - Keine generischen 500er in erwartbaren User-Fehlpfaden
 
+### M6 Fehlermatrix (Baseline)
+
+| Endpoint | Case | Erwarteter Status | Contract (Baseline) |
+|---|---|---:|---|
+| `generate_plan_api` | falsche Methode (`GET`) | `405` | JSON mit `error` |
+| `generate_plan_api` | ungültiger `plan_type` | `400` | JSON mit `error` |
+| `analyze_plan_api` | falsche Methode (`POST`) | `405` | JSON mit `error` |
+| `analyze_plan_api` | fehlendes `plan_id` | `400` | JSON mit `error` |
+| `analyze_plan_api` | fremder Plan | `404` | JSON mit `error` |
+| `optimize_plan_api` | falsche Methode (`GET`) | `405` | JSON mit `error` |
+| `optimize_plan_api` | fehlendes `plan_id` | `400` | JSON mit `error` |
+| `optimize_plan_api` | fremder Plan | `404` | JSON mit `error` |
+| `live_guidance_api` | falsche Methode (`GET`) | `405` | JSON mit `error` |
+| `live_guidance_api` | fehlende Pflichtfelder | `400` | JSON mit `error` |
+| `live_guidance_api` | fremde Session | `404` | JSON mit `error` |
+| `generate_plan_stream_api` | falsche Methode (`POST`) | `405` | Plain-Text `GET required` |
+| `generate_plan_stream_api` | Rate Limit | `429` | SSE `text/event-stream` mit `success=false` |
+
+**Nächster Schritt (M6.1):**
+- Contract-Tests für Methoden-/Error-Baseline zentralisieren und auf allen
+  AI-Endpunkten absichern (`core/tests/test_ai_endpoints_extended.py`).
+
+**Statusupdate (24.02.2026):**
+- M6.1 umgesetzt: erste und zweite Testwelle für Method-/Error-Contracts
+  (405/400/404/429/500) in `core/tests/test_ai_endpoints_extended.py` ergänzt.
+- M6.2 umgesetzt: `apply_optimizations_api` um konsistenten JSON-404-Contract
+  ergänzt und per Regressionstests abgesichert.
+- M6.3 umgesetzt: `generate_plan_stream_api` um zusätzliche SSE-Error-Contracts
+  (Validierungsfehler + Generator-Exception) testseitig gehärtet.
+- M6.4 umgesetzt: Malformed-JSON-Fehlerpfade für AI-POST-Endpunkte auf
+  konsistente `400`-Contracts (`error` in JSON) gehärtet.
+- M6.5 umgesetzt: `analyze_plan_api` validiert ungültige `days`-Query-Parameter
+  als `400`-User-Fehler statt generischem `500`.
+- M6.6 umgesetzt: `optimize_plan_api` validiert ungültige `days`-Werte
+  (nicht numerisch / `<= 0`) als `400` statt `500`.
+- M6.7 umgesetzt: letzte fehlende Coverage-Zeile in
+  `core/views/ai_recommendations.py` via Test für
+  `analyze_plan_api` (`days <= 0` → `400`) geschlossen.
+
 ---
 
 ## 🔐 M7 – Security & Compliance Tightening
@@ -225,7 +270,7 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
 
 ## 4) Reihenfolge & Abhängigkeiten
 
-1. **M5 (Coverage Sprint C)** und **M6 (AI Contract Hardening)** parallel starten
+1. **M6 (AI Contract Hardening)** als unmittelbarer Fokus
 2. **M7 (Security Tightening)** direkt danach, auf Basis der stabilen Testlage
 3. **M8 (Ops Maturity)** zur Betriebsfestigung vor größeren neuen Features
 4. **M9 (Refactoring)** kontinuierlich, nur testgeführt und modular
@@ -258,4 +303,4 @@ Sie dient als operative Priorisierung für die nächsten Umsetzungsphasen und
 wird nach jedem abgeschlossenen Milestone kurz aktualisiert.
 
 **Last Updated:** 2026-02-24
-**Nächster Fokus:** M5 + M6
+**Nächster Fokus:** M6

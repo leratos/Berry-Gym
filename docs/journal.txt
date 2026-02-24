@@ -3133,4 +3133,233 @@ Validierung:
   → **2 passed**
 - `black --check core/tests/test_training_views.py core/tests/test_training_session_views.py`
   → unverändert
+
+## In Arbeit: M5 Abschluss + M6 Contract-Hardening Start
+
+**Datum:** 2026-02-24
+
+Ziel:
+- M5 (Coverage Sprint C) als abgeschlossen in der Roadmap markieren,
+- für M6 eine konkrete Fehlermatrix dokumentieren,
+- erste API-Contract-Regressionstests für AI-Endpunkte ergänzen.
+
+## Abgeschlossen: M5 Abschluss + M6 Contract-Hardening Start
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `docs/PROJECT_ROADMAP.md` aktualisiert:
+  - M5 als abgeschlossen markiert (inkl. WP1–WP4-Referenz),
+  - M6 als neuer Hauptfokus gesetzt,
+  - konkrete M6-Fehlermatrix (Endpoint × Case × Status × Contract) ergänzt.
+- `core/tests/test_ai_endpoints_extended.py` erweitert um erste M6-Contract-Tests:
+  - `generate_plan_api`: Method-Contract (`GET` → `405` + `error`)
+  - `optimize_plan_api`: Method-Contract (`GET` → `405` + `error`)
+  - `live_guidance_api`: Method-Contract (`GET` → `405` + `error`)
+  - `generate_plan_stream_api`: Method-Contract (`POST` → `405`, plain `GET required`)
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -v` → **17 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py` → unverändert
+
+## In Arbeit: M6.1 – Error-Shape Contract Welle 2
+
+**Datum:** 2026-02-24
+
+Ziel: Einheitliche Error-Shape-Baseline für AI-Endpunkte vertiefen
+(429/500-Pfade) und per Regressionstests auf JSON-Contract absichern.
+
+## Abgeschlossen: M6.1 – Error-Shape Contract Welle 2
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_ai_endpoints_extended.py` erweitert um zweite Contract-Welle:
+  - zentrale Helper-Assertion für JSON-Error-Contract,
+  - zusätzliche 429-Contracts für `generate_plan_api`, `optimize_plan_api`,
+    `live_guidance_api`,
+  - zusätzliche 500-Contracts für `generate_plan_api`, `analyze_plan_api`,
+    `optimize_plan_api`,
+  - bestehende Method-/Stream-Contracts weiterhin grün.
+- `docs/PROJECT_ROADMAP.md` um M6-Statusupdate ergänzt.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -v` → **23 passed**
+- `black core/tests/test_ai_endpoints_extended.py`
+- `black --check core/tests/test_ai_endpoints_extended.py` → unverändert
+
+## Abgeschlossen: M6.2 – apply_optimizations_api Contract-Hardening
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/views/ai_recommendations.py` angepasst:
+  - Ownership/Existenz-Check in `apply_optimizations_api` auf konsistenten
+    JSON-404-Contract umgestellt (`{"error": "Plan nicht gefunden"}`).
+- `core/tests/test_ai_endpoints_extended.py` erweitert um M6.2-Regressionen:
+  - `test_apply_optimizations_requires_post` (`GET` → `405` + JSON-Error),
+  - `test_apply_optimizations_missing_plan_id_returns_400`,
+  - `test_apply_optimizations_foreign_plan_returns_json_404`,
+  - `test_apply_optimizations_internal_error_contract_500`.
+- Test-Stabilisierung im 500-Pfad:
+  - Mock auf `Plan.objects.filter` statt globalem `json.loads`, damit
+    Auth/Session-Verhalten nicht beeinflusst wird.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k apply_optimizations -v`
+  → **4 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **27 passed**
+
+## In Arbeit: M6.3 – generate_plan_stream_api Error-Contracts
+
+**Datum:** 2026-02-24
+
+Ziel:
+- SSE-Fehlerpfade für `generate_plan_stream_api` per Contract-Tests absichern
+  (Validierungsfehler + Generator-Exception), inklusive Event-Shape
+  (`success=false`, `error` im SSE-Payload).
+
+## Abgeschlossen: M6.3 – generate_plan_stream_api Error-Contracts
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_ai_endpoints_extended.py` erweitert um SSE-Contract-Tests:
+  - `test_generate_plan_stream_validation_error_returns_sse_event`
+  - `test_generate_plan_stream_generator_exception_returns_sse_error`
+- Validierungsfehler-Pfad abgesichert:
+  - bei `_validate_plan_gen_params`-Fehler wird ein SSE-Event mit
+    `success=false` und `error` geprüft.
+- Exception-Pfad im Generator-Thread abgesichert:
+  - bei Laufzeitfehlern wird ein SSE-Event mit fallback-Fehlertext geprüft.
+- `docs/PROJECT_ROADMAP.md` um M6.2/M6.3-Statusupdate ergänzt.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k generate_plan_stream -v`
+  → **4 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **29 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py`
+  → unverändert
+
+## In Arbeit: M6.4 – Malformed JSON Contract-Hardening
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Vermeidbare 500er bei ungültigem Request-JSON in AI-POST-Endpunkten
+  eliminieren und als konsistente `400`-Error-Contracts absichern.
+
+## Abgeschlossen: M6.4 – Malformed JSON Contract-Hardening
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/views/ai_recommendations.py` angepasst:
+  - `generate_plan_api`, `optimize_plan_api`, `apply_optimizations_api`,
+    `live_guidance_api` behandeln ungültiges Request-JSON jetzt explizit als
+    User-Fehler mit `400` statt generischem `500`.
+  - Einheitlicher Error-Text für diesen Pfad:
+    `{"error": "Ungültiges JSON im Request-Body"}`.
+- `core/tests/test_ai_endpoints_extended.py` erweitert um M6.4-Regressionen:
+  - `test_generate_plan_malformed_json_returns_400`
+  - `test_optimize_plan_malformed_json_returns_400`
+  - `test_live_guidance_malformed_json_returns_400`
+  - `test_apply_optimizations_malformed_json_returns_400`
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k malformed_json -v`
+  → **4 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **33 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
+  → unverändert
+
+## In Arbeit: M6.5 – analyze_plan_api GET-Param-Validation
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Ungültige `days`-Query-Parameter in `analyze_plan_api` als erwartbaren
+  User-Fehler (`400`) statt generischem `500` behandeln und per Test absichern.
+
+## Abgeschlossen: M6.5 – analyze_plan_api GET-Param-Validation
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/views/ai_recommendations.py` angepasst:
+  - `analyze_plan_api` validiert `days` robust:
+    - nicht-numerisch → `400` mit `{"error": "days muss eine ganze Zahl sein"}`
+    - `<= 0` → `400` mit `{"error": "days muss größer als 0 sein"}`
+  - vermeidet damit generische `500` in erwartbaren User-Fehlpfaden.
+- `core/tests/test_ai_endpoints_extended.py` erweitert um:
+  - `test_analyze_plan_invalid_days_returns_400`
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k analyze_plan_invalid_days -v`
+  → **1 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **34 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
+  → unverändert
+
+## In Arbeit: M6.6 – optimize_plan_api days-Validation
+
+**Datum:** 2026-02-24
+
+Ziel:
+- `optimize_plan_api` auf konsistente `400`-Contracts für ungültige `days`
+  härten (nicht numerisch / `<= 0`) statt generischem `500`.
+
+## Abgeschlossen: M6.6 – optimize_plan_api days-Validation
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/views/ai_recommendations.py` angepasst:
+  - `optimize_plan_api` validiert `days` explizit:
+    - nicht-numerisch → `400` mit `{"error": "days muss eine ganze Zahl sein"}`
+    - `<= 0` → `400` mit `{"error": "days muss größer als 0 sein"}`
+  - vermeidet dadurch erwartbare User-Fehlpfade als `500`.
+  - Korrigiert nebenbei eine versehentliche Docstring-Verschiebung im
+    Funktionsblock, sodass die Validation wieder im ausführbaren Pfad liegt.
+- `core/tests/test_ai_endpoints_extended.py` erweitert um:
+  - `test_optimize_plan_invalid_days_returns_400`
+  - `test_optimize_plan_nonpositive_days_returns_400`
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k "optimize_plan_invalid_days or optimize_plan_nonpositive_days" -v`
+  → **2 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **36 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py core/views/ai_recommendations.py`
+  → unverändert
+
+## In Arbeit: M6.7 – analyze_plan_api nonpositive-days Coverage
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Letzte fehlende Coverage-Zeile in `core/views/ai_recommendations.py`
+  schließen (`analyze_plan_api`: `days <= 0` → `400`).
+
+## Abgeschlossen: M6.7 – analyze_plan_api nonpositive-days Coverage
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_ai_endpoints_extended.py` erweitert um:
+  - `test_analyze_plan_nonpositive_days_returns_400`
+- Damit wird der Branch in `analyze_plan_api` für `days <= 0`
+  (`400` + `error`) explizit getroffen.
+
+Validierung:
+- `pytest core/tests/test_ai_endpoints_extended.py -k analyze_plan_nonpositive_days -v`
+  → **1 passed**
+- `pytest core/tests/test_ai_endpoints_extended.py -v`
+  → **37 passed**
+- `black --check core/tests/test_ai_endpoints_extended.py`
+  → unverändert
   

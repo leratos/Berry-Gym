@@ -21,7 +21,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Avg, Max
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import render
 from django.utils import timezone
 
 from ..models import (
@@ -561,12 +561,20 @@ def generate_plan_api(request: HttpRequest) -> JsonResponse:
 
     # Rate Limit nur für echte Generierungen (nicht für saveCachedPlan)
     # saveCachedPlan: Plan wurde bereits via Stream generiert (Counter schon erhöht)
+    malformed_json = False
     try:
         _peek = json.loads(request.body)
         _is_save_only = bool(_peek.get("saveCachedPlan") and _peek.get("plan_data"))
+    except json.JSONDecodeError:
+        _peek = None
+        _is_save_only = False
+        malformed_json = True
     except Exception:
         _peek = None
         _is_save_only = False
+
+    if malformed_json:
+        return JsonResponse({"error": "Ungültiges JSON im Request-Body"}, status=400)
 
     if not _is_save_only:
         rate_limit_response = _check_ai_rate_limit(request, "plan")
@@ -636,7 +644,13 @@ def analyze_plan_api(request: HttpRequest) -> JsonResponse:
         from ai_coach.plan_adapter import PlanAdapter
 
         plan_id = request.GET.get("plan_id")
-        days = int(request.GET.get("days", 30))
+        try:
+            days = int(request.GET.get("days", 30))
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "days muss eine ganze Zahl sein"}, status=400)
+
+        if days <= 0:
+            return JsonResponse({"error": "days muss größer als 0 sein"}, status=400)
 
         if not plan_id:
             return JsonResponse({"error": "plan_id required"}, status=400)
@@ -692,9 +706,19 @@ def optimize_plan_api(request: HttpRequest) -> JsonResponse:
     try:
         from ai_coach.plan_adapter import PlanAdapter
 
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Ungültiges JSON im Request-Body"}, status=400)
+
         plan_id = data.get("plan_id")
-        days = int(data.get("days", 30))
+        try:
+            days = int(data.get("days", 30))
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "days muss eine ganze Zahl sein"}, status=400)
+
+        if days <= 0:
+            return JsonResponse({"error": "days muss größer als 0 sein"}, status=400)
 
         if not plan_id:
             return JsonResponse({"error": "plan_id required"}, status=400)
@@ -823,7 +847,11 @@ def apply_optimizations_api(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"error": "POST request required"}, status=405)
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Ungültiges JSON im Request-Body"}, status=400)
+
         plan_id = data.get("plan_id")
         optimizations = data.get("optimizations", [])
 
@@ -831,7 +859,9 @@ def apply_optimizations_api(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "plan_id required"}, status=400)
 
         # Validierung: User darf nur eigene Pläne bearbeiten
-        plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+        plan = Plan.objects.filter(id=plan_id, user=request.user).first()
+        if not plan:
+            return JsonResponse({"error": "Plan nicht gefunden"}, status=404)
 
         applied_count = 0
         errors = []
@@ -884,7 +914,10 @@ def live_guidance_api(request: HttpRequest) -> JsonResponse:
         return rate_limit_response
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Ungültiges JSON im Request-Body"}, status=400)
 
         session_id = data.get("session_id")
         question = data.get("question", "").strip()
