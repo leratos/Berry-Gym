@@ -1,0 +1,32 @@
+# Codecov Configuration
+# https://docs.codecov.com/docs/codecov-yaml
+
+# Coverage settings
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0.5%  # Allow 0.5% drop
+    patch:
+      default:
+        target: auto
+        threshold: 0.5%
+
+# Branch comparison settings
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+
+# Ignore test files and migrations in coverage
+ignore:
+  - "*/tests/*"
+  - "*/test_*.py"
+  - "*/migrations/*"
+  - "config/*"
+  - "manage.py"
+  - "*/tests.py"
+
+# Allow branches without PR to upload coverage
+github_checks:
+  annotations: true
