@@ -367,4 +367,5 @@ wird nach jedem abgeschlossenen Milestone kurz aktualisiert.
 **Status (24.02.2026):**
 - ✅ Phase 1 abgeschlossen
 - ✅ Phase 2 abgeschlossen
-- ⏭️ Nächster Schritt: Phase 3
+- 🔄 Phase 3 gestartet (Welle 1 abgeschlossen)
+- ⏭️ Nächster Schritt: Phase 3 (Welle 2)

@@ -195,6 +195,33 @@ class TestSavePlanToDbNotFound:
         assert Plan.objects.filter(id=plan_ids[0]).exists()
         assert PlanUebung.objects.filter(plan_id=plan_ids[0]).count() == 0
 
+    def test_notes_branch_is_executed_for_existing_exercise(self):
+        """Übungs-Notiz im JSON darf den Save-Pfad nicht stören (deckt notes-Branch ab)."""
+        user = UserFactory()
+        exercise = UebungFactory(bezeichnung="Rudern")
+
+        generator = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json(
+            "Notes-Branch-Test",
+            [
+                _make_session(
+                    "Tag A",
+                    [
+                        {
+                            **_make_exercise("Rudern"),
+                            "notes": "Ellbogen eng am Körper halten",
+                        }
+                    ],
+                )
+            ],
+        )
+
+        plan_ids = generator._save_plan_to_db(plan_json)
+
+        pu = PlanUebung.objects.filter(plan_id=plan_ids[0]).first()
+        assert pu is not None
+        assert pu.uebung == exercise
+
 
 @pytest.mark.django_db
 class TestSavePlanToDbSplitPlan:
@@ -455,6 +482,68 @@ class TestSmartRetry:
         assert names == ["Fliegende (Kurzhantel)", "Seitheben (Kurzhantel)"]
         # Nur 1 LLM-Call – alle Halluzinationen auf einmal
         mock_client.generate_training_plan.assert_called_once()
+
+    def test_invalid_replacements_response_returns_original_plan(self):
+        """Leere/ungültige Replacements-Response führt zu unverändertem Plan."""
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [{"exercise_name": "Fake Übung A", "sets": 3, "reps": "10-12"}],
+                }
+            ],
+        }
+        errors = [
+            "Session 1, Übung 1: 'Fake Übung A' nicht verfügbar "
+            "(Equipment fehlt oder Übung existiert nicht)"
+        ]
+
+        mock_client = MagicMock()
+        mock_client.generate_training_plan.return_value = {"response": []}
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=["Bankdrücken (Langhantel)"],
+            llm_client=mock_client,
+        )
+
+        assert result == plan_json
+
+    def test_retry_exception_returns_original_plan(self):
+        """LLM-Fehler im Smart-Retry wird gefangen und gibt den ursprünglichen Plan zurück."""
+        user = UserFactory()
+        generator = PlanGenerator(user_id=user.id)
+
+        plan_json = {
+            "plan_name": "Test",
+            "sessions": [
+                {
+                    "day_name": "Push",
+                    "exercises": [{"exercise_name": "Fake Übung B", "sets": 3, "reps": "10-12"}],
+                }
+            ],
+        }
+        errors = [
+            "Session 1, Übung 1: 'Fake Übung B' nicht verfügbar "
+            "(Equipment fehlt oder Übung existiert nicht)"
+        ]
+
+        mock_client = MagicMock()
+        mock_client.generate_training_plan.side_effect = RuntimeError("llm down")
+
+        result = generator._fix_invalid_exercises(
+            plan_json=plan_json,
+            errors=errors,
+            available_exercises=["Bankdrücken (Langhantel)"],
+            llm_client=mock_client,
+        )
+
+        assert result == plan_json
 
 
 class TestDynamicMaxTokens:

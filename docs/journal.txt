@@ -3343,6 +3343,36 @@ Validierung:
 - `black --check ai_coach/tests/test_plan_generator.py`
   → unverändert
 
+## In Arbeit: Coverage-Kampagne – Phase 3 (_save_plan_to_db + Smart-Retry)
+
+**Datum:** 2026-02-24
+
+Ziel:
+- Offene Edge-/Fehlerpfade in `_save_plan_to_db` und
+  `_fix_invalid_exercises` durch gezielte Regressionstests absichern.
+
+## Abgeschlossen: Coverage-Kampagne – Phase 3 (Welle 1)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `ai_coach/tests/test_plan_generator.py` erweitert um:
+  - `test_notes_branch_is_executed_for_existing_exercise`
+  - `test_invalid_replacements_response_returns_original_plan`
+  - `test_retry_exception_returns_original_plan`
+- Damit sind u. a. folgende Branches explizit abgesichert:
+  - Notiz-Ausgabezweig beim Speichern (`notes` vorhanden),
+  - leere/ungültige Replacements-Response im Smart-Retry,
+  - Exception-Fallback im Smart-Retry.
+
+Validierung:
+- `pytest ai_coach/tests/test_plan_generator.py -k "notes_branch_is_executed_for_existing_exercise or invalid_replacements_response_returns_original_plan or retry_exception_returns_original_plan" -v`
+  → **3 passed**
+- `pytest ai_coach/tests/test_plan_generator.py -k "TestGenerateEntryPaths or TestGenerateWithExistingDjangoGuardRails or TestGenerateWithExistingDjangoPhase2 or notes_branch_is_executed_for_existing_exercise or invalid_replacements_response_returns_original_plan or retry_exception_returns_original_plan" -v`
+  → **9 passed**
+- `black --check ai_coach/tests/test_plan_generator.py`
+  → unverändert
+
 ## In Arbeit: M6.4 – Malformed JSON Contract-Hardening
 
 **Datum:** 2026-02-24
