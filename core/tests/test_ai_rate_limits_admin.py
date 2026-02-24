@@ -3,6 +3,7 @@ Tests für KI-Rate-Limiting mit Site-weiten und User-spezifischen Limits.
 """
 
 import uuid
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -92,27 +93,45 @@ class TestAIRateLimitHierarchy(TestCase):
             user=self.user, plan=self.plan, abgeschlossen=True
         )
 
-    def test_site_default_limits_used_without_custom(self):
+    @patch("ai_coach.plan_adapter.PlanAdapter")
+    def test_site_default_limits_used_without_custom(self, MockPlanAdapter):
         """Ohne User-Custom-Limit wird Site-Default verwendet."""
+        # Mock PlanAdapter damit kein LLMClient initialisiert wird
+        mock_instance = MockPlanAdapter.return_value
+        mock_instance.suggest_optimizations.return_value = {"optimizations": []}
+
         # Site-Settings auf niedrige Werte setzen
         site_settings = SiteSettings.load()
         site_settings.ai_limit_analysis = 2
         site_settings.save()
 
-        # 2 Requests sollten funktionieren
-        url = f"{reverse('analyze_plan_api')}?plan_id={self.plan.id}"
-        self.client.get(url, secure=True)  # Request 1
-        self.client.get(url, secure=True)  # Request 2
+        # 2 Requests sollten funktionieren (optimize_plan_api nutzt "analysis" limit)
+        payload = {"plan_id": str(self.plan.id)}
+        resp1 = self.client.post(
+            reverse("optimize_plan_api"), payload, content_type="application/json", secure=True
+        )
+        resp2 = self.client.post(
+            reverse("optimize_plan_api"), payload, content_type="application/json", secure=True
+        )
+        self.assertEqual(resp1.status_code, 200)
+        self.assertEqual(resp2.status_code, 200)
 
         # 3. Request sollte 429 returnen
-        resp3 = self.client.get(url, secure=True)
+        resp3 = self.client.post(
+            reverse("optimize_plan_api"), payload, content_type="application/json", secure=True
+        )
         self.assertEqual(resp3.status_code, 429)
         data = resp3.json()
         self.assertTrue(data["rate_limited"])
         self.assertIn("2 Analyse-Calls", data["error"])
 
-    def test_user_custom_limit_overrides_site_default(self):
+    @patch("ai_coach.plan_adapter.PlanAdapter")
+    def test_user_custom_limit_overrides_site_default(self, MockPlanAdapter):
         """User-Custom-Limit überschreibt Site-Default."""
+        # Mock PlanAdapter damit kein LLMClient initialisiert wird
+        mock_instance = MockPlanAdapter.return_value
+        mock_instance.suggest_optimizations.return_value = {"optimizations": []}
+
         # Site-Default auf 2 setzen
         site_settings = SiteSettings.load()
         site_settings.ai_limit_analysis = 2
@@ -124,19 +143,28 @@ class TestAIRateLimitHierarchy(TestCase):
         profile.save()
 
         # 5 Requests sollten funktionieren
-        url = f"{reverse('analyze_plan_api')}?plan_id={self.plan.id}"
+        payload = {"plan_id": str(self.plan.id)}
         for _ in range(5):
-            resp = self.client.get(url, secure=True)
+            resp = self.client.post(
+                reverse("optimize_plan_api"), payload, content_type="application/json", secure=True
+            )
             self.assertEqual(resp.status_code, 200)
 
         # 6. Request sollte 429 returnen
-        resp = self.client.get(url, secure=True)
+        resp = self.client.post(
+            reverse("optimize_plan_api"), payload, content_type="application/json", secure=True
+        )
         self.assertEqual(resp.status_code, 429)
         data = resp.json()
         self.assertIn("5 Analyse-Calls", data["error"])
 
-    def test_beta_user_unlimited_limits(self):
+    @patch("ai_coach.plan_adapter.PlanAdapter")
+    def test_beta_user_unlimited_limits(self, MockPlanAdapter):
         """Beta-User mit hohen Custom-Limits."""
+        # Mock PlanAdapter damit kein LLMClient initialisiert wird
+        mock_instance = MockPlanAdapter.return_value
+        mock_instance.suggest_optimizations.return_value = {"optimizations": []}
+
         # User als Beta-Tester mit sehr hohen Limits
         profile = self.user.profile
         profile.custom_ai_limit_plan = 1000
@@ -145,7 +173,9 @@ class TestAIRateLimitHierarchy(TestCase):
         profile.save()
 
         # Mehrere Requests sollten funktionieren
-        url = f"{reverse('analyze_plan_api')}?plan_id={self.plan.id}"
+        payload = {"plan_id": str(self.plan.id)}
         for _ in range(10):
-            resp = self.client.get(url, secure=True)
+            resp = self.client.post(
+                reverse("optimize_plan_api"), payload, content_type="application/json", secure=True
+            )
             self.assertEqual(resp.status_code, 200)
