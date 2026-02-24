@@ -11,6 +11,7 @@ Abdeckung:
 """
 
 import base64
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
@@ -133,6 +134,44 @@ class TestGenerateMuscleHeatmap(TestCase):
         result = generate_muscle_heatmap(stats)
         self.assertIsNotNone(result)
 
+    @patch("core.chart_generator.plt.close")
+    @patch("core.chart_generator.plt.tight_layout")
+    @patch("core.chart_generator.plt.savefig")
+    @patch("core.chart_generator.plt.subplots")
+    def test_contract_labels_und_werte_bleiben_konsistent(
+        self, mock_subplots, mock_savefig, mock_tight_layout, mock_close
+    ):
+        fig = MagicMock()
+        ax = MagicMock()
+        mock_subplots.return_value = (fig, ax)
+
+        def fake_savefig(buffer, *args, **kwargs):
+            buffer.write(b"\x89PNGheatmap")
+
+        mock_savefig.side_effect = fake_savefig
+
+        stats = [
+            {"key": "BRUST", "name": "Brust (Pectoralis)", "saetze": 12, "status": "optimal"},
+            {
+                "key": "RUECKEN_LAT",
+                "name": "Rücken (Latissimus)",
+                "saetze": 8,
+                "status": "untertrainiert",
+            },
+        ]
+
+        result = generate_muscle_heatmap(stats)
+
+        barh_args, _ = ax.barh.call_args
+        y_pos, values = barh_args[0], barh_args[1]
+        self.assertEqual(len(y_pos), len(values))
+
+        ytick_args, _ = ax.set_yticklabels.call_args
+        self.assertEqual(ytick_args[0], ["Brust", "Rücken"])
+
+        decoded = base64.b64decode(result)
+        self.assertEqual(decoded[:4], b"\x89PNG")
+
 
 class TestGenerateVolumeChart(TestCase):
     VOLUME_DATA = [
@@ -171,6 +210,39 @@ class TestGenerateVolumeChart(TestCase):
             ]
         )
         self.assertIsNotNone(result)
+
+    @patch("core.chart_generator.plt.close")
+    @patch("core.chart_generator.plt.tight_layout")
+    @patch("core.chart_generator.plt.xticks")
+    @patch("core.chart_generator.plt.savefig")
+    @patch("core.chart_generator.plt.subplots")
+    def test_contract_reihenfolge_und_laengen_stabil(
+        self, mock_subplots, mock_savefig, mock_xticks, mock_tight_layout, mock_close
+    ):
+        fig = MagicMock()
+        ax = MagicMock()
+        mock_subplots.return_value = (fig, ax)
+
+        def fake_savefig(buffer, *args, **kwargs):
+            buffer.write(b"\x89PNGcontract")
+
+        mock_savefig.side_effect = fake_savefig
+
+        daten = [
+            {"woche": "KW3", "volumen": 5500},
+            {"woche": "KW1", "volumen": 5000},
+            {"woche": "KW2", "volumen": 6000},
+        ]
+
+        result = generate_volume_chart(daten)
+
+        plot_args, _ = ax.plot.call_args
+        self.assertEqual(plot_args[0], ["KW3", "KW1", "KW2"])
+        self.assertEqual(plot_args[1], [5500, 5000, 6000])
+        self.assertEqual(len(plot_args[0]), len(plot_args[1]))
+
+        decoded = base64.b64decode(result)
+        self.assertEqual(decoded[:4], b"\x89PNG")
 
 
 class TestGeneratePushPullPie(TestCase):

@@ -485,3 +485,16 @@ class TestFinishTrainingView(SessionBase):
         self.assertEqual(
             self.client.post(reverse("finish_training", args=[other_t.id])).status_code, 404
         )
+
+    def test_fremdes_finish_veraendert_eigene_offene_session_nicht(self):
+        other = User.objects.create_user(username="other_fin_2", password="pass1234")
+        other_plan = Plan.objects.create(name="OP2", user=other)
+        other_t = Trainingseinheit.objects.create(user=other, plan=other_plan, dauer_minuten=30)
+
+        eigene_offen = self._training(abgeschlossen=False)
+
+        response = self.client.post(reverse("finish_training", args=[other_t.id]), secure=True)
+        self.assertEqual(response.status_code, 404)
+
+        eigene_offen.refresh_from_db()
+        self.assertFalse(eigene_offen.abgeschlossen)

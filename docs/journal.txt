@@ -2936,4 +2936,201 @@ Validierung:
   → `15 passed`.
 - `black --check core/tests/test_ai_rate_limits_admin.py core/admin.py`
   → unverändert.
+
+## In Arbeit: Projektanalyse & Roadmap-Refresh
+
+**Datum:** 2026-02-24
+
+Ziel: Vollständige Analyse des aktuellen Projektstands (Code, Tests, CI,
+Sicherheit, Betrieb) und Aktualisierung der `docs/PROJECT_ROADMAP.md` mit
+klar priorisierten Meilensteinen für die nächsten Umsetzungsphasen.
+
+## Abgeschlossen: Projektanalyse & Roadmap-Refresh
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- Vollständige Ist-Analyse über zentrale Quellen durchgeführt:
+  - `docs/PROJECT_ROADMAP.md`
+  - `docs/journal.txt`
+  - `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`
+  - `pyproject.toml`, `README.md`, `docs/CODE_QUALITY.md`
+- `docs/PROJECT_ROADMAP.md` komplett auf aktuellen Stand gebracht:
+  - historische Wochenstruktur durch milestone-basierte Steuerung ersetzt,
+  - abgeschlossene Meilensteine kompakt dokumentiert,
+  - nächste priorisierte Meilensteine M5–M9 mit Scope,
+    Akzeptanzkriterien, Reihenfolge und Qualitäts-Gates ergänzt.
+
+Ergebnis:
+- Roadmap ist wieder konsistent mit aktuellem Live-/CI-/Test-Stand.
+- Klare Priorisierung für nächste Phasen: **M5 (Coverage Sprint C)** und
+  **M6 (AI Endpoint Contract Hardening)** als unmittelbarer Fokus.
+
+## In Arbeit: M5 Sprintplanung – Coverage Sprint C
+
+**Datum:** 2026-02-24
+
+Ziel: M5 in konkrete, direkt ausführbare Arbeitspakete mit Datei- und
+Testfokus überführen (Stats/Charts/Helpers), inkl. Reihenfolge und
+Definition of Done.
+
+## Abgeschlossen: M5 Sprintplanung – Coverage Sprint C
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `docs/PROJECT_ROADMAP.md` im Abschnitt **M5** erweitert um:
+  - 4 konkrete Work Packages (WP1–WP4),
+  - betroffene Ziel-Dateien,
+  - zu ergänzende Testmodule,
+  - priorisierte Ausführungsreihenfolge,
+  - Definition of Done für den Sprint.
+
+Ergebnis:
+- M5 ist jetzt als umsetzbarer Sprint strukturiert und kann ohne weitere
+  Voranalyse abgearbeitet werden.
+
+## In Arbeit: README Refresh (DE/EN)
+
+**Datum:** 2026-02-24
+
+Ziel: `README.md` und `README_EN.md` auf den aktuellen Milestone-Stand bringen,
+veraltete Roadmap-/Statusangaben bereinigen und konsistent auf
+`docs/PROJECT_ROADMAP.md` referenzieren.
+
+## Abgeschlossen: README Refresh (DE/EN)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `README.md` bereinigt und auf Milestone-Roadmap ausgerichtet:
+  - veraltete „In Planung“-Punkte entfernt,
+  - neue Prioritäten M5/M6/M7 ergänzt,
+  - Verweis auf `docs/PROJECT_ROADMAP.md` hinzugefügt,
+  - volatile Test-/Timeline-Zahlen entschärft.
+- `README_EN.md` inhaltlich synchronisiert (gleiche Struktur/Statuslogik).
+
+Ergebnis:
+- Öffentliche Projektdoku (DE/EN) ist konsistent mit aktueller
+  Milestone-Planung und reduziert veraltete Statuswidersprüche.
+
+## Abgeschlossen: Docs-Konsistenzpass (Contributing + CI/CD Guide)
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `CONTRIBUTING.md` auf aktuellen Projektstand gebracht:
+  - Setup-Befehle aktualisiert (`loaddata` statt veraltetem Command),
+  - Test-Kommandos auf `pytest`-Standard umgestellt,
+  - i18n- und AI-Beschreibung auf aktuellen Status angepasst.
+- `docs/CICD_GUIDE.md` mit realen Workflows synchronisiert:
+  - Branch-Trigger, Deploy-Trigger, Lint/Security-Gates,
+  - Artifact-Retention und Monitoring-Pfade aktualisiert.
+
+## In Arbeit: M5/WP1 – Stats-Helpers Edge Cases
+
+**Datum:** 2026-02-24
+
+Ziel: Gezielte Edge-Case-Tests für `core/utils/advanced_stats.py`
+(leere Daten, Nullwerte, stabile Fallbacks ohne Exceptions) in
+`core/tests/test_advanced_stats.py` ergänzen.
+
+## Abgeschlossen: M5/WP1 – Stats-Helpers Edge Cases
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_advanced_stats.py` erweitert um neue Edge-Case-Regressionen:
+  - `test_einzel_training_hat_null_pause` (Konsistenz-Fallback bei Einzeltraining)
+  - `test_kein_volumen_spike_wenn_vorwoche_null` (Fatigue-Index mit Volumen-Nullbasis)
+  - `test_rpe_ohne_altes_vergleichsfenster_steigt_nicht` (RPE-Trend ohne Vergleichsfenster)
+  - `test_nur_null_1rm_werte_gibt_leer` (Plateau-Analyse mit nicht-progressionsfähigen Sätzen)
+
+Validierung:
+- `pytest core/tests/test_advanced_stats.py -v` → **43 passed**
+- `black --check core/tests/test_advanced_stats.py` → unverändert
+
+## In Arbeit: M5/WP2 – View-nahe Statistikpfade
+
+**Datum:** 2026-02-24
+
+Ziel: Edge-Case-Tests für `core/views/training_stats.py` ergänzen
+(Einzelpunkte, Zeitfenster/Heatmap, stabile Kennzahlen ohne Datenartefakte)
+in `core/tests/test_training_stats_extended.py`.
+
+## Abgeschlossen: M5/WP2 – View-nahe Statistikpfade
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_training_stats_extended.py` (`TestTrainingStats`) erweitert um
+  gezielte WP2-Regressionen für:
+  - `no_data`-Fallback bei neuem User,
+  - konsistente Einzelpunkt-Statistik (`gesamt_volumen`/`durchschnitt_volumen`),
+  - 90-Tage-Heatmap-Contract (genau 90 Einträge, stabile Struktur),
+  - Warmup-only Volumenfilter (0 Volumen),
+  - 12-Wochen-Cap für Weekly-Labels.
+- Testklasse auf HTTPS-stabile Requests umgestellt (`secure=True`),
+  um Redirect-Artefakte durch Security-Settings zu vermeiden.
+
+Validierung:
+- `pytest core/tests/test_training_stats_extended.py::TestTrainingStats -v`
+  → **9 passed**
+- `black --check core/tests/test_training_stats_extended.py`
+  → unverändert
+
+## In Arbeit: M5/WP3 – Chart-Daten Contract
+
+**Datum:** 2026-02-24
+
+Ziel: Contract-Tests für Chart-Daten ergänzen (Label/Data-Längen,
+deterministische Reihenfolge, valide leere Chart-Strukturen) mit Fokus auf
+`core/chart_generator.py`.
+
+## Abgeschlossen: M5/WP3 – Chart-Daten Contract
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_chart_generator.py` erweitert um gezielte Contract-Tests:
+  - `test_contract_labels_und_werte_bleiben_konsistent`
+    (Heatmap: Label-Aufbereitung + Label/Data-Längenkonsistenz)
+  - `test_contract_reihenfolge_und_laengen_stabil`
+    (Volumen-Chart: Reihenfolge der Eingabedaten bleibt erhalten,
+    Label/Data-Längen konsistent)
+- Umsetzung mit `unittest.mock` auf Matplotlib-Aufrufe, um fragile Pixel-/Image-
+  Vergleiche zu vermeiden und den Daten-Contract direkt zu testen.
+
+Validierung:
+- `pytest core/tests/test_chart_generator.py -v` → **31 passed**
+- `black --check core/tests/test_chart_generator.py` → unverändert
+
+## In Arbeit: M5/WP4 – Integrations-Regressionen
+
+**Datum:** 2026-02-24
+
+Ziel: Bestehende User-Flows gegen Regressionen absichern
+(`training` ↔ `dashboard`) und Ownership-Schutz in
+`core/tests/test_training_views.py` sowie
+`core/tests/test_training_session_views.py` gezielt erweitern.
+
+## Abgeschlossen: M5/WP4 – Integrations-Regressionen
+
+**Datum:** 2026-02-24
+
+Umsetzung:
+- `core/tests/test_training_views.py` erweitert um
+  `test_finish_training_updates_dashboard_open_and_last_training`:
+  - absichert, dass nach `finish_training` im Dashboard keine offene Session
+    mehr angezeigt wird und `letztes_training` korrekt gesetzt ist.
+- `core/tests/test_training_session_views.py` erweitert um
+  `test_fremdes_finish_veraendert_eigene_offene_session_nicht`:
+  - Ownership-Regressionsschutz: 404 bei fremdem Training,
+    eigene offene Session bleibt unverändert.
+
+Validierung:
+- `pytest core/tests/test_training_views.py::TestFinishTraining::test_finish_training_updates_dashboard_open_and_last_training core/tests/test_training_session_views.py::TestFinishTrainingView::test_fremdes_finish_veraendert_eigene_offene_session_nicht -v`
+  → **2 passed**
+- `black --check core/tests/test_training_views.py core/tests/test_training_session_views.py`
+  → unverändert
   

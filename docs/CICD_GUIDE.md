@@ -27,7 +27,9 @@ HomeGym verwendet GitHub Actions für automatisierte Tests, Code Quality Checks 
 ### 1. CI Pipeline (`ci.yml`)
 
 **Trigger:** Automatisch bei Push/PR
-**Branches:** main, NewStruc, develop
+**Branches:**
+- Push: `main`, `feature/**`, `hotfix/**`
+- Pull Request: `main`
 
 #### Jobs:
 
@@ -56,20 +58,23 @@ ALLOWED_HOSTS: localhost,127.0.0.1
 **b) Code Quality Checks**
 - Black Format Check
 - isort Import Order Check
-- flake8 Linting (exit-zero = no build fail)
+- flake8 Linting (hard fail)
 
 **c) Security Scans**
 - Safety: Dependency Vulnerability Scan
 - Bandit: Python Security Linter
 
 **Artifacts:**
-- Coverage HTML Report (30 Tage)
-- Bandit Security Report (30 Tage)
+- Coverage HTML Report (14 Tage)
+- Bandit Security Report (14 Tage)
 
 ### 2. Deploy Pipeline (`deploy.yml`)
 
-**Trigger:** Nur manuell (workflow_dispatch)
-**Input:** Environment (production/staging)
+**Trigger:**
+- automatisch via `workflow_run`, wenn die CI auf `main` erfolgreich war
+- manuell via `workflow_dispatch`
+
+**Input (manuell):** Environment `production`
 
 **Steps:**
 1. Code auschecken
@@ -136,11 +141,12 @@ SSH_PORT=22 (optional)
 
 ### Lint Job:
 - ✅ Black/isort Check MUSS passen
-- ⚠️ flake8 nur Warnings (exit-zero)
+- ✅ flake8 MUSS passen (kein `--exit-zero`)
 
 ### Security Job:
-- ⚠️ Alle Checks sind weich (continue-on-error: true)
-- 📊 Reports als Artifacts
+- ⚠️ Safety läuft als Hinweis (`continue-on-error: true`)
+- ✅ Bandit ist blockierend bei Medium+ Severity (`-ll`)
+- 📊 Bandit-Report als Artifact
 
 ## 📊 Monitoring & Reports
 
@@ -153,7 +159,7 @@ GitHub → Actions → CI/CD Pipeline → Job "Tests & Coverage"
 
 **Coverage Report:**
 ```
-GitHub → Actions → Workflow → Artifacts → coverage-report-3.12
+GitHub → Actions → Workflow → Artifacts → coverage-report
 (Download & entpacken → htmlcov/index.html öffnen)
 ```
 
@@ -245,7 +251,7 @@ strategy:
 ```yaml
 on:
   push:
-    branches: [ main, NewStruc, develop, feature/* ]
+      branches: [ main, feature/**, hotfix/** ]
 ```
 
 ### Slack Notifications hinzufügen
@@ -315,14 +321,14 @@ secrets.yml
 
 2. **Nicht flake8/mypy ohne exit-zero:**
 ```yaml
-❌ flake8 core/  # Blockt bei jedem Warning
-✅ flake8 core/ --exit-zero  # Zeigt Warnings, blockt nicht
+❌ flake8 core/ --exit-zero  # Versteckt echte Probleme
+✅ flake8 core/  # Build bricht bei Lint-Fehlern bewusst ab
 ```
 
 3. **Nicht Auto-Deploy ohne Tests:**
 ```yaml
 ❌ on: push: → deploy  # GEFÄHRLICH!
-✅ on: workflow_dispatch  # Nur manuell
+✅ on: workflow_run (CI success) + workflow_dispatch
 ```
 
 4. **Nicht zu viele Matrix-Kombinationen:**
