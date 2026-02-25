@@ -388,3 +388,11 @@ wird nach jedem abgeschlossenen Milestone kurz aktualisiert.
 - 🔄 Phase 3 gestartet (Welle 1 abgeschlossen)
 - 🔄 Phase 4 gestartet (Welle 1 abgeschlossen)
 - ⏭️ Nächster Schritt: Phase 3 (Welle 2) und Phase 4 (Welle 2)
+
+### Nächste Datei: `core/views/ai_recommendations.py`
+
+**Status (25.02.2026):**
+- ✅ Phase 1 abgeschlossen (Helper-/Contract-/SSE-Branches + Recommendations-View-Pfade)
+- 📈 Zielmodul-Coverage in relevanter Messung:
+  `pytest core/tests/test_ai_recommendations.py core/tests/test_ai_endpoints_extended.py --cov=core.views.ai_recommendations --cov-report=term-missing`
+  → **100%** (455 Stmts, 0 Miss; Baseline vorher **53%**)
