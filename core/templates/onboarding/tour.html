@@ -122,6 +122,7 @@ window.restartOnboarding = function() {
 
 <!-- Optional: Hilfreiches Styling -->
 <style>
+/* Base Intro.js Styling */
 .introjs-tooltip {
     max-width: 450px !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -139,6 +140,86 @@ window.restartOnboarding = function() {
 
 .introjs-tooltiptext {
     line-height: 1.6;
+}
+
+/* Dark Mode Support */
+[data-bs-theme="dark"] .introjs-tooltip {
+    background-color: #2b3035 !important;
+    color: #ffffff !important;
+    border: 1px solid #495057 !important;
+}
+
+[data-bs-theme="dark"] .introjs-tooltip-header {
+    background-color: #212529 !important;
+    border-bottom: 1px solid #495057 !important;
+}
+
+[data-bs-theme="dark"] .introjs-tooltip-title {
+    color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .introjs-tooltiptext {
+    color: #e9ecef !important;
+}
+
+[data-bs-theme="dark"] .introjs-button {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+[data-bs-theme="dark"] .introjs-button:hover {
+    background-color: #0b5ed7 !important;
+}
+
+[data-bs-theme="dark"] .introjs-skipbutton {
+    color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .introjs-skipbutton:hover {
+    color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .introjs-arrow.top,
+[data-bs-theme="dark"] .introjs-arrow.top-middle,
+[data-bs-theme="dark"] .introjs-arrow.top-right {
+    border-bottom-color: #2b3035 !important;
+}
+
+[data-bs-theme="dark"] .introjs-arrow.bottom,
+[data-bs-theme="dark"] .introjs-arrow.bottom-middle,
+[data-bs-theme="dark"] .introjs-arrow.bottom-right {
+    border-top-color: #2b3035 !important;
+}
+
+[data-bs-theme="dark"] .introjs-arrow.left,
+[data-bs-theme="dark"] .introjs-arrow.left-bottom {
+    border-right-color: #2b3035 !important;
+}
+
+[data-bs-theme="dark"] .introjs-arrow.right,
+[data-bs-theme="dark"] .introjs-arrow.right-bottom {
+    border-left-color: #2b3035 !important;
+}
+
+[data-bs-theme="dark"] .introjs-progressbar {
+    background-color: #495057 !important;
+}
+
+[data-bs-theme="dark"] .introjs-progress {
+    background-color: #0d6efd !important;
+}
+
+/* Light Mode (explizit für Kontrast) */
+[data-bs-theme="light"] .introjs-tooltip {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+[data-bs-theme="light"] .introjs-button {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
 }
 
 /* Hervorhebung für Onboarding-Elemente */
