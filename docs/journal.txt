@@ -3837,3 +3837,31 @@ Zusätzlich:
 Skip-Button sollte jetzt innerhalb des Modal-Headers sein
 
 **Status:** ✅ Gepusht, bereit zum Testen
+
+
+## Fix: Skip-Button Text durch X-Icon ersetzt
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 3f73996
+
+**Problem:**
+Text "Überspringen" war zu lang und brach aus dem Button-Rahmen heraus (User-Feedback mit Screenshot)
+
+**Lösung:**
+Text durch universelles ✕ Symbol ersetzt:
+- `skipLabel: '✕'` statt `skipLabel: 'Überspringen'`
+- Font-Size erhöht: 1.25rem (größer, besser sichtbar)
+- Button kompakter: padding 0.25rem 0.5rem
+- Min-Width: 32px (konsistente quadratische Form)
+- Text-Align: center (perfekt zentriert)
+- Line-Height: 1 (vertikale Zentrierung)
+
+**Vorteile:**
+✅ Universell verständlich (X = Schließen)
+✅ Kein Text-Overflow
+✅ Kompakter, cleaner Look
+✅ Passt in kleinen Raum
+✅ Internationalisierung nicht nötig
+
+**Status:** ✅ Gepusht, bereit zum Testen
