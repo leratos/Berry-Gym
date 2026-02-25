@@ -184,7 +184,7 @@ def test_get_available_exercises_for_user_filters_by_equipment():
     eq_hantel = Equipment.objects.create(name="HANTEL")
     eq_rack = Equipment.objects.create(name="RACK")
 
-    ex_no_req = Uebung.objects.create(
+    Uebung.objects.create(
         bezeichnung="Crunch",
         muskelgruppe="BAUCH",
         bewegungstyp="DRUECKEN",
