@@ -3242,7 +3242,7 @@ Validierung:
   → **29 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
-  
+
 ## In Arbeit: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
 
 **Datum:** 2026-02-25
@@ -3595,7 +3595,7 @@ Validierung:
   → **100% (`ai_coach/data_analyzer.py`: 129 Stmts, 0 Miss; Baseline 12%)**
 - `black ai_coach/tests/test_data_analyzer.py`
   → formatiert
-  
+
 ## In Arbeit: Coverage-Kampagne – core/views/training_session.py (Phase 1)
 
 **Datum:** 2026-02-25
@@ -3649,4 +3649,36 @@ Validierung:
   → **100% (`ai_coach/prompt_builder.py`: 120 Stmts, 0 Miss)**
 - `isort ai_coach/tests/test_prompt_builder.py`
 - `black --check ai_coach/tests/test_prompt_builder.py`
-  
+
+
+
+## In Arbeit: Onboarding-Tour für neue User
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+
+**Problem:**
+Berry-Gym kann für neue User überwältigend sein:
+- Viele Features (AI, Training-Log, Stats, RPE, etc.)
+- Fachbegriffe (RPE, RIR, 1RM, PPL)
+- Kein Einstiegspunkt
+
+**Ziel:**
+Geführte Tour für neue User implementieren
+- Highlight wichtigste Features
+- Erklärung der Konzepte
+- Schneller zum ersten "Success-Moment"
+
+**Scope:**
+1. Intro.js Integration
+2. 7-Step Onboarding-Tour
+3. First-Login-Trigger
+4. User-Flag (has_seen_onboarding)
+5. Skip-Option
+
+**Tech-Stack:**
+- intro.js (leichtgewichtig, keine Dependencies)
+- Django User-Model erweitern
+- Template-Integration
+
+**Geschätzter Aufwand:** 3-4 Stunden

@@ -76,6 +76,15 @@ class UserProfile(models.Model):
     )
 
     # ------------------------------------------------------------------
+    # Onboarding
+    # ------------------------------------------------------------------
+    has_seen_onboarding = models.BooleanField(
+        default=False,
+        verbose_name="Onboarding gesehen",
+        help_text="True = User hat die Onboarding-Tour abgeschlossen",
+    )
+
+    # ------------------------------------------------------------------
     # KI Rate-Limiting: optionale User-spezifische Overrides
     # ------------------------------------------------------------------
     custom_ai_limit_plan = models.PositiveIntegerField(

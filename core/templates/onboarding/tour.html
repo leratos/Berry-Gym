@@ -1,0 +1,149 @@
+{% comment %}
+Onboarding Tour für neue User
+Wird nur beim ersten Login angezeigt
+{% endcomment %}
+
+{% if user.is_authenticated and not user.profile.has_seen_onboarding %}
+<!-- Intro.js CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">
+
+<!-- Intro.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>
+
+<!-- Onboarding Tour Configuration -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Warte kurz bis DOM vollständig geladen
+    setTimeout(function() {
+        startOnboarding();
+    }, 500);
+});
+
+function startOnboarding() {
+    const intro = introJs();
+
+    intro.setOptions({
+        nextLabel: 'Weiter →',
+        prevLabel: '← Zurück',
+        skipLabel: 'Überspringen',
+        doneLabel: 'Los geht\'s! 💪',
+        showProgress: true,
+        showBullets: false,
+        exitOnOverlayClick: false,
+        exitOnEsc: true,
+        scrollToElement: true,
+        scrollPadding: 30,
+
+        steps: [
+            {
+                title: 'Willkommen bei Berry-Gym! 💪',
+                intro: 'Lass uns dir in 2 Minuten zeigen, wie Berry-Gym funktioniert.',
+                position: 'center'
+            },
+            {
+                element: document.querySelector('[data-onboarding="ai-plan"]'),
+                title: '🤖 AI-Trainingsplan',
+                intro: 'Erstelle hier deinen personalisierten Trainingsplan. Die AI berücksichtigt dein Ziel, Erfahrung und Equipment.',
+                position: 'bottom'
+            },
+            {
+                element: document.querySelector('[data-onboarding="training-log"]'),
+                title: '✍️ Training loggen',
+                intro: 'Starte hier dein Training. Wähle einen Plan aus und logge deine Sätze, Gewichte und Wiederholungen.',
+                position: 'bottom'
+            },
+            {
+                element: document.querySelector('[data-onboarding="stats"]'),
+                title: '📈 Fortschritte tracken',
+                intro: 'Hier siehst du deine Statistiken, Personal Records und Trainingsvolumen im Detail.',
+                position: 'left'
+            },
+            {
+                element: document.querySelector('[data-onboarding="analyze"]'),
+                title: '🔍 AI-Trainingsempfehlungen',
+                intro: 'Die AI analysiert deine Trainings und gibt dir personalisierte Empfehlungen zur Optimierung.',
+                position: 'bottom'
+            },
+            {
+                title: '📊 RPE verstehen',
+                intro: 'RPE = Rate of Perceived Exertion<br><br>' +
+                       '<strong>10</strong> = Muskelversagen<br>' +
+                       '<strong>9</strong> = Noch 1 Rep möglich<br>' +
+                       '<strong>8</strong> = Noch 2 Reps möglich<br><br>' +
+                       'Die AI nutzt deinen RPE zur Optimierung deiner Pläne.',
+                position: 'center'
+            },
+            {
+                title: '🎉 Du bist startklar!',
+                intro: 'Erstelle jetzt deinen ersten AI-Plan oder starte ein Training.<br><br>' +
+                       '<strong>Tipp:</strong> Du kannst diese Tour jederzeit in den Einstellungen neu starten.',
+                position: 'center'
+            }
+        ]
+    });
+
+    // Callback wenn Tour beendet
+    intro.oncomplete(function() {
+        markOnboardingComplete();
+    });
+
+    // Callback wenn Tour übersprungen
+    intro.onexit(function() {
+        markOnboardingComplete();
+    });
+
+    // Tour starten
+    intro.start();
+}
+
+function markOnboardingComplete() {
+    // AJAX-Request an Backend
+    fetch('{% url "mark_onboarding_complete" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+    }).then(function(response) {
+        if (response.ok) {
+            console.log('Onboarding als abgeschlossen markiert');
+        }
+    }).catch(function(error) {
+        console.error('Fehler beim Markieren des Onboardings:', error);
+    });
+}
+
+// Optional: Tour erneut starten Button
+window.restartOnboarding = function() {
+    startOnboarding();
+};
+</script>
+
+<!-- Optional: Hilfreiches Styling -->
+<style>
+.introjs-tooltip {
+    max-width: 450px !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.introjs-tooltip-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.introjs-helperLayer {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.introjs-tooltiptext {
+    line-height: 1.6;
+}
+
+/* Hervorhebung für Onboarding-Elemente */
+[data-onboarding] {
+    position: relative;
+}
+</style>
+{% endif %}
