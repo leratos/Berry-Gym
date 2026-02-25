@@ -16,23 +16,36 @@ Views (Django TestClient):
   - finish_training
 """
 
+import json
 from datetime import timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.http import HttpResponse
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from core.models import Equipment, Plan, PlanUebung, Satz, Trainingseinheit, Uebung, UserProfile
 from core.views.training_session import (
+    _build_ai_suggestions,
+    _build_empfehlung_from_satz,
     _build_intensity_suggestion,
     _build_plan_gruppen,
+    _build_volume_suggestion,
     _calculate_empfohlene_pause,
+    _calculate_single_empfehlung,
     _check_pr,
+    _create_ghost_saetze,
     _determine_empfehlung_hint,
+    _get_ai_training_suggestion,
+    _get_deload_config,
+    _get_gewichts_empfehlungen,
+    _get_plan_ziele,
+    _get_sorted_saetze,
     _parse_set_post_data,
     _parse_ziel_wdh,
+    finish_training,
 )
 
 
@@ -41,6 +54,7 @@ from core.views.training_session import (
 # ─────────────────────────────────────────────────────────────────────────────
 class SessionBase(TestCase):
     def setUp(self):
+        self.client.defaults["HTTP_X_FORWARDED_PROTO"] = "https"
         self.user = User.objects.create_user(username="sess_user", password="pass1234")
         self.client.force_login(self.user)
         eq = Equipment.objects.create(name="HANTEL")
@@ -498,3 +512,595 @@ class TestFinishTrainingView(SessionBase):
 
         eigene_offen.refresh_from_db()
         self.assertFalse(eigene_offen.abgeschlossen)
+
+    def test_post_invalid_dauer_keine_abschluss_markierung(self):
+        training = self._training(abgeschlossen=False)
+
+        response = self.client.post(
+            reverse("finish_training", args=[training.id]),
+            {
+                "dauer_minuten": "abc",
+                "kommentar": "test",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        training.refresh_from_db()
+        self.assertFalse(training.abgeschlossen)
+
+    def test_post_dauer_ausserhalb_bereich_keine_abschluss_markierung(self):
+        training = self._training(abgeschlossen=False)
+
+        response = self.client.post(
+            reverse("finish_training", args=[training.id]),
+            {
+                "dauer_minuten": "2000",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        training.refresh_from_db()
+        self.assertFalse(training.abgeschlossen)
+
+    def test_post_valid_dauer_setzt_dauer(self):
+        training = self._training(abgeschlossen=False)
+
+        response = self.client.post(
+            reverse("finish_training", args=[training.id]),
+            {
+                "dauer_minuten": "55",
+                "kommentar": "Sauber",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        training.refresh_from_db()
+        self.assertEqual(training.dauer_minuten, 55)
+
+
+class TestTrainingSessionExtendedCoverage(SessionBase):
+    def test_active_group_name_fallback_and_missing_profile(self):
+        import uuid
+
+        gid = uuid.uuid4()
+        self.plan.gruppe_id = gid
+        self.plan.gruppe_name = ""
+        self.plan.save(update_fields=["gruppe_id", "gruppe_name"])
+
+        profile = self.user.profile
+        profile.active_plan_group = gid
+        profile.save(update_fields=["active_plan_group"])
+
+        response = self.client.get(reverse("training_select_plan"))
+        self.assertEqual(response.context["active_group_name"], "Unbenannte Gruppe")
+
+        self.user.profile.delete()
+        response_no_profile = self.client.get(reverse("training_select_plan"))
+        self.assertEqual(response_no_profile.status_code, 200)
+
+    def test_training_select_plan_public_filter_redirectet(self):
+        response = self.client.get(reverse("training_select_plan"), {"filter": "public"})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("filter=eigene", response.url)
+
+    def test_training_select_plan_shared_filter_zeigt_geteilte_plaene(self):
+        owner = User.objects.create_user(username="owner_shared", password="pass1234")
+        shared_plan = Plan.objects.create(name="Shared Plan", user=owner)
+        shared_plan.shared_with.add(self.user)
+
+        response = self.client.get(reverse("training_select_plan"), {"filter": "shared"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(shared_plan, response.context["einzelne_plaene"])
+
+    def test_training_select_plan_active_group_ohne_plan_setzt_reset(self):
+        import uuid
+
+        profile = self.user.profile
+        profile.active_plan_group = uuid.uuid4()
+        profile.save(update_fields=["active_plan_group"])
+
+        response = self.client.get(reverse("training_select_plan"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_group_name"], None)
+        self.assertEqual(len(response.context["active_plan_gruppen"]), 0)
+
+    def test_plan_details_zeigt_historie_und_owner_flag(self):
+        alte_einheit = self._training(days_ago=3)
+        Satz.objects.create(
+            einheit=alte_einheit,
+            uebung=self.uebung,
+            satz_nr=1,
+            gewicht=85,
+            wiederholungen=9,
+            ist_aufwaermsatz=False,
+        )
+
+        response = self.client.get(reverse("plan_details", args=[self.plan.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["is_owner"])
+        self.assertEqual(len(response.context["uebungen_mit_historie"]), 1)
+        self.assertIsNotNone(response.context["uebungen_mit_historie"][0]["letztes_gewicht"])
+
+    def test_get_deload_config_defaults_und_active_group(self):
+        import uuid
+
+        self.user.profile.delete()
+        is_deload, vol_factor, weight_factor, rpe_target = _get_deload_config(self.user, self.plan)
+        self.assertEqual((is_deload, vol_factor, weight_factor, rpe_target), (False, 0.8, 0.9, 7.0))
+
+        gid = uuid.uuid4()
+        self.plan.gruppe_id = gid
+        self.plan.gruppe_name = "Split"
+        self.plan.save(update_fields=["gruppe_id", "gruppe_name"])
+
+        profile = UserProfile.objects.create(user=self.user, active_plan_group=gid)
+        profile.deload_volume_factor = 0.7
+        profile.deload_weight_factor = 0.85
+        profile.deload_rpe_target = 6.5
+        profile.save()
+
+        with patch.object(UserProfile, "is_deload_week", return_value=True):
+            is_deload, vol_factor, weight_factor, rpe_target = _get_deload_config(
+                self.user, self.plan
+            )
+
+        self.assertEqual((is_deload, vol_factor, weight_factor, rpe_target), (True, 0.7, 0.85, 6.5))
+        profile.refresh_from_db()
+        self.assertIsNotNone(profile.cycle_start_date)
+
+    def test_get_deload_config_handles_missing_profile_exception(self):
+        self.user.profile.delete()
+        self.user.__dict__.pop("profile", None)
+
+        with patch.object(User, "profile", new_callable=PropertyMock) as mock_profile:
+            mock_profile.side_effect = UserProfile.DoesNotExist
+            result = _get_deload_config(self.user, self.plan)
+
+        self.assertEqual(result, (False, 0.8, 0.9, 7.0))
+
+    def test_get_sorted_saetze_and_plan_ziele(self):
+        training = self._training()
+        second = Uebung.objects.create(
+            bezeichnung="Rudern",
+            muskelgruppe="RÜCKEN",
+            bewegungstyp="COMPOUND",
+            gewichts_typ="GESAMT",
+        )
+        PlanUebung.objects.create(
+            plan=self.plan,
+            uebung=second,
+            reihenfolge=2,
+            saetze_ziel=4,
+            wiederholungen_ziel="6-8",
+        )
+        Satz.objects.create(
+            einheit=training,
+            uebung=second,
+            satz_nr=1,
+            gewicht=70,
+            wiederholungen=8,
+            ist_aufwaermsatz=False,
+        )
+        Satz.objects.create(
+            einheit=training,
+            uebung=self.uebung,
+            satz_nr=2,
+            gewicht=80,
+            wiederholungen=8,
+            ist_aufwaermsatz=False,
+        )
+
+        sorted_saetze = list(_get_sorted_saetze(training))
+        self.assertEqual(sorted_saetze[0].uebung_id, self.uebung.id)
+
+        plan_ziele = _get_plan_ziele(training)
+        self.assertEqual(plan_ziele[self.uebung.id]["saetze_ziel"], 3)
+        self.assertEqual(plan_ziele[second.id]["wiederholungen_ziel"], "6-8")
+
+        training.plan = None
+        training.save(update_fields=["plan"])
+        sorted_no_plan = list(_get_sorted_saetze(training))
+        self.assertGreaterEqual(len(sorted_no_plan), 2)
+
+    def test_create_ghost_saetze_deload_and_fallback_paths(self):
+        training = Trainingseinheit.objects.create(user=self.user, plan=self.plan, dauer_minuten=40)
+        old = self._training(days_ago=5)
+        Satz.objects.create(
+            einheit=old,
+            uebung=self.uebung,
+            satz_nr=1,
+            gewicht=100,
+            wiederholungen=7,
+            ist_aufwaermsatz=False,
+        )
+        Satz.objects.create(
+            einheit=old,
+            uebung=self.uebung,
+            satz_nr=2,
+            gewicht=90,
+            wiederholungen=6,
+            ist_aufwaermsatz=False,
+        )
+
+        pu = self.plan.uebungen.get(uebung=self.uebung)
+        pu.wiederholungen_ziel = "abc"
+        pu.saetze_ziel = 3
+        pu.save(update_fields=["wiederholungen_ziel", "saetze_ziel"])
+
+        _create_ghost_saetze(
+            training, self.plan, is_deload=True, deload_vol_factor=0.6, deload_weight_factor=0.8
+        )
+        created = list(training.saetze.filter(uebung=self.uebung).order_by("satz_nr"))
+        self.assertEqual(len(created), 2)
+        self.assertEqual(created[0].wiederholungen, 6)
+
+    def test_training_start_deload_message_branch(self):
+        with patch(
+            "core.views.training_session._get_deload_config", return_value=(True, 0.5, 0.8, 6.5)
+        ):
+            response = self.client.get(reverse("training_start_plan", args=[self.plan.id]))
+        self.assertEqual(response.status_code, 302)
+
+    def test_determine_empfehlung_hint_kg_low_rpe_plus2(self):
+        satz = MagicMock()
+        satz.gewicht = 0
+        satz.wiederholungen = 8
+        satz.rpe = 6.0
+
+        _, reps, hint = _determine_empfehlung_hint(satz, 8, 12, is_kg_uebung=True)
+        self.assertEqual(reps, 10)
+        self.assertIn("+2 Wdh", hint)
+
+    def test_calculate_single_empfehlung_and_batch_empfehlungen(self):
+        training = self._training()
+        alt = self._training(days_ago=7)
+        Satz.objects.create(
+            einheit=alt,
+            uebung=self.uebung,
+            satz_nr=1,
+            gewicht=90,
+            wiederholungen=8,
+            rpe=6.5,
+            ist_aufwaermsatz=False,
+        )
+
+        PlanUebung.objects.filter(plan=self.plan, uebung=self.uebung).update(
+            wiederholungen_ziel="8-12", pausenzeit=150
+        )
+
+        single = _calculate_single_empfehlung(self.user, self.uebung.id, training)
+        self.assertIsNotNone(single)
+        self.assertEqual(single["pause"], 150)
+        self.assertTrue(single["pause_from_plan"])
+
+        Satz.objects.create(
+            einheit=training,
+            uebung=self.uebung,
+            satz_nr=1,
+            gewicht=80,
+            wiederholungen=8,
+            ist_aufwaermsatz=False,
+        )
+        recommendations = _get_gewichts_empfehlungen(self.user, training)
+        self.assertIn(self.uebung.id, recommendations)
+
+        empty_training = Trainingseinheit.objects.create(
+            user=self.user, plan=None, dauer_minuten=30
+        )
+        self.assertEqual(_get_gewichts_empfehlungen(self.user, empty_training), {})
+
+    def test_calculate_single_empfehlung_none_and_missing_uebung_lookup(self):
+        training = self._training()
+        no_history = _calculate_single_empfehlung(self.user, self.uebung.id, training)
+        self.assertIsNone(no_history)
+
+        old = self._training(days_ago=2)
+        Satz.objects.create(
+            einheit=old,
+            uebung=self.uebung,
+            satz_nr=1,
+            gewicht=80,
+            wiederholungen=8,
+            rpe=7.0,
+            ist_aufwaermsatz=False,
+        )
+        with patch("core.models.Uebung.objects.get", side_effect=Uebung.DoesNotExist):
+            result = _calculate_single_empfehlung(self.user, self.uebung.id, training)
+        self.assertIsNotNone(result)
+
+    def test_build_empfehlung_from_satz_kg_uebung(self):
+        kg = Uebung.objects.create(
+            bezeichnung="Klimmzug",
+            muskelgruppe="RÜCKEN",
+            bewegungstyp="ZIEHEN",
+            gewichts_typ="KOERPERGEWICHT",
+        )
+        pu = PlanUebung.objects.create(
+            plan=self.plan,
+            uebung=kg,
+            reihenfolge=3,
+            saetze_ziel=3,
+            wiederholungen_ziel="6-10",
+            pausenzeit=90,
+        )
+        training = self._training(days_ago=1)
+        letzter_satz = Satz.objects.create(
+            einheit=training,
+            uebung=kg,
+            satz_nr=1,
+            gewicht=0,
+            wiederholungen=10,
+            rpe=8.0,
+            ist_aufwaermsatz=False,
+        )
+
+        data = _build_empfehlung_from_satz(letzter_satz, pu)
+        self.assertEqual(data["gewicht"], 0.0)
+        self.assertIn("nächste Stufe", data["hint"])
+        self.assertEqual(data["pause"], 90)
+
+    def test_training_session_context_includes_hinweise(self):
+        training = self._training()
+        pu = self.plan.uebungen.get(uebung=self.uebung)
+        pu.notiz = "Schulterblätter stabil halten"
+        pu.save(update_fields=["notiz"])
+        self._satz(training, gewicht=80, wdh=8, rpe=7.0)
+
+        response = self.client.get(reverse("training_session", args=[training.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.uebung.id, response.context["plan_uebung_hinweise"])
+
+    def test_training_session_handles_missing_profile_exception(self):
+        training = self._training()
+        self.user.profile.delete()
+        self.user.__dict__.pop("profile", None)
+
+        with patch.object(User, "profile", new_callable=PropertyMock) as mock_profile:
+            mock_profile.side_effect = UserProfile.DoesNotExist
+            response = self.client.get(reverse("training_session", args=[training.id]))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_update_set_ajax_validation_and_unexpected_error(self):
+        training = self._training()
+        satz = self._satz(training)
+
+        bad = self.client.post(
+            reverse("update_set", args=[satz.id]),
+            {"gewicht": "abc"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(bad.status_code, 400)
+
+        with patch(
+            "core.views.training_session.get_object_or_404", side_effect=RuntimeError("boom")
+        ):
+            error = self.client.post(
+                reverse("update_set", args=[satz.id]),
+                {"gewicht": "80"},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+        self.assertEqual(error.status_code, 500)
+
+    def test_update_set_ajax_success_and_nonajax_validation_redirect(self):
+        training = self._training()
+        satz = self._satz(training)
+
+        ok = self.client.post(
+            reverse("update_set", args=[satz.id]),
+            {"gewicht": "85", "wiederholungen": "8", "rpe": "7.5", "superset_gruppe": ""},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(ok.status_code, 200)
+        self.assertTrue(ok.json()["success"])
+
+        invalid = self.client.post(
+            reverse("update_set", args=[satz.id]),
+            {"gewicht": "abc"},
+        )
+        self.assertEqual(invalid.status_code, 302)
+
+    def test_update_set_get_redirects(self):
+        training = self._training()
+        satz = self._satz(training)
+        response = self.client.get(reverse("update_set", args=[satz.id]))
+        self.assertEqual(response.status_code, 302)
+
+    def test_toggle_deload_branches(self):
+        training = self._training()
+
+        valid = self.client.post(
+            reverse("toggle_deload", args=[training.id]),
+            data=json.dumps({"ist_deload": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(valid.status_code, 200)
+        self.assertTrue(valid.json()["ist_deload"])
+
+        invalid = self.client.post(
+            reverse("toggle_deload", args=[training.id]),
+            data=json.dumps({"ist_deload": "ja"}),
+            content_type="application/json",
+        )
+        self.assertEqual(invalid.status_code, 400)
+
+        malformed = self.client.post(
+            reverse("toggle_deload", args=[training.id]),
+            data="{broken",
+            content_type="application/json",
+        )
+        self.assertEqual(malformed.status_code, 400)
+
+        with patch(
+            "core.views.training_session.Trainingseinheit.save", side_effect=RuntimeError("boom")
+        ):
+            server_error = self.client.post(
+                reverse("toggle_deload", args=[training.id]),
+                data=json.dumps({"ist_deload": False}),
+                content_type="application/json",
+            )
+        self.assertEqual(server_error.status_code, 500)
+
+    def test_volume_and_ai_suggestion_helpers(self):
+        trainings = [self._training(days_ago=d, abgeschlossen=True) for d in [1, 3, 5, 8, 10, 12]]
+        for idx, t in enumerate(trainings, start=1):
+            gewicht = 40 if idx <= 3 else 100
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=gewicht,
+                wiederholungen=8,
+                rpe=7.0 if idx < 4 else 9.0,
+                ist_aufwaermsatz=False,
+            )
+
+        recent_ids = [t.id for t in trainings[:3]]
+        recent_sets = Satz.objects.filter(einheit_id__in=recent_ids, ist_aufwaermsatz=False)
+
+        volume = _build_volume_suggestion(self.user, recent_ids, recent_sets)
+        if volume is not None:
+            self.assertEqual(volume["type"], "volume")
+
+        suggestions = _build_ai_suggestions(self.user, recent_ids, recent_sets, avg_rpe=9.1)
+        self.assertGreaterEqual(len(suggestions), 1)
+
+    def test_build_volume_suggestion_drop_and_rise_with_mocks(self):
+        previous_ids_chain = MagicMock()
+        previous_ids_chain.order_by.return_value.values_list.return_value.__getitem__.return_value = [
+            10,
+            11,
+            12,
+        ]
+
+        with patch(
+            "core.views.training_session.Trainingseinheit.objects.filter",
+            return_value=previous_ids_chain,
+        ):
+            with patch("core.views.training_session.Satz.objects.filter") as satz_filter:
+
+                def drop_side_effect(*args, **kwargs):
+                    m = MagicMock()
+                    ids = kwargs.get("einheit_id__in", [])
+                    m.aggregate.return_value = {"total": 100 if ids == [1, 2, 3] else 200}
+                    return m
+
+                satz_filter.side_effect = drop_side_effect
+                drop = _build_volume_suggestion(self.user, [1, 2, 3], MagicMock())
+                self.assertEqual(drop["type"], "volume")
+                self.assertEqual(drop["color"], "danger")
+
+                def rise_side_effect(*args, **kwargs):
+                    m = MagicMock()
+                    ids = kwargs.get("einheit_id__in", [])
+                    m.aggregate.return_value = {"total": 300 if ids == [1, 2, 3] else 100}
+                    return m
+
+                satz_filter.side_effect = rise_side_effect
+                rise = _build_volume_suggestion(self.user, [1, 2, 3], MagicMock())
+                self.assertEqual(rise["type"], "volume")
+                self.assertEqual(rise["color"], "warning")
+
+                def neutral_side_effect(*args, **kwargs):
+                    m = MagicMock()
+                    m.aggregate.return_value = {"total": 100}
+                    return m
+
+                satz_filter.side_effect = neutral_side_effect
+                neutral = _build_volume_suggestion(self.user, [1, 2, 3], MagicMock())
+                self.assertIsNone(neutral)
+
+                def zero_prev_side_effect(*args, **kwargs):
+                    m = MagicMock()
+                    ids = kwargs.get("einheit_id__in", [])
+                    m.aggregate.return_value = {"total": 100 if ids == [1, 2, 3] else 0}
+                    return m
+
+                satz_filter.side_effect = zero_prev_side_effect
+                zero_prev = _build_volume_suggestion(self.user, [1, 2, 3], MagicMock())
+                self.assertIsNone(zero_prev)
+
+    def test_get_ai_training_suggestion_branches(self):
+        none_result, count = _get_ai_training_suggestion(self.user)
+        self.assertIsNone(none_result)
+        self.assertEqual(count, 0)
+
+        for d in [1, 3, 5]:
+            t = self._training(days_ago=d, abgeschlossen=True)
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=80,
+                wiederholungen=8,
+                rpe=8.0,
+                ist_aufwaermsatz=False,
+            )
+
+        with patch(
+            "core.views.training_session._build_ai_suggestions",
+            return_value=[
+                {"color": "info", "type": "x"},
+                {"color": "danger", "type": "y"},
+            ],
+        ):
+            ai_suggestion, training_count = _get_ai_training_suggestion(self.user)
+
+        self.assertEqual(training_count, 3)
+        self.assertEqual(ai_suggestion["color"], "danger")
+
+    def test_get_ai_training_suggestion_three_trainings_without_recent_sets(self):
+        for d in [1, 3, 5]:
+            t = self._training(days_ago=d, abgeschlossen=True)
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=80,
+                wiederholungen=8,
+                rpe=None,
+                ist_aufwaermsatz=False,
+            )
+
+        suggestion, count = _get_ai_training_suggestion(self.user)
+        self.assertIsNone(suggestion)
+        self.assertEqual(count, 3)
+
+    def test_finish_training_dauer_fallback_when_datum_missing(self):
+        request = RequestFactory().get("/training/1/finish/")
+        request.user = self.user
+
+        fake_arbeit = MagicMock()
+        fake_arbeit.count.return_value = 0
+        fake_arbeit.__iter__.return_value = iter([])
+        fake_warmup = MagicMock()
+        fake_warmup.count.return_value = 0
+
+        fake_saetze_manager = MagicMock()
+        fake_saetze_manager.filter.side_effect = [fake_arbeit, fake_warmup]
+        fake_saetze_manager.values.return_value.distinct.return_value.count.return_value = 0
+
+        fake_training = MagicMock()
+        fake_training.saetze = fake_saetze_manager
+        fake_training.datum = None
+
+        captured = {}
+
+        def _fake_render(req, template, context):
+            captured.update(context)
+            return HttpResponse("ok")
+
+        with (
+            patch("core.views.training_session.get_object_or_404", return_value=fake_training),
+            patch(
+                "core.views.training_session._get_ai_training_suggestion", return_value=(None, 0)
+            ),
+            patch("core.views.training_session.render", side_effect=_fake_render),
+        ):
+            response = finish_training(request, training_id=1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(captured["dauer_geschaetzt"], 60)
