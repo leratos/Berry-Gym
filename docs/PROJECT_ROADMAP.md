@@ -412,3 +412,11 @@ wird nach jedem abgeschlossenen Milestone kurz aktualisiert.
 - 📈 Zielmodul-Coverage in relevanter Messung:
   `pytest core/tests/test_training_session_views.py --cov=core.views.training_session --cov-report=term-missing -q`
   → **100%** (431 Stmts, 0 Miss; Baseline im gezielten Lauf vorher **55%**)
+
+### Nächste Datei: `ai_coach/prompt_builder.py`
+
+**Status (25.02.2026):**
+- ✅ Phase 1 abgeschlossen (Prompt-Bausteine, Fallbacks, User-Prompt-Branches, `__main__`-Pfade)
+- 📈 Zielmodul-Coverage in relevanter Messung:
+  `pytest ai_coach/tests --cov=ai_coach.prompt_builder --cov-report=term-missing -q`
+  → **100%** (120 Stmts, 0 Miss; Baseline vorher **10%**)
