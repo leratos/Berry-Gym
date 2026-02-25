@@ -3242,6 +3242,39 @@ Validierung:
   → **29 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
+  
+## In Arbeit: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
+
+**Datum:** 2026-02-25
+
+Ziel:
+- Coverage für `core/views/ai_recommendations.py` entlang der aktuellen
+  Codecov-Lücken systematisch erhöhen.
+- Fokus auf bestehende Error-/Contract-Pfade ohne Verhaltensänderung im
+  produktiven Endpoint-Verhalten.
+
+## Abgeschlossen: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
+
+**Datum:** 2026-02-25
+
+Umsetzung:
+- `core/tests/test_ai_recommendations.py` erweitert um gezielte Branch-Tests für:
+  - Rate-Limit-Helper (`_check_ai_rate_limit`) inkl. Custom-/Site-/Fallback-Limits
+    und `429`-Contract,
+  - Deload-/Mesozyklus-Helper (`_range_or_none`, `_extract_deload_params`,
+    `_apply_mesocycle_from_plan`),
+  - Recommendation-Helper (`_get_push_pull_empfehlung`, `_is_stagnating`,
+    `_get_frequenz_empfehlung`, `_get_rpe_empfehlung`),
+  - `workout_recommendations` Fallback-/Sortierpfade.
+- HTTPS-stabile View-Tests (`secure=True`) für bestehende Recommendations-Tests.
+
+Validierung:
+- `pytest core/tests/test_ai_recommendations.py -q`
+  → **20 passed**
+- `pytest core/tests/test_ai_recommendations.py core/tests/test_ai_endpoints_extended.py --cov=core.views.ai_recommendations --cov-report=term-missing -q`
+  → **57 passed**, `core/views/ai_recommendations.py` bei **81%** (von 53% Baseline)
+- `black --check core/tests/test_ai_recommendations.py`
+  → unverändert
 
 ## In Arbeit: Coverage-Kampagne – Phase 0 (ai_coach/plan_generator.py)
 
