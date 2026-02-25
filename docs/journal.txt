@@ -3682,3 +3682,60 @@ Geführte Tour für neue User implementieren
 - Template-Integration
 
 **Geschätzter Aufwand:** 3-4 Stunden
+
+
+## Abgeschlossen: Onboarding-Tour für neue User
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 56c0653
+
+**Implementierung:**
+1. UserProfile Model erweitert:
+   - `has_seen_onboarding` BooleanField hinzugefügt
+   - Migration 0075 erstellt und ausgeführt
+
+2. Onboarding-Tour erstellt:
+   - Intro.js via CDN integriert (keine npm-Dependencies)
+   - Template: `core/templates/onboarding/tour.html`
+   - 6-Step Tour:
+     * Welcome
+     * AI-Plan Button
+     * Training starten
+     * Statistiken
+     * AI-Empfehlungen
+     * RPE Erklärung
+     * Completion
+
+3. Views implementiert:
+   - `mark_onboarding_complete` - AJAX Endpoint
+   - `restart_onboarding` - Onboarding zurücksetzen
+   - URLs registriert
+
+4. Dashboard erweitert:
+   - `data-onboarding` Attribute hinzugefügt
+   - Elemente werden von Tour gehighlightet
+
+5. Tests:
+   - 3 Tests erstellt und alle bestehen
+   - Coverage: Onboarding Views 46%
+
+**Validierung:**
+- `pytest core/tests/test_onboarding.py -v`
+  → **3 passed**
+- `python manage.py check`
+  → **System check identified no issues**
+- `git push`
+  → **Branch gepusht**
+
+**Nächste Schritte:**
+- Merge via GitHub PR (User entscheidet: Squash & Merge empfohlen)
+- Onboarding in Production testen
+- Ggf. Tour-Steps basierend auf User-Feedback anpassen
+- Optional: Feature Discovery für bestehende User (später)
+
+**Impact:**
+✅ Neue User werden durch App geführt
+✅ Weniger Verwirrung über Features
+✅ Schnellerer "Success-Moment"
+✅ Reduzierte Churn-Rate erwartet
