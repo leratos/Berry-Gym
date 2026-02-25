@@ -3243,33 +3243,54 @@ Validierung:
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
   
-## In Arbeit: Coverage-Kampagne – ai_coach/secrets_manager.py (Phase 1)
+## In Arbeit: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
 
 **Datum:** 2026-02-25
 
 Ziel:
-- Branch-Coverage für `ai_coach/secrets_manager.py` gezielt erhöhen.
-- Kernpfade absichern: `FileKeyring`, `SecretsManager` (Keyring/env/.env-Fallback),
-  sowie zentrale Helper-Funktionen.
+- Coverage für `core/views/ai_recommendations.py` entlang der aktuellen
+  Codecov-Lücken systematisch erhöhen.
+- Fokus auf bestehende Error-/Contract-Pfade ohne Verhaltensänderung im
+  produktiven Endpoint-Verhalten.
 
-## Abgeschlossen: Coverage-Kampagne – ai_coach/secrets_manager.py (Phase 1)
+## Abgeschlossen: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
 
 **Datum:** 2026-02-25
 
 Umsetzung:
-- Neue Testdatei `ai_coach/tests/test_secrets_manager.py` erstellt mit:
-  - Unit-Tests für `FileKeyring` (Load/Save/Delete, Decode-Fehler, chmod-Fehlerpfad)
-  - Branch-Tests für `SecretsManager` (OS-Keyring/Fallback, env/.env-Pfade,
-    set/delete/list inkl. Plattformzweige win32/darwin/linux)
-  - Helper-Tests für `get_openrouter_key` und `get_db_password`
-  - CLI-Branch-Tests via `runpy` für `set/get/delete/list` inkl. Error-/Exit-Pfade
+- `core/tests/test_ai_recommendations.py` umfassend erweitert um gezielte Branch-Tests für
+  Helper-, API- und SSE-Pfade in `core/views/ai_recommendations.py`.
+- Bestehende Endpoint-Contracts aus `core/tests/test_ai_endpoints_extended.py` weiter genutzt
+  und mit den neuen Branch-Tests kombiniert.
 
 Validierung:
-- `pytest ai_coach/tests/test_secrets_manager.py -q`
-  → **30 passed**
-- `pytest ai_coach/tests/test_secrets_manager.py --cov=ai_coach.secrets_manager --cov-report=term-missing -q`
-  → **100% Coverage für `ai_coach/secrets_manager.py` (159 Stmts, 0 Miss)**
-- `black --check ai_coach/tests/test_secrets_manager.py`
+- `pytest core/tests/test_ai_recommendations.py core/tests/test_ai_endpoints_extended.py --cov=core.views.ai_recommendations --cov-report=term-missing -q`
+  → **74 passed**
+  → `core/views/ai_recommendations.py`: **100%** (455 Stmts, 0 Miss)
+- `black --check core/tests/test_ai_recommendations.py`
+  → unverändert
+
+## Abgeschlossen: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
+
+**Datum:** 2026-02-25
+
+Umsetzung:
+- `core/tests/test_ai_recommendations.py` erweitert um gezielte Branch-Tests für:
+  - Rate-Limit-Helper (`_check_ai_rate_limit`) inkl. Custom-/Site-/Fallback-Limits
+    und `429`-Contract,
+  - Deload-/Mesozyklus-Helper (`_range_or_none`, `_extract_deload_params`,
+    `_apply_mesocycle_from_plan`),
+  - Recommendation-Helper (`_get_push_pull_empfehlung`, `_is_stagnating`,
+    `_get_frequenz_empfehlung`, `_get_rpe_empfehlung`),
+  - `workout_recommendations` Fallback-/Sortierpfade.
+- HTTPS-stabile View-Tests (`secure=True`) für bestehende Recommendations-Tests.
+
+Validierung:
+- `pytest core/tests/test_ai_recommendations.py -q`
+  → **20 passed**
+- `pytest core/tests/test_ai_recommendations.py core/tests/test_ai_endpoints_extended.py --cov=core.views.ai_recommendations --cov-report=term-missing -q`
+  → **57 passed**, `core/views/ai_recommendations.py` bei **81%** (von 53% Baseline)
+- `black --check core/tests/test_ai_recommendations.py`
   → unverändert
 
 ## In Arbeit: Coverage-Kampagne – Phase 0 (ai_coach/plan_generator.py)
