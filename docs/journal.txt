@@ -3739,3 +3739,35 @@ Geführte Tour für neue User implementieren
 ✅ Weniger Verwirrung über Features
 ✅ Schnellerer "Success-Moment"
 ✅ Reduzierte Churn-Rate erwartet
+
+
+## Fix: Onboarding Dark Mode Styling
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 8f11596
+
+**Problem:**
+Onboarding-Tour hatte weißes Modal im Dark Mode (User-Report mit Screenshot)
+
+**Fix:**
+Umfangreiches CSS für Dark-Mode-Support hinzugefügt:
+- Intro.js Tooltip: Dunkler Hintergrund (#2b3035)
+- Text: Weiß (#ffffff)
+- Buttons: Bootstrap Primary (#0d6efd)
+- Arrows: Angepasste Border-Colors
+- Progress Bar: Dark Theme
+- Light Mode explizit definiert für Kontrast
+
+**CSS-Selektoren:**
+```css
+[data-bs-theme="dark"] .introjs-tooltip { ... }
+[data-bs-theme="dark"] .introjs-button { ... }
+[data-bs-theme="dark"] .introjs-arrow.* { ... }
+```
+
+**Validierung:**
+- Visual Check im Dark Mode nötig
+- Light Mode sollte unverändert sein
+
+**Status:** ✅ Gepusht
