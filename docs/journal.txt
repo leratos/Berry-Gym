@@ -3270,6 +3270,14 @@ Validierung:
 - `black --check core/tests/test_ai_recommendations.py`
   → unverändert
 
+## In Arbeit: Coverage-Kampagne – ai_coach/data_analyzer.py (Phase 1)
+
+**Datum:** 2026-02-25
+
+Ziel:
+- Coverage für `ai_coach/data_analyzer.py` systematisch ausbauen.
+- Fokus auf deterministische Branches/Fehlerpfade mit testbaren Contracts.
+
 ## Abgeschlossen: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
 
 **Datum:** 2026-02-25
@@ -3568,4 +3576,23 @@ Validierung:
   → **37 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
+
+## Abgeschlossen: Coverage-Kampagne – ai_coach/data_analyzer.py (Phase 1)
+
+**Datum:** 2026-02-25
+**Branch:** feature/coverage-data-analyzer
+
+Umsetzung:
+- Neue fokussierte Tests in `ai_coach/tests/test_data_analyzer.py` ergänzt.
+- Branches für `analyze()` (inkl. Empty/Trend/Skip/Push-Pull), `_identify_weaknesses()`,
+  `to_json()`, `print_summary()` sowie `__main__`-Pfade abgesichert.
+- Testdaten an Model-Constraints angepasst (`Satz.wiederholungen` not-null; Skip-Pfad über `rpe=None`).
+
+Validierung:
+- `pytest ai_coach/tests/test_data_analyzer.py -q`
+  → **10 passed**
+- `pytest ai_coach/tests --cov=ai_coach.data_analyzer --cov-report=term-missing -q`
+  → **100% (`ai_coach/data_analyzer.py`: 129 Stmts, 0 Miss; Baseline 12%)**
+- `black ai_coach/tests/test_data_analyzer.py`
+  → formatiert
   
