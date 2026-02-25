@@ -145,7 +145,7 @@
           <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary border-0" title="{% trans 'Theme wechseln' %}">
               <i class="bi bi-moon-fill" id="themeIcon"></i>
           </button>
-          <a href="{% url 'training_stats' %}" class="text-decoration-none small fw-bold text-info">
+          <a href="{% url 'training_stats' %}" class="text-decoration-none small fw-bold text-info" data-onboarding="stats">
               <i class="bi bi-graph-up"></i> {% trans "Statistiken" %}
           </a>
           <a href="{% url 'training_list' %}" class="text-decoration-none small fw-bold text-primary">
@@ -603,17 +603,17 @@
 
   <!-- Haupt-Buttons -->
   <div class="d-grid gap-3 mt-5">
-    <a href="{% url 'training_select_plan' %}" class="btn btn-success btn-action fw-bold rounded-4 shadow">
+    <a href="{% url 'training_select_plan' %}" class="btn btn-success btn-action fw-bold rounded-4 shadow" data-onboarding="training-log">
         <i class="bi bi-play-circle-fill me-2"></i> {% trans "Training starten" %}
     </a>
     <a href="{% url 'cardio_add' %}" class="btn btn-outline-danger btn-action fw-bold rounded-4">
         <i class="bi bi-heart-pulse-fill me-2"></i> {% trans "Cardio hinzufügen" %}
         {% if cardio_diese_woche > 0 %}<span class="badge bg-danger ms-2">{{ cardio_diese_woche }}×</span>{% endif %}
     </a>
-    <button type="button" class="btn btn-warning btn-action fw-bold rounded-4 shadow" data-bs-toggle="modal" data-bs-target="#aiPlanGeneratorModal">
+    <button type="button" class="btn btn-warning btn-action fw-bold rounded-4 shadow" data-bs-toggle="modal" data-bs-target="#aiPlanGeneratorModal" data-onboarding="ai-plan">
         <i class="bi bi-stars me-2"></i> {% trans "KI-Plan erstellen" %}
     </button>
-    <a href="{% url 'workout_recommendations' %}" class="btn btn-outline-success btn-action fw-bold rounded-4 shadow">
+    <a href="{% url 'workout_recommendations' %}" class="btn btn-outline-success btn-action fw-bold rounded-4 shadow" data-onboarding="analyze">
         <i class="bi bi-robot me-2"></i> {% trans "Trainingsempfehlungen (AI)" %}
     </a>
     <a href="{% url 'ml_dashboard' %}" class="btn btn-info btn-action fw-bold rounded-4 shadow">

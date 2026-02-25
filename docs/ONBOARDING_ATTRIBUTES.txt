@@ -1,0 +1,52 @@
+"""
+Onboarding-Attribute für Dashboard-Template
+
+Diese Attribute werden vom Onboarding-Script verwendet um wichtige Elemente zu highlighten.
+Füge diese Attribute in das Dashboard-Template ein:
+"""
+
+# WICHTIGE ELEMENTE FÜR ONBOARDING:
+
+# 1. AI-Plan Button (falls vorhanden in deinem Template)
+# Suche nach: "AI-Plan" oder "KI-Plan" oder "generate_plan"
+# Füge hinzu: data-onboarding="ai-plan"
+
+# 2. Training loggen / Training starten Button
+# Suche nach: "training_select_plan" oder "Training starten" oder ähnlich
+# Füge hinzu: data-onboarding="training-log"
+
+# 3. RPE Info / RPE Erklärung
+# Suche nach: "RPE" oder "Rate of Perceived Exertion"
+# Füge hinzu: data-onboarding="rpe-info"
+
+# 4. Statistiken Link
+# Suche nach: "training_stats" oder "Statistiken"
+# Füge hinzu: data-onboarding="stats"
+
+# 5. Analyse Button (falls vorhanden)
+# Suche nach: "analyze" oder "Analyse"
+# Füge hinzu: data-onboarding="analyze"
+
+# BEISPIELE:
+
+# Vorher:
+# <a href="{% url 'generate_plan_api' %}" class="btn btn-primary">
+#   AI-Plan erstellen
+# </a>
+
+# Nachher:
+# <a href="{% url 'generate_plan_api' %}" class="btn btn-primary" data-onboarding="ai-plan">
+#   AI-Plan erstellen
+# </a>
+
+# ---
+
+# Vorher:
+# <a href="{% url 'training_select_plan' %}" class="btn btn-success">
+#   Training starten
+# </a>
+
+# Nachher:
+# <a href="{% url 'training_select_plan' %}" class="btn btn-success" data-onboarding="training-log">
+#   Training starten
+# </a>

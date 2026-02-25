@@ -100,6 +100,9 @@ from .notifications import get_vapid_public_key, subscribe_push, unsubscribe_pus
 # Offline sync views
 from .offline import sync_offline_data
 
+# Onboarding views
+from .onboarding import mark_onboarding_complete, restart_onboarding
+
 # Plan management views
 from .plan_management import (
     copy_group,
@@ -243,6 +246,9 @@ __all__ = [
     "ml_dashboard",
     # Offline
     "sync_offline_data",
+    # Onboarding
+    "mark_onboarding_complete",
+    "restart_onboarding",
     # Config
     "service_worker",
     "favicon",
