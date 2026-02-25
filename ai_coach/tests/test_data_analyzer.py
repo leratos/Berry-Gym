@@ -3,8 +3,9 @@ import runpy
 import types
 from datetime import timedelta
 
-import pytest
 from django.utils import timezone
+
+import pytest
 
 from ai_coach.data_analyzer import TrainingAnalyzer
 from core.tests.factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
