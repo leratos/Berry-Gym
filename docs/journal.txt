@@ -3802,3 +3802,38 @@ Skip-Button CSS deutlich verbessert:
 - Deutlich besser sichtbar
 
 **Status:** ✅ Gepusht, bereit zum Testen
+
+
+## Fix: Skip-Button Position korrigiert
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** b1f30df
+
+**Problem:**
+Skip-Button ("Überspringen") war außerhalb des Modals positioniert (Screenshot zeigt Button rechts außerhalb der Box)
+
+**Root Cause:**
+Intro.js default CSS verwendet absolute Positionierung für Skip-Button
+
+**Fix:**
+Position-Reset im CSS:
+```css
+.introjs-skipbutton {
+    position: relative !important;  // statt absolute
+    top: auto !important;           // kein top offset
+    right: auto !important;         // kein right offset
+    margin-right: 0 !important;     // kein extra margin
+}
+```
+
+Zusätzlich:
+- Header-Padding erhöht (10px) für bessere Darstellung
+- Kleineres Button-Padding für kompakteren Look
+- Font-Size reduziert (0.875rem)
+- Für Dark + Light Mode angepasst
+
+**Ergebnis:**
+Skip-Button sollte jetzt innerhalb des Modal-Headers sein
+
+**Status:** ✅ Gepusht, bereit zum Testen

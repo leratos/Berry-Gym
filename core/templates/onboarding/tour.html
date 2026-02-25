@@ -25,7 +25,7 @@ function startOnboarding() {
     intro.setOptions({
         nextLabel: 'Weiter →',
         prevLabel: '← Zurück',
-        skipLabel: 'Überspringen',
+        skipLabel: '✕',
         doneLabel: 'Los geht\'s! 💪',
         showProgress: true,
         showBullets: false,
@@ -149,6 +149,8 @@ window.restartOnboarding = function() {
     top: auto !important;
     right: auto !important;
     margin: 0 !important;
+    cursor: pointer !important;
+    font-weight: normal !important;
 }
 
 /* Dark Mode Support */
@@ -189,13 +191,16 @@ window.restartOnboarding = function() {
     opacity: 0.9;
     background: transparent !important;
     border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    padding: 0.25rem 0.625rem !important;
+    padding: 0.25rem 0.5rem !important;
     border-radius: 0.25rem !important;
-    font-size: 0.875rem !important;
+    font-size: 1.25rem !important;
     position: relative !important;
     top: auto !important;
     right: auto !important;
     margin-right: 0 !important;
+    line-height: 1 !important;
+    min-width: 32px !important;
+    text-align: center !important;
 }
 
 [data-bs-theme="dark"] .introjs-skipbutton:hover {
@@ -256,8 +261,11 @@ window.restartOnboarding = function() {
     top: auto !important;
     right: auto !important;
     margin-right: 0 !important;
-    padding: 0.25rem 0.625rem !important;
-    font-size: 0.875rem !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 1.25rem !important;
+    line-height: 1 !important;
+    min-width: 32px !important;
+    text-align: center !important;
 }
 
 /* Hervorhebung für Onboarding-Elemente */
