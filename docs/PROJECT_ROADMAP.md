@@ -255,6 +255,17 @@ milestone-basierte Planung ab dem aktuellen Ist-Stand.
 - `black --check ai_coach/tests/test_plan_generator.py ai_coach/plan_generator.py` grün.
 - Sichtbarer Coverage-Anstieg für `ai_coach/plan_generator.py` gegenüber Phase-0-Baseline.
 
+### Coverage-Kampagne (dateiweise) – Nächste Datei `ai_coach/secrets_manager.py`
+
+**Status:** Abgeschlossen (25.02.2026)
+
+**Ergebnis:**
+- Neue fokussierte Tests in `ai_coach/tests/test_secrets_manager.py`
+  (Unit + CLI-Branches).
+- Zielmodul-Coverage in lokaler Zielmessung:
+  `pytest ai_coach/tests/test_secrets_manager.py --cov=ai_coach.secrets_manager --cov-report=term-missing`
+  → **100% (`ai_coach/secrets_manager.py`: 159 Stmts, 0 Miss)**.
+
 ---
 
 ## 🔐 M7 – Security & Compliance Tightening
