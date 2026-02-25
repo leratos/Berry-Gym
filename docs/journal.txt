@@ -3242,6 +3242,35 @@ Validierung:
   → **29 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
+  
+## In Arbeit: Coverage-Kampagne – ai_coach/secrets_manager.py (Phase 1)
+
+**Datum:** 2026-02-25
+
+Ziel:
+- Branch-Coverage für `ai_coach/secrets_manager.py` gezielt erhöhen.
+- Kernpfade absichern: `FileKeyring`, `SecretsManager` (Keyring/env/.env-Fallback),
+  sowie zentrale Helper-Funktionen.
+
+## Abgeschlossen: Coverage-Kampagne – ai_coach/secrets_manager.py (Phase 1)
+
+**Datum:** 2026-02-25
+
+Umsetzung:
+- Neue Testdatei `ai_coach/tests/test_secrets_manager.py` erstellt mit:
+  - Unit-Tests für `FileKeyring` (Load/Save/Delete, Decode-Fehler, chmod-Fehlerpfad)
+  - Branch-Tests für `SecretsManager` (OS-Keyring/Fallback, env/.env-Pfade,
+    set/delete/list inkl. Plattformzweige win32/darwin/linux)
+  - Helper-Tests für `get_openrouter_key` und `get_db_password`
+  - CLI-Branch-Tests via `runpy` für `set/get/delete/list` inkl. Error-/Exit-Pfade
+
+Validierung:
+- `pytest ai_coach/tests/test_secrets_manager.py -q`
+  → **30 passed**
+- `pytest ai_coach/tests/test_secrets_manager.py --cov=ai_coach.secrets_manager --cov-report=term-missing -q`
+  → **100% Coverage für `ai_coach/secrets_manager.py` (159 Stmts, 0 Miss)**
+- `black --check ai_coach/tests/test_secrets_manager.py`
+  → unverändert
 
 ## In Arbeit: Coverage-Kampagne – Phase 0 (ai_coach/plan_generator.py)
 
@@ -3519,175 +3548,3 @@ Validierung:
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
   
-
-## In Arbeit: Phase 3 (Welle 2) – Coverage plan_generator
-
-**Datum:** 2026-02-24
-
-Ziel:
-- Fehlende Branches in `ai_coach/plan_generator.py` (Phase 3: `_save_plan_to_db`,
-  `_fix_invalid_exercises`) über zusätzliche Tests schließen.
-
-## Abgeschlossen: Phase 3 (Welle 2) – Coverage plan_generator
-
-**Datum:** 2026-02-24
-
-Umsetzung:
-- `ai_coach/tests/test_plan_generator.py` erweitert:
-  - Defaults für fehlende Exercise-Felder in `_save_plan_to_db` abgesichert.
-  - Nicht-Dict-Replacements in `_fix_invalid_exercises` als no-op abgesichert.
-
-Validierung:
-- Nicht ausgeführt (bitte zielgerichtet testen).
-
-## In Arbeit: Phase 4 (Welle 2) – Coverage plan_generator
-
-**Datum:** 2026-02-24
-
-Ziel:
-- Branch-Coverage für Phase-4-Helper in `ai_coach/plan_generator.py` ausbauen
-  (`_build_microcycle_template`, `_build_progression_strategy`,
-  `_validate_weakness_coverage` DB-Error-Pfad).
-
-## Abgeschlossen: Phase 4 (Welle 2) – Coverage plan_generator
-
-**Datum:** 2026-02-24
-
-Umsetzung:
-- `ai_coach/tests/test_plan_generator.py` erweitert um:
-  - Contract-Tests für `_build_microcycle_template` (Profil + Fallback-Defaults)
-  - Contract-Test für `_build_progression_strategy` (RPE-/Volumen-Text inkl. `sets_per_session`)
-  - DB-Error-Branch für `_validate_weakness_coverage` (`Exception` → leere Warnings, kein Crash)
-
-Validierung:
-- `pytest ai_coach/tests/test_plan_generator.py -k "Phase4HelperContracts or Phase4CoverageValidatorErrorPath" -v`
-  → **4 passed**
-- `pytest ai_coach/tests/test_plan_generator.py -v`
-  → **49 passed**
-- `black --check ai_coach/tests/test_plan_generator.py`
-  → **1 file would be left unchanged**
-
-## In Arbeit: Phase 5 (Welle 1) – Coverage plan_generator
-
-**Datum:** 2026-02-24
-
-Ziel:
-- Branch-Coverage für `_format_macrocycle_summary` und `main()` in
-  `ai_coach/plan_generator.py` durch gezielte Tests erhöhen.
-
-## Abgeschlossen: Phase 5 (Welle 1) – Coverage plan_generator
-
-**Datum:** 2026-02-24
-
-Umsetzung:
-- `ai_coach/tests/test_plan_generator.py` erweitert um:
-  - `_format_macrocycle_summary`-Tests (mit/ohne Macro/Micro, Deload-Defaults,
-    Wochenbeispiele-Deckelung)
-  - `main()`-CLI-Tests (Output-Datei, Exit-Code `0` bei Success, Exit-Code `1`
-    bei Fehler)
-
-Validierung:
-- `pytest ai_coach/tests/test_plan_generator.py -k "MacrocycleSummaryFormatting or MainCliEntry" -v`
-  → **4 passed**
-- `pytest ai_coach/tests/test_plan_generator.py -v`
-  → **53 passed**
-- `black --check ai_coach/tests/test_plan_generator.py`
-  → **1 file would be left unchanged**
-
-## In Arbeit: Phase 5 (Welle 2) – Coverage plan_generator (Final Cleanup)
-
-**Datum:** 2026-02-24
-
-Ziel:
-- Verbleibende Restzeilen in `ai_coach/plan_generator.py` gezielt schließen
-  (Success-Pfad in `_generate_with_existing_django`, Skip-Zweig im
-  Coverage-Validator, `__main__`-Guard).
-
-## Abgeschlossen: Phase 5 (Welle 2) – Coverage plan_generator (Final Cleanup)
-
-**Datum:** 2026-02-24
-
-Umsetzung:
-- `ai_coach/tests/test_plan_generator.py` erweitert um:
-  - Success-Pfad mit `save_to_db=True`, Coverage-Warnungen und generischem
-    Plannamen-Fallback in `_generate_with_existing_django`
-  - Skip-Zweig in `_validate_weakness_coverage` für Weakness-Strings ohne `:`
-  - `__main__`-Guard-Test via `runpy.run_module(..., run_name="__main__")`
-
-Validierung:
-- `pytest ai_coach/tests/test_plan_generator.py -k "success_path_with_coverage_warnings_and_save_to_db or weakness_without_colon_is_ignored or module_main_guard_executes_main" -v`
-  → **3 passed**
-- `pytest ai_coach/tests/test_plan_generator.py -v`
-  → **56 passed**
-- `black --check ai_coach/tests/test_plan_generator.py`
-  → **1 file would be left unchanged**
-
-Ergebnis:
-- `ai_coach/plan_generator.py` im Modul-Coverage-Lauf auf **100%**.
-
-## In Arbeit: Coverage-Kampagne – ai_coach/llm_client.py
-
-**Datum:** 2026-02-24
-
-Ziel:
-- Branch-orientierte Tests für `ai_coach/llm_client.py` ergänzen
-  (`_check_ollama_available`, `_extract_json`, Generate-Strategien,
-  `validate_plan`, `__main__`-Guard) und Coverage systematisch erhöhen.
-
-## Abgeschlossen: Coverage-Kampagne – ai_coach/llm_client.py (Welle 1)
-
-**Datum:** 2026-02-24
-
-Umsetzung:
-- Neue Testdatei `ai_coach/tests/test_llm_client.py` erstellt (17 Tests) mit Fokus auf:
-  - Init-/Fallback-Strategie (`use_openrouter`, `fallback_to_openrouter`)
-  - Ollama-Verfügbarkeits-Checks inkl. Error-Wrapping
-  - OpenRouter-Client-Lazy-Init inkl. fehlendem API-Key
-  - Generate-Strategien (OpenRouter direkt, Ollama→Fallback, No-LLM-Error)
-  - `_generate_with_ollama` und `_generate_with_openrouter` Success-Pfade
-  - `_extract_json` (Markdown-Extraktion, Range-Reparatur, json-repair-Fallback, Empty-Error)
-  - `validate_plan` (invalid/valid)
-  - `__main__`-Guard via `runpy.run_module`
-
-Validierung:
-- `pytest ai_coach/tests/test_llm_client.py -v`
-  → **17 passed**
-- `pytest ai_coach/tests/test_plan_generator.py ai_coach/tests/test_llm_client.py --cov=ai_coach.llm_client --cov-report=term-missing -q`
-  → **73 passed**, `ai_coach/llm_client.py` bei **77%**
-- `black --check ai_coach/tests/test_llm_client.py`
-  → nach Formatierung unverändert
-
-Nächste Welle:
-- Restcluster in `ai_coach/llm_client.py` für höhere Coverage gezielt schließen
-  (v. a. zusätzliche Error-Pfade in `_generate_with_openrouter`/`_extract_json`/`validate_plan`).
-
-## In Arbeit: Coverage-Kampagne – ai_coach/llm_client.py (Welle 2)
-
-**Datum:** 2026-02-24
-
-Ziel:
-- Verbleibende Error-/Fallback-Branches in `ai_coach/llm_client.py`
-  vollständig schließen und Modul-Coverage auf 100% heben.
-
-## Abgeschlossen: Coverage-Kampagne – ai_coach/llm_client.py (Welle 2)
-
-**Datum:** 2026-02-24
-
-Umsetzung:
-- `ai_coach/tests/test_llm_client.py` erweitert um zusätzliche Branch-Tests für:
-  - `_check_ollama_available` (weitere Model-Shape-Varianten inkl. Objekt-Attribute),
-  - `_get_openrouter_client` ImportError-Pfad,
-  - `generate_training_plan` ohne Fallback + Strategie-3-Fallback,
-  - `_generate_with_ollama` und `_generate_with_openrouter` generische Error-Pfade,
-  - `_extract_json` Trim/Prefix/Suffix-Pfade + json-repair-ImportError-Fallback,
-  - `validate_plan` für leeres Dict, Session-/Exercise-Fehler und Duplicate-Checks,
-  - `__main__`-Error-Guard mit `traceback.print_exc`.
-
-Validierung:
-- `pytest ai_coach/tests/test_llm_client.py -q`
-  → **36 passed**
-- `pytest ai_coach/tests/test_llm_client.py --cov=ai_coach.llm_client --cov-report=term-missing -q`
-  → **36 passed**, `ai_coach/llm_client.py` bei **100%**
-- `black --check ai_coach/tests/test_llm_client.py`
-  → nach Formatierung unverändert
-
