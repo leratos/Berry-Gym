@@ -404,3 +404,11 @@ wird nach jedem abgeschlossenen Milestone kurz aktualisiert.
 - 📈 Zielmodul-Coverage in relevanter Messung:
   `pytest ai_coach/tests --cov=ai_coach.data_analyzer --cov-report=term-missing -q`
   → **100%** (129 Stmts, 0 Miss; Baseline vorher **12%**)
+
+### Nächste Datei: `core/views/training_session.py`
+
+**Status (25.02.2026):**
+- ✅ Phase 1 abgeschlossen (View-/Helper-Branches, Deload/Ghosting, Update-/Finish-Errorpfade)
+- 📈 Zielmodul-Coverage in relevanter Messung:
+  `pytest core/tests/test_training_session_views.py --cov=core.views.training_session --cov-report=term-missing -q`
+  → **100%** (431 Stmts, 0 Miss; Baseline im gezielten Lauf vorher **55%**)
