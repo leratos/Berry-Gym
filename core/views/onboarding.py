@@ -3,6 +3,9 @@
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @require_POST
@@ -19,8 +22,12 @@ def mark_onboarding_complete(request):
         profile.save(update_fields=["has_seen_onboarding"])
 
         return JsonResponse({"success": True, "message": "Onboarding abgeschlossen"})
-    except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+    except Exception:
+        logger.exception("Error while marking onboarding as complete")
+        return JsonResponse(
+            {"success": False, "error": "Ein interner Fehler ist aufgetreten."},
+            status=500,
+        )
 
 
 @login_required
@@ -43,9 +50,13 @@ def restart_onboarding(request):
 
             return redirect("dashboard")
 
-    except Exception as e:
+    except Exception:
+        logger.exception("Error while restarting onboarding")
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return JsonResponse({"success": False, "error": str(e)}, status=500)
+            return JsonResponse(
+                {"success": False, "error": "Ein interner Fehler ist aufgetreten."},
+                status=500,
+            )
         else:
             from django.shortcuts import redirect
 
