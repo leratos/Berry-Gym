@@ -3771,3 +3771,34 @@ Umfangreiches CSS für Dark-Mode-Support hinzugefügt:
 - Light Mode sollte unverändert sein
 
 **Status:** ✅ Gepusht
+
+
+## Fix: Skip-Button Sichtbarkeit verbessert
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 078a00a
+
+**Problem:**
+Skip-Button ("Überspringen") war im Dark Mode schlecht sichtbar / eigenartig dargestellt
+
+**Fix:**
+Skip-Button CSS deutlich verbessert:
+- Border hinzugefügt: `border: 1px solid rgba(255, 255, 255, 0.3)`
+- Subtiler Hintergrund beim Hover
+- Padding für bessere Klickbarkeit
+- Opacity für bessere Sichtbarkeit
+- text-shadow entfernt
+
+**Vorher:**
+- Nur grauer Text (#adb5bd)
+- Schwer zu erkennen
+- Kein visueller Fokus
+
+**Nachher:**
+- Weißer Text mit Border
+- Klar als Button erkennbar
+- Hover-Effekt mit Hintergrund
+- Deutlich besser sichtbar
+
+**Status:** ✅ Gepusht, bereit zum Testen
