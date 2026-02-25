@@ -3596,3 +3596,30 @@ Validierung:
 - `black ai_coach/tests/test_data_analyzer.py`
   → formatiert
   
+## In Arbeit: Coverage-Kampagne – core/views/training_session.py (Phase 1)
+
+**Datum:** 2026-02-25
+
+Ziel:
+- Coverage für `core/views/training_session.py` gezielt erhöhen.
+- Fokus auf deterministische Branches/Ownership-/Fehlerpfade in Session-Views.
+
+## Abgeschlossen: Coverage-Kampagne – core/views/training_session.py (Phase 1)
+
+**Datum:** 2026-02-25
+**Branch:** feature/coverage-training-session
+
+Umsetzung:
+- `core/tests/test_training_session_views.py` deutlich erweitert (View- und Helper-Branches).
+- HTTPS-Testkontext stabilisiert (`HTTP_X_FORWARDED_PROTO=https`) zur Vermeidung von SSL-Redirect-Rauschen.
+- Zusätzliche Abdeckung u. a. für Deload-/Ghost-Set-Flows, Empfehlungspfade,
+  `toggle_deload`, `update_set` Error-/AJAX-Zweige, Finish-Workflow sowie
+  AI-Suggestion- und Volumen-Branching.
+
+Validierung:
+- `/workspaces/Berry-Gym/.venv/bin/python -m pytest core/tests/test_training_session_views.py --cov=core.views.training_session --cov-report=term-missing -q`
+  → **81 passed**
+  → **100% (`core/views/training_session.py`: 431 Stmts, 0 Miss)**
+- `isort core/tests/test_training_session_views.py`
+- `black core/tests/test_training_session_views.py`
+  
