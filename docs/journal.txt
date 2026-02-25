@@ -3258,6 +3258,23 @@ Ziel:
 **Datum:** 2026-02-25
 
 Umsetzung:
+- `core/tests/test_ai_recommendations.py` umfassend erweitert um gezielte Branch-Tests für
+  Helper-, API- und SSE-Pfade in `core/views/ai_recommendations.py`.
+- Bestehende Endpoint-Contracts aus `core/tests/test_ai_endpoints_extended.py` weiter genutzt
+  und mit den neuen Branch-Tests kombiniert.
+
+Validierung:
+- `pytest core/tests/test_ai_recommendations.py core/tests/test_ai_endpoints_extended.py --cov=core.views.ai_recommendations --cov-report=term-missing -q`
+  → **74 passed**
+  → `core/views/ai_recommendations.py`: **100%** (455 Stmts, 0 Miss)
+- `black --check core/tests/test_ai_recommendations.py`
+  → unverändert
+
+## Abgeschlossen: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
+
+**Datum:** 2026-02-25
+
+Umsetzung:
 - `core/tests/test_ai_recommendations.py` erweitert um gezielte Branch-Tests für:
   - Rate-Limit-Helper (`_check_ai_rate_limit`) inkl. Custom-/Site-/Fallback-Limits
     und `429`-Contract,
