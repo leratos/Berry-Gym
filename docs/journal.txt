@@ -3242,7 +3242,7 @@ Validierung:
   → **29 passed**
 - `black --check core/tests/test_ai_endpoints_extended.py`
   → unverändert
-  
+
 ## In Arbeit: Coverage-Kampagne – core/views/ai_recommendations.py (Phase 1)
 
 **Datum:** 2026-02-25
@@ -3595,7 +3595,7 @@ Validierung:
   → **100% (`ai_coach/data_analyzer.py`: 129 Stmts, 0 Miss; Baseline 12%)**
 - `black ai_coach/tests/test_data_analyzer.py`
   → formatiert
-  
+
 ## In Arbeit: Coverage-Kampagne – core/views/training_session.py (Phase 1)
 
 **Datum:** 2026-02-25
@@ -3649,4 +3649,306 @@ Validierung:
   → **100% (`ai_coach/prompt_builder.py`: 120 Stmts, 0 Miss)**
 - `isort ai_coach/tests/test_prompt_builder.py`
 - `black --check ai_coach/tests/test_prompt_builder.py`
-  
+
+
+
+## In Arbeit: Onboarding-Tour für neue User
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+
+**Problem:**
+Berry-Gym kann für neue User überwältigend sein:
+- Viele Features (AI, Training-Log, Stats, RPE, etc.)
+- Fachbegriffe (RPE, RIR, 1RM, PPL)
+- Kein Einstiegspunkt
+
+**Ziel:**
+Geführte Tour für neue User implementieren
+- Highlight wichtigste Features
+- Erklärung der Konzepte
+- Schneller zum ersten "Success-Moment"
+
+**Scope:**
+1. Intro.js Integration
+2. 7-Step Onboarding-Tour
+3. First-Login-Trigger
+4. User-Flag (has_seen_onboarding)
+5. Skip-Option
+
+**Tech-Stack:**
+- intro.js (leichtgewichtig, keine Dependencies)
+- Django User-Model erweitern
+- Template-Integration
+
+**Geschätzter Aufwand:** 3-4 Stunden
+
+
+## Abgeschlossen: Onboarding-Tour für neue User
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 56c0653
+
+**Implementierung:**
+1. UserProfile Model erweitert:
+   - `has_seen_onboarding` BooleanField hinzugefügt
+   - Migration 0075 erstellt und ausgeführt
+
+2. Onboarding-Tour erstellt:
+   - Intro.js via CDN integriert (keine npm-Dependencies)
+   - Template: `core/templates/onboarding/tour.html`
+   - 6-Step Tour:
+     * Welcome
+     * AI-Plan Button
+     * Training starten
+     * Statistiken
+     * AI-Empfehlungen
+     * RPE Erklärung
+     * Completion
+
+3. Views implementiert:
+   - `mark_onboarding_complete` - AJAX Endpoint
+   - `restart_onboarding` - Onboarding zurücksetzen
+   - URLs registriert
+
+4. Dashboard erweitert:
+   - `data-onboarding` Attribute hinzugefügt
+   - Elemente werden von Tour gehighlightet
+
+5. Tests:
+   - 3 Tests erstellt und alle bestehen
+   - Coverage: Onboarding Views 46%
+
+**Validierung:**
+- `pytest core/tests/test_onboarding.py -v`
+  → **3 passed**
+- `python manage.py check`
+  → **System check identified no issues**
+- `git push`
+  → **Branch gepusht**
+
+**Nächste Schritte:**
+- Merge via GitHub PR (User entscheidet: Squash & Merge empfohlen)
+- Onboarding in Production testen
+- Ggf. Tour-Steps basierend auf User-Feedback anpassen
+- Optional: Feature Discovery für bestehende User (später)
+
+**Impact:**
+✅ Neue User werden durch App geführt
+✅ Weniger Verwirrung über Features
+✅ Schnellerer "Success-Moment"
+✅ Reduzierte Churn-Rate erwartet
+
+
+## Fix: Onboarding Dark Mode Styling
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 8f11596
+
+**Problem:**
+Onboarding-Tour hatte weißes Modal im Dark Mode (User-Report mit Screenshot)
+
+**Fix:**
+Umfangreiches CSS für Dark-Mode-Support hinzugefügt:
+- Intro.js Tooltip: Dunkler Hintergrund (#2b3035)
+- Text: Weiß (#ffffff)
+- Buttons: Bootstrap Primary (#0d6efd)
+- Arrows: Angepasste Border-Colors
+- Progress Bar: Dark Theme
+- Light Mode explizit definiert für Kontrast
+
+**CSS-Selektoren:**
+```css
+[data-bs-theme="dark"] .introjs-tooltip { ... }
+[data-bs-theme="dark"] .introjs-button { ... }
+[data-bs-theme="dark"] .introjs-arrow.* { ... }
+```
+
+**Validierung:**
+- Visual Check im Dark Mode nötig
+- Light Mode sollte unverändert sein
+
+**Status:** ✅ Gepusht
+
+
+## Fix: Skip-Button Sichtbarkeit verbessert
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 078a00a
+
+**Problem:**
+Skip-Button ("Überspringen") war im Dark Mode schlecht sichtbar / eigenartig dargestellt
+
+**Fix:**
+Skip-Button CSS deutlich verbessert:
+- Border hinzugefügt: `border: 1px solid rgba(255, 255, 255, 0.3)`
+- Subtiler Hintergrund beim Hover
+- Padding für bessere Klickbarkeit
+- Opacity für bessere Sichtbarkeit
+- text-shadow entfernt
+
+**Vorher:**
+- Nur grauer Text (#adb5bd)
+- Schwer zu erkennen
+- Kein visueller Fokus
+
+**Nachher:**
+- Weißer Text mit Border
+- Klar als Button erkennbar
+- Hover-Effekt mit Hintergrund
+- Deutlich besser sichtbar
+
+**Status:** ✅ Gepusht, bereit zum Testen
+
+
+## Fix: Skip-Button Position korrigiert
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** b1f30df
+
+**Problem:**
+Skip-Button ("Überspringen") war außerhalb des Modals positioniert (Screenshot zeigt Button rechts außerhalb der Box)
+
+**Root Cause:**
+Intro.js default CSS verwendet absolute Positionierung für Skip-Button
+
+**Fix:**
+Position-Reset im CSS:
+```css
+.introjs-skipbutton {
+    position: relative !important;  // statt absolute
+    top: auto !important;           // kein top offset
+    right: auto !important;         // kein right offset
+    margin-right: 0 !important;     // kein extra margin
+}
+```
+
+Zusätzlich:
+- Header-Padding erhöht (10px) für bessere Darstellung
+- Kleineres Button-Padding für kompakteren Look
+- Font-Size reduziert (0.875rem)
+- Für Dark + Light Mode angepasst
+
+**Ergebnis:**
+Skip-Button sollte jetzt innerhalb des Modal-Headers sein
+
+**Status:** ✅ Gepusht, bereit zum Testen
+
+
+## Fix: Skip-Button Text durch X-Icon ersetzt
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 3f73996
+
+**Problem:**
+Text "Überspringen" war zu lang und brach aus dem Button-Rahmen heraus (User-Feedback mit Screenshot)
+
+**Lösung:**
+Text durch universelles ✕ Symbol ersetzt:
+- `skipLabel: '✕'` statt `skipLabel: 'Überspringen'`
+- Font-Size erhöht: 1.25rem (größer, besser sichtbar)
+- Button kompakter: padding 0.25rem 0.5rem
+- Min-Width: 32px (konsistente quadratische Form)
+- Text-Align: center (perfekt zentriert)
+- Line-Height: 1 (vertikale Zentrierung)
+
+**Vorteile:**
+✅ Universell verständlich (X = Schließen)
+✅ Kein Text-Overflow
+✅ Kompakter, cleaner Look
+✅ Passt in kleinen Raum
+✅ Internationalisierung nicht nötig
+
+**Status:** ✅ Gepusht, bereit zum Testen
+
+
+## Final: Onboarding UI Polish - PRODUCTION READY! 🎉
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** 0815d76
+
+**Letzte UI-Verbesserungen (User-Feedback):**
+
+1. **Titel in zwei Zeilen:**
+   - "Willkommen bei" (Zeile 1)
+   - "Berry-Gym! 💪" (Zeile 2)
+   - Bessere Lesbarkeit
+
+2. **X-Button rechts oben positioniert:**
+   - Position: absolute (top: 10px, right: 10px)
+   - Perfektes Quadrat: 32x32px (width + height)
+   - Flexbox-Zentrierung: align-items + justify-content center
+   - Subtiler Hintergrund: rgba(255, 255, 255, 0.1)
+   - X perfekt zentriert
+
+**Finale CSS-Eigenschaften:**
+```css
+.introjs-skipbutton {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+```
+
+**FEATURE STATUS: ✅ PRODUCTION READY**
+
+Alle 6 Commits auf feature/onboarding:
+1. 56c0653 - feat: Add onboarding tour
+2. 8f11596 - fix: Dark mode styling
+3. 078a00a - fix: Skip button visibility
+4. b1f30df - fix: Skip button position
+5. 3f73996 - fix: Replace skip button text with X icon
+6. 0815d76 - fix: Final onboarding UI polish ⭐
+
+**Tests:** ✅ 3/3 bestanden
+**Ready to Merge:** ✅ Ja
+**User Feedback:** ✅ Alle Punkte adressiert
+
+
+## Test: 100% Coverage für Onboarding Views erreicht
+
+**Datum:** 2026-02-25
+**Branch:** feature/onboarding
+**Commit:** c0b7b17
+
+**Problem:**
+core/views/onboarding.py hatte 15 uncovered Zeilen (46% Coverage)
+
+**Lösung:**
+Tests deutlich erweitert von 3 auf 8 Tests:
+
+**Neue Tests:**
+1. `test_mark_onboarding_complete_error` - Exception Handling
+2. `test_restart_onboarding_ajax` - AJAX Success Path
+3. `test_restart_onboarding_redirect` - Non-AJAX Redirect
+4. `test_restart_onboarding_ajax_error` - AJAX Error Handling
+5. `test_restart_onboarding_redirect_error` - Redirect Error Handling
+
+**Techniken:**
+- `unittest.mock.patch` für Exception-Simulation
+- `HTTP_X_REQUESTED_WITH` Header für AJAX-Tests
+- setUp-Methode für gemeinsame Test-Initialisierung
+- Beide Success- und Error-Pfade getestet
+
+**Ergebnis:**
+```
+core/views/onboarding.py: 28 Statements, 0 Missed, 100% Coverage ✅
+```
+
+**Validierung:**
+- `pytest core/tests/test_onboarding.py --cov=core.views.onboarding -v`
+  → **8 passed in 18.20s**
+  → **100% Coverage**
+
+**Status:** ✅ Gepusht

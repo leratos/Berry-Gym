@@ -6,6 +6,9 @@ urlpatterns = [
     # Auth
     path("apply-beta/", views.apply_beta, name="apply_beta"),
     path("register/", views.register, name="register"),
+    # Onboarding
+    path("onboarding/complete/", views.mark_onboarding_complete, name="mark_onboarding_complete"),
+    path("onboarding/restart/", views.restart_onboarding, name="restart_onboarding"),
     # Profile
     path("profile/", views.profile, name="profile"),
     # Legal Pages
