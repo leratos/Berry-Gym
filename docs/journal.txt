@@ -3791,6 +3791,28 @@ Umfangreiches CSS für Dark-Mode-Support hinzugefügt:
 **Ready to Merge:** Ja
 
 
+## Abgeschlossen: Deload-Visualisierung & Statistik-Bereinigung
+
+**Datum:** 2026-03-02
+**Branch:** feature/fix-csrf-deload-toggle (erweitert)
+**Commit:** 2348418
+
+**Änderungen Backend** (`core/views/training_stats.py`):
+- `_get_training_heatmap()`: Gibt jetzt `{count, deload}` pro Tag zurück statt nur count
+- `_calc_per_training_volume()`: Gibt zusätzlich `deload_flags` Liste zurück
+- `_calc_weekly_volume()`: Deload-Trainings werden übersprungen (keine verzerrten Warnungen)
+- `_calc_muscle_balance()`: Deload-Trainings werden übersprungen
+- `training_stats()` View: `deload_flags_json` im Context
+
+**Änderungen Templates:**
+- `dashboard.html`: Heatmap zeigt Deload-Tage gelb + Legende
+- `training_stats.html`: Volumen-Chart zeigt Deload als gelbe Punkte mit gestrichelter Linie + Legende
+
+**Testergebnis:** 132 passed in 63.63s
+**Status:** ✅ Gepusht & Tests grün
+**Ready to Merge:** Ja
+
+
 ## In Arbeit: Bugfix – Deload-Flag wird nicht persistiert
 
 **Datum:** 2026-03-02
