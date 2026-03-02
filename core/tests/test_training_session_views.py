@@ -743,6 +743,19 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
         ):
             response = self.client.get(reverse("training_start_plan", args=[self.plan.id]))
         self.assertEqual(response.status_code, 302)
+        # Verify ist_deload flag is persisted on the training
+        training = Trainingseinheit.objects.filter(user=self.user).order_by("-datum").first()
+        self.assertTrue(training.ist_deload, "ist_deload should be True when deload week is active")
+
+    def test_training_start_non_deload_flag_false(self):
+        """Wenn KEIN Deload: ist_deload muss False bleiben."""
+        with patch(
+            "core.views.training_session._get_deload_config", return_value=(False, 0.8, 0.9, 7.0)
+        ):
+            response = self.client.get(reverse("training_start_plan", args=[self.plan.id]))
+        self.assertEqual(response.status_code, 302)
+        training = Trainingseinheit.objects.filter(user=self.user).order_by("-datum").first()
+        self.assertFalse(training.ist_deload, "ist_deload should be False for normal training")
 
     def test_determine_empfehlung_hint_kg_low_rpe_plus2(self):
         satz = MagicMock()
