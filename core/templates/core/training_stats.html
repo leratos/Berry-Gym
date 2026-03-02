@@ -76,6 +76,12 @@
                     <i class="bi bi-graph-up-arrow me-2"></i>{% trans "Volumen-Progression (pro Training)" %}
                 </h6>
                 <canvas id="volumenChart" style="max-height: 300px;"></canvas>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                    <span style="width:12px;height:12px;border-radius:50%;background:#198754;display:inline-block;"></span>
+                    <small class="text-muted">{% trans "Normal" %}</small>
+                    <span style="width:12px;height:12px;border-radius:50%;background:#ffc107;display:inline-block;margin-left:8px;"></span>
+                    <small class="text-muted">{% trans "Deload" %}</small>
+                </div>
             </div>
         </div>
 
@@ -205,6 +211,11 @@
         }
     };
 
+    const deloadFlags = {{ deload_flags_json|safe }};
+    const pointColors = deloadFlags.map(d => d ? '#ffc107' : '#198754');
+    const pointBorders = deloadFlags.map(d => d ? '#ffc107' : '#198754');
+    const pointRadii = deloadFlags.map(d => d ? 6 : 4);
+
     new Chart(document.getElementById('volumenChart'), {
         type: 'line',
         data: {
@@ -214,7 +225,15 @@
                 data: {{ volumen_data_json|safe }},
                 borderColor: '#198754',
                 backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                tension: 0.3, fill: true, pointRadius: 4, pointHoverRadius: 6
+                tension: 0.3, fill: true,
+                pointRadius: pointRadii,
+                pointHoverRadius: 8,
+                pointBackgroundColor: pointColors,
+                pointBorderColor: pointBorders,
+                segment: {
+                    borderColor: ctx => deloadFlags[ctx.p0DataIndex] || deloadFlags[ctx.p1DataIndex] ? '#ffc10766' : '#198754',
+                    borderDash: ctx => deloadFlags[ctx.p0DataIndex] || deloadFlags[ctx.p1DataIndex] ? [5, 5] : [],
+                }
             }]
         },
         options: chartDefaults

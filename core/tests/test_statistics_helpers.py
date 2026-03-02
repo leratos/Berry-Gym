@@ -104,7 +104,7 @@ class TestCalcPerTrainingVolume:
     def test_leere_trainings_liste(self):
         from core.views.training_stats import _calc_per_training_volume
 
-        labels, data = _calc_per_training_volume([])
+        labels, data, _ = _calc_per_training_volume([])
         assert labels == []
         assert data == []
 
@@ -116,7 +116,7 @@ class TestCalcPerTrainingVolume:
         satz2 = make_mock_satz(gewicht=80.0, wiederholungen=8)  # 640
         # Erwartet: 1640 kg
         training = make_mock_training(datum=datetime(2026, 2, 15), saetze=[satz1, satz2])
-        labels, data = _calc_per_training_volume([training])
+        labels, data, _ = _calc_per_training_volume([training])
         assert len(labels) == 1
         assert data[0] == pytest.approx(1640.0, abs=0.1)
 
@@ -124,14 +124,14 @@ class TestCalcPerTrainingVolume:
         from core.views.training_stats import _calc_per_training_volume
 
         training = make_mock_training(datum=datetime(2026, 2, 15), saetze=[])
-        labels, data = _calc_per_training_volume([training])
+        labels, data, _ = _calc_per_training_volume([training])
         assert data[0] == 0.0
 
     def test_label_format_dd_mm(self):
         from core.views.training_stats import _calc_per_training_volume
 
         training = make_mock_training(datum=datetime(2026, 2, 5), saetze=[make_mock_satz()])
-        labels, _ = _calc_per_training_volume([training])
+        labels, _, _ = _calc_per_training_volume([training])
         assert labels[0] == "05.02"
 
     def test_mehrere_trainings_richtige_reihenfolge(self):
@@ -139,7 +139,7 @@ class TestCalcPerTrainingVolume:
 
         t1 = make_mock_training(datum=datetime(2026, 2, 1), saetze=[make_mock_satz(100, 10)])
         t2 = make_mock_training(datum=datetime(2026, 2, 8), saetze=[make_mock_satz(120, 5)])
-        labels, data = _calc_per_training_volume([t1, t2])
+        labels, data, _ = _calc_per_training_volume([t1, t2])
         assert len(labels) == 2
         assert data[0] == pytest.approx(1000.0, abs=0.1)
         assert data[1] == pytest.approx(600.0, abs=0.1)
@@ -150,7 +150,7 @@ class TestCalcPerTrainingVolume:
 
         satz = make_mock_satz(gewicht=None, wiederholungen=10)
         training = make_mock_training(datum=datetime(2026, 2, 15), saetze=[satz])
-        labels, data = _calc_per_training_volume([training])
+        labels, data, _ = _calc_per_training_volume([training])
         # None-Guard in der Funktion: `if s.gewicht and s.wiederholungen`
         assert data[0] == 0.0
 
