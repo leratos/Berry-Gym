@@ -232,11 +232,13 @@ def training_start(request: HttpRequest, plan_id: Optional[int] = None) -> HttpR
     if plan_id:
         plan = get_object_or_404(Plan, id=plan_id, user=request.user)
         training.plan = plan
-        training.save()
 
         is_deload, deload_vol_factor, deload_weight_factor, deload_rpe_target = _get_deload_config(
             request.user, plan
         )
+        training.ist_deload = is_deload
+        training.save()
+
         _create_ghost_saetze(training, plan, is_deload, deload_vol_factor, deload_weight_factor)
 
         if is_deload:
