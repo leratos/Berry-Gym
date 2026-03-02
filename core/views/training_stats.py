@@ -384,16 +384,20 @@ def _get_motivation_quote(form_index: int, fatigue_index: int) -> str:
 
 
 def _get_training_heatmap(user, heute) -> str:
-    """Return JSON string of training counts per day for the last 365 days."""
+    """Return JSON string of training counts per day for the last 365 days.
+
+    Each entry has the format {"count": int, "deload": bool}.
+    """
     start_date = heute - timedelta(days=364)
-    trainings_by_date = (
-        Trainingseinheit.objects.filter(user=user, datum__gte=start_date)
-        .values("datum__date")
-        .annotate(count=Count("id"))
-    )
-    heatmap = {
-        entry["datum__date"].strftime("%Y-%m-%d"): entry["count"] for entry in trainings_by_date
-    }
+    trainings = Trainingseinheit.objects.filter(user=user, datum__gte=start_date)
+    heatmap: dict[str, dict] = {}
+    for t in trainings:
+        key = t.datum.date().strftime("%Y-%m-%d") if hasattr(t.datum, "date") else str(t.datum)
+        if key not in heatmap:
+            heatmap[key] = {"count": 0, "deload": False}
+        heatmap[key]["count"] += 1
+        if t.ist_deload:
+            heatmap[key]["deload"] = True
     return json.dumps(heatmap)
 
 
@@ -907,10 +911,11 @@ _MUSCLE_MAPPING: dict[str, list[str]] = {
 }
 
 
-def _calc_per_training_volume(trainings) -> tuple[list, list]:
-    """Return (date_labels, volumes) for every training session."""
+def _calc_per_training_volume(trainings) -> tuple[list, list, list]:
+    """Return (date_labels, volumes, deload_flags) for every training session."""
     labels: list[str] = []
     data: list[float] = []
+    deload_flags: list[bool] = []
     for training in trainings:
         arbeitssaetze = training.arbeitssaetze_list
         vol = sum(
@@ -920,13 +925,19 @@ def _calc_per_training_volume(trainings) -> tuple[list, list]:
         )
         labels.append(training.datum.strftime("%d.%m"))
         data.append(round(vol, 1))
-    return labels, data
+        deload_flags.append(bool(training.ist_deload))
+    return labels, data, deload_flags
 
 
 def _calc_weekly_volume(trainings) -> tuple[list, list]:
-    """Return (iso_week_labels, volumes) for the last 12 ISO calendar weeks."""
+    """Return (iso_week_labels, volumes) for the last 12 ISO calendar weeks.
+
+    Deload trainings are excluded so they don't distort volume trends.
+    """
     weekly: defaultdict[str, float] = defaultdict(float)
     for training in trainings:
+        if training.ist_deload:
+            continue
         iso_year, iso_week, _ = training.datum.isocalendar()
         key = f"{iso_year}-W{iso_week:02d}"
         arbeitssaetze = training.arbeitssaetze_list
@@ -952,6 +963,8 @@ def _calc_muscle_balance(trainings) -> tuple[list, list, list, dict]:
     stats: dict[str, dict] = {}
     stats_code: dict[str, float] = {}
     for training in trainings:
+        if training.ist_deload:
+            continue
         for satz in training.arbeitssaetze_list:
             if not satz.wiederholungen:
                 continue
@@ -1042,7 +1055,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     if not trainings.exists():
         return render(request, "core/training_stats.html", {"no_data": True})
 
-    volumen_labels, volumen_data = _calc_per_training_volume(trainings)
+    volumen_labels, volumen_data, deload_flags = _calc_per_training_volume(trainings)
     weekly_labels, weekly_data = _calc_weekly_volume(trainings)
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(trainings)
     svg_muscle_data = _build_svg_muscle_data(stats_code)
@@ -1059,6 +1072,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "durchschnitt_volumen": durchschnitt,
         "volumen_labels_json": json.dumps(volumen_labels),
         "volumen_data_json": json.dumps(volumen_data),
+        "deload_flags_json": json.dumps(deload_flags),
         "weekly_labels_json": json.dumps(weekly_labels),
         "weekly_data_json": json.dumps(weekly_data),
         "mg_labels_json": json.dumps(mg_labels),
