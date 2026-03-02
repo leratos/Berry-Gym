@@ -1109,6 +1109,8 @@
         }
 
         function getCSRFToken() {
+            const input = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (input) return input.value;
             const name = 'csrftoken';
             const cookies = document.cookie.split(';');
             for (let cookie of cookies) {
