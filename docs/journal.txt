@@ -3773,6 +3773,59 @@ Umfangreiches CSS für Dark-Mode-Support hinzugefügt:
 **Status:** ✅ Gepusht
 
 
+## Abgeschlossen: Fix CSRF 403 bei Deload-Toggle
+
+**Datum:** 2026-03-02
+**Branch:** feature/fix-csrf-deload-toggle
+**Commit:** 21eb60e
+
+**Problem:** `toggle-deload` POST gibt 403 Forbidden zurück.
+**Ursache:** `CSRF_COOKIE_HTTPONLY = True` (settings.py Zeile 466) macht das `csrftoken`-Cookie für JS unlesbar. `getCSRFToken()` las nur aus `document.cookie` → leerer Token → 403.
+**Fix:** `getCSRFToken()` liest jetzt zuerst das hidden input `[name=csrfmiddlewaretoken]` (Zeile 468), Cookie nur als Fallback.
+
+**Geänderte Datei:**
+- `core/templates/core/training_session.html` – 2 Zeilen hinzugefügt in `getCSRFToken()`
+
+**Testergebnis:** 82 passed in 36.28s
+**Status:** ✅ Gepusht & Tests grün
+**Ready to Merge:** Ja
+
+
+## In Arbeit: Bugfix – Deload-Flag wird nicht persistiert
+
+**Datum:** 2026-03-02
+**Branch:** feature/fix-deload-flag-persistence
+
+**Problem:**
+`training_start()` setzt `training.ist_deload` nie auf `True`, obwohl die Deload-Woche korrekt erkannt wird.
+Dadurch werden Deload-Trainings in allen Statistik-Queries (1RM, Volumen, PRs) mitgezählt.
+
+**Nächster Schritt:** Fix in `core/views/training_session.py` → `training_start()`
+
+## Abgeschlossen: Bugfix – Deload-Flag Persistierung
+
+**Commit:** 8da637b
+**Branch:** feature/fix-deload-flag-persistence
+
+**Root Cause:**
+`training_start()` rief `training.save()` BEVOR `_get_deload_config()` aufgerufen wurde.
+Dadurch wurde `ist_deload` nie auf `True` gesetzt.
+
+**Fix:**
+`_get_deload_config()` wird jetzt VOR `training.save()` aufgerufen.
+`training.ist_deload = is_deload` wird gesetzt, dann gespeichert → nur 1x save.
+
+**Geänderte Dateien:**
+- `core/views/training_session.py` – Reihenfolge in `training_start()` korrigiert
+- `core/tests/test_training_session_views.py` – 2 Tests hinzugefügt:
+  - `test_training_start_deload_message_branch` erweitert (prüft `ist_deload=True`)
+  - `test_training_start_non_deload_flag_false` (prüft `ist_deload=False`)
+
+**Testergebnis:** 82 passed in 42.46s – 100% Coverage für training_session.py
+**Status:** ✅ Gepusht & Tests grün
+**Ready to Merge:** Ja
+
+
 ## Fix: Skip-Button Sichtbarkeit verbessert
 
 **Datum:** 2026-02-25
