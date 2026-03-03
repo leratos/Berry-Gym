@@ -3798,6 +3798,30 @@ Umfangreiches CSS für Dark-Mode-Support hinzugefügt:
 **Status:** ✅ Gepusht
 
 
+## Abgeschlossen: Body Stats Trend Chart
+
+**Datum:** 2026-03-03
+**Branch:** feature/body-stats-trend-chart
+
+**Aufgabe:** Überlagertes Trend-Diagramm mit Dual-Y-Achsen unter der Tabelle "Alle Messungen"
+- Linke Y-Achse (kg): Gewicht (cyan), Muskelmasse (blau)
+- Rechte Y-Achse (% / Index): KFA% (rot), BMI (gelb), FFMI (grün)
+- Keine Fill-Areas, tension 0.3, Legende
+- Nur Template-Änderung, kein Backend
+
+**Datei:** core/templates/core/body_stats.html
+
+**Änderungen:**
+- Neue Card "Gesamtübersicht" mit `<canvas id="trendChart">` nach Alle-Messungen-Tabelle
+- Dual-Y-Achsen Chart: links kg (Gewicht cyan, Muskelmasse blau), rechts %/Index (KFA rot, BMI gelb, FFMI grün)
+- Crosshair-Tooltip (interaction mode: index), usePointStyle Legende
+- Keine Backend-Änderungen (alle JSON-Serien bereits vorhanden)
+- Commit: ee25149
+- Tests: 26/26 passed
+
+**Status:** ✅ Gepusht
+
+
 ## Abgeschlossen: Fix CSRF 403 bei Deload-Toggle
 
 **Datum:** 2026-03-02
