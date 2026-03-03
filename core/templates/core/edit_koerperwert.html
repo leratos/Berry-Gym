@@ -96,6 +96,53 @@
         </div>
     </div>
 
+    <div class="card bg-dark border-secondary mb-3">
+        <div class="card-body pb-2 pt-3">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-water text-info me-2"></i>
+                <span class="text-muted small fw-bold">{% trans "KÖRPERWASSER" %}</span>
+                <span class="ms-auto text-muted" style="font-size:0.7rem">{% trans "eines eingeben → anderes wird berechnet" %}</span>
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="text-muted" style="font-size:0.72rem">kg</label>
+                    <input id="wasser_kg" type="number" step="0.1" name="koerperwasser_kg"
+                           value="{{ wert.koerperwasser_kg|default:'' }}"
+                           class="form-control bg-transparent text-white border-secondary fw-bold fs-5 text-center"
+                           placeholder="–">
+                </div>
+                <div class="col-6">
+                    <label class="text-muted" style="font-size:0.72rem">%</label>
+                    <input id="wasser_prozent" type="number" step="0.1" name="koerperwasser_prozent"
+                           value="{{ wert.koerperwasser_prozent|default:'' }}"
+                           class="form-control bg-transparent text-white border-secondary fw-bold fs-5 text-center"
+                           placeholder="–">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6">
+            <div class="p-3 bg-dark border border-secondary rounded-3">
+                <label class="d-block text-muted small mb-1"><i class="bi bi-heart-pulse text-danger"></i> {% trans "Viszeralfett" %}</label>
+                <input type="number" step="1" name="viszeralfett" min="1" max="59"
+                       value="{{ wert.viszeralfett|default:'' }}"
+                       class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="–">
+                <small class="text-muted" style="font-size:0.65rem">{% trans "Stufe 1-59" %}</small>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="p-3 bg-dark border border-secondary rounded-3">
+                <label class="d-block text-muted small mb-1"><i class="bi bi-fire text-warning"></i> {% trans "Grundumsatz" %}</label>
+                <input type="number" step="1" name="grundumsatz_kcal" min="500" max="5000"
+                       value="{{ wert.grundumsatz_kcal|default:'' }}"
+                       class="form-control bg-transparent text-white border-0 fw-bold fs-4 p-0" placeholder="–">
+                <small class="text-muted" style="font-size:0.65rem">kcal</small>
+            </div>
+        </div>
+    </div>
+
     <div class="d-grid gap-2 mt-5 pb-5">
         <button type="submit" class="btn btn-primary btn-lg fw-bold p-3 rounded-4">
             <i class="bi bi-check-lg me-2"></i>{% trans "Änderungen speichern" %}
@@ -138,6 +185,22 @@
         if (g && this.value) muskelKg.value = round1(parseFloat(this.value) / 100 * g);
         else if (!this.value) muskelKg.value = '';
     });
+    const wasserKg  = document.getElementById('wasser_kg');
+    const wasserPct = document.getElementById('wasser_prozent');
+
+    if (wasserKg && wasserPct) {
+        wasserKg.addEventListener('input', function () {
+            const g = getGewicht();
+            if (g && this.value) wasserPct.value = round1(parseFloat(this.value) / g * 100);
+            else if (!this.value) wasserPct.value = '';
+        });
+        wasserPct.addEventListener('input', function () {
+            const g = getGewicht();
+            if (g && this.value) wasserKg.value = round1(parseFloat(this.value) / 100 * g);
+            else if (!this.value) wasserKg.value = '';
+        });
+    }
+
     gewichtInput?.addEventListener('input', function () {
         const g = parseFloat(this.value) || null;
         if (!g) return;
@@ -145,6 +208,8 @@
         if (fettPct.value)   fettKg.value     = round1(parseFloat(fettPct.value)   / 100 * g);
         if (muskelKg.value)  muskelPct.value  = round1(parseFloat(muskelKg.value)  / g * 100);
         if (muskelPct.value) muskelKg.value   = round1(parseFloat(muskelPct.value) / 100 * g);
+        if (wasserKg && wasserKg.value)   wasserPct.value = round1(parseFloat(wasserKg.value)  / g * 100);
+        if (wasserPct && wasserPct.value)  wasserKg.value  = round1(parseFloat(wasserPct.value) / 100 * g);
     });
 })();
 </script>
