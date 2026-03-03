@@ -1,5 +1,30 @@
 # Berry-Gym Development Journal
 
+
+## TODO (offen)
+
+- [ ] Lokale Testdaten / Fixtures erstellen (loaddata-Setup), damit Dev-Server lokal mit realistischen Daten laufen kann. Wird relevant sobald weitere User aktiv sind. (notiert 2026-03-02)
+
+
+## Abgeschlossen: Körperwerte-Erweiterung & Auto-Berechnung
+
+**Datum:** 2026-03-03
+**Branch:** feature/body-stats-enhancement
+**Commit:** a02ac2f
+**Geänderte Dateien:** 10 (Model, Migration, 4 Templates, Views, Export, Tests, Journal)
+
+**Was wurde gemacht:**
+- Model: 3 neue DB-Felder (koerperwasser_prozent, viszeralfett, grundumsatz_kcal)
+- Model: 3 berechnete Properties (lbm_kg, muskel_fett_ratio, gewichts_veraenderung_rate)
+- Model: Refactor ffmi -> nutzt jetzt _get_fett_kg() statt duplizierter Logik
+- Formular (add + edit): Wasser als kg/%-Paar, Viszeralfett, Grundumsatz, JS Auto-Berechnung
+- PDF-Export: 6 neue Zeilen mit klinischen Bewertungen, 3 neue Spalten in Verlaufstabelle
+- Body Stats: 3 neue responsive Spalten
+- 9 neue Tests (40/40 passed, 14/14 Export-Tests passed)
+
+**Status:** Gepusht
+
+
 ## Abgeschlossen: Phase 4.2 – Database Indexes
 
 **Datum:** 2026-02-15

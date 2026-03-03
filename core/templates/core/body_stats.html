@@ -109,6 +109,9 @@
                             <th>BMI</th>
                             <th>FFMI</th>
                             <th>KFA</th>
+                            <th class="d-none d-md-table-cell">Wasser</th>
+                            <th class="d-none d-md-table-cell">Viszeral</th>
+                            <th class="d-none d-lg-table-cell">BMR</th>
                             <th class="text-end">{% trans "Aktionen" %}</th>
                         </tr>
                     </thead>
@@ -120,6 +123,9 @@
                             <td>{{ wert.bmi|default:"--" }}</td>
                             <td>{{ wert.ffmi|default:"--" }}</td>
                             <td>{{ wert.koerperfett_prozent|default:"--" }}{% if wert.koerperfett_prozent %}%{% endif %}</td>
+                            <td class="d-none d-md-table-cell">{% if wert.koerperwasser_prozent %}{{ wert.koerperwasser_prozent }}%{% elif wert.koerperwasser_kg %}{{ wert.koerperwasser_kg }}kg{% else %}--{% endif %}</td>
+                            <td class="d-none d-md-table-cell">{{ wert.viszeralfett|default:"--" }}</td>
+                            <td class="d-none d-lg-table-cell">{% if wert.grundumsatz_kcal %}{{ wert.grundumsatz_kcal }}{% else %}--{% endif %}</td>
                             <td class="text-end">
                                 <a href="{% url 'edit_koerperwert' wert.id %}" class="btn btn-sm btn-outline-primary border-0" title="{% trans 'Bearbeiten' %}">
                                     <i class="bi bi-pencil"></i>
