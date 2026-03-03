@@ -476,6 +476,9 @@ def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     koerperwerte = list(koerperwerte_qs[:10])  # letzte 10 für Verlaufstabelle im PDF
     letzter_koerperwert = koerperwerte[0] if koerperwerte else None
     user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
+    gewichts_rate = (
+        letzter_koerperwert.gewichts_veraenderung_rate() if letzter_koerperwert else None
+    )
     rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)
     gewichts_trend = _collect_weight_trend(koerperwerte)
 
@@ -514,6 +517,7 @@ def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         "volumen_wochen": volumen_wochen[-8:],
         "koerperwerte": koerperwerte,
         "letzter_koerperwert": letzter_koerperwert,
+        "gewichts_rate": gewichts_rate,
         "gewichts_trend": gewichts_trend,
         "plateau_analysis": plateau_analysis,
         "consistency_metrics": consistency_metrics,

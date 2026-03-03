@@ -23,6 +23,21 @@ class KoerperWerte(models.Model):
     koerperwasser_kg = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True, verbose_name="Wasser (kg)"
     )
+    koerperwasser_prozent = models.DecimalField(
+        max_digits=4, decimal_places=1, blank=True, null=True, verbose_name="Wasser (%)"
+    )
+    viszeralfett = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Viszeralfett (Stufe)",
+        help_text="Viszeralfett-Stufe (1-59), je nach Waage",
+    )
+    grundumsatz_kcal = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Grundumsatz (kcal)",
+        help_text="Basaler Energieumsatz (BMR) in kcal",
+    )
     muskelmasse_kg = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True, verbose_name="Muskeln (kg)"
     )
@@ -60,11 +75,7 @@ class KoerperWerte(models.Model):
     @property
     def ffmi(self):
         groesse = self._get_groesse_cm()
-        fett_kg = None
-        if self.fettmasse_kg:
-            fett_kg = float(self.fettmasse_kg)
-        elif self.gewicht and self.koerperfett_prozent:
-            fett_kg = float(self.gewicht) * (float(self.koerperfett_prozent) / 100)
+        fett_kg = self._get_fett_kg()
         if self.gewicht and groesse and fett_kg is not None:
             fettfreie_masse = float(self.gewicht) - fett_kg
             groesse_m = groesse / 100
@@ -72,6 +83,45 @@ class KoerperWerte(models.Model):
             ffmi_norm = ffmi_wert + 6.1 * (1.8 - groesse_m)
             return round(ffmi_norm, 1)
         return None
+
+    @property
+    def lbm_kg(self):
+        """Lean Body Mass (fettfreie Masse) in kg."""
+        fett_kg = self._get_fett_kg()
+        if self.gewicht and fett_kg is not None:
+            return round(float(self.gewicht) - fett_kg, 2)
+        return None
+
+    @property
+    def muskel_fett_ratio(self):
+        """Verhältnis Muskelmasse zu Fettmasse."""
+        fett_kg = self._get_fett_kg()
+        if self.muskelmasse_kg and fett_kg and fett_kg > 0:
+            return round(float(self.muskelmasse_kg) / fett_kg, 2)
+        return None
+
+    def _get_fett_kg(self) -> float | None:
+        """Fettmasse in kg aus direktem Wert oder Prozent berechnet."""
+        if self.fettmasse_kg:
+            return float(self.fettmasse_kg)
+        if self.gewicht and self.koerperfett_prozent:
+            return float(self.gewicht) * (float(self.koerperfett_prozent) / 100)
+        return None
+
+    def gewichts_veraenderung_rate(self) -> float | None:
+        """Gewichtsveränderung in kg/Woche zum vorherigen Eintrag."""
+        vorheriger = (
+            KoerperWerte.objects.filter(user=self.user, datum__lt=self.datum)
+            .order_by("-datum")
+            .first()
+        )
+        if not vorheriger or not vorheriger.gewicht:
+            return None
+        tage = (self.datum - vorheriger.datum).days
+        if tage <= 0:
+            return None
+        diff_kg = float(self.gewicht) - float(vorheriger.gewicht)
+        return round(diff_kg / tage * 7, 2)
 
 
 class ProgressPhoto(models.Model):

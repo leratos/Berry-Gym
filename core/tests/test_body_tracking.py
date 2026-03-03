@@ -287,3 +287,86 @@ class TestDeleteProgressPhoto:
 
         # Foto existiert noch
         assert ProgressPhoto.objects.filter(id=photo_user2.id).exists()
+
+
+@pytest.mark.django_db
+class TestKoerperWerteProperties:
+    """Tests für berechnete Properties auf KoerperWerte Model."""
+
+    def test_lbm_kg_aus_fettmasse(self):
+        """LBM = Gewicht - Fettmasse."""
+        wert = KoerperWerteFactory(
+            gewicht=90, fettmasse_kg=20, koerperfett_prozent=None, muskelmasse_kg=30
+        )
+        assert wert.lbm_kg == 70.0
+
+    def test_lbm_kg_aus_kfa_prozent(self):
+        """LBM berechnet aus KFA% wenn fettmasse_kg fehlt."""
+        wert = KoerperWerteFactory(
+            gewicht=100, fettmasse_kg=None, koerperfett_prozent=25, muskelmasse_kg=40
+        )
+        assert wert.lbm_kg == 75.0
+
+    def test_lbm_kg_none_ohne_fettdaten(self):
+        """LBM None wenn weder fettmasse_kg noch KFA%."""
+        wert = KoerperWerteFactory(
+            gewicht=90, fettmasse_kg=None, koerperfett_prozent=None, muskelmasse_kg=30
+        )
+        assert wert.lbm_kg is None
+
+    def test_muskel_fett_ratio(self):
+        """Muskel/Fett Ratio = Muskelmasse / Fettmasse."""
+        wert = KoerperWerteFactory(
+            gewicht=90, muskelmasse_kg=40, fettmasse_kg=20, koerperfett_prozent=None
+        )
+        assert wert.muskel_fett_ratio == 2.0
+
+    def test_muskel_fett_ratio_none_ohne_fett(self):
+        """Ratio None wenn keine Fettdaten."""
+        wert = KoerperWerteFactory(
+            gewicht=90, muskelmasse_kg=40, fettmasse_kg=None, koerperfett_prozent=None
+        )
+        assert wert.muskel_fett_ratio is None
+
+    def test_get_fett_kg_priorisiert_direktwert(self):
+        """_get_fett_kg bevorzugt fettmasse_kg über Prozent."""
+        wert = KoerperWerteFactory(
+            gewicht=100, fettmasse_kg=22, koerperfett_prozent=25, muskelmasse_kg=40
+        )
+        # Direktwert 22 hat Vorrang vor 25% von 100 = 25
+        assert wert._get_fett_kg() == 22.0
+
+    def test_gewichts_veraenderung_rate(self):
+        """Gewichtsrate berechnet kg/Woche zwischen zwei Einträgen."""
+        import datetime
+
+        user = UserFactory()
+        # Erster Eintrag
+        wert1 = KoerperWerteFactory(user=user, gewicht=100)
+        # Datum manuell setzen (auto_now_add umgehen)
+        KoerperWerte.objects.filter(id=wert1.id).update(datum=datetime.date(2026, 1, 1))
+        # Zweiter Eintrag 7 Tage später
+        wert2 = KoerperWerteFactory(user=user, gewicht=99)
+        KoerperWerte.objects.filter(id=wert2.id).update(datum=datetime.date(2026, 1, 8))
+        wert2.refresh_from_db()
+        rate = wert2.gewichts_veraenderung_rate()
+        assert rate == -1.0  # (99-100) / 7 Tage * 7 = -1.0 kg/Woche
+
+    def test_gewichts_veraenderung_rate_erster_eintrag(self):
+        """Rate None wenn kein vorheriger Eintrag."""
+        wert = KoerperWerteFactory()
+        assert wert.gewichts_veraenderung_rate() is None
+
+    def test_neue_felder_speicherbar(self):
+        """Viszeralfett, Grundumsatz, Wasser% können gespeichert werden."""
+        wert = KoerperWerteFactory(
+            viszeralfett=8,
+            grundumsatz_kcal=1850,
+            koerperwasser_prozent=55.0,
+            koerperwasser_kg=49.5,
+        )
+        wert.refresh_from_db()
+        assert wert.viszeralfett == 8
+        assert wert.grundumsatz_kcal == 1850
+        assert float(wert.koerperwasser_prozent) == 55.0
+        assert float(wert.koerperwasser_kg) == 49.5
