@@ -507,6 +507,70 @@
                 <td>-</td>
             </tr>
             {% endif %}
+            {% if letzter_koerperwert.koerperwasser_kg or letzter_koerperwert.koerperwasser_prozent %}
+            <tr>
+                <td>Körperwasser</td>
+                <td>
+                    {% if letzter_koerperwert.koerperwasser_kg %}{{ letzter_koerperwert.koerperwasser_kg|floatformat:1 }} kg{% endif %}
+                    {% if letzter_koerperwert.koerperwasser_prozent %}({{ letzter_koerperwert.koerperwasser_prozent|floatformat:1 }} %){% endif %}
+                </td>
+                <td>-</td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.lbm_kg %}
+            <tr>
+                <td>Fettfreie Masse (LBM)</td>
+                <td>{{ letzter_koerperwert.lbm_kg|floatformat:1 }} kg</td>
+                <td>-</td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.muskel_fett_ratio %}
+            <tr>
+                <td>Muskel/Fett-Ratio</td>
+                <td>{{ letzter_koerperwert.muskel_fett_ratio }}:1</td>
+                <td>
+                    {% with ratio=letzter_koerperwert.muskel_fett_ratio %}
+                    {% if ratio < 1.0 %}Mehr Fett als Muskeln
+                    {% elif ratio < 1.5 %}Ausgewogen
+                    {% elif ratio < 2.0 %}Gut
+                    {% else %}Sehr gut{% endif %}
+                    {% endwith %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.viszeralfett %}
+            <tr>
+                <td>Viszeralfett</td>
+                <td>Stufe {{ letzter_koerperwert.viszeralfett }}</td>
+                <td>
+                    {% with vf=letzter_koerperwert.viszeralfett %}
+                    {% if vf <= 9 %}✅ Normal
+                    {% elif vf <= 14 %}&#9888; Erhöht
+                    {% else %}❌ Hoch – Arzt konsultieren{% endif %}
+                    {% endwith %}
+                </td>
+            </tr>
+            {% endif %}
+            {% if letzter_koerperwert.grundumsatz_kcal %}
+            <tr>
+                <td>Grundumsatz (BMR)</td>
+                <td>{{ letzter_koerperwert.grundumsatz_kcal }} kcal</td>
+                <td>-</td>
+            </tr>
+            {% endif %}
+            {% if gewichts_rate %}
+            <tr>
+                <td>Gewichtsveränderung</td>
+                <td>{{ gewichts_rate }} kg/Woche</td>
+                <td>
+                    {% if gewichts_rate > 1.0 %}&#9888; Schnelle Zunahme
+                    {% elif gewichts_rate > 0 %}Leichte Zunahme
+                    {% elif gewichts_rate > -0.5 %}Moderater Verlust
+                    {% elif gewichts_rate > -1.0 %}Guter Verlust
+                    {% else %}&#9888; Schneller Verlust – Muskelabbau möglich{% endif %}
+                </td>
+            </tr>
+            {% endif %}
         </tbody>
     </table>
     {% endif %}
@@ -521,6 +585,9 @@
                 <th>FFMI</th>
                 <th>KFA %</th>
                 <th>Muskeln %</th>
+                <th>Wasser %</th>
+                <th>Viszeral</th>
+                <th>BMR</th>
             </tr>
         </thead>
         <tbody>
@@ -532,6 +599,9 @@
                 <td>{{ wert.ffmi|default:"-" }}</td>
                 <td>{{ wert.koerperfett_prozent|floatformat:1|default:"-" }}{% if wert.koerperfett_prozent %} %{% endif %}</td>
                 <td>{{ wert.muskelmasse_prozent|floatformat:1|default:"-" }}{% if wert.muskelmasse_prozent %} %{% endif %}</td>
+                <td>{{ wert.koerperwasser_prozent|floatformat:1|default:"-" }}{% if wert.koerperwasser_prozent %} %{% endif %}</td>
+                <td>{{ wert.viszeralfett|default:"-" }}</td>
+                <td>{% if wert.grundumsatz_kcal %}{{ wert.grundumsatz_kcal }}{% else %}-{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>

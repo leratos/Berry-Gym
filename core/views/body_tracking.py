@@ -32,9 +32,12 @@ def add_koerperwert(request: HttpRequest) -> HttpResponse:
         fett_kg = request.POST.get("fett_kg")
         kfa = request.POST.get("kfa")
         wasser = request.POST.get("wasser")
+        wasser_prozent = request.POST.get("wasser_prozent")
         muskel = request.POST.get("muskel")
         muskel_prozent = request.POST.get("muskel_prozent")
         knochen = request.POST.get("knochen")
+        viszeralfett = request.POST.get("viszeralfett")
+        grundumsatz = request.POST.get("grundumsatz")
         notiz = request.POST.get("notiz")
 
         # Wenn Größe angegeben: Profil aktualisieren damit sie konsistent bleibt
@@ -53,9 +56,12 @@ def add_koerperwert(request: HttpRequest) -> HttpResponse:
             fettmasse_kg=fett_kg if fett_kg else None,
             koerperfett_prozent=kfa if kfa else None,
             koerperwasser_kg=wasser if wasser else None,
+            koerperwasser_prozent=wasser_prozent if wasser_prozent else None,
             muskelmasse_kg=muskel if muskel else None,
             muskelmasse_prozent=muskel_prozent if muskel_prozent else None,
             knochenmasse_kg=knochen if knochen else None,
+            viszeralfett=viszeralfett if viszeralfett else None,
+            grundumsatz_kcal=grundumsatz if grundumsatz else None,
             notiz=notiz,
         )
         return redirect("dashboard")
@@ -130,8 +136,12 @@ def edit_koerperwert(request: HttpRequest, wert_id: int) -> HttpResponse:
         wert.groesse_cm = request.POST.get("groesse_cm") or None
         wert.koerperfett_prozent = request.POST.get("koerperfett_prozent") or None
         wert.fettmasse_kg = request.POST.get("fettmasse_kg") or None
+        wert.koerperwasser_kg = request.POST.get("koerperwasser_kg") or None
+        wert.koerperwasser_prozent = request.POST.get("koerperwasser_prozent") or None
         wert.muskelmasse_kg = request.POST.get("muskelmasse_kg") or None
         wert.muskelmasse_prozent = request.POST.get("muskelmasse_prozent") or None
+        wert.viszeralfett = request.POST.get("viszeralfett") or None
+        wert.grundumsatz_kcal = request.POST.get("grundumsatz_kcal") or None
         wert.save()
         messages.success(request, "Körperwert erfolgreich aktualisiert!")
         return redirect("body_stats")
