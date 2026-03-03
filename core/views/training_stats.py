@@ -37,6 +37,7 @@ from ..models import (
     Uebung,
     UserProfile,
 )
+from .body_tracking import _prepare_body_chart_data
 
 logger = logging.getLogger(__name__)
 
@@ -1066,6 +1067,15 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     gesamt_volumen = sum(volumen_data)
     durchschnitt = round(gesamt_volumen / len(volumen_data), 1) if volumen_data else 0
 
+    # Body stats trend data (optional – only if measurements exist)
+    body_werte = KoerperWerte.objects.filter(user=request.user).order_by("datum")
+    body_chart_ctx = {}
+    if body_werte.exists():
+        raw = _prepare_body_chart_data(body_werte)
+        # Prefix keys with body_ to avoid collisions with training chart vars
+        body_chart_ctx = {f"body_{k}": v for k, v in raw.items()}
+        body_chart_ctx["has_body_data"] = True
+
     context = {
         "trainings_count": trainings.count(),
         "gesamt_volumen": round(gesamt_volumen, 1),
@@ -1081,5 +1091,6 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "heatmap_data_json": json.dumps(heatmap_data),
         "deload_warnings": deload_warnings,
         "svg_muscle_data_json": json.dumps(svg_muscle_data),
+        **body_chart_ctx,
     }
     return render(request, "core/training_stats.html", context)
