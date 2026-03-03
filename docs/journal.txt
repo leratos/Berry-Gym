@@ -3816,8 +3816,11 @@ Umfangreiches CSS für Dark-Mode-Support hinzugefügt:
 - Dual-Y-Achsen Chart: links kg (Gewicht cyan, Muskelmasse blau), rechts %/Index (KFA rot, BMI gelb, FFMI grün)
 - Crosshair-Tooltip (interaction mode: index), usePointStyle Legende
 - Keine Backend-Änderungen (alle JSON-Serien bereits vorhanden)
-- Commit: ee25149
-- Tests: 26/26 passed
+- Commit: ee25149 (body_stats.html)
+- Commit: c71bc57 (training_stats.html + training_stats.py)
+- Tests: 76/76 passed (body_tracking + training_stats)
+- View: `_prepare_body_chart_data` aus body_tracking importiert, Keys mit `body_`-Prefix
+- Chart nur sichtbar wenn Körperwerte vorhanden (`has_body_data`)
 
 **Status:** ✅ Gepusht
 
