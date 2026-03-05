@@ -11,7 +11,7 @@
 # ============================================
 # Core Django Framework
 # ============================================
-Django==5.2.11
+Django==5.2.12
 gunicorn==25.1.0
 
 # ============================================
@@ -114,7 +114,7 @@ pre-commit==4.0.1
 # ============================================
 #
 # 1. Django Version:
-#    - Currently: 5.1.15
+#    - Currently: 5.2.12
 #    - LTS-ready: Monitor https://www.djangoproject.com/download/ for security updates
 #
 # 2. Gunicorn:
