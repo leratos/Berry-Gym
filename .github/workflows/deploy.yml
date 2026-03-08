@@ -90,14 +90,43 @@ jobs:
           echo "=== [6/7] App-Server neu starten ==="
           sudo systemctl restart homegym
 
-          echo "=== [7/7] Smoke Test ==="
-          sleep 5  # Kurz warten bis App hochgefahren ist
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 10 \
-            "https://gym.last-strawberry.com/accounts/login/")
+          # Warte bis systemd den Service als 'active' meldet
+          echo "Warte auf Service-Start..."
+          for i in {1..30}; do
+            if sudo systemctl is-active --quiet homegym; then
+              echo "✓ Service ist active nach ${i}s"
+              break
+            fi
+            sleep 1
+          done
 
-          if [ "$HTTP_STATUS" != "200" ]; then
-            echo "❌ Smoke Test fehlgeschlagen! HTTP Status: $HTTP_STATUS"
+          echo "=== [7/7] Smoke Test mit Retry ==="
+          # Intelligentes Warten: bis zu 60s mit Retry-Logik
+          MAX_ATTEMPTS=12
+          ATTEMPT=0
+          SUCCESS=false
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Versuch $ATTEMPT/$MAX_ATTEMPTS..."
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 5 \
+              --max-time 15 \
+              "https://gym.last-strawberry.com/accounts/login/" || echo "000")
+
+            if [ "$HTTP_STATUS" == "200" ]; then
+              SUCCESS=true
+              echo "✅ Smoke Test erfolgreich! HTTP Status: $HTTP_STATUS"
+              break
+            else
+              echo "   HTTP Status: $HTTP_STATUS (Retry in 5s...)"
+              sleep 5
+            fi
+          done
+
+          if [ "$SUCCESS" != "true" ]; then
+            echo "❌ Smoke Test fehlgeschlagen nach $MAX_ATTEMPTS Versuchen!"
             echo "=== ROLLBACK auf $PREVIOUS_COMMIT ==="
             git reset --hard "$PREVIOUS_COMMIT"
             $PIP install -r requirements.txt --quiet
@@ -107,7 +136,7 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Deployment erfolgreich! HTTP Status: $HTTP_STATUS"
+          echo "✅ Deployment erfolgreich!"
 
     - name: Deployment-Status melden
       if: always()

@@ -1,6 +1,28 @@
 # Berry-Gym Development Journal
 
 
+## Abgeschlossen: Deployment-Script robuster gemacht
+
+**Datum:** 2026-03-08
+**Problem:** SSH-Verbindungsabbruch während Smoke Test, Deployment schlägt fehl mit "connection reset by peer".
+
+**Ursache:**
+- `sleep 5` zu kurz für Django/Gunicorn-Start
+- Einzelner curl ohne Retry nicht robust genug
+- Keine Prüfung ob systemd-Service wirklich aktiv ist
+
+**Lösung:**
+1. systemctl-Status-Check: wartet bis Service als 'active' gemeldet wird (max. 30s)
+2. Retry-Logik: 12 Versuche mit je 5s Pause (= bis zu 60s Gesamtwartezeit)
+3. Längere Timeouts: connect-timeout 5s, max-time 15s
+4. Besseres Fehlerhandling: curl-Fehler werden als "000" Status behandelt
+
+**Geänderte Dateien:**
+- .github/workflows/deploy.yml - Robusterer Smoke Test
+
+**Status:** Abgeschlossen
+
+
 ## Abgeschlossen: Performance-Analyse – Deload-Training-Filter-Korrektur
 
 **Datum:** 2026-03-08
