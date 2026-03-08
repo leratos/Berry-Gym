@@ -687,6 +687,8 @@ def update_set(request: HttpRequest, set_id: int) -> HttpResponse:
 @require_http_methods(["POST"])
 def toggle_deload(request: HttpRequest, training_id: int) -> JsonResponse:
     """Setzt oder entfernt den Deload-Status eines Trainings via AJAX."""
+    from django.core.cache import cache
+
     training = get_object_or_404(Trainingseinheit, id=training_id, user=request.user)
     try:
         data = json.loads(request.body)
@@ -701,6 +703,12 @@ def toggle_deload(request: HttpRequest, training_id: int) -> JsonResponse:
             )
         training.ist_deload = ist_deload_value
         training.save(update_fields=["ist_deload"])
+
+        # Dashboard-Cache invalidieren (Performance-Warnungen neu berechnen)
+        cache_key = f"dashboard_computed_{request.user.id}"
+        cache.delete(cache_key)
+        logger.info(f"Dashboard cache invalidated for user {request.user.id} after deload toggle")
+
         return JsonResponse({"success": True, "ist_deload": training.ist_deload})
     except json.JSONDecodeError as e:
         logger.warning(f"toggle_deload JSON decode error: {e}")

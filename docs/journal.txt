@@ -1,6 +1,30 @@
 # Berry-Gym Development Journal
 
 
+## Abgeschlossen: Performance-Analyse – Deload-Training-Filter-Korrektur
+
+**Datum:** 2026-03-08
+**Problem:** Performance-Analyse zeigte Regression-Warnungen für Übungen aus Deload-Trainings, obwohl diese bewusst mit reduzierter Intensität ausgeführt wurden.
+
+**Lösung:** Nachträgliches Markieren von Trainings als Deload über Dashboard-Widget mit automatischer Cache-Invalidierung.
+
+**Implementierung:**
+1. `_check_regression_warnings()` erweitert: sammelt betroffene Training-IDs (letzte 2 Wochen)
+2. Dashboard-Template: "Als Deload markieren"-Buttons bei Regression-Warnungen
+3. `toggle_deload()` erweitert: invalidiert Dashboard-Cache nach Statusänderung
+4. JavaScript-Helfer `markAsDeload()` für AJAX-Calls mit visueller Rückmeldung
+
+**Geänderte Dateien:**
+- core/views/training_stats.py - Regression-Warnungen mit Training-IDs
+- core/views/training_session.py - toggle_deload mit Cache-Invalidierung
+- core/templates/core/dashboard.html - UI für Deload-Markierung
+- docs/journal.txt - Dokumentation
+
+**Tests:** 132/132 passed ✅
+
+**Status:** Abgeschlossen
+
+
 ## TODO (offen)
 
 - [ ] Lokale Testdaten / Fixtures erstellen (loaddata-Setup), damit Dev-Server lokal mit realistischen Daten laufen kann. Wird relevant sobald weitere User aktiv sind. (notiert 2026-03-02)

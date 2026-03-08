@@ -386,10 +386,23 @@
                             </span>
                         </div>
                         <p class="mb-2 small">{{ warning.message }}</p>
-                        <p class="mb-0 small text-muted">
+                        <p class="mb-2 small text-muted">
                             <i class="bi bi-lightbulb-fill me-1"></i>
                             <strong>{% trans "Tipp" %}:</strong> {{ warning.suggestion }}
                         </p>
+                        {% if warning.type == 'regression' and warning.training_ids %}
+                        <div class="mt-2">
+                            <small class="text-muted d-block mb-1">
+                                <i class="bi bi-info-circle me-1"></i>War das ein Deload-Training?
+                            </small>
+                            {% for training_id in warning.training_ids %}
+                            <button class="btn btn-sm btn-outline-warning me-1 mb-1"
+                                    onclick="markAsDeload({{ training_id }}, this)">
+                                <i class="bi bi-arrow-down-circle"></i> Training #{{ training_id }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -799,5 +812,38 @@
     }
 
     window.addEventListener('DOMContentLoaded', generateHeatmap);
+
+    // Deload-Markierung aus Performance-Warnung
+    async function markAsDeload(trainingId, btn) {
+        if (!confirm('Dieses Training als Deload markieren? Es wird dann nicht mehr in Performance-Analysen berücksichtigt.')) {
+            return;
+        }
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+        try {
+            const response = await fetch(`/api/training/${trainingId}/toggle-deload/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ ist_deload: true })
+            });
+            const data = await response.json();
+            if (data.success) {
+                btn.classList.remove('btn-outline-warning');
+                btn.classList.add('btn-success');
+                btn.innerHTML = '<i class="bi bi-check-circle"></i> Markiert';
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                throw new Error(data.error || 'Unbekannter Fehler');
+            }
+        } catch (error) {
+            console.error('Deload-Markierung fehlgeschlagen:', error);
+            alert('Fehler beim Markieren als Deload. Bitte versuche es erneut.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-down-circle"></i> Training #' + trainingId;
+        }
+    }
 </script>
 {% endblock %}
