@@ -473,6 +473,18 @@ def _check_regression_warnings(user, heute) -> list[dict]:
         )
         if previous_avg > 0 and current_avg < previous_avg * 0.85:
             drop_percent = round(((previous_avg - current_avg) / previous_avg) * 100)
+            # Finde betroffene Trainings (nicht als Deload markiert, aber mit Regression)
+            affected_trainings = list(
+                Trainingseinheit.objects.filter(
+                    user=user,
+                    datum__gte=two_weeks_ago,
+                    ist_deload=False,
+                    saetze__uebung_id=ex["uebung_id"],
+                    saetze__ist_aufwaermsatz=False,
+                )
+                .distinct()
+                .values_list("id", flat=True)[:5]
+            )
             warnings.append(
                 {
                     "type": "regression",
@@ -482,6 +494,7 @@ def _check_regression_warnings(user, heute) -> list[dict]:
                     "suggestion": "Prüfe Regeneration, Ernährung und Schlaf. Erwäge eine Deload-Woche.",
                     "icon": "bi-arrow-down-circle",
                     "color": "danger",
+                    "training_ids": affected_trainings,
                 }
             )
     return warnings
