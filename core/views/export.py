@@ -426,17 +426,36 @@ def _sum_volume(saetze_qs) -> float:
     )
 
 
-def _calc_volume_trend_weekly(volumen_wochen: list[dict]) -> dict | None:
-    """Vergleicht Trainingsvolumen der letzten beiden Wochen.
+def _calc_volume_trend_weekly(volumen_wochen: list[dict], heute=None) -> dict | None:
+    """Vergleicht Trainingsvolumen der letzten beiden **abgeschlossenen** Wochen.
+
+    Eine laufende (noch nicht beendete) Woche wird bewusst ignoriert, da ein
+    Vergleich von z.B. 2 Trainingstagen (aktuell) mit 4 Trainingstagen
+    (Vorwoche) irreführende Ergebnisse liefern würde.
+
+    Args:
+        volumen_wochen: Liste von dicts mit 'woche' (z.B. 'KW10') und 'volumen'.
+        heute: datetime-Objekt für die Bestimmung der aktuellen KW (default: now).
 
     Returns:
         dict mit diese_woche, letzte_woche, veraenderung_prozent, trend
-        oder None wenn zu wenig Daten.
+        oder None wenn zu wenig abgeschlossene Daten vorliegen.
     """
     if len(volumen_wochen) < 2:
         return None
-    letzte = float(volumen_wochen[-1]["volumen"])
-    vorletzte = float(volumen_wochen[-2]["volumen"])
+
+    if heute is None:
+        heute = timezone.now()
+
+    aktuelle_kw = f"KW{heute.isocalendar()[1]:02d}"
+
+    # Laufende Woche aus dem Vergleich ausschließen
+    kandidaten = [w for w in volumen_wochen if w["woche"] != aktuelle_kw]
+    if len(kandidaten) < 2:
+        return None
+
+    letzte = float(kandidaten[-1]["volumen"])
+    vorletzte = float(kandidaten[-2]["volumen"])
     if vorletzte == 0:
         return None
     veraenderung = round(((letzte - vorletzte) / vorletzte) * 100, 1)
@@ -702,7 +721,9 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     stats = _collect_pdf_stats(request.user, letzte_30_tage, heute)
 
     # Abhängige Analysen – benötigen den vollständigen stats-Dict
-    volumen_trend_weekly = _calc_volume_trend_weekly(stats.get("volumen_wochen", []))
+    volumen_trend_weekly = _calc_volume_trend_weekly(
+        stats.get("volumen_wochen", []), heute=stats.get("current_date")
+    )
     stats["volumen_trend_weekly"] = volumen_trend_weekly
     weight_loss_analysis = _analyze_weight_loss_context(stats)
     stats["weight_loss_analysis"] = weight_loss_analysis
