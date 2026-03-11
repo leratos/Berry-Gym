@@ -236,15 +236,20 @@ class TestImportUebungen:
 # Tests für neue Gewichtsverlust-Analyse-Helfer
 # ---------------------------------------------------------------------------
 
+from datetime import datetime
+
 from core.tests.factories import KoerperWerteFactory
 from core.views.export import _analyze_weight_loss_context, _calc_volume_trend_weekly
+
+# Fixes heute-Datum für Tests: KW20 2026 – weit genug von KW10/KW11 entfernt
+_HEUTE_KW20 = datetime(2026, 5, 13)
 
 
 class TestCalcVolumeTrendWeekly:
     """Tests für _calc_volume_trend_weekly."""
 
     def test_returns_none_wenn_zu_wenig_daten(self):
-        result = _calc_volume_trend_weekly([{"woche": "KW10", "volumen": 5000}])
+        result = _calc_volume_trend_weekly([{"woche": "KW10", "volumen": 5000}], heute=_HEUTE_KW20)
         assert result is None
 
     def test_volumen_steigt(self):
@@ -252,7 +257,7 @@ class TestCalcVolumeTrendWeekly:
             {"woche": "KW10", "volumen": 5000},
             {"woche": "KW11", "volumen": 6000},
         ]
-        result = _calc_volume_trend_weekly(wochen)
+        result = _calc_volume_trend_weekly(wochen, heute=_HEUTE_KW20)
         assert result is not None
         assert result["trend"] == "steigt"
         assert result["veraenderung_prozent"] == 20.0
@@ -262,7 +267,7 @@ class TestCalcVolumeTrendWeekly:
             {"woche": "KW10", "volumen": 6000},
             {"woche": "KW11", "volumen": 4000},
         ]
-        result = _calc_volume_trend_weekly(wochen)
+        result = _calc_volume_trend_weekly(wochen, heute=_HEUTE_KW20)
         assert result["trend"] == "fällt"
 
     def test_volumen_stabil(self):
@@ -270,12 +275,22 @@ class TestCalcVolumeTrendWeekly:
             {"woche": "KW10", "volumen": 5000},
             {"woche": "KW11", "volumen": 5100},
         ]
-        result = _calc_volume_trend_weekly(wochen)
+        result = _calc_volume_trend_weekly(wochen, heute=_HEUTE_KW20)
         assert result["trend"] == "stabil"
 
     def test_returns_none_wenn_vorwoche_null(self):
         wochen = [{"woche": "KW10", "volumen": 0}, {"woche": "KW11", "volumen": 5000}]
-        result = _calc_volume_trend_weekly(wochen)
+        result = _calc_volume_trend_weekly(wochen, heute=_HEUTE_KW20)
+        assert result is None
+
+    def test_returns_none_wenn_aktuelle_woche(self):
+        """Laufende Woche wird nicht verglichen – kein irreführendes Ergebnis."""
+        heute_kw11 = datetime(2026, 3, 11)  # KW11
+        wochen = [
+            {"woche": "KW10", "volumen": 6000},
+            {"woche": "KW11", "volumen": 2000},  # laufende Woche, unvollständig
+        ]
+        result = _calc_volume_trend_weekly(wochen, heute=heute_kw11)
         assert result is None
 
 
