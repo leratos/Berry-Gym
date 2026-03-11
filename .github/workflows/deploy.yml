@@ -93,7 +93,7 @@ jobs:
           # Warte bis systemd den Service als 'active' meldet
           echo "Warte auf Service-Start..."
           for i in {1..30}; do
-            if sudo systemctl is-active --quiet homegym; then
+            if sudo systemctl is-active homegym; then
               echo "✓ Service ist active nach ${i}s"
               break
             fi
