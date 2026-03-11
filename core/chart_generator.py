@@ -715,3 +715,73 @@ def generate_push_pull_pie(push_saetze, pull_saetze):
     plt.close(fig)
 
     return image_base64
+
+
+def generate_body_trend_chart(koerperwerte: list) -> str | None:
+    """Körperwerte-Trend-Chart für den PDF-Report.
+
+    Zeigt Gewicht (linke Achse) sowie KFA % und Muskelmasse % (rechte Achse)
+    über alle übergebenen Einträge.
+
+    Args:
+        koerperwerte: Liste von KoerperWerte-Objekten, chronologisch sortiert (älteste zuerst).
+
+    Returns:
+        Base64-encoded PNG oder None bei zu wenig Daten.
+    """
+    if not koerperwerte or len(koerperwerte) < 2:
+        return None
+
+    labels = [w.datum.strftime("%d.%m.%y") for w in koerperwerte]
+    gewicht = [float(w.gewicht) for w in koerperwerte]
+    kfa = [float(w.koerperfett_prozent) if w.koerperfett_prozent else None for w in koerperwerte]
+    muskel = [float(w.muskelmasse_prozent) if w.muskelmasse_prozent else None for w in koerperwerte]
+
+    fig, ax1 = plt.subplots(figsize=(12, 4))
+    ax2 = ax1.twinx()
+
+    x = range(len(labels))
+
+    # Gewicht – linke Achse
+    ax1.plot(x, gewicht, marker="o", linewidth=2, color="#0d6efd", markersize=6, label="Gewicht (kg)", zorder=3)
+    ax1.fill_between(x, gewicht, min(gewicht) - 1, alpha=0.1, color="#0d6efd")
+    ax1.set_ylabel("Gewicht (kg)", color="#0d6efd", fontsize=9)
+    ax1.tick_params(axis="y", labelcolor="#0d6efd")
+
+    # KFA % – rechte Achse
+    kfa_x = [i for i, v in enumerate(kfa) if v is not None]
+    kfa_y = [v for v in kfa if v is not None]
+    if len(kfa_x) >= 2:
+        ax2.plot(kfa_x, kfa_y, marker="s", linewidth=1.5, color="#dc3545", markersize=5,
+                 linestyle="--", label="KFA %", zorder=2)
+
+    # Muskelmasse % – rechte Achse
+    muskel_x = [i for i, v in enumerate(muskel) if v is not None]
+    muskel_y = [v for v in muskel if v is not None]
+    if len(muskel_x) >= 2:
+        ax2.plot(muskel_x, muskel_y, marker="^", linewidth=1.5, color="#198754", markersize=5,
+                 linestyle="-.", label="Muskeln %", zorder=2)
+
+    ax2.set_ylabel("% Körperzusammensetzung", color="#555", fontsize=9)
+    ax2.tick_params(axis="y", labelcolor="#555")
+
+    ax1.set_xticks(list(x))
+    ax1.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
+    ax1.set_title("Körperwerte-Trend", fontsize=12, fontweight="bold", pad=15)
+    ax1.grid(True, alpha=0.3, linestyle=":", linewidth=0.5)
+    ax1.set_axisbelow(True)
+
+    # Gemeinsame Legende
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=8, framealpha=0.8)
+
+    plt.tight_layout()
+
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+    buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.read()).decode("utf-8")
+    plt.close(fig)
+
+    return image_base64

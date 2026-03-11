@@ -109,18 +109,39 @@ class KoerperWerte(models.Model):
         return None
 
     def gewichts_veraenderung_rate(self) -> float | None:
-        """Gewichtsveränderung in kg/Woche zum vorherigen Eintrag."""
-        vorheriger = (
-            KoerperWerte.objects.filter(user=self.user, datum__lt=self.datum)
+        """Gewichtsveränderung in kg/Woche – Vergleich über mindestens 7 Tage.
+
+        Sucht den ältesten Eintrag innerhalb der letzten 30 Tage, der mindestens
+        7 Tage zurückliegt. Tagesschwankungen (z.B. durch Creatine-Wassereinlagerung)
+        werden so herausgefiltert.
+        """
+        from datetime import timedelta
+
+        mindest_datum = self.datum - timedelta(days=7)
+        max_datum = self.datum - timedelta(days=30)
+        # Bevorzuge Eintrag der möglichst nahe an 7 Tagen liegt (neuester der ≥7 Tage alten)
+        referenz = (
+            KoerperWerte.objects.filter(
+                user=self.user,
+                datum__lte=mindest_datum,
+                datum__gte=max_datum,
+            )
             .order_by("-datum")
             .first()
         )
-        if not vorheriger or not vorheriger.gewicht:
+        # Fallback: ältester verfügbarer Eintrag wenn kein Eintrag im 7-30d Fenster
+        if not referenz:
+            referenz = (
+                KoerperWerte.objects.filter(user=self.user, datum__lt=self.datum)
+                .order_by("datum")
+                .first()
+            )
+        if not referenz or not referenz.gewicht:
             return None
-        tage = (self.datum - vorheriger.datum).days
+        tage = (self.datum - referenz.datum).days
         if tage <= 0:
             return None
-        diff_kg = float(self.gewicht) - float(vorheriger.gewicht)
+        diff_kg = float(self.gewicht) - float(referenz.gewicht)
         return round(diff_kg / tage * 7, 2)
 
 

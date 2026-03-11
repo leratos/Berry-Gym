@@ -575,6 +575,12 @@
     </table>
     {% endif %}
 
+    {% if body_trend_chart %}
+    <div style="margin: 16px 0 8px 0;">
+        <img src="data:image/png;base64,{{ body_trend_chart }}" style="width:100%; max-width:700px; display:block; margin:0 auto;" />
+    </div>
+    {% endif %}
+
     <h3>Verlauf</h3>
     <table>
         <thead>
