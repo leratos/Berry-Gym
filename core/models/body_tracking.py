@@ -144,6 +144,40 @@ class KoerperWerte(models.Model):
         diff_kg = float(self.gewicht) - float(referenz.gewicht)
         return round(diff_kg / tage * 7, 2)
 
+    def get_rate_mit_info(self) -> dict | None:
+        """Wie gewichts_veraenderung_rate(), gibt aber auch Referenzdatum und Zeitraum zurück.
+
+        Returns:
+            dict mit 'rate' (kg/Woche), 'referenz_datum', 'tage' oder None.
+        """
+        from datetime import timedelta
+
+        mindest_datum = self.datum - timedelta(days=7)
+        max_datum = self.datum - timedelta(days=30)
+        referenz = (
+            KoerperWerte.objects.filter(
+                user=self.user,
+                datum__lte=mindest_datum,
+                datum__gte=max_datum,
+            )
+            .order_by("-datum")
+            .first()
+        )
+        if not referenz:
+            referenz = (
+                KoerperWerte.objects.filter(user=self.user, datum__lt=self.datum)
+                .order_by("datum")
+                .first()
+            )
+        if not referenz or not referenz.gewicht:
+            return None
+        tage = (self.datum - referenz.datum).days
+        if tage <= 0:
+            return None
+        diff_kg = float(self.gewicht) - float(referenz.gewicht)
+        rate = round(diff_kg / tage * 7, 2)
+        return {"rate": rate, "referenz_datum": referenz.datum, "tage": tage}
+
 
 class ProgressPhoto(models.Model):
     """Fortschrittsfotos zur Dokumentation der Body Transformation."""

@@ -230,3 +230,100 @@ class TestImportUebungen:
 
         # Seite sollte laden oder nicht implementiert sein
         assert response.status_code in [200, 302, 404]
+
+
+# ---------------------------------------------------------------------------
+# Tests für neue Gewichtsverlust-Analyse-Helfer
+# ---------------------------------------------------------------------------
+
+from core.tests.factories import KoerperWerteFactory
+from core.views.export import _analyze_weight_loss_context, _calc_volume_trend_weekly
+
+
+class TestCalcVolumeTrendWeekly:
+    """Tests für _calc_volume_trend_weekly."""
+
+    def test_returns_none_wenn_zu_wenig_daten(self):
+        result = _calc_volume_trend_weekly([{"woche": "KW10", "volumen": 5000}])
+        assert result is None
+
+    def test_volumen_steigt(self):
+        wochen = [
+            {"woche": "KW10", "volumen": 5000},
+            {"woche": "KW11", "volumen": 6000},
+        ]
+        result = _calc_volume_trend_weekly(wochen)
+        assert result is not None
+        assert result["trend"] == "steigt"
+        assert result["veraenderung_prozent"] == 20.0
+
+    def test_volumen_faellt(self):
+        wochen = [
+            {"woche": "KW10", "volumen": 6000},
+            {"woche": "KW11", "volumen": 4000},
+        ]
+        result = _calc_volume_trend_weekly(wochen)
+        assert result["trend"] == "fällt"
+
+    def test_volumen_stabil(self):
+        wochen = [
+            {"woche": "KW10", "volumen": 5000},
+            {"woche": "KW11", "volumen": 5100},
+        ]
+        result = _calc_volume_trend_weekly(wochen)
+        assert result["trend"] == "stabil"
+
+    def test_returns_none_wenn_vorwoche_null(self):
+        wochen = [{"woche": "KW10", "volumen": 0}, {"woche": "KW11", "volumen": 5000}]
+        result = _calc_volume_trend_weekly(wochen)
+        assert result is None
+
+
+@pytest.mark.django_db
+class TestAnalyzeWeightLossContext:
+    """Tests für _analyze_weight_loss_context."""
+
+    def test_returns_none_bei_moderatem_verlust(self):
+        """Kein Warning wenn Rate > -1.0."""
+        stats = {"gewichts_rate": -0.8}
+        assert _analyze_weight_loss_context(stats) is None
+
+    def test_returns_none_wenn_keine_rate(self):
+        assert _analyze_weight_loss_context({"gewichts_rate": None}) is None
+
+    def test_risk_gering_bei_steigendem_volumen(self):
+        """Steigendes Trainingsvolumen → Risiko gering."""
+        user = UserFactory()
+        kw1 = KoerperWerteFactory(user=user)
+        kw2 = KoerperWerteFactory(user=user)
+        stats = {
+            "gewichts_rate": -1.5,
+            "volumen_trend_weekly": {
+                "diese_woche": 6000,
+                "letzte_woche": 5500,
+                "veraenderung_prozent": 9.1,
+                "trend": "steigt",
+            },
+            "koerperwerte": [kw1, kw2],
+        }
+        result = _analyze_weight_loss_context(stats)
+        assert result is not None
+        assert result["risk_level"] == "gering"
+        assert any("Trainingsvolumen steigt" in f for f in result["faktoren_dagegen"])
+
+    def test_faktoren_dafuer_bei_sinkendem_volumen(self):
+        """Sinkendes Volumen → faktoren_dafuer enthält Eintrag."""
+        user = UserFactory()
+        kw1 = KoerperWerteFactory(user=user)
+        stats = {
+            "gewichts_rate": -1.5,
+            "volumen_trend_weekly": {
+                "diese_woche": 4000,
+                "letzte_woche": 6000,
+                "veraenderung_prozent": -33.3,
+                "trend": "fällt",
+            },
+            "koerperwerte": [kw1],
+        }
+        result = _analyze_weight_loss_context(stats)
+        assert any("sinkt" in f for f in result["faktoren_dafuer"])

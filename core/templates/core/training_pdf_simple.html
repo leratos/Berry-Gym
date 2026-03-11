@@ -561,15 +561,60 @@
             {% if gewichts_rate %}
             <tr>
                 <td>Gewichtsveränderung</td>
-                <td>{{ gewichts_rate }} kg/Woche</td>
+                <td>
+                    {{ gewichts_rate }} kg/Woche
+                    {% if weight_loss_analysis and weight_loss_analysis.referenz_info %}
+                    <br><span style="font-size:7px;color:#888;">Basis: {{ weight_loss_analysis.referenz_info }}</span>
+                    {% endif %}
+                </td>
                 <td>
                     {% if gewichts_rate > 1.0 %}&#9888; Schnelle Zunahme
                     {% elif gewichts_rate > 0 %}Leichte Zunahme
                     {% elif gewichts_rate > -0.5 %}Moderater Verlust
                     {% elif gewichts_rate > -1.0 %}Guter Verlust
-                    {% else %}&#9888; Schneller Verlust – Muskelabbau möglich{% endif %}
+                    {% else %}
+                        {% if weight_loss_analysis %}
+                            {% if weight_loss_analysis.risk_level == 'gering' %}
+                            &#10003; Kaloriendefizit (kein Muskelabbau-Risiko)
+                            {% elif weight_loss_analysis.risk_level == 'mittel' %}
+                            &#9888; Hohe Rate – Indikatoren beachten
+                            {% else %}
+                            &#9888; Hohe Rate – beobachten
+                            {% endif %}
+                        {% else %}
+                        &#9888; Schneller Verlust – beobachten
+                        {% endif %}
+                    {% endif %}
                 </td>
             </tr>
+            {% if weight_loss_analysis %}
+            <tr>
+                <td colspan="3" style="padding:4px 0 8px 0; border-bottom:none;">
+                    <div class="{% if weight_loss_analysis.risk_level == 'gering' %}recommendation-box{% else %}warning-box{% endif %}" style="margin:6px 0; font-size:8px; padding:10px 12px;">
+                        <strong>Gewichtsverlust-Analyse:</strong> {{ weight_loss_analysis.erklaerung }}
+                        {% if weight_loss_analysis.faktoren_dagegen %}
+                        <br><strong style="color:#198754;">&#10003; Spricht gegen Muskelabbau:</strong>
+                        <ul style="margin:3px 0 3px 0; padding-left:14px;">
+                            {% for f in weight_loss_analysis.faktoren_dagegen %}
+                            <li style="margin-bottom:2px;">{{ f }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                        {% if weight_loss_analysis.faktoren_dafuer %}
+                        <br><strong style="color:#856404;">&#9888; Zu beachten:</strong>
+                        <ul style="margin:3px 0 3px 0; padding-left:14px;">
+                            {% for f in weight_loss_analysis.faktoren_dafuer %}
+                            <li style="margin-bottom:2px;">{{ f }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                        {% if weight_loss_analysis.bia_warnung %}
+                        <br><em style="color:#856404; font-size:7px;">Hinweis: BIA-Muskelmasse-Werte werden stark durch Hydration, Tageszeit und letzte Mahlzeit beeinflusst. Einzelmessungen nicht überinterpretieren.</em>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
             {% endif %}
         </tbody>
     </table>
