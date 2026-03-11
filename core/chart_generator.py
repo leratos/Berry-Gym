@@ -743,7 +743,16 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
     x = range(len(labels))
 
     # Gewicht – linke Achse
-    ax1.plot(x, gewicht, marker="o", linewidth=2, color="#0d6efd", markersize=6, label="Gewicht (kg)", zorder=3)
+    ax1.plot(
+        x,
+        gewicht,
+        marker="o",
+        linewidth=2,
+        color="#0d6efd",
+        markersize=6,
+        label="Gewicht (kg)",
+        zorder=3,
+    )
     ax1.fill_between(x, gewicht, min(gewicht) - 1, alpha=0.1, color="#0d6efd")
     ax1.set_ylabel("Gewicht (kg)", color="#0d6efd", fontsize=9)
     ax1.tick_params(axis="y", labelcolor="#0d6efd")
@@ -752,15 +761,33 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
     kfa_x = [i for i, v in enumerate(kfa) if v is not None]
     kfa_y = [v for v in kfa if v is not None]
     if len(kfa_x) >= 2:
-        ax2.plot(kfa_x, kfa_y, marker="s", linewidth=1.5, color="#dc3545", markersize=5,
-                 linestyle="--", label="KFA %", zorder=2)
+        ax2.plot(
+            kfa_x,
+            kfa_y,
+            marker="s",
+            linewidth=1.5,
+            color="#dc3545",
+            markersize=5,
+            linestyle="--",
+            label="KFA %",
+            zorder=2,
+        )
 
     # Muskelmasse % – rechte Achse
     muskel_x = [i for i, v in enumerate(muskel) if v is not None]
     muskel_y = [v for v in muskel if v is not None]
     if len(muskel_x) >= 2:
-        ax2.plot(muskel_x, muskel_y, marker="^", linewidth=1.5, color="#198754", markersize=5,
-                 linestyle="-.", label="Muskeln %", zorder=2)
+        ax2.plot(
+            muskel_x,
+            muskel_y,
+            marker="^",
+            linewidth=1.5,
+            color="#198754",
+            markersize=5,
+            linestyle="-.",
+            label="Muskeln %",
+            zorder=2,
+        )
 
     ax2.set_ylabel("% Körperzusammensetzung", color="#555", fontsize=9)
     ax2.tick_params(axis="y", labelcolor="#555")
