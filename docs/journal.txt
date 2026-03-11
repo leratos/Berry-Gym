@@ -4125,3 +4125,60 @@ core/views/onboarding.py: 28 Statements, 0 Missed, 100% Coverage ✅
   → **100% Coverage**
 
 **Status:** ✅ Gepusht
+
+
+## In Arbeit: fix/body-warning-logic – Muskelabbau-Warnung verbessern
+**Datum:** 2026-03-11
+**Branch:** fix/body-warning-logic (neu)
+
+**Ziel:** Warnung „Schneller Verlust – Muskelabbau möglich" im PDF-Export durch
+kontextbasierte, mehrstufige Analyse ersetzen. Trainingsvolumen-Trend und
+FFMI-Verlauf werden als Gegenargumente einbezogen.
+
+**Dateien:**
+1. core/models/body_tracking.py – gewichts_veraenderung_rate_mit_info() hinzufügen
+2. core/views/export.py – _analyze_weight_loss_context() + Volumentrend
+3. core/templates/core/training_pdf_simple.html – Warnung mehrstufig ersetzen
+
+
+## Abgeschlossen: Verbesserung Gewichtsverlust-Warnung im PDF-Export
+
+**Datum:** 2026-03-11
+**Branch:** (aktueller Branch – kein separater Branch nötig, Bugfix-Charakter)
+
+**Problem:**
+Die Warnung "Schneller Verlust – Muskelabbau möglich" im PDF-Export war nicht valide:
+- Basierte ausschließlich auf Gewichtsrate (< -1.0 kg/Woche)
+- Kein Hinweis auf verwendeten Referenzzeitraum
+- Kein BIA-Disclaimer trotz stark schwankender Muskelmasse-%-Werte
+- Kein Abgleich mit Trainingsvolumen oder FFMI-Trend
+
+**Geänderte Dateien:**
+
+1. `core/models/body_tracking.py`
+   - Neue Methode `get_rate_mit_info()`: Gibt rate, referenz_datum und tage zurück
+     (ermöglicht Referenzzeitraum-Anzeige im PDF)
+
+2. `core/views/export.py`
+   - Neue Funktion `_calc_volume_trend_weekly()`: Vergleicht letzte vs. vorletzte Woche
+   - Neue Funktion `_analyze_weight_loss_context()`: Mehrstufige Risikoanalyse
+     * Trainingsvolumen-Trend (stärkstes Signal)
+     * FFMI-Verlauf (2 Messungen)
+     * BIA-Volatilität (Schwankung > 4% → Disclaimer)
+     * Referenzzeitraum transparent gemacht
+   - `export_training_pdf`: Ruft beide neuen Funktionen auf und übergibt
+     `weight_loss_analysis` und `volumen_trend_weekly` an Template
+
+3. `core/templates/core/training_pdf_simple.html`
+   - Gewichtsveränderungs-Zeile zeigt jetzt Referenzzeitraum (z.B. "Basis: 01.02 → 11.03 (38 Tage)")
+   - Bewertungsspalte differenziert: "Kaloriendefizit (kein Muskelabbau-Risiko)" / "Hohe Rate – Indikatoren beachten" / "Hohe Rate – beobachten"
+   - Neue Analyse-Box unterhalb der Tabelle mit Faktoren für/gegen Muskelabbau
+   - BIA-Hinweis bei Schwankung > 4%
+
+**Risiko-Level-Logik:**
+- `gering`: Steigendes Volumen + maximal 1 schwaches Gegenargument ODER ≥2 Faktoren dagegen
+- `mittel`: Faktoren dafür vorhanden, keine dagegen
+- `beobachten`: Unklar / zu wenig Daten
+
+**Tests:** ✅ 49/49 bestanden (test_export.py + test_body_tracking.py)
+- Inkl. 4 neue Tests für `_analyze_weight_loss_context` und `_calc_volume_trend_weekly`
