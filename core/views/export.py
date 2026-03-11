@@ -36,6 +36,7 @@ except ImportError:
 
 from core.chart_generator import (
     generate_body_map_with_data,
+    generate_body_trend_chart,
     generate_muscle_heatmap,
     generate_push_pull_pie,
     generate_volume_chart,
@@ -474,6 +475,8 @@ def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
 
     koerperwerte_qs = KoerperWerte.objects.filter(user=user).order_by("-datum")
     koerperwerte = list(koerperwerte_qs[:10])  # letzte 10 für Verlaufstabelle im PDF
+    # Alle Einträge (chronologisch) für den Trend-Chart
+    koerperwerte_chart = list(koerperwerte_qs.order_by("datum"))
     letzter_koerperwert = koerperwerte[0] if koerperwerte else None
     user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
     gewichts_rate = (
@@ -516,6 +519,7 @@ def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         "rpe_verteilung": rpe_verteilung,
         "volumen_wochen": volumen_wochen[-8:],
         "koerperwerte": koerperwerte,
+        "koerperwerte_chart": koerperwerte_chart,
         "letzter_koerperwert": letzter_koerperwert,
         "gewichts_rate": gewichts_rate,
         "gewichts_trend": gewichts_trend,
@@ -557,6 +561,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     muscle_heatmap, volume_chart, push_pull_chart, body_map_image = _generate_pdf_charts(
         muskelgruppen_stats, volumen_wochen, push_saetze, pull_saetze
     )
+    body_trend_chart = generate_body_trend_chart(stats.get("koerperwerte_chart", []))
 
     context = {
         "user": request.user,
@@ -565,6 +570,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         "volume_chart": volume_chart,
         "push_pull_chart": push_pull_chart,
         "body_map_image": body_map_image,
+        "body_trend_chart": body_trend_chart,
         **stats,
     }
 
