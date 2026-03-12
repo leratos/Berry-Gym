@@ -118,7 +118,9 @@
         </label>
         <div class="input-group mb-3">
           <input type="number" name="dauer_minuten" class="form-control bg-dark text-white border-secondary"
-                 value="{{ dauer_geschaetzt }}" min="1" max="300" required>
+                 value="{{ dauer_geschaetzt|default:'' }}" min="1" max="300"
+                 placeholder="{% trans 'Minuten eingeben' %}"
+                 {% if dauer_geschaetzt %}required{% endif %}>
           <span class="input-group-text bg-dark text-secondary border-secondary">{% trans "Minuten" %}</span>
         </div>
         <label class="form-label text-secondary small text-uppercase mb-2">
