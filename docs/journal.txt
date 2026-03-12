@@ -4183,6 +4183,23 @@ Die Warnung "Schneller Verlust – Muskelabbau möglich" im PDF-Export war nicht
 **Tests:** ✅ 49/49 bestanden (test_export.py + test_body_tracking.py)
 - Inkl. 4 neue Tests für `_analyze_weight_loss_context` und `_calc_volume_trend_weekly`
 
+## In Arbeit: Phase 1 – UX-Fixes & Navigation
+**Datum:** 2026-03-12
+**Branch:** feature/phase1-ux-fixes
+
+**Aufgaben:**
+1.1 Dauer-Bug: historische Trainings zeigen `jetzt - ursprung` → Guard einbauen
+1.2 KI-Empfehlung auf Abschlussseite aktivieren
+1.3 "Alle anzeigen" → "Trainingshistorie" mit Edit-Kontext
+1.4 Wochenvolumen-Widget: Deload-Woche kennzeichnen
+1.5 Session-Notiz & Dauer in Trainingshistorie anzeigen
+
+**Dateien:**
+- core/views/training_session.py
+- core/templates/core/training_finish.html
+- core/templates/core/dashboard.html
+- core/templates/core/training_list.html (prüfen)
+
 ## In Arbeit: Fix – Laufende Woche in Volumen-Analyse / training_stats
 
 **Datum:** 2026-03-12
@@ -4197,3 +4214,51 @@ obwohl die Woche noch nicht abgeschlossen ist (3. Trainingstag folgt noch).
    + aktuelle_kw in Context übergeben
 2. `core/templates/core/training_stats.html` – Chart: aktuelle Woche andere Farbe (gedimmt),
    Warning-Box: neutraler Hinweis statt Warnung für laufende Woche
+
+
+## Abgeschlossen: Phase 1 – Dauer-Bug Fix (historische Trainings)
+
+**Datum:** 2026-03-12
+**Branch:** fix/body-warning-logic (bestehend, Bugfix-Charakter)
+
+**Problem:**
+Wenn ein historisches Training aus der Historie geöffnet und "Fertig" geklickt wurde,
+berechnete finish_training() die Dauer als `jetzt - ursprünglicher_start_timestamp`
+→ ergab z.B. 1594 Minuten (26h) statt sinnlosem Wert.
+
+**Geänderte Dateien:**
+
+1. `core/views/training_session.py`
+   - Neue Logik für `dauer_geschaetzt`:
+     1. Falls `training.dauer_minuten` gespeichert → diesen Wert verwenden
+     2. Falls Training < 24h alt (aktives Training) → Timestamp-Differenz berechnen
+     3. Historisches Training ohne gespeicherte Dauer → `None` (kein Fallback-Wert)
+
+2. `core/templates/core/training_finish.html`
+   - Dauer-Input: `value="{{ dauer_geschaetzt|default:'' }}"` (kein falscher Vorausfüllwert)
+   - `placeholder` statt Pflichtfeld bei historischen Trainings
+   - `required` nur wenn `dauer_geschaetzt` gesetzt ist
+
+3. `core/tests/test_training_session_views.py`
+   - `test_finish_training_dauer_fallback_when_datum_missing`:
+     - `fake_training.dauer_minuten = None` gesetzt (MagicMock war truthy → falscher Branch)
+     - Assertion: `assertIsNone` statt `assertEqual(..., 60)`
+
+**Tests:** ✅ 156/156 (test_training_session_views + test_training_stats + test_export)
+
+
+## In Arbeit: Phase 1 – Abschluss (Dashboard + KI-Empfehlung)
+
+**Datum:** 2026-03-12
+**Branch:** feature/phase1-ux-fixes
+
+**Aufgaben:**
+1. Dashboard: uncommitted Änderungen (Verlauf/Bearbeiten + Deload-Label) committen
+2. KI-Empfehlung: RPE-Pflicht entfernen – Funktion zündet nie weil rpe__isnull=False
+   alle Sätze ohne RPE-Wert herausfiltert → recent_sets leer → return None
+3. Tests anpassen + alle Tests grün
+
+**Dateien:**
+- core/views/training_session.py
+- core/templates/core/dashboard.html (bereits geändert)
+- core/views/training_stats.py (bereits geändert)

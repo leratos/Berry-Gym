@@ -1065,7 +1065,9 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
         self.assertEqual(training_count, 3)
         self.assertEqual(ai_suggestion["color"], "danger")
 
-    def test_get_ai_training_suggestion_three_trainings_without_recent_sets(self):
+    def test_get_ai_training_suggestion_three_trainings_without_rpe(self):
+        # Sätze ohne RPE → avg_rpe=None → kein Intensitäts-Vorschlag
+        # Aber: nur 1 Übung (< 5) → Variety-Vorschlag wird geliefert
         for d in [1, 3, 5]:
             t = self._training(days_ago=d, abgeschlossen=True)
             Satz.objects.create(
@@ -1079,7 +1081,9 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
             )
 
         suggestion, count = _get_ai_training_suggestion(self.user)
-        self.assertIsNone(suggestion)
+        # Variety-Vorschlag erwartet (1 Übung < 5), kein Intensitäts-Vorschlag (kein RPE)
+        self.assertIsNotNone(suggestion)
+        self.assertEqual(suggestion["type"], "variety")
         self.assertEqual(count, 3)
 
     def test_finish_training_dauer_fallback_when_datum_missing(self):
@@ -1099,6 +1103,7 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
         fake_training = MagicMock()
         fake_training.saetze = fake_saetze_manager
         fake_training.datum = None
+        fake_training.dauer_minuten = None  # kein gespeicherter Wert → historisch ohne Datum
 
         captured = {}
 
@@ -1116,4 +1121,6 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
             response = finish_training(request, training_id=1)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(captured["dauer_geschaetzt"], 60)
+        self.assertIsNone(
+            captured["dauer_geschaetzt"]
+        )  # historisch + kein Datum → None statt Fallback 60
