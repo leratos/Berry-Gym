@@ -1008,10 +1008,28 @@ def _build_svg_muscle_data(stats_code: dict) -> dict:
     return svg_data
 
 
-def _detect_volume_warnings(weekly_labels: list, weekly_data: list) -> list[dict]:
-    """Flag weeks with >20 % volume spike or >30 % volume drop vs. prior week."""
+def _detect_volume_warnings(
+    weekly_labels: list, weekly_data: list, aktuelle_kw: str | None = None
+) -> list[dict]:
+    """Flag weeks with >20 % volume spike or >30 % volume drop vs. prior week.
+
+    Die laufende (noch nicht abgeschlossene) Woche wird grundsätzlich nicht
+    bewertet – ein Vergleich von z.B. 2 Trainingstagen gegen eine volle Woche
+    liefert irreführende Ergebnisse. Stattdessen wird sie als 'laufend' markiert.
+    """
     warnings: list[dict] = []
     for i in range(1, len(weekly_data)):
+        label = weekly_labels[i]
+        # Laufende Woche: neutralen Hinweis statt Warnung
+        if aktuelle_kw and label == aktuelle_kw:
+            warnings.append(
+                {
+                    "week": label,
+                    "volume": round(weekly_data[i], 1),
+                    "type": "laufend",
+                }
+            )
+            continue
         prev = weekly_data[i - 1]
         if prev <= 0:
             continue
@@ -1019,7 +1037,7 @@ def _detect_volume_warnings(weekly_labels: list, weekly_data: list) -> list[dict
         if change > 20:
             warnings.append(
                 {
-                    "week": weekly_labels[i],
+                    "week": label,
                     "increase": round(change, 1),
                     "volume": round(weekly_data[i], 1),
                     "type": "spike",
@@ -1028,7 +1046,7 @@ def _detect_volume_warnings(weekly_labels: list, weekly_data: list) -> list[dict
         elif change < -30:
             warnings.append(
                 {
-                    "week": weekly_labels[i],
+                    "week": label,
                     "decrease": abs(round(change, 1)),
                     "volume": round(weekly_data[i], 1),
                     "type": "drop",
@@ -1073,8 +1091,12 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     weekly_labels, weekly_data = _calc_weekly_volume(trainings)
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(trainings)
     svg_muscle_data = _build_svg_muscle_data(stats_code)
-    deload_warnings = _detect_volume_warnings(weekly_labels, weekly_data)
     heute = timezone.now().date()
+    deload_warnings = _detect_volume_warnings(
+        weekly_labels,
+        weekly_data,
+        aktuelle_kw=f"{heute.isocalendar()[0]}-W{heute.isocalendar()[1]:02d}",
+    )
     heatmap_data = _build_90day_heatmap(trainings, heute)
 
     gesamt_volumen = sum(volumen_data)
@@ -1098,6 +1120,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "deload_flags_json": json.dumps(deload_flags),
         "weekly_labels_json": json.dumps(weekly_labels),
         "weekly_data_json": json.dumps(weekly_data),
+        "aktuelle_kw": f"{heute.isocalendar()[0]}-W{heute.isocalendar()[1]:02d}",
         "mg_labels_json": json.dumps(mg_labels),
         "mg_data_json": json.dumps(mg_data),
         "muskelgruppen_stats": muskelgruppen_sorted,
