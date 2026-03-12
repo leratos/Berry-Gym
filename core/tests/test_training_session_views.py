@@ -1099,6 +1099,7 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
         fake_training = MagicMock()
         fake_training.saetze = fake_saetze_manager
         fake_training.datum = None
+        fake_training.dauer_minuten = None  # kein gespeicherter Wert → historisch ohne Datum
 
         captured = {}
 
@@ -1116,4 +1117,6 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
             response = finish_training(request, training_id=1)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(captured["dauer_geschaetzt"], 60)
+        self.assertIsNone(
+            captured["dauer_geschaetzt"]
+        )  # historisch + kein Datum → None statt Fallback 60

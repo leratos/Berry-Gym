@@ -916,11 +916,16 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
     # Anzahl Übungen
     uebungen_count = training.saetze.values("uebung").distinct().count()
 
-    # Trainingsdauer schätzen (falls nicht manuell eingegeben)
-    if training.datum:
+    # Trainingsdauer schätzen (nur für aktive/heutige Trainings)
+    # Bereits gespeicherte Dauer hat Vorrang
+    if training.dauer_minuten:
+        dauer_geschaetzt = training.dauer_minuten
+    elif training.datum and (timezone.now() - training.datum).total_seconds() < 86400:
+        # Nur schätzen wenn Training < 24h alt (aktives Training)
         dauer_geschaetzt = int((timezone.now() - training.datum).total_seconds() / 60)
     else:
-        dauer_geschaetzt = 60
+        # Historisches Training ohne gespeicherte Dauer → kein Schätzwert
+        dauer_geschaetzt = None
 
     ai_suggestion, training_count = _get_ai_training_suggestion(request.user)
 
