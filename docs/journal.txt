@@ -4262,3 +4262,33 @@ berechnete finish_training() die Dauer als `jetzt - ursprünglicher_start_timest
 - core/views/training_session.py
 - core/templates/core/dashboard.html (bereits geändert)
 - core/views/training_stats.py (bereits geändert)
+
+
+## Abgeschlossen: Phase 1 – UX-Fixes + KI-Empfehlung (vollständig)
+
+**Datum:** 2026-03-12
+**Branch:** feature/phase1-ux-fixes
+**Commits:** 90ce779 (Dauer-Bug), 8fc9900 (Dashboard + KI-Fix)
+
+**Gesamte Phase 1 umfasst:**
+
+1. ✅ Dauer-Bug bei historischen Trainings (90ce779)
+   - finish_training() berechnete Dauer als `jetzt - alter Timestamp` → 26h
+   - Fix: gespeicherte Dauer Vorrang, Schätzung nur bei Training < 24h alt, sonst None
+
+2. ✅ KI-Empfehlung feuert jetzt korrekt (8fc9900)
+   - Bug: rpe__isnull=False filterte alle Sätze ohne RPE heraus → recent_sets leer → None
+   - Fix: RPE-Filter entfernt, avg_rpe separat aus RPE-Sätzen (kann None sein)
+   - _build_intensity_suggestion akzeptiert None, überspringt gracefully
+   - Volumen- und Variety-Vorschläge funktionieren jetzt ohne RPE-Daten
+
+3. ✅ Dashboard Volume-Widget: Deload-Woche kennzeichnen (8fc9900)
+   - Deload-Wochen zeigen gelbes Border + 'Deload' statt '0 kg'
+   - ist_deload-Flag in _calculate_weekly_volumes ergänzt
+
+4. ✅ Navigation: "Alle anzeigen" → "Verlauf / Bearbeiten" (8fc9900)
+   - Hauptfrustrationspunkt: Link führt zur Trainingshistorie zum Bearbeiten
+
+**Tests:** ✅ 175/175 (training_session_views + training_stats + export + training_views)
+
+**Noch uncommitted:** docs/PROJECT_ROADMAP.md – zur Prüfung und separaten Freigabe
