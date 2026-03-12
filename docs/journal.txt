@@ -4245,3 +4245,20 @@ berechnete finish_training() die Dauer als `jetzt - ursprünglicher_start_timest
      - Assertion: `assertIsNone` statt `assertEqual(..., 60)`
 
 **Tests:** ✅ 156/156 (test_training_session_views + test_training_stats + test_export)
+
+
+## In Arbeit: Phase 1 – Abschluss (Dashboard + KI-Empfehlung)
+
+**Datum:** 2026-03-12
+**Branch:** feature/phase1-ux-fixes
+
+**Aufgaben:**
+1. Dashboard: uncommitted Änderungen (Verlauf/Bearbeiten + Deload-Label) committen
+2. KI-Empfehlung: RPE-Pflicht entfernen – Funktion zündet nie weil rpe__isnull=False
+   alle Sätze ohne RPE-Wert herausfiltert → recent_sets leer → return None
+3. Tests anpassen + alle Tests grün
+
+**Dateien:**
+- core/views/training_session.py
+- core/templates/core/dashboard.html (bereits geändert)
+- core/views/training_stats.py (bereits geändert)
