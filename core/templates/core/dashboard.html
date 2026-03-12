@@ -150,7 +150,7 @@
               <i class="bi bi-graph-up"></i> {% trans "Statistiken" %}
           </a>
           <a href="{% url 'training_list' %}" class="text-decoration-none small fw-bold text-primary">
-              {% trans "Alle anzeigen" %} <i class="bi bi-chevron-right"></i>
+              <i class="bi bi-pencil-square"></i> {% trans "Verlauf / Bearbeiten" %} <i class="bi bi-chevron-right"></i>
           </a>
       </div>
   </div>
@@ -507,12 +507,17 @@
         <div class="row g-2">
             {% for week in weekly_volumes %}
             <div class="col-6 col-md-3">
-                <div class="text-center p-2 {% if week.week_num == 0 %}bg-primary bg-opacity-10 border border-primary{% else %}bg-secondary bg-opacity-10{% endif %} rounded">
-                    <small class="text-muted d-block" style="font-size: 0.7rem;">{{ week.label }}</small>
-                    <strong class="{% if week.week_num == 0 %}text-primary{% else %}text-white{% endif %}" style="font-size: 1.2rem;">
+                <div class="text-center p-2 {% if week.week_num == 0 %}bg-primary bg-opacity-10 border border-primary{% elif week.ist_deload %}bg-warning bg-opacity-10 border border-warning{% else %}bg-secondary bg-opacity-10{% endif %} rounded">
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                        {{ week.label }}
+                        {% if week.ist_deload %}<span class="text-warning ms-1" title="{% trans 'Deload-Woche' %}">🟡</span>{% endif %}
+                    </small>
+                    <strong class="{% if week.week_num == 0 %}text-primary{% elif week.ist_deload %}text-warning{% else %}text-white{% endif %}" style="font-size: 1.2rem;">
                         {{ week.volume|floatformat:0 }}
                     </strong>
-                    <small class="text-muted d-block">kg</small>
+                    <small class="{% if week.ist_deload %}text-warning{% else %}text-muted{% endif %} d-block">
+                        {% if week.ist_deload %}Deload{% else %}kg{% endif %}
+                    </small>
                 </div>
             </div>
             {% endfor %}

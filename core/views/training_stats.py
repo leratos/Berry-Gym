@@ -237,9 +237,23 @@ def _calculate_weekly_volumes(user, heute) -> list[dict]:
             for s in week_saetze
             if s.gewicht and s.wiederholungen
         )
+        # Prüfen ob es in dieser Woche Deload-Trainings gab
+        hat_deload = Trainingseinheit.objects.filter(
+            user=user,
+            datum__gte=week_start,
+            datum__lt=week_end,
+            ist_deload=True,
+        ).exists()
         labels = {0: "Diese Woche", 1: "Letzte Woche"}
         week_label = labels.get(i, f"Vor {i} Wochen")
-        weekly_volumes.append({"label": week_label, "volume": round(week_total, 0), "week_num": i})
+        weekly_volumes.append(
+            {
+                "label": week_label,
+                "volume": round(week_total, 0),
+                "week_num": i,
+                "ist_deload": hat_deload,
+            }
+        )
     return weekly_volumes
 
 

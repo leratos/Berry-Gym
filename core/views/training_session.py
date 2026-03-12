@@ -764,8 +764,10 @@ def _save_training_post(request, training) -> bool:
     return False
 
 
-def _build_intensity_suggestion(avg_rpe: float) -> dict | None:
-    """Gibt Intensitäts-Vorschlag zurück oder None."""
+def _build_intensity_suggestion(avg_rpe: float | None) -> dict | None:
+    """Gibt Intensitäts-Vorschlag zurück oder None. avg_rpe kann None sein (kein RPE erfasst)."""
+    if avg_rpe is None:
+        return None
     if avg_rpe < 6.5:
         return {
             "type": "intensity",
@@ -878,12 +880,12 @@ def _get_ai_training_suggestion(user) -> tuple:
         einheit_id__in=recent_training_ids,
         ist_aufwaermsatz=False,
         einheit__ist_deload=False,
-        rpe__isnull=False,
     )
     if not recent_sets.exists():
         return None, training_count
 
-    avg_rpe = recent_sets.aggregate(Avg("rpe"))["rpe__avg"]
+    # avg_rpe nur aus Sätzen mit RPE-Wert – kann None sein wenn kein RPE erfasst wurde
+    avg_rpe = recent_sets.filter(rpe__isnull=False).aggregate(Avg("rpe"))["rpe__avg"]
     suggestions = _build_ai_suggestions(user, recent_training_ids, recent_sets, avg_rpe)
 
     priority_order = {"danger": 0, "warning": 1, "info": 2}

@@ -1065,7 +1065,9 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
         self.assertEqual(training_count, 3)
         self.assertEqual(ai_suggestion["color"], "danger")
 
-    def test_get_ai_training_suggestion_three_trainings_without_recent_sets(self):
+    def test_get_ai_training_suggestion_three_trainings_without_rpe(self):
+        # Sätze ohne RPE → avg_rpe=None → kein Intensitäts-Vorschlag
+        # Aber: nur 1 Übung (< 5) → Variety-Vorschlag wird geliefert
         for d in [1, 3, 5]:
             t = self._training(days_ago=d, abgeschlossen=True)
             Satz.objects.create(
@@ -1079,7 +1081,9 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
             )
 
         suggestion, count = _get_ai_training_suggestion(self.user)
-        self.assertIsNone(suggestion)
+        # Variety-Vorschlag erwartet (1 Übung < 5), kein Intensitäts-Vorschlag (kein RPE)
+        self.assertIsNotNone(suggestion)
+        self.assertEqual(suggestion["type"], "variety")
         self.assertEqual(count, 3)
 
     def test_finish_training_dauer_fallback_when_datum_missing(self):
