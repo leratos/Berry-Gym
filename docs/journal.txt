@@ -4182,3 +4182,18 @@ Die Warnung "Schneller Verlust – Muskelabbau möglich" im PDF-Export war nicht
 
 **Tests:** ✅ 49/49 bestanden (test_export.py + test_body_tracking.py)
 - Inkl. 4 neue Tests für `_analyze_weight_loss_context` und `_calc_volume_trend_weekly`
+
+## In Arbeit: Fix – Laufende Woche in Volumen-Analyse / training_stats
+
+**Datum:** 2026-03-12
+**Branch:** fix/body-warning-logic (bestehend)
+
+**Problem:**
+In /stats/ wird für die noch laufende Woche (W11) ein Rückgang von -40% angezeigt,
+obwohl die Woche noch nicht abgeschlossen ist (3. Trainingstag folgt noch).
+
+**Geplante Änderungen:**
+1. `core/views/training_stats.py` – _detect_volume_warnings(): aktuelle KW überspringen
+   + aktuelle_kw in Context übergeben
+2. `core/templates/core/training_stats.html` – Chart: aktuelle Woche andere Farbe (gedimmt),
+   Warning-Box: neutraler Hinweis statt Warnung für laufende Woche

@@ -94,7 +94,15 @@
                 <div class="alert alert-warning border-warning mb-3">
                     <h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>{% trans "Volumen-Analyse" %}</h6>
                     {% for warning in deload_warnings %}
-                        {% if warning.type == 'spike' %}
+                        {% if warning.type == 'laufend' %}
+                        <div class="small mb-2">
+                            <strong>{{ warning.week }}:</strong>
+                            <span class="text-secondary">{% trans "Laufende Woche" %}</span>
+                            ({{ warning.volume }} kg {% trans "bisher" %})<br>
+                            <i class="bi bi-clock me-1"></i>
+                            <em>{% trans "Diese Woche ist noch nicht abgeschlossen – keine Bewertung möglich." %}</em>
+                        </div>
+                        {% elif warning.type == 'spike' %}
                         <div class="small mb-2">
                             <strong>{{ warning.week }}:</strong>
                             <span class="text-danger">+{{ warning.increase }}% {% trans "Anstieg" %}</span>
@@ -250,14 +258,27 @@
         options: chartDefaults
     });
 
+    const weeklyLabels = {{ weekly_labels_json|safe }};
+    const weeklyData = {{ weekly_data_json|safe }};
+    const aktuelleKw = "{{ aktuelle_kw }}";
+    const weeklyColors = weeklyLabels.map(label =>
+        label === aktuelleKw ? 'rgba(13, 202, 240, 0.35)' : '#0dcaf0'
+    );
+    const weeklyBorderColors = weeklyLabels.map(label =>
+        label === aktuelleKw ? 'rgba(13, 202, 240, 0.6)' : '#0dcaf0'
+    );
+
     new Chart(document.getElementById('weeklyChart'), {
         type: 'bar',
         data: {
-            labels: {{ weekly_labels_json|safe }},
+            labels: weeklyLabels,
             datasets: [{
                 label: '{% trans "Wochenvolumen (kg)" %}',
-                data: {{ weekly_data_json|safe }},
-                backgroundColor: '#0dcaf0', borderColor: '#0dcaf0', borderWidth: 1
+                data: weeklyData,
+                backgroundColor: weeklyColors,
+                borderColor: weeklyBorderColors,
+                borderWidth: 1,
+                borderDash: weeklyLabels.map(label => label === aktuelleKw ? [4, 4] : [])
             }]
         },
         options: { ...chartDefaults, plugins: { legend: { display: false } } }
