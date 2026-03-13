@@ -505,7 +505,10 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
 
 
 def _check_pr(user, uebung, neuer_satz, gewicht_float: float, wdh_int: int) -> str | None:
-    """Prüft ob ein neuer PR erzielt wurde.
+    """Prüft ob ein neuer PR erzielt wurde und speichert ihn in der DB.
+
+    Setzt is_pr, pr_type und pr_previous_value direkt auf neuer_satz (ohne save – Caller
+    muss nach PR-Check ggf. save() aufrufen oder direkt update() verwenden).
 
     Returns:
         PR-Meldung (str) oder None wenn kein PR.
@@ -518,15 +521,27 @@ def _check_pr(user, uebung, neuer_satz, gewicht_float: float, wdh_int: int) -> s
         einheit__ist_deload=False,
     ).exclude(id=neuer_satz.id)
 
-    if alte_saetze.exists():
-        max_alter_1rm = max(
-            float(s.gewicht) * (1 + int(s.wiederholungen) / 30) for s in alte_saetze
+    if not alte_saetze.exists():
+        # Erster Satz dieser Übung
+        Satz.objects.filter(id=neuer_satz.id).update(
+            is_pr=True,
+            pr_type="first",
+            pr_previous_value=None,
         )
-        if current_1rm > max_alter_1rm:
-            diff = round(current_1rm - max_alter_1rm, 1)
-            return f"🎉 NEUER REKORD! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM) - +{diff} kg!"
-    else:
         return f"🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)"
+
+    max_alter_1rm = max(float(s.gewicht) * (1 + int(s.wiederholungen) / 30) for s in alte_saetze)
+    if current_1rm > max_alter_1rm:
+        diff = round(current_1rm - max_alter_1rm, 1)
+        Satz.objects.filter(id=neuer_satz.id).update(
+            is_pr=True,
+            pr_type="best_1rm",
+            pr_previous_value=round(max_alter_1rm, 2),
+        )
+        return (
+            f"🎉 NEUER REKORD! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM) - +{diff} kg!"
+        )
+
     return None
 
 
@@ -931,6 +946,13 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
 
     ai_suggestion, training_count = _get_ai_training_suggestion(request.user)
 
+    # PRs dieser Session
+    session_prs = (
+        training.saetze.filter(is_pr=True, ist_aufwaermsatz=False)
+        .select_related("uebung")
+        .order_by("uebung__bezeichnung")
+    )
+
     context = {
         "training": training,
         "arbeitssaetze_count": arbeitssaetze.count(),
@@ -940,5 +962,6 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
         "dauer_geschaetzt": dauer_geschaetzt,
         "training_count": training_count,
         "ai_suggestion": ai_suggestion,
+        "session_prs": session_prs,
     }
     return render(request, "core/training_finish.html", context)
