@@ -4345,3 +4345,28 @@ berechnete finish_training() die Dauer als `jetzt - ursprünglicher_start_timest
 - exercise_stats: pr_history im Context
 
 **Gesamtstand:** 91 passed (test_pr_system + test_training_session_views)
+
+
+## Geplant: Phase 3 – Trainingsblock-Konzept
+**Datum:** 2026-03-13
+**Priorität:** Mittel – kein sofortiger Handlungsbedarf, aktueller Plan läuft noch ~7 Wochen
+
+**Anlass / User-Szenario:**
+User wechselt nach aktuellem Definitionsplan (12–15 Wdh) auf eine Massephase (6–8 Wdh, mehr Gewicht).
+Dabei sinkt das berechnete Trainingsvolumen (kg × Wdh) automatisch, obwohl die tatsächliche Belastung
+steigt. Das System würde fälschlicherweise Volumen-Abfall-Warnungen ausgeben.
+
+Rechenbeispiel:
+- Definition: 4 × 12 × 50 kg = 2.400 kg
+- Masse:       4 × 6 × 75 kg = 1.800 kg (−25 % auf dem Papier, aber intensiver!)
+
+**Geplanter Lösungsansatz:**
+- Neues Modell `Trainingsblock` (start/end, Typ: Masse/Definition/Kraft/Peaking)
+- Volumen-Vergleiche nur innerhalb desselben Blocks
+- KI-Volumen-Warnungen in den ersten 3 Wochen eines neuen Blocks unterdrücken
+- Intensitätsnormalisierung: 1RM-Trend parallel zum Volumen-Trend anzeigen
+- Beim Plan-Wechsel: User fragen ob neuer Block gestartet werden soll
+
+**Abhängigkeiten:** Phase 2 (1RM-Tracking) ist Voraussetzung – bereits erledigt ✅
+**Dokumentiert in:** docs/PROJECT_ROADMAP.md (Phase 3)
+
