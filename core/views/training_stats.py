@@ -706,6 +706,19 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     except UserProfile.DoesNotExist:
         pass
 
+    # PRs der letzten 7 Tage (immer frisch)
+    week_ago = heute - timedelta(days=7)
+    prs_diese_woche = (
+        Satz.objects.filter(
+            einheit__user=request.user,
+            einheit__datum__gte=week_ago,
+            is_pr=True,
+            ist_aufwaermsatz=False,
+        )
+        .select_related("uebung", "einheit")
+        .order_by("-einheit__datum")
+    )
+
     context = {
         "letztes_training": letztes_training,
         "letzter_koerperwert": letzter_koerperwert,
@@ -714,6 +727,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "offene_sessions_anzahl": offene_sessions_anzahl,
         "week_overview": week_overview,
         "trainings_ziel": trainings_ziel,
+        "prs_diese_woche": prs_diese_woche,
         **computed,
     }
     _add_plan_group_context(request.user, context)
@@ -897,6 +911,18 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
     hat_zusatzgewicht = saetze.filter(gewicht__gt=0).exists()
     show_reps_chart = is_kg_uebung and bool(wdh_history) and not hat_zusatzgewicht
 
+    # PR-Geschichte: alle gespeicherten PRs dieser Übung (älteste zuerst für Timeline)
+    pr_history = (
+        Satz.objects.filter(
+            einheit__user=request.user,
+            uebung=uebung,
+            is_pr=True,
+            ist_aufwaermsatz=False,
+        )
+        .select_related("einheit")
+        .order_by("einheit__datum")
+    )
+
     context = {
         "uebung": uebung,
         "labels_json": json.dumps(list(history_data.keys())),
@@ -910,6 +936,7 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
         "user_koerpergewicht": user_koerpergewicht,
         "avg_rpe": round(avg_rpe, 1) if avg_rpe else None,
         "rpe_trend": _calc_rpe_trend(saetze, avg_rpe),
+        "pr_history": pr_history,
     }
     return render(request, "core/stats_exercise.html", context)
 

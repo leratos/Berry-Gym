@@ -155,6 +155,46 @@
             </div>
         </div>
 
+        {% if pr_history %}
+        <div class="card card-stat border-warning border-opacity-50 mt-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">🏆 PR-Geschichte</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-dark table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="text-muted small">Datum</th>
+                                <th class="text-muted small">Gewicht</th>
+                                <th class="text-muted small">Wdh</th>
+                                <th class="text-muted small">Art</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pr in pr_history %}
+                            <tr>
+                                <td class="small">{{ pr.einheit.datum|date:"d.m.Y" }}</td>
+                                <td class="small fw-semibold">{{ pr.gewicht }} kg</td>
+                                <td class="small">{{ pr.wiederholungen }}</td>
+                                <td>
+                                    {% if pr.pr_type == "first" %}
+                                        <span class="badge bg-primary">Erster</span>
+                                    {% elif pr.pr_type == "best_1rm" %}
+                                        <span class="badge bg-success">🎉 1RM</span>
+                                    {% elif pr.pr_type == "max_weight" %}
+                                        <span class="badge bg-warning text-dark">Max KG</span>
+                                    {% elif pr.pr_type == "max_reps" %}
+                                        <span class="badge bg-info text-dark">Max Wdh</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
     {% endif %}
 
 </div>

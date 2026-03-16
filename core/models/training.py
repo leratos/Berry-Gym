@@ -47,6 +47,13 @@ class Trainingseinheit(models.Model):
 
 
 class Satz(models.Model):
+    PR_TYPE_CHOICES = [
+        ("best_1rm", "Bestes 1RM"),
+        ("max_weight", "Neues Max-Gewicht"),
+        ("max_reps", "Neue Wdh auf gleichem Gewicht"),
+        ("first", "Erster Satz dieser Übung"),
+    ]
+
     einheit = models.ForeignKey(Trainingseinheit, on_delete=models.CASCADE, related_name="saetze")
     uebung = models.ForeignKey(Uebung, on_delete=models.PROTECT, verbose_name="Übung")
     satz_nr = models.PositiveIntegerField(default=1, verbose_name="Satz Nr.")
@@ -66,6 +73,26 @@ class Satz(models.Model):
         default=0,
         verbose_name="Superset-Gruppe",
         help_text="0 = keine Gruppe, 1-9 = Gruppennummer für Supersätze",
+    )
+    is_pr = models.BooleanField(
+        default=False,
+        verbose_name="Persönlicher Rekord",
+        help_text="Dieser Satz ist ein neuer persönlicher Rekord",
+    )
+    pr_type = models.CharField(
+        max_length=20,
+        choices=PR_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="PR-Typ",
+    )
+    pr_previous_value = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Vorheriger Rekordwert",
+        help_text="1RM-Wert vor diesem PR",
     )
 
     class Meta:

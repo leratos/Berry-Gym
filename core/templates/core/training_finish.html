@@ -31,6 +31,24 @@
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-20px); }
     }
+    .pr-card {
+        background: linear-gradient(135deg, #1a2e1a 0%, #1e3a1e 100%);
+        border: 1px solid #2d6a4f;
+    }
+    .pr-badge {
+        background: linear-gradient(135deg, #ffd700, #ff8c00);
+        color: #1a1a1a;
+        font-weight: bold;
+        font-size: 0.7rem;
+        padding: 2px 7px;
+        border-radius: 10px;
+        white-space: nowrap;
+    }
+    @keyframes pr-glow {
+        0%, 100% { box-shadow: 0 0 6px rgba(255, 215, 0, 0.3); }
+        50% { box-shadow: 0 0 18px rgba(255, 215, 0, 0.7); }
+    }
+    .pr-card { animation: pr-glow 2s ease-in-out infinite; }
 </style>
 {% endblock %}
 
@@ -88,6 +106,39 @@
     </div>
     {% endif %}
   </div>
+
+  {% if session_prs %}
+  <div class="card pr-card rounded-3 mb-4">
+    <div class="card-body">
+      <div class="d-flex align-items-center mb-3">
+        <span style="font-size:1.8rem; margin-right:0.5rem;">🏆</span>
+        <h5 class="mb-0 fw-bold text-warning">{% trans "Persönliche Rekorde" %}</h5>
+      </div>
+      {% for pr in session_prs %}
+      <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-secondary border-opacity-25">
+        <div>
+          <span class="fw-semibold text-white">{{ pr.uebung.bezeichnung }}</span>
+          <small class="text-muted d-block">
+            {{ pr.gewicht }} kg × {{ pr.wiederholungen }} Wdh
+          </small>
+        </div>
+        <div class="text-end">
+          {% if pr.pr_type == "first" %}
+            <span class="pr-badge">🥇 Erster</span>
+          {% elif pr.pr_type == "best_1rm" %}
+            <span class="pr-badge">🎉 Neuer 1RM</span>
+            {% if pr.pr_previous_value %}
+            <small class="text-success d-block mt-1">
+              +{{ pr.pr_previous_value|stringformat:".1f" }} → {{ pr.gewicht|add:"0" }} kg
+            </small>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
   {% if ai_suggestion %}
   <div class="alert alert-{{ ai_suggestion.color }} border-{{ ai_suggestion.color }} mb-4" role="alert">
