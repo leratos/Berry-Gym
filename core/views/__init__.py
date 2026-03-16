@@ -31,6 +31,9 @@ from .api_plan_sharing import (
     api_unshare_plan_with_user,
 )
 
+# API Saleria views (Elder-Berry AI-Assistent)
+from .api_saleria import saleria_last_training, saleria_prs, saleria_summary, saleria_week
+
 # Auth views
 from .auth import apply_beta, feedback_create, feedback_detail, feedback_list, profile, register
 
@@ -272,4 +275,9 @@ __all__ = [
     "api_get_plan_shares",
     "api_get_group_shares",
     "sources_list",
+    # Saleria API
+    "saleria_summary",
+    "saleria_last_training",
+    "saleria_week",
+    "saleria_prs",
 ]

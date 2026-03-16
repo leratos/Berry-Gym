@@ -408,6 +408,14 @@ AI_RATE_LIMIT_LIVE_GUIDANCE = int(os.getenv("AI_RATE_LIMIT_LIVE_GUIDANCE", "50")
 AI_RATE_LIMIT_ANALYSIS = int(os.getenv("AI_RATE_LIMIT_ANALYSIS", "10"))
 
 # ==================================
+# SALERIA API (Elder-Berry AI-Assistent)
+# ==================================
+# Read-only API für Saleria – Token-basierte Authentifizierung.
+# Token wird auf beiden Seiten (Berry-Gym + Elder-Berry Tower) konfiguriert.
+SALERIA_API_TOKEN = os.getenv("SALERIA_API_TOKEN", "")
+SALERIA_API_USER_ID = int(os.getenv("SALERIA_API_USER_ID", "1"))
+
+# ==================================
 # DJANGO-AXES: Brute Force Protection
 # ==================================
 

@@ -166,6 +166,11 @@ urlpatterns = [
     path("api/push/subscribe/", views.subscribe_push, name="subscribe_push"),
     path("api/push/unsubscribe/", views.unsubscribe_push, name="unsubscribe_push"),
     path("api/push/vapid-key/", views.get_vapid_public_key, name="get_vapid_public_key"),
+    # Saleria API (Elder-Berry AI-Assistent, Token-Auth)
+    path("api/saleria/summary/", views.saleria_summary, name="saleria_summary"),
+    path("api/saleria/last-training/", views.saleria_last_training, name="saleria_last_training"),
+    path("api/saleria/week/", views.saleria_week, name="saleria_week"),
+    path("api/saleria/prs/", views.saleria_prs, name="saleria_prs"),
     # ML Prediction (scikit-learn, 100% lokal, CPU-only)
     path("api/ml/train/", views.ml_train_model, name="ml_train_model"),
     path("api/ml/predict/<int:uebung_id>/", views.ml_predict_weight, name="ml_predict_weight"),
