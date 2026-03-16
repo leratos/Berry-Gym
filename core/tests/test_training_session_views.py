@@ -1095,9 +1095,11 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
         fake_arbeit.__iter__.return_value = iter([])
         fake_warmup = MagicMock()
         fake_warmup.count.return_value = 0
+        fake_prs = MagicMock()
+        fake_prs.select_related.return_value.order_by.return_value = []
 
         fake_saetze_manager = MagicMock()
-        fake_saetze_manager.filter.side_effect = [fake_arbeit, fake_warmup]
+        fake_saetze_manager.filter.side_effect = [fake_arbeit, fake_warmup, fake_prs]
         fake_saetze_manager.values.return_value.distinct.return_value.count.return_value = 0
 
         fake_training = MagicMock()

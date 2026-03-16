@@ -30,19 +30,48 @@
 
 ---
 
-## Phase 3 – Dashboard-Hierarchie *(täglich sichtbar)*
-**Branch:** `feature/phase3-dashboard`
+## Phase 3 – Trainingsblock-Konzept *(Phasenwechsel intelligent behandeln)*
+**Branch:** `feature/phase3-trainingsblock`
+**Priorität:** Mittel – relevant sobald User Trainingsplan wechselt (aktueller Plan läuft noch ~7 Wochen)
+
+### Hintergrund / Problem
+Beim Wechsel von einer Definitionsphase (12–15 Wdh, ~50 kg) auf eine Massephase (6–8 Wdh, ~75 kg)
+sinkt das **Trainingsvolumen** (kg × Wdh × Sätze) auf dem Papier dramatisch, obwohl die Belastung
+tatsächlich höher ist. Das führt zu falschen Warnungen und irreführenden Trend-Diagrammen.
+
+**Rechenbeispiel:**
+- Definition: 4 × 12 × 50 kg = 2.400 kg Volumen
+- Masse:       4 × 6 × 75 kg = 1.800 kg Volumen → −25 %, obwohl schwerer trainiert wird
+
+### Geplante Lösung
 
 | # | Aufgabe | Details |
 |---|---|---|
-| 3.1 | Quick Actions: 3 primäre Buttons | Training, Körperwerte, Cardio – Rest unter "Mehr" |
-| 3.2 | Farbwirrwarr bereinigen | Einheitliche Button-Sprache |
-| 3.3 | Motivationstext datenbasisiert | "Letztes Mal 80kg – heute PR-Versuch?" statt Generic |
+| 3.1 | Trainingsblock-Modell | `Trainingsblock` mit `start_datum`, `end_datum`, `typ` (Definition/Masse/Kraft/Peaking/Deload), `ziel_rep_range` |
+| 3.2 | Volumen-Baseline pro Block | Vergleiche Volumen nur innerhalb desselben Blocks, nicht blockübergreifend |
+| 3.3 | Phasenwechsel-Hinweis | Beim Plan-Wechsel: User wird gefragt, ob neuer Block gestartet werden soll |
+| 3.4 | Intensitäts-Normalisierung | Zeige sowohl Volumen als auch geschätzte 1RM-Last als Trend – so sind beide Phasen vergleichbar |
+| 3.5 | Volumen-Warnungen unterdrücken | Keine "Volumen gesunken"-KI-Warnung in den ersten 3 Wochen eines neuen Blocks |
+
+### Abhängigkeiten
+- Setzt Phase 2 (PR-System, 1RM-Tracking) voraus ✅ erledigt
+- Benötigt Plan-Wechsel-Event (User muss neuen Block manuell starten oder beim Plan-Aktivieren gefragt werden)
 
 ---
 
-## Phase 4 – Trainingsabschluss aufwerten *(Belohnungsmoment)*
-**Branch:** `feature/phase4-finish-screen`
+## Phase 4 – Dashboard-Hierarchie *(täglich sichtbar)*
+**Branch:** `feature/phase4-dashboard`
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 4.1 | Quick Actions: 3 primäre Buttons | Training, Körperwerte, Cardio – Rest unter "Mehr" |
+| 4.2 | Farbwirrwarr bereinigen | Einheitliche Button-Sprache |
+| 4.3 | Motivationstext datenbasisiert | "Letztes Mal 80kg – heute PR-Versuch?" statt Generic |
+
+---
+
+## Phase 5 – Trainingsabschluss aufwerten *(Belohnungsmoment)*
+**Branch:** `feature/phase5-finish-screen`
 
 | # | Aufgabe | Details |
 |---|---|---|

@@ -4294,6 +4294,84 @@ berechnete finish_training() die Dauer als `jetzt - ursprünglicher_start_timest
 **Noch uncommitted:** docs/PROJECT_ROADMAP.md – zur Prüfung und separaten Freigabe
 
 
+## In Arbeit: Phase 2 – PR-System
+**Datum:** 2026-03-13
+**Branch:** feature/phase2-pr-system (lokal, noch nicht erstellt)
+
+**Scope:**
+- 2.1 PR-Detection beim Speichern → in DB markieren
+- 2.2 PR-Moment auf Abschlussseite (visuell)
+- 2.3 PR-Geschichte pro Übung in Statistik
+- 2.4 "Deine PRs diese Woche" auf Dashboard
+
+
+## Abgeschlossen: Phase 2 – PR-System
+**Datum:** 2026-03-13
+**Branch:** feature/phase2-pr-system
+
+**Implementierung:**
+
+1. ✅ **Satz-Modell erweitert** (core/models/training.py + Migration 0077)
+   - `is_pr` BooleanField (default=False)
+   - `pr_type` CharField (choices: best_1rm, max_weight, max_reps, first)
+   - `pr_previous_value` DecimalField (vorheriger 1RM-Wert)
+
+2. ✅ **_check_pr() umgebaut** (core/views/training_session.py)
+   - Erster Satz → `pr_type="first"`, kein pr_previous_value
+   - Neuer 1RM → `pr_type="best_1rm"`, pr_previous_value = alter Rekord
+   - Kein PR → is_pr bleibt False
+   - Deload-Trainings werden beim PR-Check ignoriert (war schon so)
+   - DB-Update direkt via `Satz.objects.filter(id=...).update(...)` (atomisch)
+
+3. ✅ **finish_training() erweitert** (core/views/training_session.py)
+   - `session_prs` QuerySet im Context
+   - training_finish.html: Goldene Karte mit PR-Liste + Glow-Animation
+   - Zeigt Übung, Gewicht × Wdh, PR-Badge
+
+4. ✅ **exercise_stats() erweitert** (core/views/training_stats.py)
+   - `pr_history` QuerySet im Context
+   - stats_exercise.html: PR-Geschichte Tabelle (Datum, Gewicht, Wdh, Art)
+   - Chronologisch (älteste zuerst → neueste)
+
+5. ✅ **Dashboard PR-Widget** (core/views/training_stats.py + dashboard.html)
+   - `prs_diese_woche` = PRs der letzten 7 Tage
+   - Widget erscheint nach Favoriten-Übungen (nur wenn PRs vorhanden)
+   - Link direkt auf Übungsstatistik
+
+**Tests:** 9 neue Tests in core/tests/test_pr_system.py
+- _check_pr(): erster Satz, neuer 1RM, kein PR, Deload-Ignorierung
+- finish_training: session_prs im Context
+- dashboard: prs_diese_woche (aktuell + alt)
+- exercise_stats: pr_history im Context
+
+**Gesamtstand:** 91 passed (test_pr_system + test_training_session_views)
+
+
+## Geplant: Phase 3 – Trainingsblock-Konzept
+**Datum:** 2026-03-13
+**Priorität:** Mittel – kein sofortiger Handlungsbedarf, aktueller Plan läuft noch ~7 Wochen
+
+**Anlass / User-Szenario:**
+User wechselt nach aktuellem Definitionsplan (12–15 Wdh) auf eine Massephase (6–8 Wdh, mehr Gewicht).
+Dabei sinkt das berechnete Trainingsvolumen (kg × Wdh) automatisch, obwohl die tatsächliche Belastung
+steigt. Das System würde fälschlicherweise Volumen-Abfall-Warnungen ausgeben.
+
+Rechenbeispiel:
+- Definition: 4 × 12 × 50 kg = 2.400 kg
+- Masse:       4 × 6 × 75 kg = 1.800 kg (−25 % auf dem Papier, aber intensiver!)
+
+**Geplanter Lösungsansatz:**
+- Neues Modell `Trainingsblock` (start/end, Typ: Masse/Definition/Kraft/Peaking)
+- Volumen-Vergleiche nur innerhalb desselben Blocks
+- KI-Volumen-Warnungen in den ersten 3 Wochen eines neuen Blocks unterdrücken
+- Intensitätsnormalisierung: 1RM-Trend parallel zum Volumen-Trend anzeigen
+- Beim Plan-Wechsel: User fragen ob neuer Block gestartet werden soll
+
+**Abhängigkeiten:** Phase 2 (1RM-Tracking) ist Voraussetzung – bereits erledigt ✅
+**Dokumentiert in:** docs/PROJECT_ROADMAP.md (Phase 3)
+
+
+
 ## Konzept bestätigt: Phase 5 – Dashboard-Redesign
 
 **Datum:** 2026-03-12
