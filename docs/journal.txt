@@ -4292,3 +4292,79 @@ berechnete finish_training() die Dauer als `jetzt - ursprünglicher_start_timest
 **Tests:** ✅ 175/175 (training_session_views + training_stats + export + training_views)
 
 **Noch uncommitted:** docs/PROJECT_ROADMAP.md – zur Prüfung und separaten Freigabe
+
+
+## Konzept bestätigt: Phase 5 – Dashboard-Redesign
+
+**Datum:** 2026-03-12
+
+**Umfang (bestätigt):**
+1. Button-Hierarchie: 7 Buttons/6 Farben → 3 primäre + "Mehr"-Collapse
+   - Primär: Training starten
+   - Sekundär: Cardio | Körperwerte (nebeneinander)
+   - Tertiär (Collapse): KI-Plan, Trainingsempfehlungen, ML, Muskelgruppen
+2. Motivationstext datenbasisiert (View-Logik, kein KI-Call):
+   - > 3 Tage kein Training → "Letzte Einheit vor X Tagen"
+   - Trainingstag laut Plan → letztes Gewicht der nächsten Übung
+   - PR in letztem Training → PR-Erwähnung
+   - Streak-Meilenstein → Streak-Text
+3. Körper-Sektion kompakter: nur Gewicht + FFMI primär, Rest hinter "Details"
+4. Heatmap: zeigt nur Zeitraum seit erstem Training (kein leeres Grid)
+
+**Nicht angefasst:**
+- Layout-Grundstruktur (2 Sektionen)
+- Performance Form-Index
+- AI Auto-Suggest
+- Aktiver Plan Widget
+- Wochenübersicht 7 Tage
+
+**Technische Basis:** Bootstrap Collapse, keine neuen Libraries
+**Aufwand-Schätzung:** ~2-3 Tage
+
+
+## Konzeptphase abgeschlossen – Finaler Phasenplan Berry-Gym Erweiterung
+
+**Datum:** 2026-03-12
+
+**Produktvision (festgehalten):**
+"Plan erstellen ohne Stress, Training ohne Stocken, Daten die mir helfen besser zu werden."
+Kein Wearable-Support, keine Ernährung, kein Social Feed – bewusste Entscheidung.
+
+**Bestätigte Phasen:**
+
+| Phase | Titel                        | Priorität | Aufwand |
+|-------|------------------------------|-----------|---------|
+| 1     | Bugs & Navigation            | ✅ DONE   | -       |
+| 2     | PR-System                    | Hoch      | ~2 Tage |
+| 4     | Trainingsabschluss aufwerten | Mittel    | ~2 Tage |
+| 5     | Dashboard-Redesign           | Mittel    | ~3 Tage |
+
+Phase 3 (Quick Actions) wurde in Phase 5 integriert.
+Wearable-Integration: bewusst gestrichen – kein Nutzen für Use-Case.
+
+**Nächster Schritt:** Phase 2 (PR-System) – neuer Chat
+
+
+## Architektur-Entscheidung: Berry-Gym bleibt standalone
+
+**Datum:** 2026-03-12
+
+**Evaluiert:** Integration in signz-vision.de (Woltlab CMS 6.2) via OAuth 2.0
+**Entscheidung:** Nein – bewusst getrennt
+
+**Begründung:**
+- Zielgruppen überschneiden sich kaum:
+  Gruppe A (trainiert) ≠ Gruppe B (entwickelt/kollaboriert)
+- Integration würde Berry-Gym architektonisch einschränken
+- Zwei unabhängige Deployments = kein gegenseitiges Ausfallrisiko
+- OAuth 2.0 wäre technisch machbar gewesen (Woltlab als Provider vorhanden),
+  aber Aufwand ohne echten Mehrwert
+
+**Stand Gesamtplanung:**
+- Phase 1: ✅ Abgeschlossen
+- Phase 2: PR-System (nächster Chat)
+- Phase 4: Trainingsabschluss aufwerten
+- Phase 5: Dashboard-Redesign
+- Wearables: gestrichen
+- OAuth/Woltlab-Integration: gestrichen
+- Monetarisierung: technisch/infrastrukturell bereit, nach Phase 5 evaluieren
