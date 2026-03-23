@@ -877,6 +877,78 @@ def _build_ai_suggestions(user, recent_training_ids: list, recent_sets, avg_rpe:
     return suggestions
 
 
+def _get_volume_comparison(training) -> dict | None:
+    """Vergleicht Volumen des aktuellen Trainings mit dem letzten desselben Plans.
+
+    Gibt dict zurück mit:
+    - prev_volume: Volumen des Vorgänger-Trainings (kg)
+    - pct_change: Prozentuale Änderung (positiv = mehr, negativ = weniger)
+    - is_positive: True wenn Verbesserung oder gleich
+    Gibt None zurück wenn kein Vorgänger vorhanden oder Plan fehlt.
+    """
+    if not training.plan or not training.datum:
+        return None
+
+    prev_training = (
+        Trainingseinheit.objects.filter(
+            user=training.user,
+            plan=training.plan,
+            abgeschlossen=True,
+            datum__lt=training.datum,
+        )
+        .order_by("-datum")
+        .first()
+    )
+    if not prev_training:
+        return None
+
+    prev_saetze = prev_training.saetze.filter(ist_aufwaermsatz=False)
+    prev_volume = sum(
+        float(s.gewicht) * s.wiederholungen for s in prev_saetze if s.gewicht and s.wiederholungen
+    )
+    if prev_volume <= 0:
+        return None
+
+    current_saetze = training.saetze.filter(ist_aufwaermsatz=False)
+    current_volume = sum(
+        float(s.gewicht) * s.wiederholungen
+        for s in current_saetze
+        if s.gewicht and s.wiederholungen
+    )
+    pct_change = ((current_volume - prev_volume) / prev_volume) * 100
+    return {
+        "prev_volume": round(prev_volume, 0),
+        "pct_change": round(pct_change, 1),
+        "is_positive": pct_change >= 0,
+    }
+
+
+def _get_next_plan_suggestion(user, current_plan) -> "Plan | None":
+    """Gibt den nächsten Plan in der aktiven Gruppe zurück (nach current_plan).
+
+    Berücksichtigt die Reihenfolge in der aktiven Plan-Gruppe.
+    Gibt None zurück wenn kein aktiver Plan, Gruppe < 2 Pläne oder current_plan nicht in Gruppe.
+    """
+    if not current_plan:
+        return None
+    try:
+        profile = user.profile
+        if not profile.active_plan_group:
+            return None
+        group_plans = list(
+            Plan.objects.filter(user=user, gruppe_id=profile.active_plan_group).order_by(
+                "gruppe_reihenfolge", "name"
+            )
+        )
+        if len(group_plans) < 2:
+            return None
+        plan_ids = [p.id for p in group_plans]
+        current_idx = plan_ids.index(current_plan.id)
+        return group_plans[(current_idx + 1) % len(group_plans)]
+    except (UserProfile.DoesNotExist, ValueError):
+        return None
+
+
 def _get_ai_training_suggestion(user) -> tuple:
     """
     Gibt (ai_suggestion, training_count) zurück.
@@ -918,9 +990,12 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
         id=training_id,
         user=request.user,
     )
+    next_plan = _get_next_plan_suggestion(request.user, training.plan)
 
     if request.method == "POST":
         if _save_training_post(request, training):
+            if "start_next" in request.POST and next_plan:
+                return redirect("training_start_plan", next_plan.id)
             return redirect("dashboard")
 
     # Statistiken für die Zusammenfassung berechnen
@@ -953,6 +1028,8 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
         .order_by("uebung__bezeichnung")
     )
 
+    volume_comparison = _get_volume_comparison(training)
+
     context = {
         "training": training,
         "arbeitssaetze_count": arbeitssaetze.count(),
@@ -963,5 +1040,7 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
         "training_count": training_count,
         "ai_suggestion": ai_suggestion,
         "session_prs": session_prs,
+        "volume_comparison": volume_comparison,
+        "next_plan": next_plan,
     }
     return render(request, "core/training_finish.html", context)
