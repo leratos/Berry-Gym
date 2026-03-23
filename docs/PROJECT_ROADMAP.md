@@ -32,6 +32,7 @@
 
 ## Phase 3 – Trainingsblock-Konzept *(Phasenwechsel intelligent behandeln)*
 **Branch:** `feature/phase3-trainingsblock`
+**Status:** ✅ Abgeschlossen (2026-03-23)
 **Priorität:** Mittel – relevant sobald User Trainingsplan wechselt (aktueller Plan läuft noch ~7 Wochen)
 
 ### Hintergrund / Problem

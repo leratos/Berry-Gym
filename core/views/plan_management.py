@@ -17,7 +17,9 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Uebung, UserProfile
+from django.utils import timezone
+
+from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Trainingsblock, Uebung, UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -594,6 +596,32 @@ def _ensure_gruppe_id(plan: "Plan") -> str:
     return str(plan.gruppe_id)
 
 
+def _start_new_trainingsblock(request, gruppe_id: str, block_typ: str) -> None:
+    """Schließt den aktuell offenen Block und startet einen neuen.
+
+    Wird beim Plan-Wechsel aufgerufen, wenn der User einen Block-Typ gewählt hat.
+    """
+    today = timezone.now().date()
+
+    # Bestehende offene Blöcke schließen
+    Trainingsblock.objects.filter(user=request.user, end_datum__isnull=True).update(
+        end_datum=today
+    )
+
+    # Aktuellen Plan für den neuen Block ermitteln
+    plan_obj = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).first()
+
+    new_block = Trainingsblock.objects.create(
+        user=request.user,
+        typ=block_typ,
+        start_datum=today,
+        plan=plan_obj,
+    )
+    typ_label = dict(Trainingsblock.BLOCK_TYP_CHOICES).get(block_typ, block_typ)
+    messages.info(request, f"Neuer Trainingsblock gestartet: {typ_label}")
+    return new_block
+
+
 def _apply_gruppe_selection(
     request: HttpRequest, profile: "UserProfile", gruppe_id: str, cycle_length: int
 ) -> None:
@@ -601,18 +629,17 @@ def _apply_gruppe_selection(
     if gruppe_id:
         plan_exists = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).exists()
         if plan_exists:
-            if str(profile.active_plan_group) != gruppe_id:
+            is_new_plan = str(profile.active_plan_group) != gruppe_id
+            if is_new_plan:
                 profile.cycle_start_date = None
             profile.active_plan_group = gruppe_id
 
             # Optional: laufende Woche angeben → cycle_start_date rückwärts berechnen
             try:
+                from datetime import timedelta
+
                 current_week = int(request.POST.get("current_week", "0"))
                 if 1 <= current_week <= cycle_length:
-                    from datetime import timedelta
-
-                    from django.utils import timezone
-
                     today = timezone.now().date()
                     monday_this_week = today - timedelta(days=today.weekday())
                     weeks_back = current_week - 1
@@ -623,8 +650,6 @@ def _apply_gruppe_selection(
             # Default: Ohne laufende Woche startet Zyklus am Montag der aktuellen Woche.
             if profile.cycle_start_date is None:
                 from datetime import timedelta
-
-                from django.utils import timezone
 
                 today = timezone.now().date()
                 profile.cycle_start_date = today - timedelta(days=today.weekday())
@@ -637,6 +662,12 @@ def _apply_gruppe_selection(
             messages.success(
                 request, f"Aktiver Plan gesetzt: {gruppe_name} ({cycle_length} Wochen Zyklus)"
             )
+
+            # Neuen Trainingsblock starten, falls der User einen Typ gewählt hat
+            block_typ = request.POST.get("block_typ", "").strip()
+            valid_typen = {k for k, _ in Trainingsblock.BLOCK_TYP_CHOICES}
+            if block_typ and block_typ in valid_typen:
+                _start_new_trainingsblock(request, gruppe_id, block_typ)
         else:
             messages.error(request, "Plan-Gruppe nicht gefunden!")
     else:
@@ -698,6 +729,13 @@ def set_active_plan_group(request: HttpRequest) -> HttpResponse:
         .values("id", "name")
     )
 
+    # Aktuell aktiven Block laden (für Anzeige im Template)
+    active_block = (
+        Trainingsblock.objects.filter(user=request.user, end_datum__isnull=True)
+        .order_by("-start_datum")
+        .first()
+    )
+
     return render(
         request,
         "core/set_active_plan.html",
@@ -709,5 +747,7 @@ def set_active_plan_group(request: HttpRequest) -> HttpResponse:
             "deload_volume_factor": profile.deload_volume_factor,
             "deload_weight_factor": profile.deload_weight_factor,
             "deload_rpe_target": profile.deload_rpe_target,
+            "active_block": active_block,
+            "block_typ_choices": Trainingsblock.BLOCK_TYP_CHOICES,
         },
     )

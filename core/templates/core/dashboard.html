@@ -527,25 +527,46 @@
   {% if weekly_volumes %}
   <div class="card card-stat border-secondary mb-3 shadow-sm">
     <div class="card-body">
-        <h6 class="mb-3"><i class="bi bi-calendar-week me-2"></i>{% trans "Wöchentliches Volumen" %}</h6>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h6 class="mb-0"><i class="bi bi-calendar-week me-2"></i>{% trans "Wöchentliches Volumen" %}</h6>
+          {% if active_block %}
+          <a href="{% url 'set_active_plan_group' %}" class="text-decoration-none">
+            <span class="badge bg-primary bg-opacity-75">
+              <i class="bi bi-layers me-1"></i>{{ active_block.get_typ_display }}
+              {% if block_age_weeks is not None %}· W{{ block_age_weeks|add:"1" }}{% endif %}
+            </span>
+          </a>
+          {% endif %}
+        </div>
         <div class="row g-2">
             {% for week in weekly_volumes %}
             <div class="col-6 col-md-3">
-                <div class="text-center p-2 {% if week.week_num == 0 %}bg-primary bg-opacity-10 border border-primary{% elif week.ist_deload %}bg-warning bg-opacity-10 border border-warning{% else %}bg-secondary bg-opacity-10{% endif %} rounded">
+                <div class="text-center p-2 {% if week.before_block %}opacity-50 bg-secondary bg-opacity-10{% elif week.week_num == 0 %}bg-primary bg-opacity-10 border border-primary{% elif week.ist_deload %}bg-warning bg-opacity-10 border border-warning{% else %}bg-secondary bg-opacity-10{% endif %} rounded">
                     <small class="text-muted d-block" style="font-size: 0.7rem;">
                         {{ week.label }}
                         {% if week.ist_deload %}<span class="text-warning ms-1" title="{% trans 'Deload-Woche' %}">🟡</span>{% endif %}
+                        {% if week.before_block %}<span class="text-muted ms-1" title="{% trans 'Vor aktuellem Block' %}">←</span>{% endif %}
                     </small>
-                    <strong class="{% if week.week_num == 0 %}text-primary{% elif week.ist_deload %}text-warning{% else %}text-white{% endif %}" style="font-size: 1.2rem;">
+                    <strong class="{% if week.before_block %}text-muted{% elif week.week_num == 0 %}text-primary{% elif week.ist_deload %}text-warning{% else %}text-white{% endif %}" style="font-size: 1.2rem;">
                         {{ week.volume|floatformat:0 }}
                     </strong>
                     <small class="{% if week.ist_deload %}text-warning{% else %}text-muted{% endif %} d-block">
                         {% if week.ist_deload %}Deload{% else %}kg{% endif %}
                     </small>
+                    {% if week.avg_1rm and not week.before_block %}
+                    <small class="text-info d-block" style="font-size: 0.65rem;" title="{% trans 'Ø Geschätztes 1RM (Epley)' %}">
+                        ⚡ {{ week.avg_1rm|floatformat:0 }} kg
+                    </small>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
         </div>
+        {% if active_block and block_age_weeks is not None and block_age_weeks < 3 %}
+        <div class="mt-2 small text-muted">
+          <i class="bi bi-info-circle me-1"></i>{% trans "Neuer Block – Volumen-Vergleiche erst ab Woche 3 aussagekräftig." %}
+        </div>
+        {% endif %}
     </div>
   </div>
   {% endif %}

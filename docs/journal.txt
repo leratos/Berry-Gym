@@ -4446,3 +4446,52 @@ Wearable-Integration: bewusst gestrichen – kein Nutzen für Use-Case.
 - Wearables: gestrichen
 - OAuth/Woltlab-Integration: gestrichen
 - Monetarisierung: technisch/infrastrukturell bereit, nach Phase 5 evaluieren
+
+
+## Phase 3 implementiert – Trainingsblock-Konzept
+
+**Datum:** 2026-03-23
+
+**Implementierter Umfang:**
+
+### 3.1 Trainingsblock-Modell (`Trainingsblock`)
+- Neues Model in `core/models/training.py`
+- Felder: `user`, `typ` (definition/masse/kraft/peaking/deload/sonstige), `start_datum`, `end_datum`, `ziel_rep_range_min/max`, `plan` (FK), `name`, `notiz`
+- Properties: `is_active` (end_datum=None), `weeks_since_start`
+- Migration `0078_add_trainingsblock_model.py` erstellt
+- Admin-Registrierung in `core/admin.py`
+
+### 3.2 Volumen-Baseline pro Block
+- `_calculate_weekly_volumes()` in `training_stats.py` erweitert
+- Neues Flag `before_block` je Woche: True wenn diese Woche vor dem aktuellen Block-Start liegt
+- Weeks mit `before_block=True` werden im Dashboard ausgegraut/opacity-50 angezeigt
+- Kein Volumen-Vergleich über Blockkgrenzen hinweg
+
+### 3.3 Phasenwechsel-Hinweis beim Plan-Wechsel
+- `set_active_plan_group` in `plan_management.py`: Übergibt aktuellen Block + Block-Typ-Choices ans Template
+- Template `set_active_plan.html`: neue "Trainingsblock"-Card mit Dropdown (Typ-Auswahl)
+- Bei POST mit `block_typ`: bestehende offene Blöcke werden geschlossen, neuer Block wird gestartet
+- Hilfsfunktion `_start_new_trainingsblock()` kapselt diese Logik
+
+### 3.4 Intensitäts-Normalisierung
+- `_calculate_weekly_volumes()` berechnet zusätzlich `avg_1rm` (Ø geschätztes 1RM nach Epley-Formel)
+- Dashboard zeigt `avg_1rm` als kleinen "⚡ X kg"-Wert unter dem Volumen an
+- Ermöglicht Vergleich über Phasengrenzen (Definitionsphase vs. Massephase)
+
+### 3.5 Volumen-Warnungen unterdrücken
+- `_get_volume_spike_fatigue()` nimmt neuen Parameter `block_age_weeks`
+- Wenn Block < 3 Wochen alt: keine Volumen-Warnungen (return 0, [])
+- Wenn Vergleichswoche `before_block=True`: kein Cross-Block-Vergleich
+- `_calculate_fatigue_index()` erhält `block_age_weeks` vom Dashboard-View
+
+**Technische Details:**
+- Kein neues npm/pip-Paket nötig
+- Volle Backward-Kompatibilität: ohne aktiven Block verhält sich alles wie vorher
+- Dashboard-Cache enthält jetzt `active_block` und `block_age_weeks`
+
+**Stand:**
+- Phase 1: ✅
+- Phase 2: ✅
+- Phase 3: ✅
+- Phase 4: Dashboard-Hierarchie (nächste Phase)
+- Phase 5: Trainingsabschluss aufwerten
