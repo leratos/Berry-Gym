@@ -33,6 +33,7 @@ from ..models import (
     KoerperWerte,
     Plan,
     Satz,
+    Trainingsblock,
     Trainingseinheit,
     Uebung,
     UserProfile,
@@ -56,6 +57,15 @@ def _get_week_start(heute):
     iso_weekday = heute.isoweekday()
     ws = heute - timedelta(days=iso_weekday - 1)
     return ws.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _get_active_trainingsblock(user):
+    """Gibt den aktuell aktiven Trainingsblock (end_datum=None) zurück oder None."""
+    return (
+        Trainingsblock.objects.filter(user=user, end_datum__isnull=True)
+        .order_by("-start_datum")
+        .first()
+    )
 
 
 def _count_trainings_this_week(user, heute) -> int:
@@ -219,24 +229,47 @@ def _calculate_form_index(
     return form_index, "Ausbaufähig", "danger", form_factors
 
 
-def _calculate_weekly_volumes(user, heute) -> list[dict]:
-    """Return volume data for the last 4 weeks."""
+def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
+    """Return volume data for the last 4 weeks.
+
+    Ergänzt jede Woche um:
+    - ``avg_1rm``: Durchschnittliches geschätztes 1RM (Epley) aller Arbeitssätze
+      → ermöglicht Intensitäts-Vergleich über Phasengrenzen hinweg
+    - ``before_block``: True wenn diese Woche vor dem aktuellen Block-Start liegt
+      → Volumen-Warnungen werden für solche Wochen deaktiviert
+    """
+    block_start_date = active_block.start_datum if active_block else None
+
     weekly_volumes = []
     for i in range(4):
         week_start = _get_week_start(heute - timedelta(days=i * 7))
         week_end = week_start + timedelta(days=7)
-        week_saetze = Satz.objects.filter(
-            einheit__user=user,
-            einheit__datum__gte=week_start,
-            einheit__datum__lt=week_end,
-            ist_aufwaermsatz=False,
-            einheit__ist_deload=False,
+        week_saetze = list(
+            Satz.objects.filter(
+                einheit__user=user,
+                einheit__datum__gte=week_start,
+                einheit__datum__lt=week_end,
+                ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
+            ).only("gewicht", "wiederholungen")
         )
+
+        # Volumen: Gewicht × Wdh
         week_total = sum(
             float(s.gewicht) * int(s.wiederholungen)
             for s in week_saetze
             if s.gewicht and s.wiederholungen
         )
+
+        # Durchschnittliches 1RM nach Epley-Formel: w × (1 + reps/30)
+        # Ermöglicht Vergleich zwischen Definitions- und Massephasen
+        est_1rms = [
+            float(s.gewicht) * (1 + int(s.wiederholungen) / 30)
+            for s in week_saetze
+            if s.gewicht and s.wiederholungen and int(s.wiederholungen) > 0
+        ]
+        avg_1rm = round(sum(est_1rms) / len(est_1rms), 1) if est_1rms else 0
+
         # Prüfen ob es in dieser Woche Deload-Trainings gab
         hat_deload = Trainingseinheit.objects.filter(
             user=user,
@@ -244,25 +277,47 @@ def _calculate_weekly_volumes(user, heute) -> list[dict]:
             datum__lt=week_end,
             ist_deload=True,
         ).exists()
+
+        # Liegt diese Woche vor dem aktuellen Block-Start?
+        before_block = bool(block_start_date and week_start.date() < block_start_date)
+
         labels = {0: "Diese Woche", 1: "Letzte Woche"}
         week_label = labels.get(i, f"Vor {i} Wochen")
         weekly_volumes.append(
             {
                 "label": week_label,
                 "volume": round(week_total, 0),
+                "avg_1rm": avg_1rm,
                 "week_num": i,
                 "ist_deload": hat_deload,
+                "before_block": before_block,
             }
         )
     return weekly_volumes
 
 
-def _get_volume_spike_fatigue(weekly_volumes: list[dict]) -> tuple[int, list[str]]:
-    """Return (points, warnings) for a volume spike in the last 2 weeks."""
+def _get_volume_spike_fatigue(
+    weekly_volumes: list[dict], block_age_weeks: int | None = None
+) -> tuple[int, list[str]]:
+    """Return (points, warnings) for a volume spike in the last 2 weeks.
+
+    Wenn ein neuer Trainingsblock kürzer als 3 Wochen alt ist, werden
+    Volumen-Warnungen unterdrückt – ein Phasenwechsel verändert das
+    Volumen natürlicherweise, ohne dass Ermüdung dahintersteckt.
+    """
+    # Erste 3 Wochen eines neuen Blocks: keine Volumen-Warnungen
+    if block_age_weeks is not None and block_age_weeks < 3:
+        return 0, []
+
     if len(weekly_volumes) < 2:
         return 0, []
+
+    # Woche vor aktuellem Block nicht für Vergleiche nutzen
     current_vol = weekly_volumes[0]["volume"]
-    last_vol = weekly_volumes[1]["volume"]
+    last_week = weekly_volumes[1]
+    if last_week.get("before_block"):
+        return 0, []
+    last_vol = last_week["volume"]
     if last_vol <= 0:
         return 0, []
     vol_change = ((current_vol - last_vol) / last_vol) * 100
@@ -330,7 +385,11 @@ def _get_fatigue_rating(fatigue_index: int) -> tuple[str, str, str]:
 
 
 def _calculate_fatigue_index(
-    user, heute, weekly_volumes: list[dict], gesamt_trainings: int
+    user,
+    heute,
+    weekly_volumes: list[dict],
+    gesamt_trainings: int,
+    block_age_weeks: int | None = None,
 ) -> dict:
     """Compute fatigue index and related display data. Returns a dict."""
     fatigue_index = 0
@@ -338,7 +397,7 @@ def _calculate_fatigue_index(
 
     if gesamt_trainings >= 4:
         for pts, warns in [
-            _get_volume_spike_fatigue(weekly_volumes),
+            _get_volume_spike_fatigue(weekly_volumes, block_age_weeks),
             _get_rpe_fatigue(user, heute),
             _get_frequency_fatigue(user, heute),
         ]:
@@ -653,9 +712,11 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         form_index, form_rating, form_color, form_factors = _calculate_form_index(
             request.user, heute, trainings_diese_woche, streak, gesamt_trainings
         )
-        weekly_volumes = _calculate_weekly_volumes(request.user, heute)
+        active_block = _get_active_trainingsblock(request.user)
+        block_age_weeks = active_block.weeks_since_start if active_block else None
+        weekly_volumes = _calculate_weekly_volumes(request.user, heute, active_block)
         fatigue_data = _calculate_fatigue_index(
-            request.user, heute, weekly_volumes, gesamt_trainings
+            request.user, heute, weekly_volumes, gesamt_trainings, block_age_weeks
         )
         motivation_quote = _get_motivation_quote(form_index, fatigue_data["fatigue_index"])
         training_heatmap_json = _get_training_heatmap(request.user, heute)
@@ -673,6 +734,9 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "form_color": form_color,
             "form_factors": form_factors,
             "weekly_volumes": weekly_volumes,
+            # Trainingsblock-Kontext (Phase 3)
+            "active_block": active_block,
+            "block_age_weeks": block_age_weeks,
             **fatigue_data,
             "motivation_quote": motivation_quote,
             "training_heatmap_json": training_heatmap_json,

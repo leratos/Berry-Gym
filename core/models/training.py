@@ -1,8 +1,9 @@
-"""Training-bezogene Models: Trainingseinheit, Satz."""
+"""Training-bezogene Models: Trainingseinheit, Satz, Trainingsblock."""
 
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from .exercise import Uebung
 
@@ -103,3 +104,71 @@ class Satz(models.Model):
             models.Index(fields=["uebung", "einheit"]),
             models.Index(fields=["einheit", "ist_aufwaermsatz"], name="satz_einheit_warmup_idx"),
         ]
+
+
+class Trainingsblock(models.Model):
+    """
+    Repräsentiert einen Trainingsblock (z. B. Definitionsphase, Massephase).
+
+    Zweck: Volumen-Trends werden nur *innerhalb* eines Blocks verglichen,
+    da ein Phasenwechsel (z. B. 12 Wdh × 50 kg → 6 Wdh × 75 kg) das
+    Gesamtvolumen auf dem Papier senkt, obwohl die Belastung steigt.
+    """
+
+    BLOCK_TYP_CHOICES = [
+        ("definition", "Definition / Hypertrophie"),
+        ("masse", "Masseaufbau"),
+        ("kraft", "Kraft"),
+        ("peaking", "Peaking / Wettkampf"),
+        ("deload", "Deload-Block"),
+        ("sonstige", "Sonstige"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="trainingsblöcke")
+    name = models.CharField(max_length=100, blank=True, verbose_name="Blockname")
+    typ = models.CharField(
+        max_length=20,
+        choices=BLOCK_TYP_CHOICES,
+        default="sonstige",
+        verbose_name="Block-Typ",
+    )
+    start_datum = models.DateField(verbose_name="Startdatum")
+    end_datum = models.DateField(null=True, blank=True, verbose_name="Enddatum")
+    ziel_rep_range_min = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Ziel-Wdh. (min)"
+    )
+    ziel_rep_range_max = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Ziel-Wdh. (max)"
+    )
+    plan = models.ForeignKey(
+        "core.Plan",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="trainingsblöcke",
+        verbose_name="Trainingsplan",
+    )
+    notiz = models.TextField(blank=True, verbose_name="Notiz")
+
+    class Meta:
+        verbose_name = "Trainingsblock"
+        verbose_name_plural = "Trainingsblöcke"
+        ordering = ["-start_datum"]
+        indexes = [
+            models.Index(fields=["user", "start_datum"], name="block_user_start_idx"),
+            models.Index(fields=["user", "end_datum"], name="block_user_end_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.get_typ_display()} (ab {self.start_datum.strftime('%d.%m.%Y')})"
+
+    @property
+    def is_active(self) -> bool:
+        """Ein Block ist aktiv, solange kein Enddatum gesetzt ist."""
+        return self.end_datum is None
+
+    @property
+    def weeks_since_start(self) -> int:
+        """Anzahl vollständiger Wochen seit Block-Start."""
+        today = timezone.now().date()
+        return max(0, (today - self.start_datum).days // 7)
