@@ -7,6 +7,7 @@
 
 ## Phase 1 – Bugs & Navigation *(klein, sofort spürbar)*
 **Branch:** `feature/phase1-ux-fixes`
+**Status:** ✅ Abgeschlossen (2026-03-12)
 
 | # | Aufgabe | Datei(en) |
 |---|---|---|
@@ -20,6 +21,7 @@
 
 ## Phase 2 – PR-System *(mittlerer Aufwand, emotional wichtig)*
 **Branch:** `feature/phase2-pr-system`
+**Status:** ✅ Abgeschlossen (2026-03-13)
 
 | # | Aufgabe | Details |
 |---|---|---|
