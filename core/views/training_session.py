@@ -886,7 +886,7 @@ def _get_volume_comparison(training) -> dict | None:
     - is_positive: True wenn Verbesserung oder gleich
     Gibt None zurück wenn kein Vorgänger vorhanden oder Plan fehlt.
     """
-    if not training.plan:
+    if not training.plan or not training.datum:
         return None
 
     prev_training = (
