@@ -10,8 +10,11 @@ Abgedeckte Views:
 """
 
 import json
+from datetime import timedelta
+from decimal import Decimal
 
 from django.urls import reverse
+from django.utils import timezone
 
 import pytest
 
@@ -612,3 +615,97 @@ class TestExerciseStats:
         assert response.status_code == 200
         assert "uebung" in response.context
         assert response.context["uebung"].id == uebung.id
+
+    def test_rpe_chart_shown_with_enough_rpe_data(self, client):
+        """≥ 3 Trainings mit RPE → show_rpe_chart=True."""
+        user = UserFactory()
+        client.force_login(user)
+        uebung = UebungFactory()
+        for i in range(3):
+            einheit = TrainingseinheitFactory(
+                user=user, datum=timezone.now() - timedelta(days=i + 1)
+            )
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=Decimal("7.0"),
+            )
+        response = client.get(self._url(uebung.id))
+        assert response.status_code == 200
+        assert response.context["show_rpe_chart"] is True
+
+    def test_rpe_chart_hidden_without_enough_rpe_data(self, client):
+        """Weniger als 3 RPE-Datenpunkte → show_rpe_chart=False."""
+        user = UserFactory()
+        client.force_login(user)
+        uebung = UebungFactory()
+        einheit = TrainingseinheitFactory(user=user)
+        SatzFactory(
+            einheit=einheit,
+            uebung=uebung,
+            ist_aufwaermsatz=False,
+            rpe=Decimal("7.0"),
+        )
+        response = client.get(self._url(uebung.id))
+        assert response.status_code == 200
+        assert response.context["show_rpe_chart"] is False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Balance Warnings Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestCheckBalanceWarnings:
+    """Tests für _check_balance_warnings() – Push/Pull-Imbalance Detection."""
+
+    def _create_sets(self, user, muskelgruppe, count, days_ago=3):
+        uebung = UebungFactory(muskelgruppe=muskelgruppe)
+        einheit = TrainingseinheitFactory(
+            user=user, datum=timezone.now() - timedelta(days=days_ago)
+        )
+        for _ in range(count):
+            SatzFactory(einheit=einheit, uebung=uebung, ist_aufwaermsatz=False)
+
+    def test_returns_empty_when_insufficient_sets(self):
+        """Weniger als 3 Push-Sätze → keine Warnung (zu wenig Daten)."""
+        from core.views.training_stats import _check_balance_warnings
+
+        user = UserFactory()
+        self._create_sets(user, "BRUST", 2)  # push=2 < 3, pull=0 < 3
+        assert _check_balance_warnings(user, timezone.now()) == []
+
+    def test_warns_push_heavy(self):
+        """8 Push vs. 3 Pull → ratio 2.67 > 2.5 → Push-Warnung."""
+        from core.views.training_stats import _check_balance_warnings
+
+        user = UserFactory()
+        self._create_sets(user, "BRUST", 8)
+        self._create_sets(user, "RUECKEN_LAT", 3, days_ago=5)
+        result = _check_balance_warnings(user, timezone.now())
+        assert len(result) == 1
+        assert result[0]["type"] == "balance"
+        assert "Push" in result[0]["message"]
+
+    def test_warns_pull_heavy(self):
+        """3 Push vs. 10 Pull → ratio 0.3 < 0.4 → Pull-Warnung."""
+        from core.views.training_stats import _check_balance_warnings
+
+        user = UserFactory()
+        self._create_sets(user, "BRUST", 3)
+        self._create_sets(user, "RUECKEN_LAT", 10, days_ago=5)
+        result = _check_balance_warnings(user, timezone.now())
+        assert len(result) == 1
+        assert result[0]["type"] == "balance"
+        assert "Pull" in result[0]["message"]
+
+    def test_no_warning_when_balanced(self):
+        """5 Push vs. 5 Pull → Ratio 1.0 → keine Warnung."""
+        from core.views.training_stats import _check_balance_warnings
+
+        user = UserFactory()
+        self._create_sets(user, "BRUST", 5)
+        self._create_sets(user, "RUECKEN_LAT", 5, days_ago=5)
+        assert _check_balance_warnings(user, timezone.now()) == []

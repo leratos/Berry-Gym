@@ -662,16 +662,73 @@ def _check_stagnation_warnings(user, heute) -> list[dict]:
     return warnings
 
 
+_PUSH_MUSCLES = {"BRUST", "TRIZEPS", "SCHULTER_VORN", "SCHULTER_SEIT"}
+_PULL_MUSCLES = {"RUECKEN_LAT", "RUECKEN_TRAPEZ", "BIZEPS", "SCHULTER_HINT"}
+
+
+def _check_balance_warnings(user, heute) -> list[dict]:
+    """Check for push/pull imbalance over the last 14 days.
+
+    Vergleicht Arbeitssätze in Push- vs. Pull-Muskelgruppen.
+    Warnt wenn das Verhältnis > 2.5:1 oder < 1:2.5 ist.
+    """
+    two_weeks_ago = heute - timedelta(days=14)
+    muscle_counts = (
+        Satz.objects.filter(
+            einheit__user=user,
+            einheit__datum__gte=two_weeks_ago,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        )
+        .values("uebung__muskelgruppe")
+        .annotate(count=Count("id"))
+    )
+    counts = {r["uebung__muskelgruppe"]: r["count"] for r in muscle_counts}
+    push = sum(counts.get(mg, 0) for mg in _PUSH_MUSCLES)
+    pull = sum(counts.get(mg, 0) for mg in _PULL_MUSCLES)
+
+    if push < 3 or pull < 3:
+        return []
+
+    ratio = push / pull
+    if ratio > 2.5:
+        return [
+            {
+                "type": "balance",
+                "severity": "warning",
+                "exercise": "Push/Pull-Balance",
+                "message": f"Push-Sätze ({push}) deutlich höher als Pull-Sätze ({pull})",
+                "suggestion": "Ergänze Rücken- und Bizeps-Übungen für eine ausgeglichene Belastung",
+                "icon": "bi-arrow-left-right",
+                "color": "warning",
+            }
+        ]
+    if ratio < 0.4:
+        return [
+            {
+                "type": "balance",
+                "severity": "warning",
+                "exercise": "Push/Pull-Balance",
+                "message": f"Pull-Sätze ({pull}) deutlich höher als Push-Sätze ({push})",
+                "suggestion": "Ergänze Brust-, Schulter- und Trizeps-Übungen für eine ausgeglichene Belastung",
+                "icon": "bi-arrow-left-right",
+                "color": "warning",
+            }
+        ]
+    return []
+
+
 def _get_performance_warnings(user, heute, favoriten, gesamt_trainings: int) -> list[dict]:
-    """Aggregate performance warnings (plateau, regression, stagnation), max 3."""
+    """Aggregate performance warnings (plateau, regression, stagnation, balance), max 3."""
     if gesamt_trainings < 4:
         return []
     all_warnings = (
         _check_plateau_warnings(user, heute, favoriten)
         + _check_regression_warnings(user, heute)
+        + _check_balance_warnings(user, heute)
         + _check_stagnation_warnings(user, heute)
     )
-    priority = {"regression": 0, "plateau": 1, "stagnation": 2}
+    priority = {"regression": 0, "plateau": 1, "balance": 2, "stagnation": 3}
     return sorted(all_warnings, key=lambda w: priority[w["type"]])[:3]
 
 
@@ -999,6 +1056,7 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
     # Best 1RM per day + overall records
     history_data: dict[str, float] = {}
     wdh_history: dict[str, int] = {}  # Wdh-Verlauf für KG-Übungen
+    rpe_session: dict[str, list[float]] = {}  # RPE-Werte je Session-Tag
     personal_record = 0.0
     best_weight = 0.0
     best_reps = 0
@@ -1019,6 +1077,11 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
                 wdh_history[datum_str] = wdh
             if wdh > best_reps:
                 best_reps = wdh
+        # RPE-Verlauf: Durchschnitt pro Trainingstag
+        if satz.rpe is not None:
+            rpe_session.setdefault(datum_str, []).append(float(satz.rpe))
+
+    rpe_history = {d: round(sum(v) / len(v), 1) for d, v in rpe_session.items()}
 
     avg_rpe = saetze.aggregate(Avg("rpe"))["rpe__avg"]
 
@@ -1045,6 +1108,9 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
         "data_json": json.dumps(list(history_data.values())),
         "wdh_labels_json": json.dumps(list(wdh_history.keys())),
         "wdh_data_json": json.dumps(list(wdh_history.values())),
+        "rpe_labels_json": json.dumps(list(rpe_history.keys())),
+        "rpe_data_json": json.dumps(list(rpe_history.values())),
+        "show_rpe_chart": len(rpe_history) >= 3,
         "show_reps_chart": show_reps_chart,
         "personal_record": personal_record,
         "best_weight": best_weight,
