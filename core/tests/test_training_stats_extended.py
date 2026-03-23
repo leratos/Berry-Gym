@@ -737,7 +737,8 @@ class TestLinearForecast:
         from core.views.training_stats import _linear_forecast
 
         # Klare lineare Progression: 10, 20, 30, 40, 50, 60 kg
-        pairs = [(date(2026, 1, i * 7), float(i * 10)) for i in range(1, 7)]
+        base = date(2026, 1, 1)
+        pairs = [(base + timedelta(weeks=i), float(i * 10)) for i in range(1, 7)]
         result = _linear_forecast(pairs, 56)  # 8 Wochen in der Zukunft
         assert result is not None
         assert result > 60  # Muss über letztem Wert liegen
