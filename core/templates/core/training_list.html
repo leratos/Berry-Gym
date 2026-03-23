@@ -48,13 +48,25 @@
                             &bull; {{ data.training.dauer_minuten }} Min
                             {% endif %}
                         </small>
-                        <div class="mt-2">
-                            <span class="badge bg-secondary me-1">
+                        {% if data.training.plan %}
+                        <div class="mb-1">
+                            <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size: 0.7rem;">
+                                <i class="bi bi-journal-text me-1"></i>{{ data.training.plan.name }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        <div class="mt-1 d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge bg-secondary">
                                 <i class="bi bi-layers-half"></i> {{ data.arbeitssaetze }} {% trans "Sätze" %}
                             </span>
                             <span class="badge bg-success">
                                 <i class="bi bi-bar-chart-fill"></i> {{ data.volumen|floatformat:0 }} kg
                             </span>
+                            {% if data.hat_prs %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-trophy-fill me-1"></i>PR
+                            </span>
+                            {% endif %}
                         </div>
                         {% if data.training.kommentar %}
                         <div class="mt-2 text-muted small fst-italic">
