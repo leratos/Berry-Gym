@@ -17,6 +17,7 @@ import logging
 import os
 import random
 from collections import defaultdict
+from datetime import datetime as _dt
 from datetime import timedelta
 
 from django.conf import settings
@@ -732,6 +733,34 @@ def _get_performance_warnings(user, heute, favoriten, gesamt_trainings: int) -> 
     return sorted(all_warnings, key=lambda w: priority[w["type"]])[:3]
 
 
+def _linear_forecast(dates_values: list, forecast_days: int) -> float | None:
+    """Lineare Regression auf (date, value)-Paaren → Prognose für forecast_days in der Zukunft.
+
+    Args:
+        dates_values: Liste von (date, float)-Tupeln, chronologisch sortiert.
+        forecast_days: Tage in der Zukunft ab dem letzten Datenpunkt.
+
+    Returns:
+        Prognostizierter Wert oder None wenn < 5 Datenpunkte oder Nenner = 0.
+    """
+    if len(dates_values) < 5:
+        return None
+    t0 = dates_values[0][0]
+    xs = [(d - t0).days for d, _ in dates_values]
+    ys = [float(v) for _, v in dates_values]
+    n = len(xs)
+    s_x = sum(xs)
+    s_y = sum(ys)
+    s_xy = sum(x * y for x, y in zip(xs, ys))
+    s_xx = sum(x * x for x in xs)
+    denom = n * s_xx - s_x**2
+    if denom == 0:
+        return None
+    slope = (n * s_xy - s_x * s_y) / denom
+    intercept = (s_y - slope * s_x) / n
+    return slope * (xs[-1] + forecast_days) + intercept
+
+
 def _find_next_plan_idx(group_plans: list, user) -> int:
     """Return the index of the next plan in the rotation."""
     last_training = (
@@ -1083,6 +1112,14 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
 
     rpe_history = {d: round(sum(v) / len(v), 1) for d, v in rpe_session.items()}
 
+    # 1RM-Prognose: lineare Regression auf bisherigem Verlauf (8 Wochen = 56 Tage)
+    _history_pairs = [(_dt.strptime(d, "%d.%m.%Y").date(), v) for d, v in history_data.items()]
+    _forecast_raw = _linear_forecast(_history_pairs, 56)
+    _current_1rm_last = list(history_data.values())[-1] if history_data else 0
+    forecast_1rm = (
+        round(_forecast_raw, 1) if _forecast_raw and _forecast_raw > _current_1rm_last else None
+    )
+
     avg_rpe = saetze.aggregate(Avg("rpe"))["rpe__avg"]
 
     # Wdh-Verlauf als primäre Chart-Metrik wenn KG-Übung UND ausschließlich
@@ -1119,6 +1156,7 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
         "avg_rpe": round(avg_rpe, 1) if avg_rpe else None,
         "rpe_trend": _calc_rpe_trend(saetze, avg_rpe),
         "pr_history": pr_history,
+        "forecast_1rm": forecast_1rm,
     }
     return render(request, "core/stats_exercise.html", context)
 

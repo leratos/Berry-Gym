@@ -4560,3 +4560,50 @@ Wearable-Integration: bewusst gestrichen – kein Nutzen für Use-Case.
 - Phase 3: ✅
 - Phase 4: ✅
 - Phase 5: ✅
+
+---
+
+## Phase 8 – Prognose & Forecasting
+
+**Datum:** 2026-03-23
+**Branch:** `feature/phase8-forecasting`
+
+### 8.1 – 1RM-Prognose in Übungs-Statistik
+
+Lineare Regression über bisherige 1RM-Datenpunkte (mind. 5 Sessions).
+Zeigt ein grünes Forecast-Badge unter dem Progressions-Chart:
+"Bei aktuellem Tempo: ~X kg Est. 1RM in 8 Wochen".
+Wird nur angezeigt wenn der prognostizierte Wert über dem aktuellen 1RM liegt
+(positiver Trend).
+
+**Implementierung:**
+- `_linear_forecast(dates_values, forecast_days)` in `training_stats.py`
+  – pure-Python Least-Squares ohne externe Abhängigkeiten
+- Datumstrings aus `history_data` werden mit `strptime` zurück zu `date`-Objekten konvertiert
+- `forecast_1rm` im Context → `{% if forecast_1rm %}` Badge im Template
+
+### 8.2 – Body-Composition-Forecast
+
+Für Gewicht und KFA je eine 6-Wochen-Prognose.
+Grünes Forecast-Card zwischen Stat-Kacheln und Gewichtsverlauf-Chart in `body_stats.html`.
+
+**Implementierung:**
+- `_linear_forecast` in `body_tracking.py` (identisch, kein Circular Import)
+- Berechnung direkt in `body_stats` View aus `KoerperWerte`-QuerySet
+- `gewicht_forecast` und `kfa_forecast` im Context (beide optional, min. 5 Datenpunkte)
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – `_linear_forecast` + `forecast_1rm` im `exercise_stats` Context
+- `core/views/body_tracking.py` – `_linear_forecast` + Forecast-Berechnung in `body_stats`
+- `core/templates/core/stats_exercise.html` – Forecast-Badge nach progressionChart
+- `core/templates/core/body_stats.html` – Forecast-Card nach Stat-Kacheln
+
+**Stand:**
+- Phase 1: ✅
+- Phase 2: ✅
+- Phase 3: ✅
+- Phase 4: ✅
+- Phase 5: ✅
+- Phase 6: ✅
+- Phase 7: ✅
+- Phase 8: ✅

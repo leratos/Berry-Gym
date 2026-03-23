@@ -8,6 +8,29 @@ from django.shortcuts import get_object_or_404, redirect, render
 from ..models import KoerperWerte, ProgressPhoto
 
 
+def _linear_forecast(dates_values: list, forecast_days: int) -> float | None:
+    """Lineare Regression auf (date, value)-Paaren → Prognose für forecast_days in der Zukunft.
+
+    Benötigt mindestens 5 Datenpunkte. Gibt None zurück wenn zu wenig Daten.
+    """
+    if len(dates_values) < 5:
+        return None
+    t0 = dates_values[0][0]
+    xs = [(d - t0).days for d, _ in dates_values]
+    ys = [float(v) for _, v in dates_values]
+    n = len(xs)
+    s_x = sum(xs)
+    s_y = sum(ys)
+    s_xy = sum(x * y for x, y in zip(xs, ys))
+    s_xx = sum(x * x for x in xs)
+    denom = n * s_xx - s_x**2
+    if denom == 0:
+        return None
+    slope = (n * s_xy - s_x * s_y) / denom
+    intercept = (s_y - slope * s_x) / n
+    return slope * (xs[-1] + forecast_days) + intercept
+
+
 @login_required
 def add_koerperwert(request: HttpRequest) -> HttpResponse:
     """Formular zum Eintragen der erweiterten Watch-Daten"""
@@ -121,7 +144,26 @@ def body_stats(request: HttpRequest) -> HttpResponse:
     if not werte.exists():
         return render(request, "core/body_stats.html", {"no_data": True})
 
-    context = {"werte": werte, **_prepare_body_chart_data(werte)}
+    # Prognose (6 Wochen = 42 Tage) via linearer Regression
+    werte_list = list(werte)
+    weight_pairs = [(w.datum, float(w.gewicht)) for w in werte_list]
+    gewicht_forecast_raw = _linear_forecast(weight_pairs, 42)
+    gewicht_forecast = round(gewicht_forecast_raw, 1) if gewicht_forecast_raw else None
+
+    kfa_pairs = [
+        (w.datum, float(w.koerperfett_prozent))
+        for w in werte_list
+        if w.koerperfett_prozent is not None
+    ]
+    kfa_forecast_raw = _linear_forecast(kfa_pairs, 42)
+    kfa_forecast = round(kfa_forecast_raw, 1) if kfa_forecast_raw else None
+
+    context = {
+        "werte": werte,
+        **_prepare_body_chart_data(werte),
+        "gewicht_forecast": gewicht_forecast,
+        "kfa_forecast": kfa_forecast,
+    }
     return render(request, "core/body_stats.html", context)
 
 

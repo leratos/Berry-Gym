@@ -60,6 +60,30 @@
             </div>
         </div>
 
+        {% if gewicht_forecast or kfa_forecast %}
+        <div class="card card-stat border-success border-opacity-25 mb-4">
+            <div class="card-body">
+                <h6 class="text-success mb-3">
+                    <i class="bi bi-graph-up-arrow me-2"></i>{% trans "Prognose (6 Wochen)" %}
+                </h6>
+                <div class="row g-3">
+                    {% if gewicht_forecast %}
+                    <div class="col-6">
+                        <small class="text-secondary text-uppercase" style="font-size:0.7rem;">{% trans "Gewicht" %}</small>
+                        <div class="fw-bold text-white">~{{ gewicht_forecast }} kg</div>
+                    </div>
+                    {% endif %}
+                    {% if kfa_forecast %}
+                    <div class="col-6">
+                        <small class="text-secondary text-uppercase" style="font-size:0.7rem;">{% trans "KFA" %}</small>
+                        <div class="fw-bold text-white">~{{ kfa_forecast }}%</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
