@@ -86,6 +86,58 @@ tatsächlich höher ist. Das führt zu falschen Warnungen und irreführenden Tre
 
 ---
 
+## Phase 6 – Session-UX & Daten-Sichtbarkeit *(Quick Wins, kein neues Model)*
+**Branch:** `feature/phase6-data-visibility`
+
+Bestehende Daten werden erfasst aber an den falschen Stellen nicht angezeigt.
+Beide Aufgaben sind reine Template/View-Änderungen ohne Migrations-Aufwand.
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 6.1 | Coach-Notizen in Training-Session anzeigen | `PlanUebung.notiz` als Live-Reminder während der Session – z.B. "Ellenbogen nah am Körper" |
+| 6.2 | Trainings-Notizen in Trainingshistorie anzeigen | `Trainingseinheit.kommentar` als Vorschautext in `training_list.html` – macht Muster sichtbar |
+
+---
+
+## Phase 7 – Statistiken vertiefen *(bestehende Daten besser nutzen)*
+**Branch:** `feature/phase7-stats`
+
+RPE wird bei jedem Satz erfasst, aber nie als Trend ausgewertet. Die Muskelgruppen-Balance
+ist berechnet, aber löst keine proaktiven Hinweise aus.
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 7.1 | RPE-Trend pro Übung | Chart in `exercise_stats`: RPE-Verlauf über Zeit – "RPE steigt trotz gleichem Gewicht → Erholung prüfen" |
+| 7.2 | Muscle-Group-Balance Alert | Erweiterung von `_get_performance_warnings()`: Alert wenn Muskelgruppe stark unterrepräsentiert – z.B. "Brust 4× diese Woche, Rücken 1×" |
+
+---
+
+## Phase 8 – Prognose & Forecasting *(Ziele greifbar machen)*
+**Branch:** `feature/phase8-forecasting`
+
+Beide Features nutzen lineare Regression auf vorhandenen Datenpunkten – keine
+externe KI, nur `numpy`/simple Slope-Berechnung.
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 8.1 | 1RM-Trend + Prognose in Übungs-Statistik | Trendlinie + "In 8 Wochen bei aktuellem Tempo: ~X kg" in `exercise_stats` – motiviert und hilft beim Ziel-Setting |
+| 8.2 | Body-Composition-Forecast | Trendextrapolation auf `KoerperWerte`: "Bei aktuellem Tempo KFA 12% in ~6 Wochen" in `body_stats` |
+
+---
+
+## Phase 9 – Periodisierungs-Intelligence *(baut auf Phase 3 auf)*
+**Branch:** `feature/phase9-periodisierung`
+
+Setzt den `Trainingsblock` aus Phase 3 voraus. Ein Block läuft typisch 8–12 Wochen –
+das System soll proaktiv auf den Phasenwechsel hinweisen, statt passiv zu warten.
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 9.1 | Block-Alter-Warnung auf Dashboard | Wenn aktiver Block > 8 Wochen alt: Hinweis "Dein Kraft-Block läuft seit 9 Wochen – Zeit für Hypertrophie?" mit Link zum Plan-Wechsel-Flow |
+| 9.2 | Block-Typ-Empfehlung | Basierend auf letztem Block-Typ einen logischen Folge-Block vorschlagen (Kraft → Hypertrophie → Definition → Deload-Block) |
+
+---
+
 ## Bewusst NICHT in dieser Roadmap
 
 - Ernährungstracking (anderes Produkt)
