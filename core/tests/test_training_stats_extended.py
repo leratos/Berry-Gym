@@ -18,6 +18,8 @@ from django.utils import timezone
 
 import pytest
 
+from core.models import Trainingseinheit
+
 from .factories import PlanFactory, SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -622,8 +624,10 @@ class TestExerciseStats:
         client.force_login(user)
         uebung = UebungFactory()
         for i in range(3):
-            einheit = TrainingseinheitFactory(
-                user=user, datum=timezone.now() - timedelta(days=i + 1)
+            einheit = TrainingseinheitFactory(user=user)
+            # datum ist auto_now_add → via update() überschreiben
+            Trainingseinheit.objects.filter(pk=einheit.pk).update(
+                datum=timezone.now() - timedelta(days=i + 1)
             )
             SatzFactory(
                 einheit=einheit,
