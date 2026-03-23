@@ -4495,3 +4495,68 @@ Wearable-Integration: bewusst gestrichen – kein Nutzen für Use-Case.
 - Phase 3: ✅
 - Phase 4: Dashboard-Hierarchie (nächste Phase)
 - Phase 5: Trainingsabschluss aufwerten
+
+
+## Phase 4 implementiert – Dashboard-Hierarchie
+
+**Datum:** 2026-03-23
+
+### 4.1 + 4.2 – Quick Actions & einheitliche Button-Sprache
+- Dashboard-Buttons von 7 verschiedenen Stilen auf klare Hierarchie reduziert
+- 3 primäre Buttons immer sichtbar: Training starten (btn-primary), Körperwerte eintragen (btn-outline-primary), Cardio (btn-outline-secondary)
+- Restliche 4 Aktionen (KI-Plan, AI-Empfehlungen, ML-Modelle, Muskelgruppen) unter Bootstrap-Collapse „Mehr" versteckt
+- Körperwerte von letztem Platz nach oben verschoben – gehört zu den täglichen Aktionen
+
+### 4.3 – Datenbasisierter Motivationstext
+- Neue Funktion `_get_smart_motivation_quote()` in `training_stats.py`
+- Sucht letztes abgeschlossenes Training mit dem nächsten Plan in der Rotation
+- Findet besten Satz (höchstes Gewicht) → generiert z.B. „Letztes Mal: Bankdrücken 85 kg × 6 – heute PR-Versuch? 💪"
+- Fallback auf generischen Random-Quote wenn kein Plan aktiv oder keine Daten vorhanden
+- Wird nach `_add_plan_group_context()` berechnet (damit `next_plan` verfügbar ist), überschreibt gecachten Generic-Quote
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – `_get_smart_motivation_quote()` + View-Anpassung
+- `core/templates/core/dashboard.html` – Quick-Actions-Sektion neu strukturiert
+
+**Stand:**
+- Phase 1: ✅
+- Phase 2: ✅
+- Phase 3: ✅
+- Phase 4: ✅
+- Phase 5: Trainingsabschluss aufwerten (nächste Phase)
+
+
+## Phase 5 implementiert – Trainingsabschluss aufwerten
+
+**Datum:** 2026-03-23
+
+### 5.1 – Volumen-Vergleich mit letztem Training
+- Neue Funktion `_get_volume_comparison()` in `training_session.py`
+- Sucht letztes abgeschlossenes Training mit demselben Plan (vor aktuellem)
+- Berechnet prozentuale Volumenänderung: (aktuell - vorherig) / vorherig × 100
+- Badge auf Abschlussseite: „↑ +2.8% vs. letztes Mal" (grün) oder „↓ -1.2% vs. letztes Mal" (rot)
+- Guard für `training.datum = None` (historische Trainings ohne Datum → kein Vergleich)
+
+### 5.2 – PR-Integration
+- Bereits aus Phase 2 vorhanden (`session_prs`, PR-Card mit Gold-Glow-Animation) ✅
+
+### 5.3 – Weiterleitung „Nächstes Training vorschlagen"
+- Neue Funktion `_get_next_plan_suggestion()` in `training_session.py`
+- Findet nächsten Plan in der aktiven Gruppe anhand der Reihenfolge (nach current_plan)
+- Neuer primärer Button auf Abschlussseite: „Speichern & nächstes Training – *Plan Name*"
+- POST-Handler: wenn `start_next` im POST → redirect zu `training_start_plan` statt Dashboard
+- Normaler „Training speichern"-Button bleibt als Fallback (redirect Dashboard)
+- Button erscheint nur wenn aktive Plan-Gruppe mit ≥ 2 Plänen vorhanden
+
+**Geänderte Dateien:**
+- `core/views/training_session.py` – 2 neue Helper + View-Anpassung
+- `core/templates/core/training_finish.html` – Volumen-Badge + Next-Training-Button
+
+**Tests:** 1534 passed, 1 fixed (ValueError-Guard für datum=None)
+
+**Stand:**
+- Phase 1: ✅
+- Phase 2: ✅
+- Phase 3: ✅
+- Phase 4: ✅
+- Phase 5: ✅
