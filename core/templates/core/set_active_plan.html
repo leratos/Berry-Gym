@@ -107,6 +107,35 @@
     </div>
     {% endif %}
 
+    <div class="card card-stat border-secondary mb-4" id="block-section">
+      <div class="card-body p-3">
+        <h6 class="mb-2">
+          <i class="bi bi-layers me-2 text-primary"></i>{% trans "Trainingsblock" %}
+          <span class="badge bg-secondary ms-1">{% trans "optional" %}</span>
+        </h6>
+
+        {% if active_block %}
+        <div class="alert alert-info py-2 px-3 mb-3 small">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>{% trans "Aktiver Block:" %}</strong>
+          {{ active_block.get_typ_display }}
+          — {% trans "gestartet am" %} {{ active_block.start_datum|date:"d.m.Y" }}
+          ({{ active_block.weeks_since_start }} {% trans "Woche(n)" %})
+        </div>
+        {% endif %}
+
+        <small class="text-muted d-block mb-2">
+          {% trans "Beim Wechsel auf einen neuen Plan kannst du einen neuen Trainingsblock starten. Das verhindert falsche Volumen-Warnungen beim Phasenwechsel (z. B. Definitionsphase → Massephase)." %}
+        </small>
+        <select name="block_typ" class="form-select" id="block_typ_select">
+          <option value="">{% trans "Keinen neuen Block starten" %}</option>
+          {% for value, label in block_typ_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
     <div class="card card-stat border-secondary mb-4">
       <div class="card-body p-3">
         <h6 class="mb-2"><i class="bi bi-calendar-week me-2"></i>{% trans "Mesozyklus-Länge" %}</h6>

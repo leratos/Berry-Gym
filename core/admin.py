@@ -20,6 +20,7 @@ from .models import (
     Satz,
     ScientificDisclaimer,
     SiteSettings,
+    Trainingsblock,
     Trainingseinheit,
     TrainingSource,
     Uebung,
@@ -916,3 +917,17 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Singleton: Kann nicht gelöscht werden."""
         return False
+
+
+# --- TRAININGSBLOCK ---
+@admin.register(Trainingsblock)
+class TrainingsblockAdmin(admin.ModelAdmin):
+    list_display = ("user", "typ", "start_datum", "end_datum", "is_active_display", "weeks_since_start")
+    list_filter = ("typ", "user")
+    search_fields = ("user__username", "name")
+    ordering = ("-start_datum",)
+    raw_id_fields = ("user", "plan")
+
+    @admin.display(boolean=True, description="Aktiv")
+    def is_active_display(self, obj):
+        return obj.is_active

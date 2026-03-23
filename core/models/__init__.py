@@ -51,7 +51,7 @@ from .site_settings import SiteSettings  # noqa: F401
 from .social import InviteCode, WaitlistEntry  # noqa: F401
 
 # Training
-from .training import Satz, Trainingseinheit  # noqa: F401
+from .training import Satz, Trainingsblock, Trainingseinheit  # noqa: F401
 
 # Scientific Sources
 from .training_source import TrainingSource  # noqa: F401
@@ -86,6 +86,7 @@ __all__ = [
     "Satz",
     "ScientificDisclaimer",
     "SiteSettings",
+    "Trainingsblock",
     "Trainingseinheit",
     "TrainingSource",
     "Uebung",
