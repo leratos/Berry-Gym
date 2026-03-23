@@ -62,6 +62,7 @@ tatsächlich höher ist. Das führt zu falschen Warnungen und irreführenden Tre
 
 ## Phase 4 – Dashboard-Hierarchie *(täglich sichtbar)*
 **Branch:** `feature/phase4-dashboard`
+**Status:** ✅ Abgeschlossen (2026-03-23)
 
 | # | Aufgabe | Details |
 |---|---|---|
@@ -73,12 +74,13 @@ tatsächlich höher ist. Das führt zu falschen Warnungen und irreführenden Tre
 
 ## Phase 5 – Trainingsabschluss aufwerten *(Belohnungsmoment)*
 **Branch:** `feature/phase5-finish-screen`
+**Status:** ✅ Abgeschlossen (2026-03-23)
 
 | # | Aufgabe | Details |
 |---|---|---|
-| 4.1 | Volumen vs. letztes Mal gleicher Trainingstag | "+2.8% vs. letzte Woche" |
-| 4.2 | PR-Integration aus Phase 2 | |
-| 4.3 | Weiterleitung: "Nächstes Training vorschlagen" | |
+| 5.1 | Volumen vs. letztes Mal gleicher Trainingstag | Badge "+2.8% vs. letztes Mal" (grün/rot) unter Gesamtvolumen |
+| 5.2 | PR-Integration aus Phase 2 | ✅ bereits vorhanden (session_prs) |
+| 5.3 | Weiterleitung: "Nächstes Training vorschlagen" | Button "Speichern & nächstes Training – *Plan Name*" leitet direkt zu training_start_plan |
 
 ---
 
