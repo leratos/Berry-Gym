@@ -128,6 +128,18 @@
             </div>
         </div>
 
+        {% if show_rpe_chart %}
+        <div class="card card-stat border-secondary shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="mb-3 text-secondary">
+                    <i class="bi bi-activity me-2"></i>{% trans "RPE-Verlauf" %}
+                    <small class="text-muted fw-normal ms-2" style="font-size: 0.75rem;">{% trans "Ø RPE pro Training" %}</small>
+                </h6>
+                <canvas id="rpeChart"></canvas>
+            </div>
+        </div>
+        {% endif %}
+
         {% if show_reps_chart %}
         <div class="card card-stat border-info shadow-sm mb-4">
             <div class="card-header border-info">
@@ -237,6 +249,46 @@
             plugins: { legend: { display: false } }
         }
     });
+
+    {% if show_rpe_chart %}
+    // Chart RPE: RPE-Verlauf pro Trainingstag
+    const rpeCtx = document.getElementById('rpeChart').getContext('2d');
+    new Chart(rpeCtx, {
+        type: 'line',
+        data: {
+            labels: {{ rpe_labels_json|safe }},
+            datasets: [{
+                label: '{% trans "Ø RPE" %}',
+                data: {{ rpe_data_json|safe }},
+                borderColor: '#fd7e14',
+                backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                borderWidth: 2,
+                pointBackgroundColor: '#fd7e14',
+                pointRadius: 4,
+                tension: 0.3,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    min: 1, max: 10,
+                    grid: { color: '#495057' },
+                    ticks: { color: '#adb5bd', stepSize: 1 }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#adb5bd', maxTicksLimit: 8 }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => `RPE ${ctx.parsed.y}` } }
+            }
+        }
+    });
+    {% endif %}
 
     {% if show_reps_chart %}
     // Chart 2: Wiederholungs-Verlauf (nur bei KG-Übungen ohne Zusatzgewicht)
