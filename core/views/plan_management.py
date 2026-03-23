@@ -16,7 +16,6 @@ from django.db import models
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-
 from django.utils import timezone
 
 from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Trainingsblock, Uebung, UserProfile
