@@ -7,6 +7,7 @@ Tests für:
 - Permission Checks (User Isolation)
 """
 
+from datetime import date, timedelta
 from io import BytesIO
 
 from django.urls import reverse
@@ -370,3 +371,68 @@ class TestKoerperWerteProperties:
         assert wert.grundumsatz_kcal == 1850
         assert float(wert.koerperwasser_prozent) == 55.0
         assert float(wert.koerperwasser_kg) == 49.5
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Forecasting Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestLinearForecastBodyTracking:
+    """Unit-Tests für _linear_forecast() in body_tracking – keine DB notwendig."""
+
+    def test_returns_none_with_fewer_than_5_points(self):
+        from core.views.body_tracking import _linear_forecast
+
+        pairs = [(date(2026, 1, i), float(i * 80)) for i in range(1, 5)]
+        assert _linear_forecast(pairs, 42) is None
+
+    def test_returns_value_with_enough_points(self):
+        from core.views.body_tracking import _linear_forecast
+
+        # Leicht sinkendes Gewicht (Diät): 90, 89.5, 89, 88.5, 88 kg
+        pairs = [(date(2026, 1, 1) + timedelta(weeks=i), 90.0 - i * 0.5) for i in range(6)]
+        result = _linear_forecast(pairs, 42)
+        assert result is not None
+        assert result < 88  # Trend weiter sinkend
+
+
+@pytest.mark.django_db
+class TestBodyStatsForecast:
+    """Integration-Tests: Forecast-Context in body_stats View."""
+
+    def _create_werte(self, user, count=5):
+        """Erstellt count KoerperWerte mit aufsteigenden Daten via update()."""
+        werte = [KoerperWerteFactory(user=user) for _ in range(count)]
+        for i, wert in enumerate(werte):
+            KoerperWerte.objects.filter(pk=wert.pk).update(
+                datum=date(2026, 1, 1) + timedelta(weeks=i * 2)
+            )
+        return werte
+
+    def test_forecast_present_with_enough_data(self, client):
+        """5 Messungen → gewicht_forecast im Context."""
+        user = UserFactory()
+        client.force_login(user)
+        self._create_werte(user, count=5)
+        response = client.get(reverse("body_stats"))
+        assert response.status_code == 200
+        assert response.context["gewicht_forecast"] is not None
+
+    def test_kfa_forecast_present_with_enough_data(self, client):
+        """5 Messungen mit KFA → kfa_forecast im Context."""
+        user = UserFactory()
+        client.force_login(user)
+        self._create_werte(user, count=5)
+        response = client.get(reverse("body_stats"))
+        assert response.status_code == 200
+        assert response.context["kfa_forecast"] is not None
+
+    def test_forecast_absent_with_few_data(self, client):
+        """Weniger als 5 Messungen → kein Forecast."""
+        user = UserFactory()
+        client.force_login(user)
+        KoerperWerteFactory(user=user)
+        response = client.get(reverse("body_stats"))
+        assert response.status_code == 200
+        assert response.context["gewicht_forecast"] is None

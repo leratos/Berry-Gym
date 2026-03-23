@@ -713,3 +713,70 @@ class TestCheckBalanceWarnings:
         self._create_sets(user, "BRUST", 5)
         self._create_sets(user, "RUECKEN_LAT", 5, days_ago=5)
         assert _check_balance_warnings(user, timezone.now()) == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Forecasting Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestLinearForecast:
+    """Unit-Tests für _linear_forecast() – keine DB notwendig."""
+
+    def test_returns_none_with_fewer_than_5_points(self):
+        from datetime import date
+
+        from core.views.training_stats import _linear_forecast
+
+        pairs = [(date(2026, 1, i), float(i * 10)) for i in range(1, 5)]
+        assert _linear_forecast(pairs, 30) is None
+
+    def test_returns_value_with_positive_slope(self):
+        from datetime import date
+
+        from core.views.training_stats import _linear_forecast
+
+        # Klare lineare Progression: 10, 20, 30, 40, 50, 60 kg
+        pairs = [(date(2026, 1, i * 7), float(i * 10)) for i in range(1, 7)]
+        result = _linear_forecast(pairs, 56)  # 8 Wochen in der Zukunft
+        assert result is not None
+        assert result > 60  # Muss über letztem Wert liegen
+
+    def test_returns_none_when_all_same_day(self):
+        from datetime import date
+
+        from core.views.training_stats import _linear_forecast
+
+        # Alle am gleichen Tag → denom = 0
+        pairs = [(date(2026, 1, 1), float(i)) for i in range(1, 6)]
+        assert _linear_forecast(pairs, 30) is None
+
+
+@pytest.mark.django_db
+class TestForecast1RM:
+    """Integration-Test: forecast_1rm im exercise_stats Context."""
+
+    def _url(self, uebung_id):
+        return reverse("exercise_stats", kwargs={"uebung_id": uebung_id})
+
+    def test_forecast_shown_with_5_sessions_positive_trend(self, client):
+        """5 Sessions mit steigendem 1RM → forecast_1rm im Context."""
+        user = UserFactory()
+        client.force_login(user)
+        uebung = UebungFactory()
+        for i in range(5):
+            einheit = TrainingseinheitFactory(user=user)
+            Trainingseinheit.objects.filter(pk=einheit.pk).update(
+                datum=timezone.now() - timedelta(days=(4 - i) * 14)
+            )
+            # Steigendes Gewicht für positiven Trend
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                gewicht=Decimal(str(60 + i * 5)),
+                wiederholungen=5,
+            )
+        response = client.get(self._url(uebung.id))
+        assert response.status_code == 200
+        assert response.context["forecast_1rm"] is not None
