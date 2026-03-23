@@ -95,6 +95,24 @@
         <div class="stat-label mb-2">{% trans "Gesamtvolumen" %}</div>
         <div class="stat-number text-success">{{ total_volume|floatformat:0 }} <span class="fs-4 text-muted">kg</span></div>
         <small class="text-muted">{% trans "Gewicht × Wiederholungen (ohne Warmup)" %}</small>
+        {% if volume_comparison %}
+        <div class="mt-2">
+          {% if volume_comparison.is_positive %}
+            <span class="badge bg-success bg-opacity-25 text-success px-2 py-1">
+              <i class="bi bi-arrow-up-short"></i>
+              +{{ volume_comparison.pct_change }}% {% trans "vs. letztes Mal" %}
+            </span>
+          {% else %}
+            <span class="badge bg-danger bg-opacity-25 text-danger px-2 py-1">
+              <i class="bi bi-arrow-down-short"></i>
+              {{ volume_comparison.pct_change }}% {% trans "vs. letztes Mal" %}
+            </span>
+          {% endif %}
+          <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">
+            {% trans "Letztes Mal" %}: {{ volume_comparison.prev_volume|floatformat:0 }} kg
+          </small>
+        </div>
+        {% endif %}
       </div>
     </div>
     {% if warmup_saetze_count > 0 %}
@@ -182,7 +200,14 @@
       </div>
     </div>
     <div class="d-grid gap-2 mt-4">
-      <button type="submit" class="btn btn-success btn-lg fw-bold">
+      {% if next_plan %}
+      <button type="submit" name="start_next" value="1" class="btn btn-primary btn-lg fw-bold">
+        <i class="bi bi-skip-forward-fill me-2"></i>
+        {% trans "Speichern & nächstes Training" %}
+        <span class="d-block" style="font-size: 0.75rem; font-weight: 400; opacity: 0.85;">{{ next_plan.name }}</span>
+      </button>
+      {% endif %}
+      <button type="submit" class="btn {% if next_plan %}btn-outline-success{% else %}btn-success btn-lg fw-bold{% endif %}">
         <i class="bi bi-check-circle-fill me-2"></i> {% trans "Training speichern" %}
       </button>
       <a href="{% url 'training_session' training.id %}" class="btn btn-outline-secondary">
