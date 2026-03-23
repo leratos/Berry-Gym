@@ -368,7 +368,7 @@
             <span class="badge bg-warning text-dark">{{ performance_warnings|length }}</span>
         </div>
         <p class="text-muted small mb-3">
-            <i class="bi bi-info-circle me-1"></i>{% trans "Automatische Erkennung von Plateau, Rückschritt und Stagnation" %}
+            <i class="bi bi-info-circle me-1"></i>{% trans "Automatische Erkennung von Plateau, Rückschritt, Stagnation und Balance" %}
         </p>
         <div class="list-group list-group-flush bg-transparent">
             {% for warning in performance_warnings %}
@@ -382,6 +382,7 @@
                                 {% if warning.type == 'plateau' %}{% trans "Plateau" %}
                                 {% elif warning.type == 'regression' %}{% trans "Rückschritt" %}
                                 {% elif warning.type == 'stagnation' %}{% trans "Stagnation" %}
+                                {% elif warning.type == 'balance' %}{% trans "Imbalance" %}
                                 {% endif %}
                             </span>
                         </div>
