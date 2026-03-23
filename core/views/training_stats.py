@@ -279,9 +279,7 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
         ).exists()
 
         # Liegt diese Woche vor dem aktuellen Block-Start?
-        before_block = bool(
-            block_start_date and week_start.date() < block_start_date
-        )
+        before_block = bool(block_start_date and week_start.date() < block_start_date)
 
         labels = {0: "Diese Woche", 1: "Letzte Woche"}
         week_label = labels.get(i, f"Vor {i} Wochen")
@@ -387,7 +385,11 @@ def _get_fatigue_rating(fatigue_index: int) -> tuple[str, str, str]:
 
 
 def _calculate_fatigue_index(
-    user, heute, weekly_volumes: list[dict], gesamt_trainings: int, block_age_weeks: int | None = None
+    user,
+    heute,
+    weekly_volumes: list[dict],
+    gesamt_trainings: int,
+    block_age_weeks: int | None = None,
 ) -> dict:
     """Compute fatigue index and related display data. Returns a dict."""
     fatigue_index = 0

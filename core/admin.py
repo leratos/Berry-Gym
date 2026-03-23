@@ -922,7 +922,14 @@ class SiteSettingsAdmin(admin.ModelAdmin):
 # --- TRAININGSBLOCK ---
 @admin.register(Trainingsblock)
 class TrainingsblockAdmin(admin.ModelAdmin):
-    list_display = ("user", "typ", "start_datum", "end_datum", "is_active_display", "weeks_since_start")
+    list_display = (
+        "user",
+        "typ",
+        "start_datum",
+        "end_datum",
+        "is_active_display",
+        "weeks_since_start",
+    )
     list_filter = ("typ", "user")
     search_fields = ("user__username", "name")
     ordering = ("-start_datum",)
