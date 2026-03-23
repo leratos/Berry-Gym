@@ -114,14 +114,15 @@ ist berechnet, aber löst keine proaktiven Hinweise aus.
 
 ## Phase 8 – Prognose & Forecasting *(Ziele greifbar machen)*
 **Branch:** `feature/phase8-forecasting`
+**Status:** ✅ Abgeschlossen (2026-03-23)
 
-Beide Features nutzen lineare Regression auf vorhandenen Datenpunkten – keine
-externe KI, nur `numpy`/simple Slope-Berechnung.
+Beide Features nutzen pure-Python Least-Squares Regression auf vorhandenen Datenpunkten –
+keine externe Bibliothek notwendig.
 
 | # | Aufgabe | Details |
 |---|---|---|
-| 8.1 | 1RM-Trend + Prognose in Übungs-Statistik | Trendlinie + "In 8 Wochen bei aktuellem Tempo: ~X kg" in `exercise_stats` – motiviert und hilft beim Ziel-Setting |
-| 8.2 | Body-Composition-Forecast | Trendextrapolation auf `KoerperWerte`: "Bei aktuellem Tempo KFA 12% in ~6 Wochen" in `body_stats` |
+| 8.1 | 1RM-Trend + Prognose in Übungs-Statistik | Badge unter 1RM-Chart: "Bei aktuellem Tempo: ~X kg Est. 1RM in 8 Wochen" (min. 5 Sessions, nur bei positivem Trend) |
+| 8.2 | Body-Composition-Forecast | Forecast-Card in `body_stats`: Gewicht ~X kg und KFA ~X% in 6 Wochen (min. 5 Datenpunkte) |
 
 ---
 
