@@ -457,6 +457,47 @@ def _get_motivation_quote(form_index: int, fatigue_index: int) -> str:
     return random.choice(quotes["need_motivation"])
 
 
+def _get_smart_motivation_quote(user, next_plan, fallback: str) -> str:
+    """Datenbasisierter Motivationstext basierend auf dem letzten Training mit next_plan.
+
+    Gibt z.B. "Letztes Mal: Bankdrücken 85 kg × 6 – heute PR-Versuch? 💪" zurück.
+    Fällt auf den generischen fallback zurück wenn kein Plan oder keine Daten vorhanden.
+    """
+    if not next_plan:
+        return fallback
+
+    last_same_plan = (
+        Trainingseinheit.objects.filter(
+            user=user,
+            plan=next_plan,
+            abgeschlossen=True,
+        )
+        .order_by("-datum")
+        .first()
+    )
+    if not last_same_plan:
+        return fallback
+
+    best_satz = (
+        Satz.objects.filter(
+            einheit=last_same_plan,
+            ist_aufwaermsatz=False,
+            gewicht__isnull=False,
+            wiederholungen__isnull=False,
+        )
+        .select_related("uebung")
+        .order_by("-gewicht")
+        .first()
+    )
+    if not best_satz or not best_satz.gewicht or not best_satz.uebung:
+        return fallback
+
+    uebung = best_satz.uebung.bezeichnung
+    gewicht = best_satz.gewicht
+    wdh = best_satz.wiederholungen
+    return f"Letztes Mal: {uebung} {gewicht} kg × {wdh} – heute PR-Versuch? 💪"
+
+
 def _get_training_heatmap(user, heute) -> str:
     """Return JSON string of training counts per day for the last 365 days.
 
@@ -795,6 +836,10 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         **computed,
     }
     _add_plan_group_context(request.user, context)
+    # Überschreibe gecachten Generic-Quote mit datenbasisiertem Text (4.3)
+    context["motivation_quote"] = _get_smart_motivation_quote(
+        request.user, context.get("next_plan"), computed["motivation_quote"]
+    )
     return render(request, "core/dashboard.html", context)
 
 
