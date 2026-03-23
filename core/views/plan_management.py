@@ -604,9 +604,7 @@ def _start_new_trainingsblock(request, gruppe_id: str, block_typ: str) -> None:
     today = timezone.now().date()
 
     # Bestehende offene Blöcke schließen
-    Trainingsblock.objects.filter(user=request.user, end_datum__isnull=True).update(
-        end_datum=today
-    )
+    Trainingsblock.objects.filter(user=request.user, end_datum__isnull=True).update(end_datum=today)
 
     # Aktuellen Plan für den neuen Block ermitteln
     plan_obj = Plan.objects.filter(user=request.user, gruppe_id=gruppe_id).first()
