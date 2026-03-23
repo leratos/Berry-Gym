@@ -86,16 +86,16 @@ tatsächlich höher ist. Das führt zu falschen Warnungen und irreführenden Tre
 
 ---
 
-## Phase 6 – Session-UX & Daten-Sichtbarkeit *(Quick Wins, kein neues Model)*
+## Phase 6 – Trainingshistorie aufwerten *(Quick Wins, kein neues Model)*
 **Branch:** `feature/phase6-data-visibility`
 
-Bestehende Daten werden erfasst aber an den falschen Stellen nicht angezeigt.
-Beide Aufgaben sind reine Template/View-Änderungen ohne Migrations-Aufwand.
+Beide ursprünglichen Punkte (Coach-Notizen, Trainingskommentar) waren bereits implementiert.
+Echte Lücken in der Trainingshistorie:
 
 | # | Aufgabe | Details |
 |---|---|---|
-| 6.1 | Coach-Notizen in Training-Session anzeigen | `PlanUebung.notiz` als Live-Reminder während der Session – z.B. "Ellenbogen nah am Körper" |
-| 6.2 | Trainings-Notizen in Trainingshistorie anzeigen | `Trainingseinheit.kommentar` als Vorschautext in `training_list.html` – macht Muster sichtbar |
+| 6.1 | Plan-Name in Trainingshistorie | `select_related("plan")` in `training_list`-View + Plan-Name Badge in `training_list.html` |
+| 6.2 | PR-Badge in Trainingshistorie | Annotate-Query ob Session PRs enthält → Trophy-Badge in `training_list.html` |
 
 ---
 

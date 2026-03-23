@@ -846,11 +846,18 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 @login_required
 def training_list(request: HttpRequest) -> HttpResponse:
     """Zeigt eine Liste aller vergangenen Trainings."""
-    # Wir holen NUR die Trainings des aktuellen Users, sortiert nach Datum (neu -> alt)
-    # annotate(satz_count=Count('saetze')) zählt die Sätze für die Vorschau
+    from django.db.models import BooleanField, ExpressionWrapper
+
     trainings = (
         Trainingseinheit.objects.filter(user=request.user)
-        .annotate(satz_count=Count("saetze"))
+        .select_related("plan")
+        .annotate(
+            satz_count=Count("saetze"),
+            hat_prs=ExpressionWrapper(
+                Q(saetze__is_pr=True, saetze__ist_aufwaermsatz=False),
+                output_field=BooleanField(),
+            ),
+        )
         .prefetch_related(
             Prefetch(
                 "saetze",
@@ -861,7 +868,6 @@ def training_list(request: HttpRequest) -> HttpResponse:
         .order_by("-datum")
     )
 
-    # Volumen für jedes Training berechnen
     trainings_mit_volumen = []
     for training in trainings:
         arbeitssaetze = training.arbeitssaetze_list
@@ -871,6 +877,7 @@ def training_list(request: HttpRequest) -> HttpResponse:
                 "training": training,
                 "volumen": round(volumen, 1),
                 "arbeitssaetze": len(arbeitssaetze),
+                "hat_prs": bool(training.hat_prs),
             }
         )
 
