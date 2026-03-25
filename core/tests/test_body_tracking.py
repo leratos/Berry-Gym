@@ -338,20 +338,57 @@ class TestKoerperWerteProperties:
         assert wert._get_fett_kg() == 22.0
 
     def test_gewichts_veraenderung_rate(self):
-        """Gewichtsrate berechnet kg/Woche zwischen zwei Einträgen."""
+        """Gewichtsrate berechnet kg/Woche bei ≥14 Tagen Abstand (Primärpfad)."""
         import datetime
 
         user = UserFactory()
         # Erster Eintrag
         wert1 = KoerperWerteFactory(user=user, gewicht=100)
-        # Datum manuell setzen (auto_now_add umgehen)
         KoerperWerte.objects.filter(id=wert1.id).update(datum=datetime.date(2026, 1, 1))
-        # Zweiter Eintrag 7 Tage später
+        # Zweiter Eintrag 14 Tage später
+        wert2 = KoerperWerteFactory(user=user, gewicht=98)
+        KoerperWerte.objects.filter(id=wert2.id).update(datum=datetime.date(2026, 1, 15))
+        wert2.refresh_from_db()
+        rate = wert2.gewichts_veraenderung_rate()
+        assert rate == -1.0  # (98-100) / 14 Tage * 7 = -1.0 kg/Woche
+
+    def test_gewichts_veraenderung_rate_7_tage_nutzt_fallback(self):
+        """Bei nur 7 Tagen Abstand greift der Fallback (ältester Eintrag)."""
+        import datetime
+
+        user = UserFactory()
+        wert1 = KoerperWerteFactory(user=user, gewicht=100)
+        KoerperWerte.objects.filter(id=wert1.id).update(datum=datetime.date(2026, 1, 1))
         wert2 = KoerperWerteFactory(user=user, gewicht=99)
         KoerperWerte.objects.filter(id=wert2.id).update(datum=datetime.date(2026, 1, 8))
         wert2.refresh_from_db()
         rate = wert2.gewichts_veraenderung_rate()
-        assert rate == -1.0  # (99-100) / 7 Tage * 7 = -1.0 kg/Woche
+        # Fallback findet den ältesten Eintrag (Jan 1) → (99-100)/7*7 = -1.0
+        assert rate == -1.0
+
+    def test_gewichts_veraenderung_rate_bevorzugt_14_tage(self):
+        """Bei mehreren Referenz-Einträgen wird der nächste an 14 Tagen bevorzugt."""
+        import datetime
+
+        user = UserFactory()
+        # 3 Einträge: Tag 0, Tag 14, Tag 21 → aktueller Eintrag Tag 28
+        wert_d0 = KoerperWerteFactory(user=user, gewicht=100)
+        KoerperWerte.objects.filter(id=wert_d0.id).update(datum=datetime.date(2026, 1, 1))
+        wert_d14 = KoerperWerteFactory(user=user, gewicht=99)
+        KoerperWerte.objects.filter(id=wert_d14.id).update(datum=datetime.date(2026, 1, 15))
+        wert_d21 = KoerperWerteFactory(user=user, gewicht=99)
+        KoerperWerte.objects.filter(id=wert_d21.id).update(datum=datetime.date(2026, 1, 22))
+
+        # Aktueller Eintrag Tag 28
+        wert_d28 = KoerperWerteFactory(user=user, gewicht=98)
+        KoerperWerte.objects.filter(id=wert_d28.id).update(datum=datetime.date(2026, 1, 29))
+        wert_d28.refresh_from_db()
+
+        rate = wert_d28.gewichts_veraenderung_rate()
+        # Fenster: 14-30 Tage vor 29.1. = 30.12.–15.1.
+        # Beide d0 (1.1.) und d14 (15.1.) qualifizieren → neuester = d14
+        # (98-99) / 14 Tage * 7 = -0.5 kg/Woche
+        assert rate == -0.5
 
     def test_gewichts_veraenderung_rate_erster_eintrag(self):
         """Rate None wenn kein vorheriger Eintrag."""
