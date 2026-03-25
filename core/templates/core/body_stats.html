@@ -142,7 +142,7 @@
                     <tbody>
                         {% for wert in werte reversed %}
                         <tr>
-                            <td>{{ wert.datum|date:"d.m.Y" }}</td>
+                            <td>{% if wert.id in outlier_ids %}<i class="bi bi-exclamation-triangle-fill text-warning me-1" title="{% trans 'Möglicher Messfehler (BIA-Ausreißer)' %}"></i>{% endif %}{{ wert.datum|date:"d.m.Y" }}</td>
                             <td class="fw-bold">{{ wert.gewicht }} kg</td>
                             <td>{{ wert.bmi|default:"--" }}</td>
                             <td>{{ wert.ffmi|default:"--" }}</td>
@@ -205,6 +205,18 @@
 {% block extra_scripts %}
 {% if not no_data %}
 <script>
+    const outlierFlags = {{ outlier_flags_json|safe }};
+
+    function outlierPointStyle(color, flags) {
+        return {
+            pointBackgroundColor: flags.map(f => f ? 'transparent' : color),
+            pointBorderColor: color,
+            pointBorderWidth: flags.map(f => f ? 2.5 : 1),
+            pointRadius: flags.map(f => f ? 5 : 3),
+            pointHoverRadius: flags.map(f => f ? 7 : 5),
+        };
+    }
+
     const chartDefaults = {
         responsive: true, maintainAspectRatio: true,
         plugins: { legend: { display: true, labels: { color: '#adb5bd' } } },
@@ -219,7 +231,8 @@
         data: {
             labels: {{ labels_json|safe }},
             datasets: [{ label: '{% trans "Gewicht (kg)" %}', data: {{ gewicht_json|safe }},
-                borderColor: '#0dcaf0', backgroundColor: 'rgba(13, 202, 240, 0.1)', tension: 0.3, fill: true }]
+                borderColor: '#0dcaf0', backgroundColor: 'rgba(13, 202, 240, 0.1)', tension: 0.3, fill: true,
+                ...outlierPointStyle('#0dcaf0', outlierFlags) }]
         },
         options: chartDefaults
     });
@@ -229,8 +242,8 @@
         data: {
             labels: {{ labels_json|safe }},
             datasets: [
-                { label: 'BMI', data: {{ bmi_json|safe }}, borderColor: '#ffc107', tension: 0.3 },
-                { label: 'FFMI', data: {{ ffmi_json|safe }}, borderColor: '#198754', tension: 0.3 }
+                { label: 'BMI', data: {{ bmi_json|safe }}, borderColor: '#ffc107', tension: 0.3, ...outlierPointStyle('#ffc107', outlierFlags) },
+                { label: 'FFMI', data: {{ ffmi_json|safe }}, borderColor: '#198754', tension: 0.3, ...outlierPointStyle('#198754', outlierFlags) }
             ]
         },
         options: chartDefaults
@@ -241,7 +254,8 @@
         data: {
             labels: {{ labels_json|safe }},
             datasets: [{ label: '{% trans "Körperfett (%)" %}', data: {{ kfa_json|safe }},
-                borderColor: '#dc3545', backgroundColor: 'rgba(220, 53, 69, 0.1)', tension: 0.3, fill: true }]
+                borderColor: '#dc3545', backgroundColor: 'rgba(220, 53, 69, 0.1)', tension: 0.3, fill: true,
+                ...outlierPointStyle('#dc3545', outlierFlags) }]
         },
         options: chartDefaults
     });
@@ -251,7 +265,8 @@
         data: {
             labels: {{ labels_json|safe }},
             datasets: [{ label: '{% trans "Muskelmasse (kg)" %}', data: {{ muskel_json|safe }},
-                borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', tension: 0.3, fill: true }]
+                borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', tension: 0.3, fill: true,
+                ...outlierPointStyle('#0d6efd', outlierFlags) }]
         },
         options: chartDefaults
     });
@@ -267,7 +282,8 @@
                     borderColor: '#0dcaf0',
                     borderWidth: 2,
                     tension: 0.3,
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    ...outlierPointStyle('#0dcaf0', outlierFlags)
                 },
                 {
                     label: '{% trans "Muskelmasse (kg)" %}',
@@ -275,7 +291,8 @@
                     borderColor: '#0d6efd',
                     borderWidth: 2,
                     tension: 0.3,
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    ...outlierPointStyle('#0d6efd', outlierFlags)
                 },
                 {
                     label: '{% trans "KFA (%)" %}',
@@ -283,7 +300,8 @@
                     borderColor: '#dc3545',
                     borderWidth: 2,
                     tension: 0.3,
-                    yAxisID: 'y1'
+                    yAxisID: 'y1',
+                    ...outlierPointStyle('#dc3545', outlierFlags)
                 },
                 {
                     label: 'BMI',
@@ -291,7 +309,8 @@
                     borderColor: '#ffc107',
                     borderWidth: 2,
                     tension: 0.3,
-                    yAxisID: 'y1'
+                    yAxisID: 'y1',
+                    ...outlierPointStyle('#ffc107', outlierFlags)
                 },
                 {
                     label: 'FFMI',
@@ -299,7 +318,8 @@
                     borderColor: '#198754',
                     borderWidth: 2,
                     tension: 0.3,
-                    yAxisID: 'y1'
+                    yAxisID: 'y1',
+                    ...outlierPointStyle('#198754', outlierFlags)
                 }
             ]
         },
