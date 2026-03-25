@@ -4670,3 +4670,37 @@ Geflaggte Werte als offene Kreise in Charts, aus Forecast-Regression ausgeschlos
 **Bugfix während Entwicklung:** Bestehende Forecast-Tests brauchten konsistente groesse_cm, da zufällige Höhenwerte zu FFMI-Schwankungen und falschem Ausreißer-Flagging führten.
 
 **Nächster Schritt:** Phase 9.2 (Gleitender 14-Tage-Durchschnitt für Gewichtstrend) in neuem Chat
+
+
+---
+
+## In Arbeit: Phase 9.2 – Gleitender 14-Tage-Durchschnitt für Gewichtstrend
+
+**Datum:** 2026-03-25
+**Branch:** `feature/phase9-data-quality` (fortgesetzt)
+
+### Aufgabe
+7-Tage-Fenster → 14-Tage-Fenster in `gewichts_veraenderung_rate()` und `get_rate_mit_info()`.
+Glättet Tagesfluktuation durch Wasserhaushalt und Mahlzeiten.
+
+**Betroffene Dateien:**
+- `core/models/body_tracking.py` – beide Methoden: timedelta(days=7) → 14, Docstrings
+- `core/tests/test_body_tracking.py` – bestehende Tests anpassen + neue Tests
+
+**nächster Schritt:** Model-Methoden anpassen
+
+## Abgeschlossen: Phase 9.2 – Gleitender 14-Tage-Durchschnitt für Gewichtstrend
+
+**Implementierung:**
+- `gewichts_veraenderung_rate()`: mindest_datum timedelta(days=7) → 14
+- `get_rate_mit_info()`: identische Änderung, Docstrings aktualisiert
+- Fallback-Kommentar korrigiert (7-30d → 14-30d)
+
+**Tests:** 44 passed (2 neue: Fallback bei 7d-Abstand, Referenz-Bevorzugung bei 14d)
+**Bugfix während Tests:** Factory akzeptiert kein float für Decimal-Feld (gewicht=98.5 → 99)
+
+**Auswirkung auf nachgelagerte Logik:**
+- Muskelabbau-Analyse (_analyze_weight_loss_context) wird seltener getriggert (geglättete Rate fällt weniger oft unter -1.0 kg/Woche) – gewollt, weniger Fehlalarme
+- PDF-Export zeigt automatisch die 14-Tage-Rate an (keine Änderung an export.py nötig)
+
+**Nächster Schritt:** Phase 9.3 (RPE-10-Warnung prominent in Dashboard/Stats)
