@@ -4898,3 +4898,25 @@ Ursprünglich in einem früheren Chat definiert (basierend auf Auswertung eines 
 
 **Geänderte Dateien:**
 - `docs/PROJECT_ROADMAP.md` – Phase 11 eingefügt, Phase 12 umnummeriert
+
+
+---
+
+## Fix: Hanging Leg Raises hilfsmuskeln + Weakness Coverage Auto-Fix
+
+**Datum:** 2026-03-26
+
+### Fix 1: Fixture-Korrektur
+`Hanging Leg Raises (hängendes Beinheben)` hatte `hilfsmuskeln: ["BEINE_QUAD"]` —
+anatomisch falsch. Korrigiert zu `["HUEFTBEUGER"]`. Fixture UND DB aktualisiert.
+
+### Fix 2: Weakness Coverage Auto-Fix
+`_validate_weakness_coverage()` war nur Soft-Warning. Jetzt mit Auto-Fix:
+- Neue Methode `_auto_fix_weakness()` in `plan_generator.py`
+- Findet passende verfügbare Übung für fehlende Muskelgruppe
+- Wählt beste Session über verwandte Muskelgruppen (HUEFTBEUGER → Legs)
+- Ersetzt die Übung mit den wenigsten Sätzen ab Position 4+ (Compounds geschützt)
+- Falls keine ersetzbare Übung: fügt neue Übung am Ende hinzu
+- Fallback auf Warning wenn kein Auto-Fix möglich
+
+**Tests:** 235 passed (ai_coach/tests/)
