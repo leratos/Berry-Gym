@@ -1434,9 +1434,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
 
     gesamt_volumen = sum(volumen_data)
     durchschnitt = round(gesamt_volumen / len(volumen_data), 1) if volumen_data else 0
-    gesamt_saetze = sum(
-        len(t.arbeitssaetze_list) for t in trainings
-    )
+    gesamt_saetze = sum(len(t.arbeitssaetze_list) for t in trainings)
 
     # RPE-10 metric (Phase 9.3)
     rpe10_anteil = _get_rpe10_anteil(request.user, heute)
