@@ -1,10 +1,12 @@
 """
-Tests für Phase 10 – Periodisierungs-Intelligence.
+Tests für Periodisierungs-Intelligence (Phase 10 + Phase 12).
 
 Testet:
 - get_next_block_recommendation() für jeden Block-Typ
 - get_block_age_warning() für verschiedene Block-Alter
 - Dashboard-Integration (block_age_warning im Context)
+- Phase 12: Muskelgruppen-Größenklassifikation, Modus-Profile,
+  Volumen-Schwellenwerte, Rep-Range-Klassifikation
 """
 
 from datetime import date, timedelta
@@ -12,7 +14,15 @@ from unittest.mock import MagicMock
 
 from django.test import TestCase
 
-from core.utils.periodization import get_block_age_warning, get_next_block_recommendation
+from core.models.constants import MUSKELGRUPPEN
+from core.utils.periodization import (
+    MUSKELGRUPPEN_GROESSE,
+    get_block_age_warning,
+    get_modus_profil,
+    get_next_block_recommendation,
+    get_volumen_schwellenwerte,
+    klassifiziere_rep_range,
+)
 
 
 class TestGetNextBlockRecommendation(TestCase):
@@ -215,3 +225,170 @@ class TestDashboardBlockAgeIntegration(TestCase):
         response = self.client.get("/")
         content = response.content.decode()
         self.assertNotIn("läuft seit", content)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 12: Kontextsensitive Empfehlungen
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestMuskelgruppenGroesse(TestCase):
+    """Tests für MUSKELGRUPPEN_GROESSE Mapping."""
+
+    def test_jede_muskelgruppe_hat_groesse(self):
+        """Jede Muskelgruppe aus constants.py muss in MUSKELGRUPPEN_GROESSE enthalten sein."""
+        for key, _ in MUSKELGRUPPEN:
+            self.assertIn(
+                key,
+                MUSKELGRUPPEN_GROESSE,
+                f"Muskelgruppe '{key}' fehlt in MUSKELGRUPPEN_GROESSE",
+            )
+
+    def test_grosse_gruppen(self):
+        for key in ["BRUST", "RUECKEN_LAT", "BEINE_QUAD", "BEINE_HAM", "PO"]:
+            self.assertEqual(MUSKELGRUPPEN_GROESSE[key], "gross")
+
+    def test_mittlere_gruppen(self):
+        for key in ["SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS", "BAUCH"]:
+            self.assertEqual(MUSKELGRUPPEN_GROESSE[key], "mittel")
+
+    def test_kleine_gruppen(self):
+        for key in ["BIZEPS", "WADEN", "UNTERARME"]:
+            self.assertEqual(MUSKELGRUPPEN_GROESSE[key], "klein")
+
+    def test_haltungsgruppen(self):
+        for key in ["HUEFTBEUGER", "RUECKEN_UNTEN"]:
+            self.assertEqual(MUSKELGRUPPEN_GROESSE[key], "haltung")
+
+    def test_ganzkoerper_ist_spezial(self):
+        self.assertEqual(MUSKELGRUPPEN_GROESSE["GANZKOERPER"], "spezial")
+
+    def test_nur_bekannte_kategorien(self):
+        erlaubte = {"gross", "mittel", "klein", "haltung", "spezial"}
+        for key, kategorie in MUSKELGRUPPEN_GROESSE.items():
+            self.assertIn(kategorie, erlaubte, f"'{key}' hat unbekannte Kategorie '{kategorie}'")
+
+
+class TestGetModusProfil(TestCase):
+    """Tests für get_modus_profil()."""
+
+    _PFLICHT_KEYS = {
+        "label",
+        "volumen_empfehlung",
+        "rpe_target_range",
+        "rpe_zu_niedrig_text",
+        "rpe_zu_hoch_text",
+        "stagnation_tipp",
+        "volumen_faktor",
+    }
+
+    def test_masse_profil(self):
+        profil = get_modus_profil("masse")
+        self.assertEqual(profil["rpe_target_range"], (6.5, 8.5))
+        self.assertEqual(profil["volumen_faktor"], 1.0)
+
+    def test_definition_profil(self):
+        profil = get_modus_profil("definition")
+        self.assertEqual(profil["rpe_target_range"], (7.0, 9.0))
+        self.assertEqual(profil["volumen_faktor"], 0.85)
+
+    def test_kraft_profil(self):
+        profil = get_modus_profil("kraft")
+        self.assertEqual(profil["rpe_target_range"], (7.5, 9.5))
+        self.assertEqual(profil["volumen_faktor"], 0.75)
+
+    def test_deload_profil(self):
+        profil = get_modus_profil("deload")
+        self.assertEqual(profil["rpe_target_range"], (5.0, 7.0))
+        self.assertEqual(profil["rpe_zu_niedrig_text"], "")
+        self.assertEqual(profil["stagnation_tipp"], "")
+
+    def test_none_gibt_default(self):
+        profil = get_modus_profil(None)
+        self.assertEqual(profil["rpe_target_range"], (6.0, 9.0))
+        self.assertEqual(profil["volumen_faktor"], 1.0)
+
+    def test_unbekannter_typ_gibt_default(self):
+        profil = get_modus_profil("gibts_nicht")
+        self.assertEqual(profil["label"], "Standard")
+
+    def test_alle_profile_haben_pflicht_keys(self):
+        for typ in ["masse", "definition", "kraft", "deload", None, "peaking", "sonstige"]:
+            profil = get_modus_profil(typ)
+            for key in self._PFLICHT_KEYS:
+                self.assertIn(key, profil, f"Profil für '{typ}' fehlt Key '{key}'")
+
+
+class TestGetVolumenSchwellenwerte(TestCase):
+    """Tests für get_volumen_schwellenwerte()."""
+
+    def test_brust_ohne_block(self):
+        result = get_volumen_schwellenwerte("BRUST")
+        self.assertEqual(result, (12, 25))
+
+    def test_bizeps_ohne_block(self):
+        result = get_volumen_schwellenwerte("BIZEPS")
+        self.assertEqual(result, (8, 16))
+
+    def test_hueftbeuger_ohne_block(self):
+        result = get_volumen_schwellenwerte("HUEFTBEUGER")
+        self.assertEqual(result, (6, 12))
+
+    def test_ganzkoerper_gibt_none(self):
+        result = get_volumen_schwellenwerte("GANZKOERPER")
+        self.assertIsNone(result)
+
+    def test_unbekannte_gruppe_gibt_none(self):
+        result = get_volumen_schwellenwerte("GIBTS_NICHT")
+        self.assertIsNone(result)
+
+    def test_brust_kraft_block_reduziert(self):
+        result = get_volumen_schwellenwerte("BRUST", "kraft")
+        # 12 * 0.75 = 9, 25 * 0.75 = 18.75 → 19
+        self.assertEqual(result, (9, 19))
+
+    def test_brust_definition_block_reduziert(self):
+        result = get_volumen_schwellenwerte("BRUST", "definition")
+        # 12 * 0.85 = 10.2 → 10, 25 * 0.85 = 21.25 → 21
+        self.assertEqual(result, (10, 21))
+
+    def test_brust_deload_block_stark_reduziert(self):
+        result = get_volumen_schwellenwerte("BRUST", "deload")
+        # 12 * 0.5 = 6, 25 * 0.5 = 12.5 → 12
+        self.assertEqual(result, (6, 12))
+
+    def test_brust_masse_block_unveraendert(self):
+        result = get_volumen_schwellenwerte("BRUST", "masse")
+        self.assertEqual(result, (12, 25))
+
+
+class TestKlassifiziereRepRange(TestCase):
+    """Tests für klassifiziere_rep_range()."""
+
+    def test_kraft_bereich(self):
+        for reps in [1, 3, 5, 6]:
+            self.assertEqual(
+                klassifiziere_rep_range(reps), "kraft", f"Reps {reps} sollte Kraft sein"
+            )
+
+    def test_hypertrophie_bereich(self):
+        for reps in [7, 8, 10, 12]:
+            self.assertEqual(
+                klassifiziere_rep_range(reps),
+                "hypertrophie",
+                f"Reps {reps} sollte Hypertrophie sein",
+            )
+
+    def test_ausdauer_bereich(self):
+        for reps in [13, 15, 20, 30]:
+            self.assertEqual(
+                klassifiziere_rep_range(reps),
+                "ausdauer",
+                f"Reps {reps} sollte Ausdauer sein",
+            )
+
+    def test_grenzwerte(self):
+        self.assertEqual(klassifiziere_rep_range(6), "kraft")
+        self.assertEqual(klassifiziere_rep_range(7), "hypertrophie")
+        self.assertEqual(klassifiziere_rep_range(12), "hypertrophie")
+        self.assertEqual(klassifiziere_rep_range(13), "ausdauer")
