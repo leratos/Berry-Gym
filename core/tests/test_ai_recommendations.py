@@ -113,11 +113,12 @@ class TestWorkoutRecommendations:
         client.force_login(user)
         url = reverse("workout_recommendations")
 
-        monkeypatch.setattr(ai_views, "_get_muscle_balance_empfehlung", lambda _q: [])
+        monkeypatch.setattr(ai_views, "_get_muscle_balance_empfehlung", lambda _q, _b=None: [])
         monkeypatch.setattr(ai_views, "_get_push_pull_empfehlung", lambda _q: [])
-        monkeypatch.setattr(ai_views, "_get_stagnation_empfehlung", lambda _q: [])
+        monkeypatch.setattr(ai_views, "_get_stagnation_empfehlung", lambda _q, _b=None: [])
         monkeypatch.setattr(ai_views, "_get_frequenz_empfehlung", lambda _u, _h: [])
-        monkeypatch.setattr(ai_views, "_get_rpe_empfehlung", lambda _q: [])
+        monkeypatch.setattr(ai_views, "_get_rpe_empfehlung", lambda _q, _b=None: [])
+        monkeypatch.setattr(ai_views, "_get_rep_range_empfehlung", lambda _q, _b=None: [])
 
         response = client.get(url, secure=True)
 
@@ -135,20 +136,21 @@ class TestWorkoutRecommendations:
         monkeypatch.setattr(
             ai_views,
             "_get_muscle_balance_empfehlung",
-            lambda _q: [{"typ": "a", "prioritaet": "niedrig"}],
+            lambda _q, _b=None: [{"typ": "a", "prioritaet": "niedrig"}],
         )
         monkeypatch.setattr(
             ai_views,
             "_get_push_pull_empfehlung",
             lambda _q: [{"typ": "b", "prioritaet": "hoch"}],
         )
-        monkeypatch.setattr(ai_views, "_get_stagnation_empfehlung", lambda _q: [])
+        monkeypatch.setattr(ai_views, "_get_stagnation_empfehlung", lambda _q, _b=None: [])
         monkeypatch.setattr(ai_views, "_get_frequenz_empfehlung", lambda _u, _h: [])
         monkeypatch.setattr(
             ai_views,
             "_get_rpe_empfehlung",
-            lambda _q: [{"typ": "c", "prioritaet": "info"}],
+            lambda _q, _b=None: [{"typ": "c", "prioritaet": "info"}],
         )
+        monkeypatch.setattr(ai_views, "_get_rep_range_empfehlung", lambda _q, _b=None: [])
 
         response = client.get(url, secure=True)
 
@@ -835,3 +837,347 @@ class TestAiRecommendationRemainingBranches:
             payload = b"".join(resp.streaming_content).decode("utf-8")
 
         assert "Timeout" in payload and "erneut versuchen" in payload
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 12: Kontextsensitive Empfehlungen
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestWorkoutRecommendationsPhase12:
+    """Tests für Phase 12 Context-Erweiterungen in workout_recommendations View."""
+
+    def test_laden_mit_aktivem_block_zeigt_modus(self, client):
+        from core.tests.factories import TrainingsblockFactory
+
+        user = UserFactory()
+        client.force_login(user)
+        TrainingsblockFactory(user=user, typ="definition")
+        url = reverse("workout_recommendations")
+        response = client.get(url, secure=True)
+        assert response.status_code == 200
+        assert response.context["block_typ_display"] == "Definition / Hypertrophie"
+
+    def test_laden_ohne_block_kein_modus(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        url = reverse("workout_recommendations")
+        response = client.get(url, secure=True)
+        assert response.status_code == 200
+        assert response.context["block_typ_display"] is None
+        assert response.context["active_block"] is None
+
+
+@pytest.mark.django_db
+class TestMuscleBalancePhase12:
+    """Tests für _get_muscle_balance_empfehlung mit gruppenspezifischen Schwellenwerten."""
+
+    def test_zu_wenig_volumen_brust(self):
+        """Brust mit < 12 Sätzen (gross) → Warnung."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(5):
+            SatzFactory(einheit=einheit, uebung=uebung, ist_aufwaermsatz=False, rpe=8.0)
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_muscle_balance_empfehlung(saetze)
+        assert len(result) >= 1
+        assert any("zu wenig" in e["titel"] for e in result)
+
+    def test_genuegend_volumen_keine_warnung(self):
+        """Brust mit 15 Sätzen → keine Warnung."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(15):
+            SatzFactory(einheit=einheit, uebung=uebung, ist_aufwaermsatz=False, rpe=8.0)
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_muscle_balance_empfehlung(saetze)
+        brust_warnings = [e for e in result if "Brust" in e.get("titel", "")]
+        assert len(brust_warnings) == 0
+
+    def test_zu_viel_volumen_bizeps(self):
+        """Bizeps mit > 16 Sätzen (klein) → niedrig-Priorität Warnung."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BIZEPS")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(20):
+            SatzFactory(einheit=einheit, uebung=uebung, ist_aufwaermsatz=False, rpe=8.0)
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_muscle_balance_empfehlung(saetze)
+        zu_viel = [e for e in result if "sehr hohes Volumen" in e.get("titel", "")]
+        assert len(zu_viel) >= 1
+        assert zu_viel[0]["prioritaet"] == "niedrig"
+
+    def test_definition_block_verwendet_profil_text(self):
+        """Im Definitionsmodus verwendet die Empfehlung den Profil-Text."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(5):
+            SatzFactory(einheit=einheit, uebung=uebung, ist_aufwaermsatz=False, rpe=8.0)
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_muscle_balance_empfehlung(saetze, "definition")
+        assert len(result) >= 1
+        assert "Intensität" in result[0]["empfehlung"]
+
+
+@pytest.mark.django_db
+class TestRpeEmpfehlungPhase12:
+    """Tests für _get_rpe_empfehlung mit modusabhängigen Schwellenwerten."""
+
+    def test_masse_zu_niedrig(self):
+        """Im Masse-Modus: RPE 5.5 ist unter 6.5 → Warnung."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(10):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=5.5,
+                wiederholungen=10,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rpe_empfehlung(saetze, "masse")
+        assert len(result) == 1
+        assert "Aufbau-Modus" in result[0]["empfehlung"]
+
+    def test_definition_zu_hoch(self):
+        """Im Definitions-Modus: RPE 9.5 ist über 9.0 → Warnung."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(10):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=9.5,
+                wiederholungen=10,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rpe_empfehlung(saetze, "definition")
+        assert len(result) == 1
+        assert "Defizit" in result[0]["empfehlung"]
+
+    def test_deload_kein_zu_niedrig_warning(self):
+        """Im Deload: Niedriger RPE erzeugt keine Warnung."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(10):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=4.0,
+                wiederholungen=10,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rpe_empfehlung(saetze, "deload")
+        assert len(result) == 0
+
+    def test_ohne_block_default_schwellenwerte(self):
+        """Ohne Block: altes Verhalten (RPE 6-9 ok)."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(10):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=7.0,
+                wiederholungen=10,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rpe_empfehlung(saetze, None)
+        assert len(result) == 0  # 7.0 liegt im Default-Bereich 6.0-9.0
+
+
+@pytest.mark.django_db
+class TestStagnationPhase12:
+    """Tests für _get_stagnation_empfehlung mit modusabhängigem Tipp."""
+
+    def test_deload_unterdrueckt_stagnation(self):
+        """Im Deload-Block: keine Stagnations-Empfehlungen."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+
+        from core.models import Satz
+
+        # Erstelle 5 Trainings mit identischem Gewicht
+        for i in range(5):
+            einheit = TrainingseinheitFactory(user=user)
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=8.0,
+                wiederholungen=10,
+                gewicht=80,
+            )
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_stagnation_empfehlung(saetze, "deload")
+        assert len(result) == 0
+
+
+@pytest.mark.django_db
+class TestRepRangeEmpfehlung:
+    """Tests für _get_rep_range_empfehlung (Phase 12.3)."""
+
+    def test_zu_wenig_daten_gibt_leer(self):
+        """Weniger als 10 Sätze → leere Liste."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(5):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=8.0,
+                wiederholungen=10,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rep_range_empfehlung(saetze)
+        assert result == []
+
+    def test_verteilungs_info_card(self):
+        """Bei genügend Sätzen erscheint eine Info-Card mit rep_range_data."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        for _ in range(15):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=8.0,
+                wiederholungen=10,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rep_range_empfehlung(saetze)
+        assert len(result) >= 1
+        info_cards = [e for e in result if e["prioritaet"] == "info"]
+        assert len(info_cards) == 1
+        assert "rep_range_data" in info_cards[0]
+        assert info_cards[0]["rep_range_data"]["total_sets"] == 15
+
+    def test_definition_zu_viel_ausdauer_warnung(self):
+        """Definition + >30% Ausdauer-Sätze → Warnung."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        # 4 Kraft + 12 Ausdauer = 75% Ausdauer
+        for _ in range(4):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=8.0,
+                wiederholungen=5,
+            )
+        for _ in range(12):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=7.0,
+                wiederholungen=15,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rep_range_empfehlung(saetze, "definition")
+        warnings = [e for e in result if e["prioritaet"] == "mittel"]
+        assert len(warnings) == 1
+        assert "leichte Sätze" in warnings[0]["titel"]
+
+    def test_kraft_block_advice_text(self):
+        """Kraft-Block + wenig Kraft-Sätze → spezifischer Ratschlag."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        # 2 Kraft + 10 Hypertrophie = 17% Kraft
+        for _ in range(2):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=9.0,
+                wiederholungen=4,
+            )
+        for _ in range(10):
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=8.0,
+                wiederholungen=10,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rep_range_empfehlung(saetze, "kraft")
+        info_cards = [e for e in result if e["prioritaet"] == "info"]
+        assert len(info_cards) == 1
+        assert "Kraftbereich" in info_cards[0]["empfehlung"]
+
+    def test_balanced_kein_warning(self):
+        """Ausgewogene Verteilung → nur Info-Card, kein Warning."""
+        user = UserFactory()
+        uebung = UebungFactory(muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        # Gleichmäßig verteilt
+        for reps in [5, 5, 5, 5, 10, 10, 10, 10, 15, 15, 15, 15]:
+            SatzFactory(
+                einheit=einheit,
+                uebung=uebung,
+                ist_aufwaermsatz=False,
+                rpe=8.0,
+                wiederholungen=reps,
+            )
+
+        from core.models import Satz
+
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = ai_views._get_rep_range_empfehlung(saetze)
+        warnings = [e for e in result if e["prioritaet"] != "info"]
+        assert len(warnings) == 0

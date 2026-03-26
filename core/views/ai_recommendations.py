@@ -30,9 +30,15 @@ from ..models import (
     PlanUebung,
     Satz,
     SiteSettings,
+    Trainingsblock,
     Trainingseinheit,
     Uebung,
     UserProfile,
+)
+from ..utils.periodization import (
+    get_modus_profil,
+    get_volumen_schwellenwerte,
+    klassifiziere_rep_range,
 )
 
 # ---------------------------------------------------------------------------
@@ -206,34 +212,62 @@ def _build_muskelgruppe_stats(saetze) -> dict:
     return stats
 
 
-def _get_muscle_balance_empfehlung(letzte_30_tage_saetze) -> list:
-    """Analysiert Muskelgruppen-Balance (RPE-gewichtet) und gibt Empfehlungen zurück."""
+def _get_muscle_balance_empfehlung(letzte_30_tage_saetze, block_typ: str | None = None) -> list:
+    """Analysiert Muskelgruppen-Balance mit gruppenspezifischen Volumen-Schwellenwerten.
+
+    Phase 12: Differenzierte Schwellenwerte pro Muskelgruppengröße statt
+    pauschaler relativer Heuristik. Block-Typ skaliert die Schwellenwerte.
+    """
     muskelgruppen_stats = _build_muskelgruppe_stats(letzte_30_tage_saetze)
 
     if not muskelgruppen_stats:
         return []
 
-    avg_effektive_wdh = sum(m["effektive_wdh"] for m in muskelgruppen_stats.values()) / len(
-        muskelgruppen_stats
-    )
+    profil = get_modus_profil(block_typ)
     empfehlungen = []
+
     for gruppe_key, data in muskelgruppen_stats.items():
-        if data["effektive_wdh"] < avg_effektive_wdh * 0.5:
+        schwellenwerte = get_volumen_schwellenwerte(gruppe_key, block_typ)
+        if schwellenwerte is None:
+            continue
+
+        min_sets, max_sets = schwellenwerte
+        saetze = data["saetze"]
+
+        if saetze < min_sets:
             passende_uebungen = Uebung.objects.filter(muskelgruppe=gruppe_key)[:3]
             empfehlungen.append(
                 {
                     "typ": "muskelgruppe",
                     "prioritaet": "hoch",
-                    "titel": f'{data["name"]} untertrainiert',
+                    "titel": f'{data["name"]} – zu wenig Volumen',
                     "beschreibung": (
-                        f"Diese Muskelgruppe wurde in den letzten 30 Tagen unterdurchschnittlich trainiert "
-                        f'(nur {int(data["effektive_wdh"])} effektive Wiederholungen vs. '
-                        f"{int(avg_effektive_wdh)} Durchschnitt)."
+                        f'{data["name"]}: {saetze} Sätze in 30 Tagen '
+                        f"(Empfehlung: mindestens {min_sets} Sätze)."
                     ),
-                    "empfehlung": f'Füge mehr Übungen für {data["name"]} hinzu',
+                    "empfehlung": profil["volumen_empfehlung"],
                     "uebungen": [{"id": u.id, "name": u.bezeichnung} for u in passende_uebungen],
                 }
             )
+        elif saetze > max_sets:
+            empfehlungen.append(
+                {
+                    "typ": "muskelgruppe",
+                    "prioritaet": "niedrig",
+                    "titel": f'{data["name"]} – sehr hohes Volumen',
+                    "beschreibung": (
+                        f'{data["name"]}: {saetze} Sätze in 30 Tagen '
+                        f"(Empfehlung: maximal {max_sets} Sätze). "
+                        f"Übermäßiges Volumen kann die Regeneration beeinträchtigen."
+                    ),
+                    "empfehlung": (
+                        f'Reduziere das Volumen für {data["name"]} oder '
+                        f"verteile die Sätze besser über den Monat."
+                    ),
+                    "uebungen": [],
+                }
+            )
+
     return empfehlungen
 
 
@@ -324,12 +358,18 @@ def _is_stagnating(max_gewichte: list[float], rpe_werte: list[float] | None = No
     return True
 
 
-def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
+def _get_stagnation_empfehlung(letzte_60_tage_saetze, block_typ: str | None = None) -> list:
     """Erkennt stagnierende Übungen (kein Fortschritt in 60 Tagen).
 
     Berücksichtigt RPE-Trend: sinkender RPE bei gleichem Gewicht
     wird nicht als Stagnation gewertet.
+    Phase 12: Stagnation-Tipps sind modusabhängig; im Deload unterdrückt.
     """
+    profil = get_modus_profil(block_typ)
+    stagnation_tipp = profil["stagnation_tipp"]
+    if not stagnation_tipp:
+        return []
+
     uebung_trainings: dict = defaultdict(list)
     for satz in letzte_60_tage_saetze.select_related("uebung", "einheit"):
         if satz.gewicht and satz.gewicht > 0:
@@ -376,7 +416,7 @@ def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
                         f"Bei dieser Übung gab es in den letzten {len(max_gewichte)} Trainings "
                         f"keinen Fortschritt (konstant {max_gewichte[-1]} kg)."
                     ),
-                    "empfehlung": "Versuche: (1) Deload-Woche, (2) Wiederholungsbereich ändern, (3) Tempo variieren",
+                    "empfehlung": stagnation_tipp,
                     "uebungen": [],
                 }
             )
@@ -417,34 +457,141 @@ def _get_frequenz_empfehlung(user, heute) -> list:
     return []
 
 
-def _get_rpe_empfehlung(letzte_30_tage_saetze) -> list:
-    """Gibt RPE-basierte Intensitätsempfehlung zurück."""
+def _get_rpe_empfehlung(letzte_30_tage_saetze, block_typ: str | None = None) -> list:
+    """Gibt RPE-basierte Intensitätsempfehlung zurück.
+
+    Phase 12: RPE-Zielbereiche und Texte sind modusabhängig.
+    Im Deload wird 'zu niedrig' unterdrückt.
+    """
     avg_rpe = letzte_30_tage_saetze.filter(rpe__isnull=False).aggregate(Avg("rpe"))["rpe__avg"]
     if not avg_rpe:
         return []
-    if avg_rpe < 6:
+
+    profil = get_modus_profil(block_typ)
+    rpe_min, rpe_max = profil["rpe_target_range"]
+
+    if avg_rpe < rpe_min and profil["rpe_zu_niedrig_text"]:
         return [
             {
                 "typ": "intensitaet",
                 "prioritaet": "mittel",
                 "titel": "Zu niedrige Trainingsintensität",
-                "beschreibung": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}. Das Training könnte intensiver sein.",
-                "empfehlung": "Steigere das Gewicht, bis du bei RPE 7-9 trainierst für optimalen Muskelaufbau",
+                "beschreibung": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}.",
+                "empfehlung": profil["rpe_zu_niedrig_text"],
                 "uebungen": [],
             }
         ]
-    if avg_rpe > 9:
+    if avg_rpe > rpe_max and profil["rpe_zu_hoch_text"]:
         return [
             {
                 "typ": "intensitaet",
                 "prioritaet": "hoch",
                 "titel": "Zu hohe Trainingsintensität",
-                "beschreibung": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}. Du trainierst möglicherweise zu nah am Muskelversagen.",
-                "empfehlung": "Reduziere das Gewicht leicht - Deload-Woche empfohlen!",
+                "beschreibung": f"Dein durchschnittlicher RPE liegt bei {avg_rpe:.1f}.",
+                "empfehlung": profil["rpe_zu_hoch_text"],
                 "uebungen": [],
             }
         ]
     return []
+
+
+def _get_rep_range_advice(
+    pct_kraft: float,
+    pct_hypertrophie: float,
+    pct_ausdauer: float,
+    block_typ: str | None,
+) -> str:
+    """Generiert kontextspezifischen Ratschlag zur Rep-Range-Verteilung."""
+    if block_typ == "kraft" and pct_kraft < 40:
+        return (
+            "Im Kraft-Modus sollten mindestens 40% deiner Sätze im Kraftbereich "
+            "(1-6 Reps) liegen. Erhöhe den Anteil schwerer Sätze."
+        )
+    if block_typ == "masse" and pct_hypertrophie < 40:
+        return (
+            "Im Aufbau-Modus sollten mindestens 40% deiner Sätze im "
+            "Hypertrophiebereich (7-12 Reps) liegen."
+        )
+    if block_typ == "definition" and pct_kraft + pct_hypertrophie < 50:
+        return (
+            "Im Definitionsmodus sollte der Großteil deiner Sätze schwer sein "
+            "(6-12 Reps) um Muskelmasse zu erhalten."
+        )
+    return "Gute Mischung! Variiere bewusst zwischen Kraft-, Hypertrophie- und Ausdauerbereichen."
+
+
+def _get_rep_range_empfehlung(letzte_30_tage_saetze, block_typ: str | None = None) -> list:
+    """Analysiert die Wiederholungsbereich-Verteilung und gibt Empfehlungen.
+
+    Phase 12.3: Berechnet den Anteil der Sätze in Kraft (1-6), Hypertrophie (7-12)
+    und Ausdauer (13+) Bereichen. Im Definitionsmodus empfiehlt schwere
+    Compounds statt leichter Sätze.
+    """
+    counts = {"kraft": 0, "hypertrophie": 0, "ausdauer": 0}
+    total = 0
+
+    for satz in letzte_30_tage_saetze:
+        if satz.wiederholungen:
+            bereich = klassifiziere_rep_range(satz.wiederholungen)
+            counts[bereich] += 1
+            total += 1
+
+    if total < 10:
+        return []
+
+    pct_kraft = counts["kraft"] / total * 100
+    pct_hypertrophie = counts["hypertrophie"] / total * 100
+    pct_ausdauer = counts["ausdauer"] / total * 100
+
+    empfehlungen = []
+
+    # Basis-Info: Verteilungsanalyse (immer anzeigen wenn genug Daten)
+    empfehlungen.append(
+        {
+            "typ": "rep_range",
+            "prioritaet": "info",
+            "titel": "Wiederholungsbereich-Verteilung",
+            "beschreibung": (
+                f"Kraft (1-6 Reps): {pct_kraft:.0f}% | "
+                f"Hypertrophie (7-12 Reps): {pct_hypertrophie:.0f}% | "
+                f"Ausdauer (13+ Reps): {pct_ausdauer:.0f}%"
+            ),
+            "empfehlung": _get_rep_range_advice(
+                pct_kraft, pct_hypertrophie, pct_ausdauer, block_typ
+            ),
+            "uebungen": [],
+            "rep_range_data": {
+                "kraft_pct": round(pct_kraft),
+                "hypertrophie_pct": round(pct_hypertrophie),
+                "ausdauer_pct": round(pct_ausdauer),
+                "total_sets": total,
+            },
+        }
+    )
+
+    # Kontextspezifische Warnung im Definitionsmodus
+    if block_typ == "definition" and pct_ausdauer > 30:
+        compound_uebungen = list(
+            Uebung.objects.filter(bewegungstyp__in=["DRUECKEN", "ZIEHEN", "BEUGEN", "HEBEN"])[:4]
+        )
+        empfehlungen.append(
+            {
+                "typ": "rep_range",
+                "prioritaet": "mittel",
+                "titel": "Zu viele leichte Sätze im Definitionsmodus",
+                "beschreibung": (
+                    f"{pct_ausdauer:.0f}% deiner Sätze sind im Ausdauerbereich (13+ Reps). "
+                    f"Im Defizit ist schweres Training effektiver zum Muskelerhalt."
+                ),
+                "empfehlung": (
+                    "Ersetze leichte Sätze durch schwere Compounds (6-8 Reps). "
+                    "Das erhält mehr Muskelmasse bei Kaloriendefizit."
+                ),
+                "uebungen": [{"id": u.id, "name": u.bezeichnung} for u in compound_uebungen],
+            }
+        )
+
+    return empfehlungen
 
 
 @login_required
@@ -458,12 +605,21 @@ def workout_recommendations(request: HttpRequest) -> HttpResponse:
     letzte_30_tage_saetze = alle_saetze.filter(einheit__datum__gte=letzte_30_tage)
     letzte_60_tage_saetze = alle_saetze.filter(einheit__datum__gte=letzte_60_tage)
 
+    # Aktiven Trainingsblock ermitteln (Phase 12)
+    active_block = (
+        Trainingsblock.objects.filter(user=request.user, end_datum__isnull=True)
+        .order_by("-start_datum")
+        .first()
+    )
+    block_typ = active_block.typ if active_block else None
+
     empfehlungen = (
-        _get_muscle_balance_empfehlung(letzte_30_tage_saetze)
+        _get_muscle_balance_empfehlung(letzte_30_tage_saetze, block_typ)
         + _get_push_pull_empfehlung(letzte_30_tage_saetze)
-        + _get_stagnation_empfehlung(letzte_60_tage_saetze)
+        + _get_stagnation_empfehlung(letzte_60_tage_saetze, block_typ)
         + _get_frequenz_empfehlung(request.user, heute)
-        + _get_rpe_empfehlung(letzte_30_tage_saetze)
+        + _get_rpe_empfehlung(letzte_30_tage_saetze, block_typ)
+        + _get_rep_range_empfehlung(letzte_30_tage_saetze, block_typ)
     )
 
     if not empfehlungen:
@@ -483,6 +639,8 @@ def workout_recommendations(request: HttpRequest) -> HttpResponse:
     context = {
         "empfehlungen": empfehlungen,
         "analysiert_tage": 30,
+        "active_block": active_block,
+        "block_typ_display": active_block.get_typ_display() if active_block else None,
     }
 
     return render(request, "core/workout_recommendations.html", context)
