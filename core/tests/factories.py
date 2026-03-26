@@ -95,6 +95,7 @@ class PlanUebungFactory(DjangoModelFactory):
     pausenzeit = 90
     trainingstag = ""
     superset_gruppe = 0
+    rpe_ziel = None
 
 
 class TrainingseinheitFactory(DjangoModelFactory):

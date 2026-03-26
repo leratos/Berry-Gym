@@ -299,32 +299,49 @@ def _calculate_empfohlene_pause(hint: str, plan_pausenzeit) -> int:
 
 
 def _determine_empfehlung_hint(
-    letzter_satz, ziel_wdh_min: int, ziel_wdh_max: int, is_kg_uebung: bool = False
+    letzter_satz,
+    ziel_wdh_min: int,
+    ziel_wdh_max: int,
+    is_kg_uebung: bool = False,
+    rpe_ziel: float | None = None,
 ) -> tuple[float, int, str]:
     """Bestimmt Empfehlung basierend auf letztem Satz (RPE/Wdh-Progression).
 
     Bei Körpergewichts-Übungen ohne Zusatzgewicht wird Wdh-Progression
     empfohlen statt kg-Steigerung (da Gewicht = 0 → +2.5 wäre sinnlos).
 
+    Gewichtssteigerung wird nur empfohlen wenn der tatsächliche RPE
+    innerhalb des Ziel-RPE liegt (Default 8.5). Sonst: Gewicht halten
+    und auf dem Level festigen.
+
     Returns:
         (empfohlenes_gewicht, empfohlene_wdh, hint)
     """
     gewicht = float(letzter_satz.gewicht)
     wdh = letzter_satz.wiederholungen
+    rpe_target = rpe_ziel if rpe_ziel is not None else 8.5
+    actual_rpe = float(letzter_satz.rpe) if letzter_satz.rpe else None
 
     # Körpergewichts-Übung ohne Zusatzgewicht: nur Wdh-Progression
     if is_kg_uebung and gewicht == 0:
         if letzter_satz.wiederholungen >= ziel_wdh_max:
             return 0.0, ziel_wdh_min, f"{ziel_wdh_max}+ Wdh → nächste Stufe (Zusatzgewicht?)"
-        if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
+        if actual_rpe is not None and actual_rpe < 7:
             return 0.0, min(wdh + 2, ziel_wdh_max), f"RPE {letzter_satz.rpe} → +2 Wdh"
         return 0.0, min(wdh + 1, ziel_wdh_max), f"Ziel: +1 Wdh (aktuell {wdh})"
 
-    if letzter_satz.rpe and float(letzter_satz.rpe) < 7:
+    if actual_rpe is not None and actual_rpe < 7:
         return gewicht + 2.5, wdh, f"RPE {letzter_satz.rpe} → +2.5kg"
     if letzter_satz.wiederholungen >= ziel_wdh_max:
+        # Gewicht nur hochsetzen wenn RPE im Zielbereich (oder unbekannt)
+        if actual_rpe is not None and actual_rpe > rpe_target:
+            return (
+                gewicht,
+                wdh,
+                f"{ziel_wdh_max} Wdh aber RPE {letzter_satz.rpe} > Ziel {rpe_target} → Gewicht halten",
+            )
         return gewicht + 2.5, ziel_wdh_min, f"{ziel_wdh_max}+ Wdh → +2.5kg"
-    if letzter_satz.rpe and float(letzter_satz.rpe) >= 9:
+    if actual_rpe is not None and actual_rpe >= 9:
         return gewicht, min(wdh + 1, ziel_wdh_max), f"RPE {letzter_satz.rpe} → mehr Wdh"
     return gewicht, wdh, "Niveau halten"
 
@@ -353,6 +370,7 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
 
     ziel_wdh_str = "8-12"
     plan_pausenzeit = None
+    rpe_ziel = None
 
     if training.plan:
         pu = training.plan.uebungen.filter(uebung_id=uebung_id).first()
@@ -360,6 +378,8 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
             ziel_wdh_str = pu.wiederholungen_ziel
         if pu and hasattr(pu, "pausenzeit") and pu.pausenzeit:
             plan_pausenzeit = pu.pausenzeit
+        if pu and pu.rpe_ziel is not None:
+            rpe_ziel = pu.rpe_ziel
 
     ziel_wdh_min, ziel_wdh_max = _parse_ziel_wdh(ziel_wdh_str)
 
@@ -372,7 +392,7 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
         is_kg = False
 
     empfohlenes_gewicht, empfohlene_wdh, hint = _determine_empfehlung_hint(
-        letzter_satz, ziel_wdh_min, ziel_wdh_max, is_kg_uebung=is_kg
+        letzter_satz, ziel_wdh_min, ziel_wdh_max, is_kg_uebung=is_kg, rpe_ziel=rpe_ziel
     )
 
     return {
@@ -390,11 +410,14 @@ def _build_empfehlung_from_satz(letzter_satz: Any, plan_pu: Any) -> dict:
     """Baut Empfehlungs-Dict aus vorgeladenem letzten Satz (kein DB-Zugriff)."""
     ziel_wdh_str = "8-12"
     plan_pausenzeit = None
+    rpe_ziel = None
     if plan_pu:
         if plan_pu.wiederholungen_ziel:
             ziel_wdh_str = plan_pu.wiederholungen_ziel
         if hasattr(plan_pu, "pausenzeit") and plan_pu.pausenzeit:
             plan_pausenzeit = plan_pu.pausenzeit
+        if plan_pu.rpe_ziel is not None:
+            rpe_ziel = plan_pu.rpe_ziel
 
     ziel_wdh_min, ziel_wdh_max = _parse_ziel_wdh(ziel_wdh_str)
     is_kg = (
@@ -403,7 +426,7 @@ def _build_empfehlung_from_satz(letzter_satz: Any, plan_pu: Any) -> dict:
         and getattr(plan_pu.uebung, "gewichts_typ", "") == "KOERPERGEWICHT"
     )
     empfohlenes_gewicht, empfohlene_wdh, hint = _determine_empfehlung_hint(
-        letzter_satz, ziel_wdh_min, ziel_wdh_max, is_kg_uebung=bool(is_kg)
+        letzter_satz, ziel_wdh_min, ziel_wdh_max, is_kg_uebung=bool(is_kg), rpe_ziel=rpe_ziel
     )
     return {
         "gewicht": empfohlenes_gewicht,

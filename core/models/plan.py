@@ -74,6 +74,12 @@ class PlanUebung(models.Model):
         verbose_name="Superset-Gruppe",
         help_text="0 = keine Gruppe, 1-9 = Gruppennummer für Supersätze",
     )
+    rpe_ziel = models.FloatField(
+        null=True,
+        blank=True,
+        verbose_name="Ziel-RPE",
+        help_text="Ziel-RPE für diese Übung (z.B. 8.0). Steuert Gewichtssteigerung.",
+    )
     notiz = models.TextField(
         blank=True,
         null=True,

@@ -215,6 +215,41 @@ class TestDetermineEmpfehlungHint(TestCase):
         g, w, hint = _determine_empfehlung_hint(s, 8, 12, is_kg_uebung=True)
         self.assertIn("nächste", hint)
 
+    def test_max_wdh_bei_rpe_ueber_ziel_gewicht_halten(self):
+        """Max-Wdh erreicht aber RPE 10 > Ziel 8 → Gewicht halten."""
+        s = self._satz(gewicht=80.0, wdh=12, rpe=10.0)
+        g, w, hint = _determine_empfehlung_hint(s, 8, 12, rpe_ziel=8.0)
+        self.assertEqual(g, 80.0)
+        self.assertIn("Gewicht halten", hint)
+
+    def test_max_wdh_bei_rpe_im_ziel_gewicht_hoch(self):
+        """Max-Wdh erreicht bei RPE 7.5 ≤ Ziel 8 → Gewicht erhöhen."""
+        s = self._satz(gewicht=80.0, wdh=12, rpe=7.5)
+        g, w, hint = _determine_empfehlung_hint(s, 8, 12, rpe_ziel=8.0)
+        self.assertAlmostEqual(g, 82.5)
+        self.assertIn("+2.5kg", hint)
+
+    def test_max_wdh_rpe_gleich_ziel_gewicht_hoch(self):
+        """Max-Wdh bei RPE == Ziel → Gewicht erhöhen (Grenzwert)."""
+        s = self._satz(gewicht=80.0, wdh=12, rpe=8.0)
+        g, w, hint = _determine_empfehlung_hint(s, 8, 12, rpe_ziel=8.0)
+        self.assertAlmostEqual(g, 82.5)
+        self.assertIn("+2.5kg", hint)
+
+    def test_max_wdh_rpe9_bei_kraftziel_rpe9_gewicht_hoch(self):
+        """Kraft-Plan mit Ziel-RPE 9: RPE 9 → Gewicht erhöhen."""
+        s = self._satz(gewicht=100.0, wdh=6, rpe=9.0)
+        g, w, hint = _determine_empfehlung_hint(s, 4, 6, rpe_ziel=9.0)
+        self.assertAlmostEqual(g, 102.5)
+        self.assertIn("+2.5kg", hint)
+
+    def test_default_rpe_ziel_ohne_plan(self):
+        """Ohne Plan-RPE wird Default 8.5 verwendet. RPE 9.0 > 8.5 → halten."""
+        s = self._satz(gewicht=80.0, wdh=12, rpe=9.0)
+        g, w, hint = _determine_empfehlung_hint(s, 8, 12)
+        self.assertEqual(g, 80.0)
+        self.assertIn("Gewicht halten", hint)
+
 
 class TestParseSetPostData(TestCase):
     def _post(self, **kwargs):

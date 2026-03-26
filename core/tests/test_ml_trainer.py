@@ -100,7 +100,7 @@ class TestGetTrainingDataMenge:
         assert y is not None
         assert isinstance(X, np.ndarray)
         assert isinstance(y, np.ndarray)
-        assert X.shape[1] == 5  # 5 Features: effective_weight, reps, days, rpe, set_number
+        assert X.shape[1] == 6  # 6 Features: effective_weight, reps, days, rpe, set_number, rpe_target
 
     def test_nur_letzte_6_monate(self, user, uebung_gesamt):
         """Sätze älter als 6 Monate werden ignoriert.
