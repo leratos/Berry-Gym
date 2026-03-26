@@ -153,7 +153,7 @@ Diese Phase fixt die Datengrundlage, bevor neue Features darauf aufbauen.
 
 ## Phase 10 – Periodisierungs-Intelligence *(baut auf Phase 3 auf)*
 **Branch:** `feature/phase10-periodisierung`
-**Status:** Offen
+**Status:** ✅ Abgeschlossen (2026-03-26)
 
 Setzt den `Trainingsblock` aus Phase 3 voraus. Ein Block läuft typisch 8–12 Wochen –
 das System soll proaktiv auf den Phasenwechsel hinweisen, statt passiv zu warten.
