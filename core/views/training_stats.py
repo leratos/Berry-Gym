@@ -255,12 +255,13 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
             ).only("gewicht", "wiederholungen")
         )
 
-        # Volumen: Gewicht × Wdh
+        # Volumen (Tonnage): Gewicht × Wdh
         week_total = sum(
             float(s.gewicht) * int(s.wiederholungen)
             for s in week_saetze
             if s.gewicht and s.wiederholungen
         )
+        saetze_count = len(week_saetze)
 
         # Durchschnittliches 1RM nach Epley-Formel: w × (1 + reps/30)
         # Ermöglicht Vergleich zwischen Definitions- und Massephasen
@@ -288,6 +289,7 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
             {
                 "label": week_label,
                 "volume": round(week_total, 0),
+                "saetze": saetze_count,
                 "avg_1rm": avg_1rm,
                 "week_num": i,
                 "ist_deload": hat_deload,
@@ -1315,10 +1317,12 @@ def _calc_muscle_balance(trainings) -> tuple[list, list, list, dict]:
             mg_display = satz.uebung.get_muskelgruppe_display()
             mg_code = satz.uebung.muskelgruppe
             eff_wdh = satz.wiederholungen * (rpe / 10.0)
+            tonnage = float(satz.gewicht) * satz.wiederholungen if satz.gewicht else 0.0
             if mg_display not in stats:
-                stats[mg_display] = {"saetze": 0, "volumen": 0.0}
+                stats[mg_display] = {"saetze": 0, "volumen": 0.0, "tonnage": 0.0}
             stats[mg_display]["saetze"] += 1
             stats[mg_display]["volumen"] += eff_wdh
+            stats[mg_display]["tonnage"] += tonnage
             stats_code[mg_code] = stats_code.get(mg_code, 0.0) + eff_wdh
     sorted_items = sorted(stats.items(), key=lambda x: x[1]["volumen"], reverse=True)
     mg_labels = [mg[0] for mg in sorted_items]
@@ -1430,6 +1434,9 @@ def training_stats(request: HttpRequest) -> HttpResponse:
 
     gesamt_volumen = sum(volumen_data)
     durchschnitt = round(gesamt_volumen / len(volumen_data), 1) if volumen_data else 0
+    gesamt_saetze = sum(
+        len(t.arbeitssaetze_list) for t in trainings
+    )
 
     # RPE-10 metric (Phase 9.3)
     rpe10_anteil = _get_rpe10_anteil(request.user, heute)
@@ -1445,6 +1452,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
 
     context = {
         "trainings_count": trainings.count(),
+        "gesamt_saetze": gesamt_saetze,
         "gesamt_volumen": round(gesamt_volumen, 1),
         "durchschnitt_volumen": durchschnitt,
         "volumen_labels_json": json.dumps(volumen_labels),

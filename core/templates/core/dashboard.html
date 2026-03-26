@@ -555,6 +555,11 @@
                     <small class="{% if week.ist_deload %}text-warning{% else %}text-muted{% endif %} d-block">
                         {% if week.ist_deload %}Deload{% else %}kg{% endif %}
                     </small>
+                    {% if week.saetze and not week.before_block %}
+                    <small class="text-muted d-block" style="font-size: 0.65rem;">
+                        {{ week.saetze }} {% trans "Sätze" %}
+                    </small>
+                    {% endif %}
                     {% if week.avg_1rm and not week.before_block %}
                     <small class="text-info d-block" style="font-size: 0.65rem;" title="{% trans 'Ø Geschätztes 1RM (Epley)' %}">
                         ⚡ {{ week.avg_1rm|floatformat:0 }} kg
