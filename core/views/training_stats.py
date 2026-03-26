@@ -39,6 +39,7 @@ from ..models import (
     Uebung,
     UserProfile,
 )
+from ..utils.periodization import get_block_age_warning
 from .body_tracking import _prepare_body_chart_data
 
 logger = logging.getLogger(__name__)
@@ -957,9 +958,10 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "form_color": form_color,
             "form_factors": form_factors,
             "weekly_volumes": weekly_volumes,
-            # Trainingsblock-Kontext (Phase 3)
+            # Trainingsblock-Kontext (Phase 3 + Phase 10)
             "active_block": active_block,
             "block_age_weeks": block_age_weeks,
+            "block_age_warning": get_block_age_warning(active_block),
             **fatigue_data,
             "motivation_quote": motivation_quote,
             "training_heatmap_json": training_heatmap_json,

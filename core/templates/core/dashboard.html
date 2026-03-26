@@ -166,6 +166,33 @@
   </div>
   {% endif %}
 
+  <!-- Warnung: Trainingsblock zu alt (Phase 10) -->
+  {% if block_age_warning %}
+  <div class="alert alert-{{ block_age_warning.severity }} d-flex align-items-start mb-3 py-2">
+      <i class="bi bi-clock-history me-2 flex-shrink-0 mt-1"></i>
+      <div class="flex-grow-1 small">
+          <strong>{{ block_age_warning.block_type_display }}</strong>
+          {% blocktrans with weeks=block_age_warning.weeks %}läuft seit {{ weeks }} Wochen.{% endblocktrans %}
+          <br>
+          <span class="text-body-secondary">
+              {% trans "Empfehlung:" %} <strong>{{ block_age_warning.recommendation.label }}</strong>
+              – {{ block_age_warning.recommendation.reason }}
+          </span>
+      </div>
+      {% if block_age_warning.recommendation.target_profile %}
+      <a href="{% url 'workout_recommendations' %}?target_profile={{ block_age_warning.recommendation.target_profile }}"
+         class="btn btn-sm btn-outline-{{ block_age_warning.severity }} ms-2 flex-shrink-0 text-nowrap">
+          <i class="bi bi-magic"></i> {% trans "Neuen Plan erstellen" %}
+      </a>
+      {% else %}
+      <a href="{% url 'set_active_plan_group' %}"
+         class="btn btn-sm btn-outline-{{ block_age_warning.severity }} ms-2 flex-shrink-0 text-nowrap">
+          <i class="bi bi-arrow-repeat"></i> {% trans "Block wechseln" %}
+      </a>
+      {% endif %}
+  </div>
+  {% endif %}
+
   <!-- Trainingsfrequenz & Streak -->
   <div class="row g-3 mb-3">
     <div class="col-6">
