@@ -128,7 +128,7 @@ keine externe Bibliothek notwendig.
 
 ## Phase 9 – Datenqualität & Metriken-Hygiene *(Quick Wins, bestehende Features verbessern)*
 **Branch:** `feature/phase9-data-quality`
-**Status:** Offen
+**Status:** ✅ Abgeschlossen (2026-03-26)
 **Quelle:** Auswertung 12-Wochen-PDF-Export (März 2026)
 
 Bestehende Features (insbesondere Phase 8 Forecasting) liefern potenziell verzerrte Ergebnisse,
@@ -142,10 +142,12 @@ Diese Phase fixt die Datengrundlage, bevor neue Features darauf aufbauen.
 | 9.3 | RPE-10-Warnung prominent in Dashboard/Stats | RPE-10-Anteil als eigene Metrik. Schwellenwerte: <5% optimal, 5–15% akzeptabel, >15% Warnung (Übertrainingsrisiko, Verletzungsgefahr) |
 | 9.4 | Ermüdungs-Index Refactoring | RPE-Verteilung statt RPE-Durchschnitt verwenden. >20% RPE-10 = mindestens 50/100. Aktuelle Heuristik (40% Volumen, 30% RPE, 30% Frequenz) produziert inkonsistente Ergebnisse (20/100 trotz 22,7% RPE-10-Sätzen) |
 | 9.5 | Tonnage als zusätzliche Volumen-Metrik | Gewicht × Reps × Sätze als ergänzende Metrik neben Satz-Zählung. Löst das Problem: 12 Sätze à 30 kg ≠ 12 Sätze à 50 kg |
+| 9.6 | RPE-Ziel-basierte Gewichtssteigerung & Plateau-Konsolidierung | Gewicht wird nur noch hochgesetzt wenn Max-Wdh bei RPE ≤ Ziel-RPE erreicht werden (statt blindem Max-Wdh-Check). Neues `PlanUebung.rpe_ziel`-Feld vom AI-Generator gesetzt. ML-Pipeline um `rpe_target`-Feature erweitert. Plateau-Erkennung unterscheidet jetzt Konsolidierung (sinkender RPE = User wird stärker) von echtem Plateau (gleichbleibender RPE) |
 
 ### Abhängigkeiten
 - 9.1 verbessert Forecast-Qualität aus Phase 8 (Ausreißer verzerren Regression)
 - 9.4 nutzt bestehenden Ermüdungs-Index (kein Neubau, Refactoring)
+- 9.6 greift in Empfehlungsalgorithmus, ML-Pipeline und Plateau-Erkennung ein
 
 ---
 

@@ -1,6 +1,45 @@
 # Berry-Gym Development Journal
 
 
+## Abgeschlossen: Phase 9.6 – RPE-Ziel-basierte Gewichtssteigerung & Plateau-Konsolidierung
+
+**Datum:** 2026-03-26
+**Commits:** 4c88628, 25575a0, 6bcf1ea
+
+**Problem 1 – Blinder Max-Wdh-Check:**
+Empfehlungsalgorithmus hat bei Erreichen der Max-Wiederholungen immer +2.5kg empfohlen,
+unabhaengig vom RPE. Bei RPE 10 (technisches Versagen) war das kontraproduktiv.
+
+**Problem 2 – Falsche Plateau-Erkennung:**
+Plateau-Erkennung war rein gewichtsbasiert. Mit RPE-basierter Progression gibt es eine
+gewollte "Festigungs-Phase" (gleiches Gewicht, sinkender RPE), die faelschlicherweise
+als Plateau gemeldet wurde.
+
+**Loesung:**
+1. Neues `PlanUebung.rpe_ziel` Feld (FloatField, nullable) – vom AI Plan-Generator pro
+   Uebung gesetzt, bisher wurde rpe_target generiert aber nicht in die DB persistiert
+2. `_determine_empfehlung_hint()` prueft jetzt: Max-Wdh + RPE <= Ziel-RPE → Gewicht hoch;
+   Max-Wdh + RPE > Ziel-RPE → Gewicht halten (Default Ziel-RPE: 8.5)
+3. ML-Pipeline: `rpe_target` als 6. Feature in Trainer und Prediction Service
+4. Plateau-Erkennung (alle 3 Stellen): sinkender RPE bei gleichem Gewicht = "Konsolidierung"
+   statt Plateau. Schwelle: RPE-Differenz >= 0.5 zwischen erster/zweiter Haelfte
+
+**Geaenderte Dateien:**
+- core/models/plan.py – rpe_ziel Feld + Migration 0079
+- core/views/training_session.py – Empfehlungsalgorithmus mit RPE-Ziel
+- ai_coach/plan_generator.py – rpe_target in DB persistieren
+- ml_coach/ml_trainer.py + prediction_service.py – 6. Feature rpe_target
+- core/views/machine_learning.py – API akzeptiert rpe_target
+- core/utils/advanced_stats.py – Konsolidierungs-Status
+- ai_coach/plan_adapter.py – _detect_plateaus() mit RPE-Trend
+- core/views/ai_recommendations.py – _is_stagnating() mit RPE-Werten
+
+**Tests:** 14 neue Tests, alle bestanden
+**Hinweis:** Bestehende ML-Modelle muessen nach Deploy neu trainiert werden (Feature-Anzahl 5→6)
+
+**Status:** Abgeschlossen
+
+
 ## Abgeschlossen: Deployment-Script robuster gemacht
 
 **Datum:** 2026-03-08
