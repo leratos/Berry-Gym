@@ -60,7 +60,7 @@ class MLPredictor:
         except MLPredictionModel.DoesNotExist:
             return False
 
-    def predict_next_weight(self, last_weight=None, last_reps=None, rpe=None):
+    def predict_next_weight(self, last_weight=None, last_reps=None, rpe=None, rpe_target=None):
         """
         Vorhersage des nächsten Gewichts
 
@@ -68,6 +68,7 @@ class MLPredictor:
             last_weight: Letztes Gewicht (optional, sonst aus DB)
             last_reps: Letzte Wiederholungen (optional)
             rpe: RPE des letzten Satzes (optional)
+            rpe_target: Ziel-RPE aus dem Plan (optional, Default 8.0)
 
         Returns:
             dict: {
@@ -77,11 +78,25 @@ class MLPredictor:
                 'explanation': str
             }
         """
-        from core.models import Satz
+        from core.models import PlanUebung, Satz
+
+        # RPE-Ziel aus Plan laden falls nicht übergeben
+        if rpe_target is None:
+            plan_rpe = (
+                PlanUebung.objects.filter(
+                    plan__user=self.user,
+                    uebung=self.uebung,
+                    rpe_ziel__isnull=False,
+                )
+                .order_by("-plan__erstellt_am")
+                .values_list("rpe_ziel", flat=True)
+                .first()
+            )
+            rpe_target = plan_rpe if plan_rpe is not None else 8.0
 
         # Lade Modell
         if not self.load_model():
-            return self._fallback_prediction(last_weight, last_reps, rpe)
+            return self._fallback_prediction(last_weight, last_reps, rpe, rpe_target)
 
         # Hole letzte Trainingsdaten falls nicht übergeben
         if last_weight is None or last_reps is None:
@@ -128,7 +143,7 @@ class MLPredictor:
             days_since_last = 7  # Default wenn manuell übergeben
 
         # Bereite Features vor
-        # [last_weight, last_reps, days_since_last, rpe, set_number]
+        # [last_weight, last_reps, days_since_last, rpe, set_number, rpe_target]
         set_number = 1  # Annahme: erster Satz
         features = np.array(
             [
@@ -138,6 +153,7 @@ class MLPredictor:
                     float(days_since_last),
                     float(rpe or 7.0),
                     float(set_number),
+                    float(rpe_target),
                 ]
             ]
         )
@@ -172,7 +188,7 @@ class MLPredictor:
             "last_trained": self._ml_model_instance.trained_at.strftime("%d.%m.%Y"),
         }
 
-    def _fallback_prediction(self, last_weight, last_reps, rpe):
+    def _fallback_prediction(self, last_weight, last_reps, rpe, rpe_target=8.0):
         """Fallback auf regelbasierte Vorhersage wenn kein ML-Modell vorhanden"""
         from core.models import Satz
 
@@ -198,20 +214,27 @@ class MLPredictor:
             last_reps = last_satz.wiederholungen
             rpe = last_satz.rpe or 7.0
 
-        # Regelbasierte Logik (wie bisherige Gewichtsempfehlungen)
-        if rpe and rpe < 7:
+        # Regelbasierte Logik mit RPE-Ziel
+        if rpe and float(rpe) < 7:
             # RPE zu leicht → Gewicht erhöhen
-            increase = 2.5 if last_weight > 40 else 1.25
-            predicted = last_weight + increase
+            increase = 2.5 if float(last_weight) > 40 else 1.25
+            predicted = float(last_weight) + increase
             explanation = f"RPE {rpe} zu leicht → +{increase}kg empfohlen"
         elif last_reps and last_reps > 12:
-            # Zu viele Wiederholungen → Gewicht erhöhen
-            increase = 2.5
-            predicted = last_weight + increase
-            explanation = f"{last_reps} Wdh. erreicht → +{increase}kg"
+            if rpe and float(rpe) > rpe_target:
+                # Max-Wdh erreicht aber RPE über Ziel → Gewicht halten
+                predicted = float(last_weight)
+                explanation = (
+                    f"{last_reps} Wdh. aber RPE {rpe} > Ziel {rpe_target} → Gewicht halten"
+                )
+            else:
+                # Max-Wdh bei akzeptablem RPE → Gewicht erhöhen
+                increase = 2.5
+                predicted = float(last_weight) + increase
+                explanation = f"{last_reps} Wdh. bei RPE ≤ {rpe_target} → +{increase}kg"
         else:
             # Halten
-            predicted = last_weight
+            predicted = float(last_weight)
             explanation = "Gewicht beibehalten"
 
         return {

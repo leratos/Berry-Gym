@@ -142,6 +142,7 @@ def ml_predict_weight(request: HttpRequest, uebung_id: int) -> JsonResponse:  # 
                 last_weight = _to_number(data.get("last_weight"), "last_weight")
                 last_reps = _to_number(data.get("last_reps"), "last_reps")
                 rpe = _to_number(data.get("rpe"), "rpe")
+                rpe_target = _to_number(data.get("rpe_target"), "rpe_target")
             except ValueError as invalid_field:
                 field_name = invalid_field.args[0] if invalid_field.args else "feld"
                 logger.warning(f"Ungültiger numerischer Wert für {field_name} in ml_predict_weight")
@@ -149,10 +150,12 @@ def ml_predict_weight(request: HttpRequest, uebung_id: int) -> JsonResponse:  # 
                     {"success": False, "message": f"Ungültiger numerischer Wert für {field_name}"},
                     status=400,
                 )
+        else:
+            rpe_target = None
 
         # Prediction
         result = predictor.predict_next_weight(
-            last_weight=last_weight, last_reps=last_reps, rpe=rpe
+            last_weight=last_weight, last_reps=last_reps, rpe=rpe, rpe_target=rpe_target
         )
 
         return JsonResponse({"success": True, "uebung": uebung.bezeichnung, "prediction": result})

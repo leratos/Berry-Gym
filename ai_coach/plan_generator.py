@@ -494,6 +494,13 @@ class PlanGenerator:
                     continue
 
                 # PlanUebung erstellen
+                rpe_target_raw = exercise_data.get("rpe_target")
+                rpe_ziel_val = None
+                if rpe_target_raw is not None:
+                    try:
+                        rpe_ziel_val = float(rpe_target_raw)
+                    except (ValueError, TypeError):
+                        pass
                 PlanUebung.objects.create(
                     plan=plan,
                     uebung=uebung,
@@ -502,6 +509,7 @@ class PlanGenerator:
                     saetze_ziel=exercise_data.get("sets", 3),
                     wiederholungen_ziel=exercise_data.get("reps", "8-10"),
                     pausenzeit=exercise_data.get("rest_seconds", 120),
+                    rpe_ziel=rpe_ziel_val,
                 )
 
                 rpe = exercise_data.get("rpe_target", "-")

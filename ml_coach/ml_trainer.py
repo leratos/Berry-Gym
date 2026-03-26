@@ -33,14 +33,14 @@ class MLTrainer:
     def get_training_data(self):
         """
         Sammelt Trainingsdaten für Übung.
-        Features: [effective_weight, last_reps, days_since_last, rpe, set_number]
+        Features: [effective_weight, last_reps, days_since_last, rpe, set_number, rpe_target]
         Target: next_effective_weight
 
         Bei KOERPERGEWICHT-Übungen wird effective_weight =
         (user_koerpergewicht * koerpergewicht_faktor) + zusatzgewicht berechnet.
         Damit lernt das Modell auf sinnvollen Gewichtswerten statt reinen Nullen.
         """
-        from core.models import KoerperWerte, Satz
+        from core.models import KoerperWerte, PlanUebung, Satz
 
         # Körpergewicht einmalig laden (Fallback 80 kg)
         kg_eintrag = KoerperWerte.objects.filter(user=self.user).order_by("-datum").first()
@@ -75,6 +75,20 @@ class MLTrainer:
         if saetze.count() < 10:
             return None, None  # Zu wenig Daten
 
+        # RPE-Ziel aus aktuellem Plan laden (falls vorhanden)
+        rpe_target_default = 8.0
+        plan_rpe_target = (
+            PlanUebung.objects.filter(
+                plan__user=self.user,
+                uebung=self.uebung,
+                rpe_ziel__isnull=False,
+            )
+            .order_by("-plan__erstellt_am")
+            .values_list("rpe_ziel", flat=True)
+            .first()
+        )
+        rpe_target_val = plan_rpe_target if plan_rpe_target is not None else rpe_target_default
+
         features = []
         targets = []
 
@@ -99,6 +113,7 @@ class MLTrainer:
                     float(days_since_last),
                     float(current.rpe or 7.0),  # Default RPE
                     float(set_number),
+                    float(rpe_target_val),
                 ]
             )
 
