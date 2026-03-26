@@ -4848,18 +4848,34 @@ als Plateau gemeldet wurde.
 
 ---
 
-## In Arbeit: Phase 10 – Periodisierungs-Intelligence
+## Abgeschlossen: Phase 10 – Periodisierungs-Intelligence
 
 **Datum:** 2026-03-26
 **Branch:** `feature/phase10-periodisierung`
+**Commit:** 4da1a2a
 
-**Scope:**
-- 10.1: Block-Alter-Warnung auf Dashboard (aktiver Block >= 8 Wochen → Hinweis)
-- 10.2: Block-Typ-Empfehlung (logischen Folge-Block vorschlagen, verknüpft mit KI-Plangenerierung target_profile)
-- Bonus: Dead-Code-Divergenz `calculate_fatigue_index()` in advanced_stats.py vs. training_stats.py dokumentieren
+**Implementierung:**
+- 10.1: Block-Alter-Warnung auf Dashboard (aktiver Block >= 8 Wochen → warning, >= 12 → danger)
+- 10.2: Block-Typ-Empfehlung mit Primary + Alternative für alle 6 Block-Typen,
+  verknüpft mit KI-Plangenerierung (target_profile Query-Param)
 
-**Geplante Dateien:**
-- `core/utils/periodization.py` (NEU) – Empfehlungslogik
-- `core/views/training_stats.py` – Block-Alter-Warnung im Dashboard-Context
-- `core/templates/core/dashboard.html` – Alert-Banner
-- `core/tests/test_periodization.py` (NEU) – Tests
+**Neue Dateien:**
+- `core/utils/periodization.py` – Empfehlungslogik, get_block_age_warning(), BLOCK_AGE_WARNING_THRESHOLD
+- `core/tests/test_periodization.py` – 23 Tests (Unit + Integration + Template-Rendering)
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – Import + block_age_warning im Dashboard-Context
+- `core/templates/core/dashboard.html` – Alert-Banner mit dynamischem Text + CTA-Button
+
+**Tests:** 23 neue Tests, alle bestanden. 134 bestehende Tests weiterhin grün.
+
+**Bekannte technische Schuld:**
+- `calculate_fatigue_index()` in `core/utils/advanced_stats.py` nutzt alte 40/30/30-Heuristik,
+  während Dashboard (training_stats.py) seit Phase 9.4 die refactored Version mit RPE-10 als
+  primärem Faktor verwendet. PDF-Export (`export.py`) importiert die alte Version.
+  → Divergenz, kein Blocker – bei nächstem PDF-Export-Update angleichen.
+- `target_profile` Query-Param wird an workout_recommendations-URL angehängt, aber das JS
+  auf der Seite liest ihn noch nicht automatisch aus um das Dropdown vorzubelegen.
+  → Kleines Enhancement, kein Blocker.
+
+**Nächster Schritt:** PR erstellen, dann Phase 11 (Kontextsensitive Empfehlungen) oder PDF-Export-Update
