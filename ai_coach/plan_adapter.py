@@ -202,7 +202,11 @@ class PlanAdapter:
         return result
 
     def _detect_plateaus(self, weeks: int = 4) -> Dict[str, int]:
-        """Erkennt 1RM-Stagnation"""
+        """Erkennt 1RM-Stagnation unter Berücksichtigung des RPE-Trends.
+
+        Sinkender RPE bei gleichem Gewicht = Konsolidierung (kein Plateau).
+        Nur wenn 1RM UND RPE stagnieren/steigen → echtes Plateau.
+        """
         cutoff_date = timezone.now() - timedelta(weeks=weeks)
         plateau_exercises = {}
 
@@ -217,6 +221,7 @@ class PlanAdapter:
             ).order_by("datum")
 
             session_best_1rms = []
+            session_avg_rpes = []
             for session in sessions:
                 # Beste 1RM dieser Session
                 saetze = Satz.objects.filter(
@@ -230,21 +235,36 @@ class PlanAdapter:
                 ).exclude(gewicht=0)
 
                 best_1rm = 0
+                rpe_values = []
                 for satz in saetze:
                     # Epley-Formel: 1RM = weight × (1 + reps/30)
                     estimated_1rm = float(satz.gewicht) * (1 + satz.wiederholungen / 30)
                     best_1rm = max(best_1rm, estimated_1rm)
+                    if satz.rpe is not None:
+                        rpe_values.append(float(satz.rpe))
 
                 if best_1rm > 0:
                     session_best_1rms.append(best_1rm)
+                    if rpe_values:
+                        session_avg_rpes.append(sum(rpe_values) / len(rpe_values))
 
             # Stagnation: Keine Verbesserung über mehrere Wochen
             if len(session_best_1rms) >= 2:
                 max_early = max(session_best_1rms[: len(session_best_1rms) // 2])
                 max_late = max(session_best_1rms[len(session_best_1rms) // 2 :])
 
-                # Weniger als 2.5% Fortschritt = Plateau
+                # Weniger als 2.5% Fortschritt im 1RM
                 if max_late < max_early * 1.025:
+                    # Prüfe RPE-Trend: sinkender RPE = Konsolidierung, kein Plateau
+                    if len(session_avg_rpes) >= 2:
+                        mitte = len(session_avg_rpes) // 2
+                        avg_rpe_early = sum(session_avg_rpes[:mitte]) / mitte
+                        avg_rpe_late = sum(session_avg_rpes[mitte:]) / len(
+                            session_avg_rpes[mitte:]
+                        )
+                        if avg_rpe_early - avg_rpe_late >= 0.5:
+                            # RPE sinkt signifikant → Konsolidierung, kein Plateau
+                            continue
                     plateau_exercises[uebung.bezeichnung] = weeks
 
         return plateau_exercises

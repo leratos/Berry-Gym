@@ -349,6 +349,26 @@ class TestPlateauAnalysis(StatsTestBase):
         result = calculate_plateau_analysis(self._alle_saetze(), [])
         self.assertEqual(result, [])
 
+    def test_konsolidierung_bei_sinkendem_rpe(self):
+        """Gleiches Gewicht über 4 Wochen aber sinkender RPE → Konsolidierung, kein Plateau."""
+        # 4 Sessions über 4 Wochen, gleiches Gewicht, sinkender RPE
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=80, wiederholungen=8, rpe=rpe)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status"], "konsolidierung")
+        self.assertIn("RPE sinkt", result[0]["status_label"])
+
+    def test_echtes_plateau_bei_gleichbleibendem_rpe(self):
+        """Gleiches Gewicht + gleichbleibender RPE über 4 Wochen → echtes Plateau."""
+        for days_ago, rpe in [(25, 9.0), (18, 9.0), (10, 9.0), (3, 9.0)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=80, wiederholungen=8, rpe=rpe)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        self.assertIn("plateau", result[0]["status"])
+
     def test_nur_null_1rm_werte_gibt_leer(self):
         for days_ago in [7, 0]:
             session = self._make_session(days_ago=days_ago)

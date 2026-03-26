@@ -294,8 +294,12 @@ def _get_push_pull_empfehlung(letzte_30_tage_saetze) -> list:
     return []
 
 
-def _is_stagnating(max_gewichte: list[float]) -> bool:
-    """Gibt True zurück wenn kein Fortschritt und konstantes Gewicht."""
+def _is_stagnating(max_gewichte: list[float], rpe_werte: list[float] | None = None) -> bool:
+    """Gibt True zurück wenn kein Fortschritt und konstantes Gewicht.
+
+    Berücksichtigt RPE-Trend: sinkender RPE bei gleichem Gewicht
+    ist Konsolidierung (kein echtes Plateau).
+    """
     if len(max_gewichte) < 4:
         return False
     erste = max_gewichte[:2]
@@ -303,11 +307,29 @@ def _is_stagnating(max_gewichte: list[float]) -> bool:
     avg_erste = sum(erste) / len(erste)
     avg_letzte = sum(letzte) / len(letzte)
     fortschritt = ((avg_letzte - avg_erste) / avg_erste * 100) if avg_erste > 0 else 0
-    return fortschritt < 2.5 and len(set(max_gewichte)) == 1
+    gewicht_stagniert = fortschritt < 2.5 and len(set(max_gewichte)) == 1
+
+    if not gewicht_stagniert:
+        return False
+
+    # Prüfe RPE-Trend: sinkender RPE = Konsolidierung, kein Plateau
+    if rpe_werte and len(rpe_werte) >= 4:
+        rpe_erste = rpe_werte[:2]
+        rpe_letzte = rpe_werte[-2:]
+        avg_rpe_erste = sum(rpe_erste) / len(rpe_erste)
+        avg_rpe_letzte = sum(rpe_letzte) / len(rpe_letzte)
+        if avg_rpe_erste - avg_rpe_letzte >= 0.5:
+            return False  # RPE sinkt → Konsolidierung
+
+    return True
 
 
 def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
-    """Erkennt stagnierende Übungen (kein Fortschritt in 60 Tagen)."""
+    """Erkennt stagnierende Übungen (kein Fortschritt in 60 Tagen).
+
+    Berücksichtigt RPE-Trend: sinkender RPE bei gleichem Gewicht
+    wird nicht als Stagnation gewertet.
+    """
     uebung_trainings: dict = defaultdict(list)
     for satz in letzte_60_tage_saetze.select_related("uebung", "einheit"):
         if satz.gewicht and satz.gewicht > 0:
@@ -315,6 +337,7 @@ def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
                 {
                     "datum": satz.einheit.datum,
                     "gewicht": float(satz.gewicht),
+                    "rpe": float(satz.rpe) if satz.rpe is not None else None,
                 }
             )
 
@@ -324,14 +347,23 @@ def _get_stagnation_empfehlung(letzte_60_tage_saetze) -> list:
     empfehlungen = []
     for uebung_id, saetze_list in uebung_trainings.items():
         trainings_max: dict = defaultdict(float)
+        trainings_rpe: dict = defaultdict(list)
         for s in saetze_list:
             trainings_max[s["datum"]] = max(trainings_max[s["datum"]], s["gewicht"])
+            if s["rpe"] is not None:
+                trainings_rpe[s["datum"]].append(s["rpe"])
         max_gewichte = [g for _, g in sorted(trainings_max.items())]
+
+        # Durchschnitts-RPE pro Training, chronologisch sortiert
+        rpe_pro_training = []
+        for datum in sorted(trainings_rpe.keys()):
+            rpe_list = trainings_rpe[datum]
+            rpe_pro_training.append(sum(rpe_list) / len(rpe_list))
 
         if len(max_gewichte) < 4:
             continue
 
-        if _is_stagnating(max_gewichte):
+        if _is_stagnating(max_gewichte, rpe_pro_training):
             uebung = uebungen_map.get(uebung_id)
             if uebung is None:
                 continue
