@@ -1,45 +1,6 @@
 # Berry-Gym Development Journal
 
 
-## Abgeschlossen: Phase 9.6 – RPE-Ziel-basierte Gewichtssteigerung & Plateau-Konsolidierung
-
-**Datum:** 2026-03-26
-**Commits:** 4c88628, 25575a0, 6bcf1ea
-
-**Problem 1 – Blinder Max-Wdh-Check:**
-Empfehlungsalgorithmus hat bei Erreichen der Max-Wiederholungen immer +2.5kg empfohlen,
-unabhaengig vom RPE. Bei RPE 10 (technisches Versagen) war das kontraproduktiv.
-
-**Problem 2 – Falsche Plateau-Erkennung:**
-Plateau-Erkennung war rein gewichtsbasiert. Mit RPE-basierter Progression gibt es eine
-gewollte "Festigungs-Phase" (gleiches Gewicht, sinkender RPE), die faelschlicherweise
-als Plateau gemeldet wurde.
-
-**Loesung:**
-1. Neues `PlanUebung.rpe_ziel` Feld (FloatField, nullable) – vom AI Plan-Generator pro
-   Uebung gesetzt, bisher wurde rpe_target generiert aber nicht in die DB persistiert
-2. `_determine_empfehlung_hint()` prueft jetzt: Max-Wdh + RPE <= Ziel-RPE → Gewicht hoch;
-   Max-Wdh + RPE > Ziel-RPE → Gewicht halten (Default Ziel-RPE: 8.5)
-3. ML-Pipeline: `rpe_target` als 6. Feature in Trainer und Prediction Service
-4. Plateau-Erkennung (alle 3 Stellen): sinkender RPE bei gleichem Gewicht = "Konsolidierung"
-   statt Plateau. Schwelle: RPE-Differenz >= 0.5 zwischen erster/zweiter Haelfte
-
-**Geaenderte Dateien:**
-- core/models/plan.py – rpe_ziel Feld + Migration 0079
-- core/views/training_session.py – Empfehlungsalgorithmus mit RPE-Ziel
-- ai_coach/plan_generator.py – rpe_target in DB persistieren
-- ml_coach/ml_trainer.py + prediction_service.py – 6. Feature rpe_target
-- core/views/machine_learning.py – API akzeptiert rpe_target
-- core/utils/advanced_stats.py – Konsolidierungs-Status
-- ai_coach/plan_adapter.py – _detect_plateaus() mit RPE-Trend
-- core/views/ai_recommendations.py – _is_stagnating() mit RPE-Werten
-
-**Tests:** 14 neue Tests, alle bestanden
-**Hinweis:** Bestehende ML-Modelle muessen nach Deploy neu trainiert werden (Feature-Anzahl 5→6)
-
-**Status:** Abgeschlossen
-
-
 ## Abgeschlossen: Deployment-Script robuster gemacht
 
 **Datum:** 2026-03-08
@@ -4743,3 +4704,197 @@ Glättet Tagesfluktuation durch Wasserhaushalt und Mahlzeiten.
 - PDF-Export zeigt automatisch die 14-Tage-Rate an (keine Änderung an export.py nötig)
 
 **Nächster Schritt:** Phase 9.3 (RPE-10-Warnung prominent in Dashboard/Stats)
+
+
+---
+
+## Abgeschlossen: Phase 9.3 – RPE-10-Warnung prominent in Dashboard/Stats
+
+**Datum:** 2026-03-25/26
+**Commits:** 83c37ca, 04057e5
+**Branch:** direkt auf `main` (nach PR #137 Merge von 9.1+9.2)
+
+> **Hinweis:** Dieser Eintrag wurde am 2026-03-26 nachgetragen. Phase 9.3 wurde
+> implementiert, aber nicht im Journal dokumentiert.
+
+**Implementierung:**
+- `_get_rpe10_anteil(user, heute)` in `training_stats.py`: berechnet RPE-10-Anteil der letzten 14 Tage (nur Arbeitssätze, keine Aufwärmsätze)
+- `_check_rpe10_warning(user, heute)` in `training_stats.py`: generiert Warnung wenn >15% RPE-10
+- RPE-10-Anteil als eigene Metrik-Kachel in `training_stats.html` (mit Schwellenwert-Bewertung: <5% optimal, 5–15% akzeptabel, >15% Warnung)
+- RPE-10-Badge im Dashboard-Warning-System (`_get_performance_warnings`)
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – `_get_rpe10_anteil()`, `_check_rpe10_warning()`, Context-Erweiterung
+- `core/templates/core/training_stats.html` – RPE-10-Kachel
+- `core/templates/core/dashboard.html` – RPE-10-Badge in Warnungen
+- `core/tests/test_training_stats.py` – `TestRpe10Warning`-Klasse
+
+
+---
+
+## Abgeschlossen: Phase 9.4 – Ermüdungs-Index Refactoring
+
+**Datum:** 2026-03-25/26
+**Commits:** 2e2b311 (zusammen mit 9.5)
+**Branch:** direkt auf `main` (nach PR #137 Merge von 9.1+9.2)
+
+> **Hinweis:** Dieser Eintrag wurde am 2026-03-26 nachgetragen. Phase 9.4 wurde
+> implementiert, aber nicht im Journal dokumentiert.
+
+**Implementierung:**
+- `_calculate_fatigue_index()` in `training_stats.py` komplett neu strukturiert
+- Modulare Sub-Funktionen statt monolithischer Berechnung:
+  - `_get_volume_spike_fatigue()` – Volumen-Spike-Erkennung (Block-Alter-bewusst)
+  - `_get_rpe_fatigue()` – RPE-10-Verteilung als primärer Faktor (>20% = 50 Punkte), Durchschnitts-RPE als sekundärer Faktor
+  - `_get_frequency_fatigue()` – Trainingsfrequenz letzte 7 Tage
+  - `_get_cardio_fatigue()` – Cardio-Ermüdungspunkte
+- `_get_fatigue_rating()` als separate Bewertungsfunktion
+
+**Design-Entscheidung:** RPE-10-Verteilung ist jetzt primärer Faktor (nicht mehr RPE-Durchschnitt). >20% RPE-10 = mindestens 50/100 Ermüdungspunkte. Löst das alte Problem: 22,7% RPE-10-Sätze ergaben nur 20/100 mit der alten Heuristik.
+
+**Offener Punkt:** `calculate_fatigue_index()` in `advanced_stats.py` ist potenziell Dead Code – prüfen ob noch aufgerufen.
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – komplettes Fatigue-Refactoring
+
+
+---
+
+## Abgeschlossen: Phase 9.5 – Tonnage als zusätzliche Volumen-Metrik
+
+**Datum:** 2026-03-25/26
+**Commits:** 2e2b311 (zusammen mit 9.4)
+**Branch:** direkt auf `main` (nach PR #137 Merge von 9.1+9.2)
+
+> **Hinweis:** Dieser Eintrag wurde am 2026-03-26 nachgetragen. Phase 9.5 wurde
+> implementiert, aber nicht im Journal dokumentiert.
+
+**Implementierung:**
+- Tonnage-Berechnung (Gewicht × Wiederholungen) in Wochenvolumen-Aufbereitung (`training_stats.py`)
+- Tonnage-Kachel als Stat-Card in `training_stats.html` (Gesamt-Tonnage in kg)
+- Tonnage-Spalte in Muskelgruppen-Tabelle (`training_stats.html`)
+- Tonnage pro Muskelgruppe in `_calculate_muscle_balance()`
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – Tonnage-Berechnung in Wochenvolumen + Muskelgruppen-Balance
+- `core/templates/core/training_stats.html` – Tonnage-Kachel + Tabellenspalte
+
+
+---
+
+## Abgeschlossen: Phase 9.6 – RPE-Ziel-basierte Gewichtssteigerung & Plateau-Konsolidierung
+
+**Datum:** 2026-03-26
+**Commits:** 4c88628, 25575a0, 6bcf1ea
+
+> **Hinweis:** Dieser Eintrag wurde am 2026-03-26 vom Dateianfang hierher verschoben
+> (chronologisch korrekte Position).
+
+**Problem 1 – Blinder Max-Wdh-Check:**
+Empfehlungsalgorithmus hat bei Erreichen der Max-Wiederholungen immer +2.5kg empfohlen,
+unabhängig vom RPE. Bei RPE 10 (technisches Versagen) war das kontraproduktiv.
+
+**Problem 2 – Falsche Plateau-Erkennung:**
+Plateau-Erkennung war rein gewichtsbasiert. Mit RPE-basierter Progression gibt es eine
+gewollte "Festigungs-Phase" (gleiches Gewicht, sinkender RPE), die fälschlicherweise
+als Plateau gemeldet wurde.
+
+**Lösung:**
+1. Neues `PlanUebung.rpe_ziel` Feld (FloatField, nullable) – vom AI Plan-Generator pro
+   Übung gesetzt, bisher wurde rpe_target generiert aber nicht in die DB persistiert
+2. `_determine_empfehlung_hint()` prüft jetzt: Max-Wdh + RPE <= Ziel-RPE → Gewicht hoch;
+   Max-Wdh + RPE > Ziel-RPE → Gewicht halten (Default Ziel-RPE: 8.5)
+3. ML-Pipeline: `rpe_target` als 6. Feature in Trainer und Prediction Service
+4. Plateau-Erkennung (alle 3 Stellen): sinkender RPE bei gleichem Gewicht = "Konsolidierung"
+   statt Plateau. Schwelle: RPE-Differenz >= 0.5 zwischen erster/zweiter Hälfte
+
+**Geänderte Dateien:**
+- core/models/plan.py – rpe_ziel Feld + Migration 0079
+- core/views/training_session.py – Empfehlungsalgorithmus mit RPE-Ziel
+- ai_coach/plan_generator.py – rpe_target in DB persistieren
+- ml_coach/ml_trainer.py + prediction_service.py – 6. Feature rpe_target
+- core/views/machine_learning.py – API akzeptiert rpe_target
+- core/utils/advanced_stats.py – Konsolidierungs-Status
+- ai_coach/plan_adapter.py – _detect_plateaus() mit RPE-Trend
+- core/views/ai_recommendations.py – _is_stagnating() mit RPE-Werten
+
+**Tests:** 14 neue Tests, alle bestanden
+**Hinweis:** Bestehende ML-Modelle müssen nach Deploy neu trainiert werden (Feature-Anzahl 5→6)
+
+
+---
+
+## Abgeschlossen: Phase 9 – Datenqualität & Metriken-Hygiene (Gesamtphase)
+
+**Datum:** 2026-03-26
+**Branch:** `feature/phase9-data-quality` (9.1–9.2, gemerged via PR #137) + direkt auf `main` (9.3–9.6)
+
+**Zusammenfassung aller Sub-Phasen:**
+- 9.1 ✅ BIA-Ausreißer-Erkennung (3-Punkt-Median-Filter, offene Kreise in Charts)
+- 9.2 ✅ Gleitender 14-Tage-Durchschnitt für Gewichtstrend
+- 9.3 ✅ RPE-10-Warnung prominent in Dashboard/Stats
+- 9.4 ✅ Ermüdungs-Index Refactoring (modulare Sub-Funktionen, RPE-10 als primärer Faktor)
+- 9.5 ✅ Tonnage als zusätzliche Volumen-Metrik
+- 9.6 ✅ RPE-Ziel-basierte Gewichtssteigerung & Plateau-Konsolidierung
+
+**Bekannte Probleme:**
+- `calculate_fatigue_index()` in `advanced_stats.py` ist potenziell Dead Code nach 9.4-Refactoring
+- Commits 9.3–9.6 landeten auf `main` statt auf dem Feature-Branch (Git-Workflow-Verletzung)
+- Journal-Einträge 9.3–9.5 fehlten und wurden nachgetragen
+- Lokaler Branch + Remote-Tracking-Ref bereinigt (2026-03-26)
+
+**Nächster Schritt:** Phase 10 (Periodisierungs-Intelligence) oder PDF-Export-Update
+
+
+---
+
+## Abgeschlossen: Phase 10 – Periodisierungs-Intelligence
+
+**Datum:** 2026-03-26
+**Branch:** `feature/phase10-periodisierung`
+**Commit:** 4da1a2a
+
+**Implementierung:**
+- 10.1: Block-Alter-Warnung auf Dashboard (aktiver Block >= 8 Wochen → warning, >= 12 → danger)
+- 10.2: Block-Typ-Empfehlung mit Primary + Alternative für alle 6 Block-Typen,
+  verknüpft mit KI-Plangenerierung (target_profile Query-Param)
+
+**Neue Dateien:**
+- `core/utils/periodization.py` – Empfehlungslogik, get_block_age_warning(), BLOCK_AGE_WARNING_THRESHOLD
+- `core/tests/test_periodization.py` – 23 Tests (Unit + Integration + Template-Rendering)
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – Import + block_age_warning im Dashboard-Context
+- `core/templates/core/dashboard.html` – Alert-Banner mit dynamischem Text + CTA-Button
+
+**Tests:** 23 neue Tests, alle bestanden. 134 bestehende Tests weiterhin grün.
+
+**Bekannte technische Schuld:**
+- `calculate_fatigue_index()` in `core/utils/advanced_stats.py` nutzt alte 40/30/30-Heuristik,
+  während Dashboard (training_stats.py) seit Phase 9.4 die refactored Version mit RPE-10 als
+  primärem Faktor verwendet. PDF-Export (`export.py`) importiert die alte Version.
+  → Divergenz, kein Blocker – bei nächstem PDF-Export-Update angleichen.
+- `target_profile` Query-Param wird an workout_recommendations-URL angehängt, aber das JS
+  auf der Seite liest ihn noch nicht automatisch aus um das Dropdown vorzubelegen.
+  → Kleines Enhancement, kein Blocker.
+
+**Nächster Schritt:** PR erstellen, dann Phase 11 (Kontextsensitive Empfehlungen) oder PDF-Export-Update
+
+
+---
+
+## Roadmap-Fix: Phase 11 (KI-Planvalidierung) nachgetragen
+
+**Datum:** 2026-03-26
+
+Die Phase "KI-Planvalidierung" war bei einem früheren Roadmap-Update verloren gegangen.
+Ursprünglich in einem früheren Chat definiert (basierend auf Auswertung eines KI-generierten
+3er-Split Plans), wurde sie bei nachfolgenden Roadmap-Aktualisierungen überschrieben.
+
+**Entscheidung:**
+- Neue Phase 11: KI-Planvalidierung (5 Subtasks: Cross-Session-Duplikate, verbotene
+  Kombinationen, anatomische Pflichtgruppen, Compound-vor-Isolation, Pausenzeiten)
+- Alte Phase 11 (Kontextsensitive Empfehlungen) → Phase 12
+
+**Geänderte Dateien:**
+- `docs/PROJECT_ROADMAP.md` – Phase 11 eingefügt, Phase 12 umnummeriert
