@@ -379,7 +379,8 @@
                         <div class="d-flex justify-content-between align-items-start mb-1">
                             <strong class="text-{{ warning.color }}">{{ warning.exercise }}</strong>
                             <span class="badge bg-{{ warning.color }} bg-opacity-25 text-{{ warning.color }}">
-                                {% if warning.type == 'plateau' %}{% trans "Plateau" %}
+                                {% if warning.type == 'rpe10' %}{% trans "Überbelastung" %}
+                                {% elif warning.type == 'plateau' %}{% trans "Plateau" %}
                                 {% elif warning.type == 'regression' %}{% trans "Rückschritt" %}
                                 {% elif warning.type == 'stagnation' %}{% trans "Stagnation" %}
                                 {% elif warning.type == 'balance' %}{% trans "Imbalance" %}
@@ -554,6 +555,11 @@
                     <small class="{% if week.ist_deload %}text-warning{% else %}text-muted{% endif %} d-block">
                         {% if week.ist_deload %}Deload{% else %}kg{% endif %}
                     </small>
+                    {% if week.saetze and not week.before_block %}
+                    <small class="text-muted d-block" style="font-size: 0.65rem;">
+                        {{ week.saetze }} {% trans "Sätze" %}
+                    </small>
+                    {% endif %}
                     {% if week.avg_1rm and not week.before_block %}
                     <small class="text-info d-block" style="font-size: 0.65rem;" title="{% trans 'Ø Geschätztes 1RM (Epley)' %}">
                         ⚡ {{ week.avg_1rm|floatformat:0 }} kg

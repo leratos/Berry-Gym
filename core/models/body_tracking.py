@@ -109,17 +109,18 @@ class KoerperWerte(models.Model):
         return None
 
     def gewichts_veraenderung_rate(self) -> float | None:
-        """Gewichtsveränderung in kg/Woche – Vergleich über mindestens 7 Tage.
+        """Gewichtsveränderung in kg/Woche – Vergleich über mindestens 14 Tage.
 
         Sucht den ältesten Eintrag innerhalb der letzten 30 Tage, der mindestens
-        7 Tage zurückliegt. Tagesschwankungen (z.B. durch Creatine-Wassereinlagerung)
-        werden so herausgefiltert.
+        14 Tage zurückliegt. Das 14-Tage-Fenster glättet Tagesschwankungen durch
+        Wasserhaushalt, Mahlzeiten und Creatine-Wassereinlagerung zuverlässiger
+        als ein 7-Tage-Fenster.
         """
         from datetime import timedelta
 
-        mindest_datum = self.datum - timedelta(days=7)
+        mindest_datum = self.datum - timedelta(days=14)
         max_datum = self.datum - timedelta(days=30)
-        # Bevorzuge Eintrag der möglichst nahe an 7 Tagen liegt (neuester der ≥7 Tage alten)
+        # Bevorzuge Eintrag der möglichst nahe an 14 Tagen liegt (neuester der ≥14 Tage alten)
         referenz = (
             KoerperWerte.objects.filter(
                 user=self.user,
@@ -129,7 +130,7 @@ class KoerperWerte(models.Model):
             .order_by("-datum")
             .first()
         )
-        # Fallback: ältester verfügbarer Eintrag wenn kein Eintrag im 7-30d Fenster
+        # Fallback: ältester verfügbarer Eintrag wenn kein Eintrag im 14-30d Fenster
         if not referenz:
             referenz = (
                 KoerperWerte.objects.filter(user=self.user, datum__lt=self.datum)
@@ -147,12 +148,14 @@ class KoerperWerte(models.Model):
     def get_rate_mit_info(self) -> dict | None:
         """Wie gewichts_veraenderung_rate(), gibt aber auch Referenzdatum und Zeitraum zurück.
 
+        Verwendet dasselbe 14-Tage-Fenster für konsistente Ergebnisse.
+
         Returns:
             dict mit 'rate' (kg/Woche), 'referenz_datum', 'tage' oder None.
         """
         from datetime import timedelta
 
-        mindest_datum = self.datum - timedelta(days=7)
+        mindest_datum = self.datum - timedelta(days=14)
         max_datum = self.datum - timedelta(days=30)
         referenz = (
             KoerperWerte.objects.filter(

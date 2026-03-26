@@ -255,12 +255,13 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
             ).only("gewicht", "wiederholungen")
         )
 
-        # Volumen: Gewicht × Wdh
+        # Volumen (Tonnage): Gewicht × Wdh
         week_total = sum(
             float(s.gewicht) * int(s.wiederholungen)
             for s in week_saetze
             if s.gewicht and s.wiederholungen
         )
+        saetze_count = len(week_saetze)
 
         # Durchschnittliches 1RM nach Epley-Formel: w × (1 + reps/30)
         # Ermöglicht Vergleich zwischen Definitions- und Massephasen
@@ -288,6 +289,7 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
             {
                 "label": week_label,
                 "volume": round(week_total, 0),
+                "saetze": saetze_count,
                 "avg_1rm": avg_1rm,
                 "week_num": i,
                 "ist_deload": hat_deload,
@@ -332,13 +334,39 @@ def _get_volume_spike_fatigue(
 
 
 def _get_rpe_fatigue(user, heute) -> tuple[int, list[str]]:
-    """Return (points, warnings) based on avg RPE over the last 2 weeks."""
+    """Return (points, warnings) based on RPE-10 distribution and avg RPE.
+
+    Primary factor: RPE-10 percentage (via _get_rpe10_anteil).
+    Secondary factor: average RPE (kept for cases where RPE-10 is low but
+    overall intensity is high).  Result = max(primary, secondary).
+    """
+    warnings: list[str] = []
+
+    # Primary: RPE-10 distribution
+    anteil = _get_rpe10_anteil(user, heute)
+    if anteil is not None and anteil > 20:
+        primary = 50
+        warnings.append(f"Sehr hoher RPE-10-Anteil ({anteil}%)")
+    elif anteil is not None and anteil > 15:
+        primary = 30
+        warnings.append(f"Hoher RPE-10-Anteil ({anteil}%)")
+    elif anteil is not None and anteil > 5:
+        primary = 10
+    else:
+        primary = 0
+
+    # Secondary: average RPE
     _, avg_rpe = _get_rpe_score(user, heute)
     if avg_rpe and avg_rpe > 8.5:
-        return 30, ["Sehr hohe Trainingsintensität"]
-    if avg_rpe and avg_rpe > 8:
-        return 20, ["Hohe Trainingsintensität"]
-    return 0, []
+        secondary = 30
+        warnings.append("Sehr hohe Trainingsintensität")
+    elif avg_rpe and avg_rpe > 8:
+        secondary = 20
+        warnings.append("Hohe Trainingsintensität")
+    else:
+        secondary = 0
+
+    return max(primary, secondary), warnings
 
 
 def _get_frequency_fatigue(user, heute) -> tuple[int, list[str]]:
@@ -719,17 +747,59 @@ def _check_balance_warnings(user, heute) -> list[dict]:
     return []
 
 
+def _get_rpe10_anteil(user, heute) -> float | None:
+    """Return RPE-10 percentage over the last 14 days (work sets only), or None."""
+    two_weeks_ago = heute - timedelta(days=14)
+    base = Satz.objects.filter(
+        einheit__user=user,
+        einheit__datum__gte=two_weeks_ago,
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
+        rpe__isnull=False,
+    )
+    gesamt = base.count()
+    if gesamt == 0:
+        return None
+    rpe10_count = base.filter(rpe=10).count()
+    return round((rpe10_count / gesamt) * 100, 1)
+
+
+def _check_rpe10_warning(user, heute) -> list[dict]:
+    """Warn if >15% of work sets in the last 14 days were RPE 10."""
+    anteil = _get_rpe10_anteil(user, heute)
+    if anteil is not None and anteil > 15:
+        return [
+            {
+                "type": "rpe10",
+                "severity": "danger",
+                "exercise": "RPE-10-Anteil",
+                "message": (
+                    f"{anteil}% deiner Arbeitssätze waren RPE 10 (Muskelversagen). "
+                    f"Ziel: unter 5%."
+                ),
+                "suggestion": (
+                    "Reduziere Sätze bis zum Versagen – halte 1-2 Reps in Reserve (RIR). "
+                    "Zu viel RPE 10 erhöht Verletzungsrisiko und verlängert die Regeneration."
+                ),
+                "icon": "bi-exclamation-triangle-fill",
+                "color": "danger",
+            }
+        ]
+    return []
+
+
 def _get_performance_warnings(user, heute, favoriten, gesamt_trainings: int) -> list[dict]:
-    """Aggregate performance warnings (plateau, regression, stagnation, balance), max 3."""
+    """Aggregate performance warnings (plateau, regression, stagnation, balance, rpe10), max 3."""
     if gesamt_trainings < 4:
         return []
     all_warnings = (
-        _check_plateau_warnings(user, heute, favoriten)
+        _check_rpe10_warning(user, heute)
+        + _check_plateau_warnings(user, heute, favoriten)
         + _check_regression_warnings(user, heute)
         + _check_balance_warnings(user, heute)
         + _check_stagnation_warnings(user, heute)
     )
-    priority = {"regression": 0, "plateau": 1, "balance": 2, "stagnation": 3}
+    priority = {"rpe10": 0, "regression": 1, "plateau": 2, "balance": 3, "stagnation": 4}
     return sorted(all_warnings, key=lambda w: priority[w["type"]])[:3]
 
 
@@ -1247,10 +1317,12 @@ def _calc_muscle_balance(trainings) -> tuple[list, list, list, dict]:
             mg_display = satz.uebung.get_muskelgruppe_display()
             mg_code = satz.uebung.muskelgruppe
             eff_wdh = satz.wiederholungen * (rpe / 10.0)
+            tonnage = float(satz.gewicht) * satz.wiederholungen if satz.gewicht else 0.0
             if mg_display not in stats:
-                stats[mg_display] = {"saetze": 0, "volumen": 0.0}
+                stats[mg_display] = {"saetze": 0, "volumen": 0.0, "tonnage": 0.0}
             stats[mg_display]["saetze"] += 1
             stats[mg_display]["volumen"] += eff_wdh
+            stats[mg_display]["tonnage"] += tonnage
             stats_code[mg_code] = stats_code.get(mg_code, 0.0) + eff_wdh
     sorted_items = sorted(stats.items(), key=lambda x: x[1]["volumen"], reverse=True)
     mg_labels = [mg[0] for mg in sorted_items]
@@ -1362,6 +1434,10 @@ def training_stats(request: HttpRequest) -> HttpResponse:
 
     gesamt_volumen = sum(volumen_data)
     durchschnitt = round(gesamt_volumen / len(volumen_data), 1) if volumen_data else 0
+    gesamt_saetze = sum(len(t.arbeitssaetze_list) for t in trainings)
+
+    # RPE-10 metric (Phase 9.3)
+    rpe10_anteil = _get_rpe10_anteil(request.user, heute)
 
     # Body stats trend data (optional – only if measurements exist)
     body_werte = KoerperWerte.objects.filter(user=request.user).order_by("datum")
@@ -1374,6 +1450,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
 
     context = {
         "trainings_count": trainings.count(),
+        "gesamt_saetze": gesamt_saetze,
         "gesamt_volumen": round(gesamt_volumen, 1),
         "durchschnitt_volumen": durchschnitt,
         "volumen_labels_json": json.dumps(volumen_labels),
@@ -1388,6 +1465,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "heatmap_data_json": json.dumps(heatmap_data),
         "deload_warnings": deload_warnings,
         "svg_muscle_data_json": json.dumps(svg_muscle_data),
+        "rpe10_anteil": rpe10_anteil,
         **body_chart_ctx,
     }
     return render(request, "core/training_stats.html", context)

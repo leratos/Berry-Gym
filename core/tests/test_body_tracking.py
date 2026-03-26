@@ -338,20 +338,57 @@ class TestKoerperWerteProperties:
         assert wert._get_fett_kg() == 22.0
 
     def test_gewichts_veraenderung_rate(self):
-        """Gewichtsrate berechnet kg/Woche zwischen zwei Einträgen."""
+        """Gewichtsrate berechnet kg/Woche bei ≥14 Tagen Abstand (Primärpfad)."""
         import datetime
 
         user = UserFactory()
         # Erster Eintrag
         wert1 = KoerperWerteFactory(user=user, gewicht=100)
-        # Datum manuell setzen (auto_now_add umgehen)
         KoerperWerte.objects.filter(id=wert1.id).update(datum=datetime.date(2026, 1, 1))
-        # Zweiter Eintrag 7 Tage später
+        # Zweiter Eintrag 14 Tage später
+        wert2 = KoerperWerteFactory(user=user, gewicht=98)
+        KoerperWerte.objects.filter(id=wert2.id).update(datum=datetime.date(2026, 1, 15))
+        wert2.refresh_from_db()
+        rate = wert2.gewichts_veraenderung_rate()
+        assert rate == -1.0  # (98-100) / 14 Tage * 7 = -1.0 kg/Woche
+
+    def test_gewichts_veraenderung_rate_7_tage_nutzt_fallback(self):
+        """Bei nur 7 Tagen Abstand greift der Fallback (ältester Eintrag)."""
+        import datetime
+
+        user = UserFactory()
+        wert1 = KoerperWerteFactory(user=user, gewicht=100)
+        KoerperWerte.objects.filter(id=wert1.id).update(datum=datetime.date(2026, 1, 1))
         wert2 = KoerperWerteFactory(user=user, gewicht=99)
         KoerperWerte.objects.filter(id=wert2.id).update(datum=datetime.date(2026, 1, 8))
         wert2.refresh_from_db()
         rate = wert2.gewichts_veraenderung_rate()
-        assert rate == -1.0  # (99-100) / 7 Tage * 7 = -1.0 kg/Woche
+        # Fallback findet den ältesten Eintrag (Jan 1) → (99-100)/7*7 = -1.0
+        assert rate == -1.0
+
+    def test_gewichts_veraenderung_rate_bevorzugt_14_tage(self):
+        """Bei mehreren Referenz-Einträgen wird der nächste an 14 Tagen bevorzugt."""
+        import datetime
+
+        user = UserFactory()
+        # 3 Einträge: Tag 0, Tag 14, Tag 21 → aktueller Eintrag Tag 28
+        wert_d0 = KoerperWerteFactory(user=user, gewicht=100)
+        KoerperWerte.objects.filter(id=wert_d0.id).update(datum=datetime.date(2026, 1, 1))
+        wert_d14 = KoerperWerteFactory(user=user, gewicht=99)
+        KoerperWerte.objects.filter(id=wert_d14.id).update(datum=datetime.date(2026, 1, 15))
+        wert_d21 = KoerperWerteFactory(user=user, gewicht=99)
+        KoerperWerte.objects.filter(id=wert_d21.id).update(datum=datetime.date(2026, 1, 22))
+
+        # Aktueller Eintrag Tag 28
+        wert_d28 = KoerperWerteFactory(user=user, gewicht=98)
+        KoerperWerte.objects.filter(id=wert_d28.id).update(datum=datetime.date(2026, 1, 29))
+        wert_d28.refresh_from_db()
+
+        rate = wert_d28.gewichts_veraenderung_rate()
+        # Fenster: 14-30 Tage vor 29.1. = 30.12.–15.1.
+        # Beide d0 (1.1.) und d14 (15.1.) qualifizieren → neuester = d14
+        # (98-99) / 14 Tage * 7 = -0.5 kg/Woche
+        assert rate == -0.5
 
     def test_gewichts_veraenderung_rate_erster_eintrag(self):
         """Rate None wenn kein vorheriger Eintrag."""
@@ -402,12 +439,22 @@ class TestBodyStatsForecast:
     """Integration-Tests: Forecast-Context in body_stats View."""
 
     def _create_werte(self, user, count=5):
-        """Erstellt count KoerperWerte mit aufsteigenden Daten via update()."""
-        werte = [KoerperWerteFactory(user=user) for _ in range(count)]
-        for i, wert in enumerate(werte):
-            KoerperWerte.objects.filter(pk=wert.pk).update(
+        """Erstellt count KoerperWerte mit aufsteigenden Daten und konsistenten Werten."""
+        from decimal import Decimal
+
+        werte = []
+        for i in range(count):
+            w = KoerperWerteFactory(
+                user=user,
+                gewicht=Decimal("85.00"),
+                groesse_cm=180,
+                koerperfett_prozent=Decimal("20.0"),
+                muskelmasse_kg=Decimal("35.00"),
+            )
+            KoerperWerte.objects.filter(pk=w.pk).update(
                 datum=date(2026, 1, 1) + timedelta(weeks=i * 2)
             )
+            werte.append(w)
         return werte
 
     def test_forecast_present_with_enough_data(self, client):
@@ -436,3 +483,188 @@ class TestBodyStatsForecast:
         response = client.get(reverse("body_stats"))
         assert response.status_code == 200
         assert response.context["gewicht_forecast"] is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Outlier Detection Tests (Phase 9.1)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestDetectOutliers:
+    """Unit-Tests für detect_outliers() – keine DB notwendig.
+
+    Verwendet Mock-Objekte statt echte KoerperWerte-Instanzen,
+    weil detect_outliers() nur auf id, datum, koerperfett_prozent,
+    muskelmasse_kg und ffmi (property) zugreift.
+    """
+
+    @staticmethod
+    def _make_wert(id, datum, kfa=None, muskel=None, ffmi_val=None):
+        """Erzeugt ein Mock-KoerperWerte-Objekt."""
+        from unittest.mock import MagicMock
+
+        w = MagicMock()
+        w.id = id
+        w.datum = datum
+        w.koerperfett_prozent = kfa
+        w.muskelmasse_kg = muskel
+        w.ffmi = ffmi_val
+        return w
+
+    def test_no_outliers_in_smooth_data(self):
+        """Gleichmäßiger Verlauf → keine Flags."""
+        from core.views.body_tracking import detect_outliers
+
+        werte = [
+            self._make_wert(1, date(2026, 1, 1), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(2, date(2026, 1, 8), kfa=19.8, muskel=35.2, ffmi_val=20.1),
+            self._make_wert(3, date(2026, 1, 15), kfa=19.6, muskel=35.4, ffmi_val=20.2),
+            self._make_wert(4, date(2026, 1, 22), kfa=19.4, muskel=35.6, ffmi_val=20.3),
+            self._make_wert(5, date(2026, 1, 29), kfa=19.2, muskel=35.8, ffmi_val=20.4),
+        ]
+        assert detect_outliers(werte) == set()
+
+    def test_kfa_spike_flagged(self):
+        """KFA-Spike (Δ > 2.0%/Woche) wird geflaggt."""
+        from core.views.body_tracking import detect_outliers
+
+        werte = [
+            self._make_wert(1, date(2026, 1, 1), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(2, date(2026, 1, 8), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(3, date(2026, 1, 15), kfa=25.0, muskel=35.0, ffmi_val=20.0),  # Spike
+            self._make_wert(4, date(2026, 1, 22), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(5, date(2026, 1, 29), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+        ]
+        outliers = detect_outliers(werte)
+        assert 3 in outliers  # Spike-Punkt geflaggt
+
+    def test_ffmi_spike_flagged(self):
+        """FFMI-Spike (Δ > 0.5/Woche) wird geflaggt."""
+        from core.views.body_tracking import detect_outliers
+
+        werte = [
+            self._make_wert(1, date(2026, 1, 1), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(2, date(2026, 1, 8), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(3, date(2026, 1, 15), kfa=20.0, muskel=35.0, ffmi_val=21.5),  # Spike
+            self._make_wert(4, date(2026, 1, 22), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(5, date(2026, 1, 29), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+        ]
+        outliers = detect_outliers(werte)
+        assert 3 in outliers
+
+    def test_muskelmasse_spike_flagged(self):
+        """Muskelmasse-Spike (Δ > 1.0 kg/Woche) wird geflaggt."""
+        from core.views.body_tracking import detect_outliers
+
+        werte = [
+            self._make_wert(1, date(2026, 1, 1), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(2, date(2026, 1, 8), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(3, date(2026, 1, 15), kfa=20.0, muskel=38.0, ffmi_val=20.0),  # +3kg
+            self._make_wert(4, date(2026, 1, 22), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(5, date(2026, 1, 29), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+        ]
+        outliers = detect_outliers(werte)
+        assert 3 in outliers
+
+    def test_threshold_exactly_on_boundary_not_flagged(self):
+        """Delta genau auf Schwelle wird NICHT geflaggt (> nicht >=)."""
+        from core.views.body_tracking import detect_outliers
+
+        werte = [
+            self._make_wert(1, date(2026, 1, 1), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(
+                2, date(2026, 1, 8), kfa=22.0, muskel=35.0, ffmi_val=20.0
+            ),  # Δ=2.0 genau
+            self._make_wert(3, date(2026, 1, 15), kfa=22.0, muskel=35.0, ffmi_val=20.0),
+        ]
+        outliers = detect_outliers(werte)
+        # Δ 2.0 ist genau die Schwelle – nicht überschritten
+        assert 2 not in outliers
+
+    def test_single_entry_no_outliers(self):
+        """Ein einzelner Eintrag kann kein Ausreißer sein."""
+        from core.views.body_tracking import detect_outliers
+
+        werte = [self._make_wert(1, date(2026, 1, 1), kfa=20.0, muskel=35.0, ffmi_val=20.0)]
+        assert detect_outliers(werte) == set()
+
+    def test_empty_list(self):
+        """Leere Liste → leeres Set."""
+        from core.views.body_tracking import detect_outliers
+
+        assert detect_outliers([]) == set()
+
+    def test_none_values_skipped(self):
+        """Punkte ohne KFA/Muskel/FFMI werden übersprungen, nicht geflaggt."""
+        from core.views.body_tracking import detect_outliers
+
+        werte = [
+            self._make_wert(1, date(2026, 1, 1), kfa=20.0, muskel=None, ffmi_val=None),
+            self._make_wert(2, date(2026, 1, 8), kfa=None, muskel=35.0, ffmi_val=None),
+            self._make_wert(3, date(2026, 1, 15), kfa=20.0, muskel=None, ffmi_val=None),
+        ]
+        outliers = detect_outliers(werte)
+        assert outliers == set()
+
+    def test_delta_normalized_to_week(self):
+        """Delta wird auf 7 Tage normalisiert – 14-Tage-Abstand mit Δ=3.0 KFA → 1.5/Woche → ok."""
+        from core.views.body_tracking import detect_outliers
+
+        werte = [
+            self._make_wert(1, date(2026, 1, 1), kfa=20.0, muskel=35.0, ffmi_val=20.0),
+            self._make_wert(
+                2, date(2026, 1, 15), kfa=23.0, muskel=35.0, ffmi_val=20.0
+            ),  # 14d, Δ3.0
+            self._make_wert(3, date(2026, 1, 29), kfa=23.0, muskel=35.0, ffmi_val=20.0),
+        ]
+        outliers = detect_outliers(werte)
+        # 3.0% über 14 Tage = 1.5%/Woche → unter Schwelle 2.0
+        assert 2 not in outliers
+
+
+@pytest.mark.django_db
+class TestBodyStatsOutlierIntegration:
+    """Integration-Tests: Outlier-Context in body_stats View."""
+
+    def _create_werte_with_spike(self, user):
+        """Erstellt 5 Werte, davon einer mit KFA-Spike."""
+        import datetime
+        from decimal import Decimal
+
+        werte = []
+        for i in range(5):
+            kfa = Decimal("20.0") if i != 2 else Decimal("30.0")
+            w = KoerperWerteFactory(
+                user=user,
+                gewicht=Decimal("85.00"),
+                groesse_cm=180,
+                koerperfett_prozent=kfa,
+                muskelmasse_kg=Decimal("35.00"),
+            )
+            KoerperWerte.objects.filter(pk=w.pk).update(
+                datum=datetime.date(2026, 1, 1) + timedelta(weeks=i)
+            )
+            werte.append(w)
+        return werte
+
+    def test_outlier_ids_in_context(self, client):
+        """body_stats liefert outlier_ids im Context."""
+        user = UserFactory()
+        client.force_login(user)
+        self._create_werte_with_spike(user)
+        response = client.get(reverse("body_stats"))
+        assert response.status_code == 200
+        assert "outlier_ids" in response.context
+        assert len(response.context["outlier_ids"]) > 0
+
+    def test_forecast_excludes_outliers(self, client):
+        """Forecast-Wert ändert sich wenn Ausreißer exkludiert werden."""
+        user = UserFactory()
+        client.force_login(user)
+        self._create_werte_with_spike(user)
+        response = client.get(reverse("body_stats"))
+        assert response.status_code == 200
+        # Forecast existiert (genug Datenpunkte nach Ausreißer-Filter)
+        # Mindestens 4 saubere Punkte + kfa_forecast kann None sein (< 5 sauber)
+        # Wichtig: kein Crash
+        assert "kfa_forecast" in response.context

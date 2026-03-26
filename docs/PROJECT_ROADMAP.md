@@ -126,22 +126,71 @@ keine externe Bibliothek notwendig.
 
 ---
 
-## Phase 9 – Periodisierungs-Intelligence *(baut auf Phase 3 auf)*
-**Branch:** `feature/phase9-periodisierung`
+## Phase 9 – Datenqualität & Metriken-Hygiene *(Quick Wins, bestehende Features verbessern)*
+**Branch:** `feature/phase9-data-quality`
+**Status:** Offen
+**Quelle:** Auswertung 12-Wochen-PDF-Export (März 2026)
+
+Bestehende Features (insbesondere Phase 8 Forecasting) liefern potenziell verzerrte Ergebnisse,
+weil BIA-Ausreißer und kurzfristige Gewichtsschwankungen ungefiltert einfließen.
+Diese Phase fixt die Datengrundlage, bevor neue Features darauf aufbauen.
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 9.1 | BIA-Ausreißer-Erkennung | 3-Punkt-Median-Filter über FFMI, KFA, Muskelmasse. Harte Schwellenwerte: FFMI Δ>0,5/Woche, KFA Δ>2,0%/Woche → automatisches Flagging als möglicher Messfehler. Optional: offener Kreis statt gefüllter Punkt in Trend-Charts |
+| 9.2 | Gleitender 14-Tage-Durchschnitt für Gewichtstrend | Ersetzt das aktuelle 7-Tage-Fenster. Glättet Tagesfluktuation durch Wasserhaushalt und Mahlzeiten. Angezeigte Gewichtsveränderungsrate wird zuverlässiger |
+| 9.3 | RPE-10-Warnung prominent in Dashboard/Stats | RPE-10-Anteil als eigene Metrik. Schwellenwerte: <5% optimal, 5–15% akzeptabel, >15% Warnung (Übertrainingsrisiko, Verletzungsgefahr) |
+| 9.4 | Ermüdungs-Index Refactoring | RPE-Verteilung statt RPE-Durchschnitt verwenden. >20% RPE-10 = mindestens 50/100. Aktuelle Heuristik (40% Volumen, 30% RPE, 30% Frequenz) produziert inkonsistente Ergebnisse (20/100 trotz 22,7% RPE-10-Sätzen) |
+| 9.5 | Tonnage als zusätzliche Volumen-Metrik | Gewicht × Reps × Sätze als ergänzende Metrik neben Satz-Zählung. Löst das Problem: 12 Sätze à 30 kg ≠ 12 Sätze à 50 kg |
+
+### Abhängigkeiten
+- 9.1 verbessert Forecast-Qualität aus Phase 8 (Ausreißer verzerren Regression)
+- 9.4 nutzt bestehenden Ermüdungs-Index (kein Neubau, Refactoring)
+
+---
+
+## Phase 10 – Periodisierungs-Intelligence *(baut auf Phase 3 auf)*
+**Branch:** `feature/phase10-periodisierung`
+**Status:** Offen
 
 Setzt den `Trainingsblock` aus Phase 3 voraus. Ein Block läuft typisch 8–12 Wochen –
 das System soll proaktiv auf den Phasenwechsel hinweisen, statt passiv zu warten.
 
 | # | Aufgabe | Details |
 |---|---|---|
-| 9.1 | Block-Alter-Warnung auf Dashboard | Wenn aktiver Block > 8 Wochen alt: Hinweis "Dein Kraft-Block läuft seit 9 Wochen – Zeit für Hypertrophie?" mit Link zum Plan-Wechsel-Flow |
-| 9.2 | Block-Typ-Empfehlung | Basierend auf letztem Block-Typ einen logischen Folge-Block vorschlagen (Kraft → Hypertrophie → Definition → Deload-Block) |
+| 10.1 | Block-Alter-Warnung auf Dashboard | Wenn aktiver Block > 8 Wochen alt: Hinweis "Dein Kraft-Block läuft seit 9 Wochen – Zeit für Hypertrophie?" mit Link zum Plan-Wechsel-Flow |
+| 10.2 | Block-Typ-Empfehlung | Basierend auf letztem Block-Typ einen logischen Folge-Block vorschlagen (Kraft → Hypertrophie → Definition → Deload-Block) |
+
+---
+
+## Phase 11 – Kontextsensitive Empfehlungen *(mittlerer Aufwand, Empfehlungsqualität)*
+**Branch:** `feature/phase11-context-recommendations`
+**Status:** Offen
+**Quelle:** Auswertung 12-Wochen-PDF-Export (März 2026)
+
+Empfehlungen und Warnungen passen sich an den aktiven Trainingsblock-Typ an.
+Im Definitionsmodus wird "mehr Sätze" durch "Intensität halten" ersetzt.
+Volumen-Schwellenwerte differenzieren nach Muskelgruppengröße statt one-size-fits-all.
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 11.1 | Trainingsmodus-Erweiterung | Baut auf Phase 3 Trainingsblock-Typ auf. Empfehlungstexte, Deload-Heuristik und Volumen-Schwellenwerte werden modusabhängig: Aufbau → Volumen-Steigerung priorisieren; Definition → Intensität halten, Compounds priorisieren, Isolation reduzieren |
+| 11.2 | Gruppenspezifische Volumen-Kalibrierung | Differenzierte Schwellenwerte: Große Gruppen (Rücken, Beine, Brust) 12–25 Sätze; Mittlere (Schultern, Trizeps) 10–18; Kleine (Bizeps, Waden) 8–16; Haltung (Hüftbeuger, Rotatoren) 6–12. Ersetzt pauschale 12–20 für alle |
+| 11.3 | Wiederholungsbereich-Analyse | Neuer Stats-Abschnitt: prozentuale Verteilung der Sätze in Hypertrophie (8–12), Kraft (3–6), Ausdauer (12–15+). Im Definitionsmodus: Empfehlung für schwere Compounds (6–8 Reps) statt leichte Sätze |
+
+### Abhängigkeiten
+- 11.1 setzt Phase 3 (Trainingsblock mit `typ`) voraus ✅ erledigt
+- 11.2 erweitert bestehende Muskelgruppen-Analyse
+- Bariatric-spezifische Schwellenwerte werden nicht als eigenes Feature implementiert – die Trainingsblock-Typen decken diesen Bedarf ab
 
 ---
 
 ## Bewusst NICHT in dieser Roadmap
 
-- Ernährungstracking (anderes Produkt)
+- **Ernährungstracking:** Scope bleibt Trainings-Tool. Ein Basismodul (kcal + Protein) bringt zu wenig Nutzen bei zu wenig konsequenter Eingabe. Wer Ernährung trackt, nutzt ein dediziertes Tool dafür
+- **Bariatric-Profil:** Medizinisch sensibel, persönliche Anpassung – nicht als Produkt-Feature. Trainingsblock-Typen + kontextsensitive Empfehlungen (Phase 11) decken den Bedarf an angepassten Schwellenwerten ab
+- **Medizinisches Hinweisfeld:** Fällt mit Bariatric-Profil weg. Kein medizinisches Diagnose-Tool
+- **Gewichtsverlust-Warnung bei aggressivem Defizit:** Sinnvoller Trigger, aber ohne Ernährungsdaten (kcal) nur eingeschränkt aussagekräftig. Zurückgestellt bis ggf. API-Integration mit einem Ernährungs-Tool existiert
 - Schlaf-Tracking (braucht Wearable)
 - Social Feed (zu aufwändig für privates Tool)
 - Weitere AI/ML-Features (erst Polish des Bestehenden)
