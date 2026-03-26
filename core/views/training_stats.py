@@ -332,13 +332,39 @@ def _get_volume_spike_fatigue(
 
 
 def _get_rpe_fatigue(user, heute) -> tuple[int, list[str]]:
-    """Return (points, warnings) based on avg RPE over the last 2 weeks."""
+    """Return (points, warnings) based on RPE-10 distribution and avg RPE.
+
+    Primary factor: RPE-10 percentage (via _get_rpe10_anteil).
+    Secondary factor: average RPE (kept for cases where RPE-10 is low but
+    overall intensity is high).  Result = max(primary, secondary).
+    """
+    warnings: list[str] = []
+
+    # Primary: RPE-10 distribution
+    anteil = _get_rpe10_anteil(user, heute)
+    if anteil is not None and anteil > 20:
+        primary = 50
+        warnings.append(f"Sehr hoher RPE-10-Anteil ({anteil}%)")
+    elif anteil is not None and anteil > 15:
+        primary = 30
+        warnings.append(f"Hoher RPE-10-Anteil ({anteil}%)")
+    elif anteil is not None and anteil > 5:
+        primary = 10
+    else:
+        primary = 0
+
+    # Secondary: average RPE
     _, avg_rpe = _get_rpe_score(user, heute)
     if avg_rpe and avg_rpe > 8.5:
-        return 30, ["Sehr hohe Trainingsintensität"]
-    if avg_rpe and avg_rpe > 8:
-        return 20, ["Hohe Trainingsintensität"]
-    return 0, []
+        secondary = 30
+        warnings.append("Sehr hohe Trainingsintensität")
+    elif avg_rpe and avg_rpe > 8:
+        secondary = 20
+        warnings.append("Hohe Trainingsintensität")
+    else:
+        secondary = 0
+
+    return max(primary, secondary), warnings
 
 
 def _get_frequency_fatigue(user, heute) -> tuple[int, list[str]]:
