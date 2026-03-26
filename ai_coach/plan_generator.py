@@ -310,7 +310,28 @@ class PlanGenerator:
                 "analysis_data": analysis_data,
             }
 
-        # 5b. Schwachstellen-Coverage prüfen (kein Hard-Fail, nur Warnungen)
+        # 5b. Erweiterte Planstruktur-Validierung (Phase 11)
+        print("\n🔍 SCHRITT 5b: Erweiterte Plan-Validierung")
+        print("-" * 60)
+        self._progress(75, "Validiere Planstruktur erweitert...")
+
+        from ai_coach.plan_validator import validate_plan_structure
+
+        structure_warnings, structure_fixes = validate_plan_structure(plan_json)
+        if structure_fixes.get("order_fixed", 0) > 0:
+            print(
+                f"   🔧 Übungsreihenfolge korrigiert in "
+                f"{structure_fixes['order_fixed']} Sessions"
+            )
+        if structure_fixes.get("rest_fixed", 0) > 0:
+            print(f"   🔧 Pausenzeiten korrigiert bei " f"{structure_fixes['rest_fixed']} Übungen")
+        if structure_warnings:
+            for w in structure_warnings:
+                print(f"   ⚠️ {w}")
+        if not structure_warnings and not structure_fixes:
+            print("   ✓ Planstruktur OK")
+
+        # 5c. Schwachstellen-Coverage prüfen (kein Hard-Fail, nur Warnungen)
         print("\n🎯 SCHRITT 5c: Schwachstellen-Coverage prüfen")
         print("-" * 60)
         coverage_warnings = self._validate_weakness_coverage(
@@ -390,6 +411,7 @@ class PlanGenerator:
             "plan_data": plan_json,
             "analysis_data": analysis_data,
             "coverage_warnings": coverage_warnings,
+            "structure_warnings": structure_warnings,
         }
 
     def _save_plan_to_db(self, plan_json: dict) -> list:
