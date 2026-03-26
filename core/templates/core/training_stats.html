@@ -48,20 +48,26 @@
     {% else %}
 
         <div class="row g-3 mb-4">
-            <div class="col-4">
+            <div class="col-6 col-md-3">
                 <div class="card card-stat border-secondary text-center p-3">
                     <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Trainings" %}</small>
                     <div class="display-6 fw-bold text-primary">{{ trainings_count }}</div>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-6 col-md-3">
                 <div class="card card-stat border-secondary text-center p-3">
-                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Gesamt-Volumen" %}</small>
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Gesamt-Sätze" %}</small>
+                    <div class="display-6 fw-bold text-warning">{{ gesamt_saetze }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card card-stat border-secondary text-center p-3">
+                    <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Tonnage" %}</small>
                     <div class="display-6 fw-bold text-success">{{ gesamt_volumen|floatformat:0 }}</div>
                     <small class="text-muted">kg</small>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-6 col-md-3">
                 <div class="card card-stat border-secondary text-center p-3">
                     <small class="text-secondary text-uppercase" style="font-size: 0.7rem;">{% trans "Ø pro Training" %}</small>
                     <div class="display-6 fw-bold text-info">{{ durchschnitt_volumen|floatformat:0 }}</div>
@@ -198,6 +204,7 @@
                         <tr>
                             <th>{% trans "Muskelgruppe" %}</th>
                             <th class="text-center">{% trans "Sätze" %}</th>
+                            <th class="text-center">{% trans "Tonnage" %}</th>
                             <th class="text-end">{% trans "Eff. Wiederholungen" %}</th>
                         </tr>
                     </thead>
@@ -207,6 +214,9 @@
                             <td class="fw-bold">{{ mg }}</td>
                             <td class="text-center">
                                 <span class="badge bg-primary">{{ stats.saetze }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="text-warning">{{ stats.tonnage|floatformat:0 }} kg</span>
                             </td>
                             <td class="text-end">
                                 <span class="text-success fw-bold">{{ stats.volumen|floatformat:0 }}</span>
