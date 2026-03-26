@@ -546,7 +546,12 @@ def _get_training_heatmap(user, heute) -> str:
 
 
 def _check_plateau_warnings(user, heute, favoriten) -> list[dict]:
-    """Check for plateaus (no progress in top exercises over 4 weeks)."""
+    """Check for plateaus (no progress in top exercises over 4 weeks).
+
+    Berücksichtigt RPE-Trend: sinkender RPE bei gleichem Gewicht ist
+    Konsolidierung (kein Plateau). Nur bei stagnierendem/steigendem RPE
+    wird ein echtes Plateau gemeldet.
+    """
     warnings = []
     four_weeks_ago = heute - timedelta(days=28)
     two_weeks_ago = heute - timedelta(days=14)
@@ -572,6 +577,27 @@ def _check_plateau_warnings(user, heute, favoriten) -> list[dict]:
             or 0
         )
         if older_max > 0 and recent_max > 0 and recent_max <= older_max:
+            # RPE-Trend prüfen: sinkender RPE = Konsolidierung, kein Plateau
+            older_rpes = list(
+                Satz.objects.filter(
+                    **base_filter,
+                    einheit__datum__gte=four_weeks_ago,
+                    einheit__datum__lt=two_weeks_ago,
+                    rpe__isnull=False,
+                ).values_list("rpe", flat=True)
+            )
+            recent_rpes = list(
+                Satz.objects.filter(
+                    **base_filter, einheit__datum__gte=two_weeks_ago, rpe__isnull=False
+                ).values_list("rpe", flat=True)
+            )
+            if older_rpes and recent_rpes:
+                avg_older = sum(float(r) for r in older_rpes) / len(older_rpes)
+                avg_recent = sum(float(r) for r in recent_rpes) / len(recent_rpes)
+                if avg_older - avg_recent >= 0.5:
+                    # RPE sinkt bei gleichem Gewicht → Konsolidierung
+                    continue
+
             warnings.append(
                 {
                     "type": "plateau",
