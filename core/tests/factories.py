@@ -198,3 +198,16 @@ class CardioEinheitFactory(DjangoModelFactory):
         """Random date within last 30 days."""
         days_ago = fake.random_int(min=0, max=30)
         return (datetime.now() - timedelta(days=days_ago)).date()
+
+
+class TrainingsblockFactory(DjangoModelFactory):
+    """Factory für Trainingsblöcke."""
+
+    class Meta:
+        model = "core.Trainingsblock"
+
+    user = factory.SubFactory(UserFactory)
+    typ = "masse"
+    start_datum = factory.LazyFunction(lambda: (datetime.now() - timedelta(weeks=4)).date())
+    end_datum = None
+    name = factory.Sequence(lambda n: f"Block {n}")

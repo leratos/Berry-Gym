@@ -26,6 +26,12 @@
             <p class="text-muted small mb-0">
                 {% blocktrans with days=analysiert_tage %}Intelligente Analysen basierend auf deinen letzten {{ days }} Tagen{% endblocktrans %}
             </p>
+            {% if block_typ_display %}
+            <p class="text-muted small mb-0 mt-1">
+                <i class="bi bi-collection me-1"></i>
+                {% blocktrans with modus=block_typ_display %}Aktiver Modus: {{ modus }} – Empfehlungen sind an diesen Trainingsmodus angepasst{% endblocktrans %}
+            </p>
+            {% endif %}
         </div>
     </div>
 
@@ -63,6 +69,10 @@
                             {% elif emp.typ == 'intensitaet' %}
                             <div class="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
                                 <i class="bi bi-speedometer2 fs-4"></i>
+                            </div>
+                            {% elif emp.typ == 'rep_range' %}
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background-color: rgba(111, 66, 193, 0.25); color: rgb(111, 66, 193);">
+                                <i class="bi bi-bar-chart-steps fs-4"></i>
                             </div>
                             {% else %}
                             <div class="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
@@ -108,6 +118,27 @@
                                 </div>
                             </div>
                             {% endif %}
+                            {% if emp.rep_range_data %}
+                            <div class="mt-3">
+                                <div class="progress" style="height: 24px;">
+                                    <div class="progress-bar bg-danger" role="progressbar" style="width: {{ emp.rep_range_data.kraft_pct }}%"{% if emp.rep_range_data.kraft_pct >= 10 %} aria-label="Kraft {{ emp.rep_range_data.kraft_pct }}%"{% endif %}>
+                                        {% if emp.rep_range_data.kraft_pct >= 10 %}{{ emp.rep_range_data.kraft_pct }}%{% endif %}
+                                    </div>
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ emp.rep_range_data.hypertrophie_pct }}%"{% if emp.rep_range_data.hypertrophie_pct >= 10 %} aria-label="Hypertrophie {{ emp.rep_range_data.hypertrophie_pct }}%"{% endif %}>
+                                        {% if emp.rep_range_data.hypertrophie_pct >= 10 %}{{ emp.rep_range_data.hypertrophie_pct }}%{% endif %}
+                                    </div>
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ emp.rep_range_data.ausdauer_pct }}%"{% if emp.rep_range_data.ausdauer_pct >= 10 %} aria-label="Ausdauer {{ emp.rep_range_data.ausdauer_pct }}%"{% endif %}>
+                                        {% if emp.rep_range_data.ausdauer_pct >= 10 %}{{ emp.rep_range_data.ausdauer_pct }}%{% endif %}
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-3 small text-muted mt-1">
+                                    <span><span class="badge bg-danger">&nbsp;</span> {% trans "Kraft" %} (1-6)</span>
+                                    <span><span class="badge bg-primary">&nbsp;</span> {% trans "Hypertrophie" %} (7-12)</span>
+                                    <span><span class="badge bg-success">&nbsp;</span> {% trans "Ausdauer" %} (13+)</span>
+                                    <span class="ms-auto">{{ emp.rep_range_data.total_sets }} {% trans "Sätze gesamt" %}</span>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -127,6 +158,7 @@
                 <li><strong>{% trans "Stagnation" %}:</strong> {% trans "Erkennt Übungen ohne Fortschritt über mehrere Trainings" %} {% source_tooltip "plateau_analysis" %}</li>
                 <li><strong>{% trans "Trainingsfrequenz" %}:</strong> {% trans "Überwacht deine wöchentliche Trainingskonsistenz" %}</li>
                 <li><strong>{% trans "RPE-Analyse" %}:</strong> {% trans "Bewertet deine Trainingsintensität basierend auf deinem durchschnittlichen RPE" %} {% source_tooltip "rpe_quality" %}</li>
+                <li><strong>{% trans "Wiederholungsbereich" %}:</strong> {% trans "Analysiert die Verteilung deiner Sätze in Kraft-, Hypertrophie- und Ausdauerbereiche" %}</li>
             </ul>
         </div>
     </div>
