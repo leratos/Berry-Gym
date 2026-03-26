@@ -333,6 +333,8 @@ Current prioritization and implementation status are tracked in
 - ✅ **1RM Strength Standards**: 4 performance levels, bodyweight-scaled
 - ✅ **Advanced Statistics**: Plateau, consistency, RPE quality, fatigue index
 - ✅ **CSV Export**, Cardio Lite, Video support, Custom exercises, Superset, PWA
+- ✅ **AI Plan Validation**: 5 programmatic post-validations (cross-session duplicates, forbidden combinations, anatomical mandatory groups, compound-before-isolation auto-fix, rest time auto-fix)
+- ✅ **Context-Sensitive Recommendations**: Training mode-dependent recommendation texts, muscle group-specific volume thresholds (large/medium/small/postural), rep range distribution analysis with stacked progress bar
 
 ### Planned / Next Steps
 
@@ -347,7 +349,7 @@ Current prioritization and implementation status are tracked in
 - AI Coach requires OpenRouter API key (~€0.003/plan)
 - Custom exercises are user-specific (no global sharing)
 
-**Last Updated:** 2026-02-24
+**Last Updated:** 2026-03-26
 
 ---
 

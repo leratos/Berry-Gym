@@ -167,7 +167,7 @@ das System soll proaktiv auf den Phasenwechsel hinweisen, statt passiv zu warten
 
 ## Phase 11 – KI-Planvalidierung *(niedrig-mittlerer Aufwand, fixt bestehendes Feature)*
 **Branch:** `feature/phase11-plan-validation`
-**Status:** Offen
+**Status:** ✅ Abgeschlossen (2026-03-26)
 **Quelle:** Manuelle Auswertung eines KI-generierten 3er-Split Plans (März 2026)
 
 Die KI-Plan-Generierung (`ai_coach/plan_generator.py`) hat strukturelle Fehler, die durch
@@ -191,7 +191,7 @@ sind programmatische Post-Validierungen, die nach der LLM-Antwort laufen.
 
 ## Phase 12 – Kontextsensitive Empfehlungen *(mittlerer Aufwand, Empfehlungsqualität)*
 **Branch:** `feature/phase12-context-recommendations`
-**Status:** Offen
+**Status:** ✅ Abgeschlossen (2026-03-26)
 **Quelle:** Auswertung 12-Wochen-PDF-Export (März 2026)
 
 Empfehlungen und Warnungen passen sich an den aktiven Trainingsblock-Typ an.
