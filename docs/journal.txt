@@ -4607,3 +4607,100 @@ Grünes Forecast-Card zwischen Stat-Kacheln und Gewichtsverlauf-Chart in `body_s
 - Phase 6: ✅
 - Phase 7: ✅
 - Phase 8: ✅
+
+
+---
+
+## In Arbeit: Roadmap-Update – Phasen 9–11 aus Erweiterungskonzept definieren
+
+**Datum:** 2026-03-25
+
+Basierend auf Auswertung des 12-Wochen-PDF-Exports (homegym_erweiterungskonzept.docx).
+Entscheidungen:
+- Ernährungsmodul: gestrichen (geringe konsequente Nutzung, Scope bleibt Trainings-Tool)
+- Bariatric-Profil: gestrichen (persönliche Anpassung, nicht im Produkt)
+- Medizinisches Hinweisfeld: gestrichen (fiel mit Bariatric weg)
+- Gewichtsverlust-Warnung bei aggressivem Defizit: gestrichen (hing am Ernährungsmodul)
+- Reihenfolge: Datenqualität (Phase 9) vor Periodisierung (Phase 10) – weil bestehende Features (Forecasting) von sauberen Daten abhängen
+- Alte Phase 9 (Periodisierungs-Intelligence) → wird Phase 10
+
+**Geänderte Dateien:**
+- `docs/PROJECT_ROADMAP.md` – Phase 9 (Datenqualität), Phase 10 (Periodisierung, umnummeriert), Phase 11 (Kontextsensitive Empfehlungen) + erweiterter "Bewusst NICHT"-Abschnitt
+
+## Abgeschlossen: Roadmap-Update – Phasen 9–11 definiert
+
+**Nächster Schritt:** Phase 9.1 (BIA-Ausreißer-Erkennung) in neuem Chat starten
+
+
+---
+
+## In Arbeit: Phase 9.1 – BIA-Ausreißer-Erkennung
+
+**Datum:** 2026-03-25
+**Branch:** `feature/phase9-data-quality`
+
+### Aufgabe
+3-Punkt-Median-Filter + harte Wochendelta-Schwellenwerte für FFMI, KFA, Muskelmasse.
+Geflaggte Werte als offene Kreise in Charts, aus Forecast-Regression ausgeschlossen.
+
+**Schwellenwerte (identisch für Median-Filter und Delta-Check):**
+- FFMI: Δ > 0,5 / Woche
+- KFA: Δ > 2,0% / Woche
+- Muskelmasse: Δ > 1,0 kg / Woche
+
+**Geänderte Dateien:**
+- `core/views/body_tracking.py` – `detect_outliers()`, `_prepare_body_chart_data()` erweitert, `body_stats()` View
+- `core/templates/core/body_stats.html` – Chart.js Point-Styling, Warnsymbol in Tabelle
+- `core/tests/test_body_tracking.py` – Tests für Ausreißer-Erkennung
+
+**nächster Schritt:** `detect_outliers()` implementieren
+
+## Abgeschlossen: Phase 9.1 – BIA-Ausreißer-Erkennung
+
+**Implementierung:**
+- `detect_outliers()` in `body_tracking.py`: 3-Punkt-Median-Filter + harte Wochendelta-Schwellenwerte
+- Schwellenwerte: FFMI Δ>0,5 / KFA Δ>2,0% / Muskelmasse Δ>1,0 kg pro Woche
+- Offene Kreise (transparent pointBackgroundColor) in allen 5 Charts für geflaggte Werte
+- ⚠ Warnsymbol in Messwerte-Tabelle neben Ausreißer-Zeilen
+- KFA-Forecast exkludiert geflaggte Werte; Gewichts-Forecast NICHT (Gewicht ist BIA-unabhängig)
+
+**Design-Entscheidung:** Gewicht wird von der Waage unabhängig von der BIA-Impedanzmessung ermittelt. BIA-Ausreißer (FFMI/KFA/Muskelmasse) bedeuten nicht, dass das Gewicht falsch ist. Deshalb filtert der Gewichts-Forecast keine BIA-Ausreißer.
+
+**Tests:** 42 passed (10 neue: 8 Unit-Tests für detect_outliers, 2 Integration-Tests)
+**Bugfix während Entwicklung:** Bestehende Forecast-Tests brauchten konsistente groesse_cm, da zufällige Höhenwerte zu FFMI-Schwankungen und falschem Ausreißer-Flagging führten.
+
+**Nächster Schritt:** Phase 9.2 (Gleitender 14-Tage-Durchschnitt für Gewichtstrend) in neuem Chat
+
+
+---
+
+## In Arbeit: Phase 9.2 – Gleitender 14-Tage-Durchschnitt für Gewichtstrend
+
+**Datum:** 2026-03-25
+**Branch:** `feature/phase9-data-quality` (fortgesetzt)
+
+### Aufgabe
+7-Tage-Fenster → 14-Tage-Fenster in `gewichts_veraenderung_rate()` und `get_rate_mit_info()`.
+Glättet Tagesfluktuation durch Wasserhaushalt und Mahlzeiten.
+
+**Betroffene Dateien:**
+- `core/models/body_tracking.py` – beide Methoden: timedelta(days=7) → 14, Docstrings
+- `core/tests/test_body_tracking.py` – bestehende Tests anpassen + neue Tests
+
+**nächster Schritt:** Model-Methoden anpassen
+
+## Abgeschlossen: Phase 9.2 – Gleitender 14-Tage-Durchschnitt für Gewichtstrend
+
+**Implementierung:**
+- `gewichts_veraenderung_rate()`: mindest_datum timedelta(days=7) → 14
+- `get_rate_mit_info()`: identische Änderung, Docstrings aktualisiert
+- Fallback-Kommentar korrigiert (7-30d → 14-30d)
+
+**Tests:** 44 passed (2 neue: Fallback bei 7d-Abstand, Referenz-Bevorzugung bei 14d)
+**Bugfix während Tests:** Factory akzeptiert kein float für Decimal-Feld (gewicht=98.5 → 99)
+
+**Auswirkung auf nachgelagerte Logik:**
+- Muskelabbau-Analyse (_analyze_weight_loss_context) wird seltener getriggert (geglättete Rate fällt weniger oft unter -1.0 kg/Woche) – gewollt, weniger Fehlalarme
+- PDF-Export zeigt automatisch die 14-Tage-Rate an (keine Änderung an export.py nötig)
+
+**Nächster Schritt:** Phase 9.3 (RPE-10-Warnung prominent in Dashboard/Stats)
