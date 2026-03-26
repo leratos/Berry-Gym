@@ -4879,3 +4879,22 @@ als Plateau gemeldet wurde.
   → Kleines Enhancement, kein Blocker.
 
 **Nächster Schritt:** PR erstellen, dann Phase 11 (Kontextsensitive Empfehlungen) oder PDF-Export-Update
+
+
+---
+
+## Roadmap-Fix: Phase 11 (KI-Planvalidierung) nachgetragen
+
+**Datum:** 2026-03-26
+
+Die Phase "KI-Planvalidierung" war bei einem früheren Roadmap-Update verloren gegangen.
+Ursprünglich in einem früheren Chat definiert (basierend auf Auswertung eines KI-generierten
+3er-Split Plans), wurde sie bei nachfolgenden Roadmap-Aktualisierungen überschrieben.
+
+**Entscheidung:**
+- Neue Phase 11: KI-Planvalidierung (5 Subtasks: Cross-Session-Duplikate, verbotene
+  Kombinationen, anatomische Pflichtgruppen, Compound-vor-Isolation, Pausenzeiten)
+- Alte Phase 11 (Kontextsensitive Empfehlungen) → Phase 12
+
+**Geänderte Dateien:**
+- `docs/PROJECT_ROADMAP.md` – Phase 11 eingefügt, Phase 12 umnummeriert
