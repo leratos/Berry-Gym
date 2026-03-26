@@ -17,9 +17,11 @@ from django.utils import timezone
 from core.models import Equipment, Plan, Satz, Trainingseinheit, Uebung
 from core.views.training_stats import (
     _calc_rpe_trend,
+    _check_rpe10_warning,
     _detect_volume_warnings,
     _get_fatigue_rating,
     _get_motivation_quote,
+    _get_rpe10_anteil,
     _get_week_start,
 )
 
@@ -383,6 +385,108 @@ class TestExerciseStatsRobustness(StatsBase):
         self.assertEqual(response.context.get("best_weight"), 56.0)
         # best_reps sollte gesetzt sein
         self.assertEqual(response.context.get("best_reps"), 10)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 9.3 – RPE-10-Warnung
+# ─────────────────────────────────────────────────────────────────────────────
+class TestRpe10Warning(StatsBase):
+    """Tests für _get_rpe10_anteil und _check_rpe10_warning."""
+
+    def test_rpe10_anteil_keine_daten(self):
+        """Ohne RPE-Daten → None."""
+        heute = timezone.now()
+        self.assertIsNone(_get_rpe10_anteil(self.user, heute))
+
+    def test_rpe10_anteil_unter_5_prozent(self):
+        """< 5% RPE-10 → optimal, keine Warnung."""
+        session = self._session(days_ago=3)
+        # 19 Sätze RPE 8, 1 Satz RPE 10 → 5%
+        for _ in range(19):
+            self._satz(session, rpe=8.0)
+        self._satz(session, rpe=10.0)
+        heute = timezone.now()
+        anteil = _get_rpe10_anteil(self.user, heute)
+        self.assertEqual(anteil, 5.0)
+        self.assertEqual(_check_rpe10_warning(self.user, heute), [])
+
+    def test_rpe10_anteil_5_bis_15_prozent(self):
+        """5-15% RPE-10 → akzeptabel, keine Warnung."""
+        session = self._session(days_ago=3)
+        for _ in range(8):
+            self._satz(session, rpe=8.0)
+        for _ in range(2):
+            self._satz(session, rpe=10.0)
+        heute = timezone.now()
+        anteil = _get_rpe10_anteil(self.user, heute)
+        self.assertEqual(anteil, 20.0)  # 2/10 = 20%
+        # 20% > 15% → Warnung
+        warnings = _check_rpe10_warning(self.user, heute)
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]["type"], "rpe10")
+
+    def test_rpe10_anteil_ueber_15_prozent_warnung(self):
+        """> 15% RPE-10 → danger-Warnung."""
+        session = self._session(days_ago=2)
+        for _ in range(4):
+            self._satz(session, rpe=8.0)
+        for _ in range(4):
+            self._satz(session, rpe=10.0)
+        heute = timezone.now()
+        anteil = _get_rpe10_anteil(self.user, heute)
+        self.assertEqual(anteil, 50.0)
+        warnings = _check_rpe10_warning(self.user, heute)
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]["severity"], "danger")
+        self.assertIn("50.0%", warnings[0]["message"])
+
+    def test_rpe10_ignoriert_aufwaermsaetze(self):
+        """Aufwärmsätze mit RPE 10 zählen nicht."""
+        session = self._session(days_ago=1)
+        for _ in range(10):
+            self._satz(session, rpe=8.0)
+        # RPE-10 Aufwärmsatz → ignoriert
+        self._satz(session, rpe=10.0, warmup=True)
+        heute = timezone.now()
+        anteil = _get_rpe10_anteil(self.user, heute)
+        self.assertEqual(anteil, 0.0)
+
+    def test_rpe10_nur_letzte_14_tage(self):
+        """Sätze älter als 14 Tage werden ignoriert."""
+        old_session = self._session(days_ago=20)
+        for _ in range(5):
+            self._satz(old_session, rpe=10.0)
+        recent_session = self._session(days_ago=3)
+        for _ in range(10):
+            self._satz(recent_session, rpe=8.0)
+        heute = timezone.now()
+        anteil = _get_rpe10_anteil(self.user, heute)
+        self.assertEqual(anteil, 0.0)
+
+    def test_rpe10_in_training_stats_context(self):
+        """Training-Stats-View enthält rpe10_anteil im Context."""
+        session = self._session(days_ago=2)
+        for _ in range(5):
+            self._satz(session, rpe=8.0)
+        self._satz(session, rpe=10.0)
+        response = self.client.get(reverse("training_stats"), follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("rpe10_anteil", response.context)
+
+    def test_rpe10_warning_in_dashboard(self):
+        """Dashboard zeigt RPE-10-Warnung bei >15%."""
+        # Braucht ≥4 Trainings für performance_warnings
+        for days_ago in [1, 4, 7, 10]:
+            session = self._session(days_ago=days_ago)
+            self._satz(session, rpe=10.0)
+            self._satz(session, rpe=10.0)
+            self._satz(session, rpe=8.0)
+        response = self.client.get(reverse("dashboard"), follow=True)
+        self.assertEqual(response.status_code, 200)
+        warnings = response.context.get("performance_warnings", [])
+        rpe10_warnings = [w for w in warnings if w["type"] == "rpe10"]
+        self.assertTrue(len(rpe10_warnings) >= 1)
+        self.assertContains(response, "Überbelastung")
 
 
 class TestTrainingStatsRobustness(StatsBase):

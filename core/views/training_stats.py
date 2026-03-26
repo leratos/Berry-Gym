@@ -719,17 +719,59 @@ def _check_balance_warnings(user, heute) -> list[dict]:
     return []
 
 
+def _get_rpe10_anteil(user, heute) -> float | None:
+    """Return RPE-10 percentage over the last 14 days (work sets only), or None."""
+    two_weeks_ago = heute - timedelta(days=14)
+    base = Satz.objects.filter(
+        einheit__user=user,
+        einheit__datum__gte=two_weeks_ago,
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
+        rpe__isnull=False,
+    )
+    gesamt = base.count()
+    if gesamt == 0:
+        return None
+    rpe10_count = base.filter(rpe=10).count()
+    return round((rpe10_count / gesamt) * 100, 1)
+
+
+def _check_rpe10_warning(user, heute) -> list[dict]:
+    """Warn if >15% of work sets in the last 14 days were RPE 10."""
+    anteil = _get_rpe10_anteil(user, heute)
+    if anteil is not None and anteil > 15:
+        return [
+            {
+                "type": "rpe10",
+                "severity": "danger",
+                "exercise": "RPE-10-Anteil",
+                "message": (
+                    f"{anteil}% deiner Arbeitssätze waren RPE 10 (Muskelversagen). "
+                    f"Ziel: unter 5%."
+                ),
+                "suggestion": (
+                    "Reduziere Sätze bis zum Versagen – halte 1-2 Reps in Reserve (RIR). "
+                    "Zu viel RPE 10 erhöht Verletzungsrisiko und verlängert die Regeneration."
+                ),
+                "icon": "bi-exclamation-triangle-fill",
+                "color": "danger",
+            }
+        ]
+    return []
+
+
 def _get_performance_warnings(user, heute, favoriten, gesamt_trainings: int) -> list[dict]:
-    """Aggregate performance warnings (plateau, regression, stagnation, balance), max 3."""
+    """Aggregate performance warnings (plateau, regression, stagnation, balance, rpe10), max 3."""
     if gesamt_trainings < 4:
         return []
     all_warnings = (
-        _check_plateau_warnings(user, heute, favoriten)
+        _check_rpe10_warning(user, heute)
+        + _check_plateau_warnings(user, heute, favoriten)
         + _check_regression_warnings(user, heute)
         + _check_balance_warnings(user, heute)
         + _check_stagnation_warnings(user, heute)
     )
-    priority = {"regression": 0, "plateau": 1, "balance": 2, "stagnation": 3}
+    priority = {"rpe10": 0, "regression": 1, "plateau": 2, "balance": 3, "stagnation": 4}
     return sorted(all_warnings, key=lambda w: priority[w["type"]])[:3]
 
 
@@ -1363,6 +1405,9 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     gesamt_volumen = sum(volumen_data)
     durchschnitt = round(gesamt_volumen / len(volumen_data), 1) if volumen_data else 0
 
+    # RPE-10 metric (Phase 9.3)
+    rpe10_anteil = _get_rpe10_anteil(request.user, heute)
+
     # Body stats trend data (optional – only if measurements exist)
     body_werte = KoerperWerte.objects.filter(user=request.user).order_by("datum")
     body_chart_ctx = {}
@@ -1388,6 +1433,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "heatmap_data_json": json.dumps(heatmap_data),
         "deload_warnings": deload_warnings,
         "svg_muscle_data_json": json.dumps(svg_muscle_data),
+        "rpe10_anteil": rpe10_anteil,
         **body_chart_ctx,
     }
     return render(request, "core/training_stats.html", context)
