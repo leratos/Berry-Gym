@@ -374,6 +374,9 @@ Aktuelle Priorisierung und Umsetzungsstatus stehen in
 - ✅ **CSV-Export**, Cardio Lite, Video-Support, Custom Übungen, Superset, PWA
 - ✅ **Import/Export (Hevy-Format)**: CSV-Export & Import kompatibel mit Hevy/Strong – "Bring your data" für Wechsler, Dry-Run Vorschau, automatisches Übungs-Matching
 - ✅ **Einzelplan-Aktivierung**: Pläne ohne Gruppe können direkt als aktiver Plan gesetzt werden
+- ✅ **KI-Planvalidierung**: 5 programmatische Post-Validierungen (Cross-Session-Duplikate, verbotene Kombinationen, anatomische Pflichtgruppen, Compound-vor-Isolation Auto-Fix, Pausenzeiten Auto-Fix)
+- ✅ **Kontextsensitive Empfehlungen**: Trainingsmodus-abhängige Empfehlungstexte, gruppenspezifische Volumen-Schwellenwerte (gross/mittel/klein/haltung), Wiederholungsbereich-Analyse mit Stacked-Progress-Bar
+
 ### In Planung / Nächste Schritte
 
 - 🔥 **M5 – Coverage Sprint C**: gezielte Testvertiefung für Charts/Stats/Helpers
@@ -388,7 +391,7 @@ Aktuelle Priorisierung und Umsetzungsstatus stehen in
 - Custom Übungen sind user-spezifisch (kein globales Sharing)
 - GNU gettext nicht zwingend erforderlich (MO-Kompilierung via polib)
 
-**Last Updated:** 2026-02-24
+**Last Updated:** 2026-03-26
 
 ---
 
