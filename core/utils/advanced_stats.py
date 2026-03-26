@@ -73,6 +73,22 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
         else:
             progression_pro_monat = 0
 
+        # RPE-Trend prüfen: sinkender RPE bei gleichem Gewicht = Konsolidierung (kein Plateau)
+        # Vergleiche Durchschnitts-RPE der ersten vs. letzten Hälfte der letzten 4 Wochen
+        rpe_trend_sinkend = False
+        letzte_4w_saetze = uebung_saetze.filter(
+            einheit__datum__gte=vier_wochen, gewicht__isnull=False, rpe__isnull=False
+        ).order_by("einheit__datum")
+
+        if letzte_4w_saetze.count() >= 4:
+            rpe_werte = [float(s.rpe) for s in letzte_4w_saetze]
+            mitte = len(rpe_werte) // 2
+            avg_rpe_frueh = sum(rpe_werte[:mitte]) / mitte
+            avg_rpe_spaet = sum(rpe_werte[mitte:]) / len(rpe_werte[mitte:])
+            # RPE sinkt um mindestens 0.5 → Konsolidierung
+            if avg_rpe_frueh - avg_rpe_spaet >= 0.5:
+                rpe_trend_sinkend = True
+
         # Status bestimmen
         if tage_seit_pr <= 7:
             # Weniger als 1 Woche - noch zu früh für Bewertung
@@ -94,6 +110,11 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
                 status = "beobachten"
                 status_label = "👀 Beobachten"
                 status_farbe = "info"
+        elif rpe_trend_sinkend:
+            # Gewicht stagniert, aber RPE sinkt → User wird stärker
+            status = "konsolidierung"
+            status_label = "💪 Konsolidierung (RPE sinkt)"
+            status_farbe = "info"
         elif tage_seit_pr <= 42:  # 2-6 Wochen
             status = "plateau_leicht"
             status_label = "⚠️ Leichtes Plateau"

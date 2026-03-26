@@ -334,6 +334,30 @@ class TestAiRecommendationHelperAndRateLimit:
         assert ai_views._is_stagnating([80.0, 82.0, 85.0, 90.0]) is False
         assert ai_views._is_stagnating([100.0, 100.0, 100.0]) is False
 
+    def test_is_stagnating_rpe_sinkend_ist_konsolidierung(self):
+        """Gleiches Gewicht + sinkender RPE = Konsolidierung, kein Plateau."""
+        gewichte = [100.0, 100.0, 100.0, 100.0]
+        rpe = [9.5, 9.0, 8.5, 8.0]  # RPE sinkt um 1.5
+        assert ai_views._is_stagnating(gewichte, rpe) is False
+
+    def test_is_stagnating_rpe_gleichbleibend_ist_plateau(self):
+        """Gleiches Gewicht + gleichbleibender RPE = echtes Plateau."""
+        gewichte = [100.0, 100.0, 100.0, 100.0]
+        rpe = [9.0, 9.0, 9.0, 9.0]  # RPE stagniert
+        assert ai_views._is_stagnating(gewichte, rpe) is True
+
+    def test_is_stagnating_rpe_steigend_ist_plateau(self):
+        """Gleiches Gewicht + steigender RPE = Plateau (wird sogar schwerer)."""
+        gewichte = [100.0, 100.0, 100.0, 100.0]
+        rpe = [8.0, 8.5, 9.0, 9.5]  # RPE steigt
+        assert ai_views._is_stagnating(gewichte, rpe) is True
+
+    def test_is_stagnating_ohne_rpe_bleibt_plateau(self):
+        """Ohne RPE-Daten → altes Verhalten: Gewichtsstagnation = Plateau."""
+        gewichte = [100.0, 100.0, 100.0, 100.0]
+        assert ai_views._is_stagnating(gewichte, None) is True
+        assert ai_views._is_stagnating(gewichte, []) is True
+
     def test_check_ai_rate_limit_paths(self, rf, settings):
         settings.RATELIMIT_BYPASS = False
         settings.AI_RATE_LIMIT_PLAN_GENERATION = 11
@@ -447,20 +471,23 @@ class TestAiRecommendationRemainingBranches:
         saetze = _DummyQS(
             [
                 SimpleNamespace(
-                    gewicht=100, uebung_id=9999, einheit=SimpleNamespace(datum=now.date())
+                    gewicht=100, rpe=None, uebung_id=9999, einheit=SimpleNamespace(datum=now.date())
                 ),
                 SimpleNamespace(
                     gewicht=100,
+                    rpe=None,
                     uebung_id=9999,
                     einheit=SimpleNamespace(datum=(now - timedelta(days=1)).date()),
                 ),
                 SimpleNamespace(
                     gewicht=100,
+                    rpe=None,
                     uebung_id=9999,
                     einheit=SimpleNamespace(datum=(now - timedelta(days=2)).date()),
                 ),
                 SimpleNamespace(
                     gewicht=100,
+                    rpe=None,
                     uebung_id=9999,
                     einheit=SimpleNamespace(datum=(now - timedelta(days=3)).date()),
                 ),
@@ -468,7 +495,7 @@ class TestAiRecommendationRemainingBranches:
         )
 
         monkeypatch.setattr(ai_views.Uebung.objects, "filter", lambda **_kwargs: [])
-        monkeypatch.setattr(ai_views, "_is_stagnating", lambda _weights: True)
+        monkeypatch.setattr(ai_views, "_is_stagnating", lambda _w, _r=None: True)
         assert ai_views._get_stagnation_empfehlung(saetze) == []
 
     def test_stagnation_appends_recommendation_when_uebung_exists(self, user, monkeypatch):
@@ -485,7 +512,7 @@ class TestAiRecommendationRemainingBranches:
                 ist_aufwaermsatz=False,
             )
 
-        monkeypatch.setattr(ai_views, "_is_stagnating", lambda _weights: True)
+        monkeypatch.setattr(ai_views, "_is_stagnating", lambda _w, _r=None: True)
         qs = ai_views.Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
         result = ai_views._get_stagnation_empfehlung(qs)
 
