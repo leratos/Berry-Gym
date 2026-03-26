@@ -259,9 +259,7 @@ class PlanAdapter:
                     if len(session_avg_rpes) >= 2:
                         mitte = len(session_avg_rpes) // 2
                         avg_rpe_early = sum(session_avg_rpes[:mitte]) / mitte
-                        avg_rpe_late = sum(session_avg_rpes[mitte:]) / len(
-                            session_avg_rpes[mitte:]
-                        )
+                        avg_rpe_late = sum(session_avg_rpes[mitte:]) / len(session_avg_rpes[mitte:])
                         if avg_rpe_early - avg_rpe_late >= 0.5:
                             # RPE sinkt signifikant → Konsolidierung, kein Plateau
                             continue
