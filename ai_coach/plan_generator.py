@@ -331,11 +331,11 @@ class PlanGenerator:
         if not structure_warnings and not structure_fixes:
             print("   ✓ Planstruktur OK")
 
-        # 5c. Schwachstellen-Coverage prüfen (kein Hard-Fail, nur Warnungen)
+        # 5c. Schwachstellen-Coverage prüfen + Auto-Fix
         print("\n🎯 SCHRITT 5c: Schwachstellen-Coverage prüfen")
         print("-" * 60)
         coverage_warnings = self._validate_weakness_coverage(
-            plan_json, analysis_data.get("weaknesses", [])
+            plan_json, analysis_data.get("weaknesses", []), available_exercises
         )
         if coverage_warnings:
             print(f"   ⚠️ {len(coverage_warnings)} nicht abgedeckte Schwachstellen:")
@@ -806,12 +806,16 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             "progression": "Steigere erst Wiederholungen innerhalb Range, dann Gewicht. Nach Deload: 1 Woche Re-Akklimatisierung.",
         }
 
-    def _validate_weakness_coverage(self, plan_json: dict, weaknesses: list[str]) -> list[str]:
+    def _validate_weakness_coverage(
+        self,
+        plan_json: dict,
+        weaknesses: list[str],
+        available_exercises: list[str] | None = None,
+    ) -> list[str]:
         """
         Prüft ob die identifizierten Schwachstellen im generierten Plan abgedeckt sind.
-
-        Geht durch alle Übungen im Plan, holt ihre muskelgruppe aus der DB,
-        und gleicht ab ob jede Schwachstellen-Gruppe ≥1 Übung hat.
+        Wenn available_exercises übergeben wird: Auto-Fix durch Einsetzen einer passenden
+        Übung in die geeignetste Session (ersetzt die letzte Übung mit den wenigsten Sätzen).
 
         Returns:
             Liste von Warnungen (leer = alles abgedeckt)
@@ -819,8 +823,6 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         if not weaknesses:
             return []
 
-        # Analyzer-Label → MUSKELGRUPPEN-Key(s) Mapping
-        # Ein Label kann mehrere Keys matchen (z.B. "Rücken" → mehrere Rücken-Keys)
         LABEL_TO_KEYS: dict[str, list[str]] = {
             "brust": ["BRUST"],
             "rücken": ["RUECKEN_LAT", "RUECKEN_TRAPEZ", "RUECKEN_UNTEN", "RUECKEN_OBERER"],
@@ -873,28 +875,145 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             return []
 
         warnings = []
-        # Nur echte Muskelgruppen-Schwachstellen, keine "Nicht trainiert seit X Tagen"
         for weakness in weaknesses:
-            # Format: "Bauch: Untertrainiert (...)" → extrahiere Label vor ":"
-            if ":" not in weakness:
+            if ":" not in weakness or "Untertrainiert" not in weakness:
                 continue
             label = weakness.split(":")[0].strip().lower()
             target_keys = LABEL_TO_KEYS.get(label)
             if not target_keys:
-                continue  # Unbekanntes Label – kein False Positive
+                continue
 
             covered = any(k in plan_muscle_keys for k in target_keys)
-            if not covered:
-                mg_display = weakness.split(":")[0].strip()
-                warnings.append(
-                    f"⚠️ Schwachstelle nicht abgedeckt: {mg_display} – "
-                    f"keine Übung im Plan trainiert diese Muskelgruppe"
-                )
-                print(f"   ⚠️ Coverage fehlt: {mg_display} (Keys: {target_keys})")
-            else:
+            if covered:
                 print(f"   ✓ Coverage OK: {weakness.split(':')[0].strip()}")
+                continue
+
+            mg_display = weakness.split(":")[0].strip()
+
+            # --- Auto-Fix: passende Übung finden und einsetzen ---
+            if available_exercises:
+                fixed = self._auto_fix_weakness(
+                    plan_json, target_keys, available_exercises, mg_display
+                )
+                if fixed:
+                    plan_muscle_keys.update(target_keys)
+                    continue
+
+            warnings.append(
+                f"⚠️ Schwachstelle nicht abgedeckt: {mg_display} – "
+                f"keine Übung im Plan trainiert diese Muskelgruppe"
+            )
+            print(f"   ⚠️ Coverage fehlt: {mg_display} (Keys: {target_keys})")
 
         return warnings
+
+    def _auto_fix_weakness(
+        self,
+        plan_json: dict,
+        target_keys: list[str],
+        available_exercises: list[str],
+        mg_display: str,
+    ) -> bool:
+        """Setzt eine passende Übung für eine nicht abgedeckte Schwachstelle ein.
+
+        Strategie:
+        1. Finde verfügbare Übung für die Muskelgruppe
+        2. Finde die Session mit den meisten verwandten Muskelgruppen (best fit)
+        3. Ersetze die letzte Übung mit den wenigsten Sätzen in dieser Session
+
+        Returns:
+            True wenn Fix erfolgreich, False wenn keine passende Übung gefunden.
+        """
+        try:
+            from core.models import Uebung
+
+            # Passende Übung finden (bevorzuge Körpergewicht-Übungen)
+            candidates = list(
+                Uebung.objects.filter(
+                    muskelgruppe__in=target_keys,
+                    bezeichnung__in=available_exercises,
+                )
+                .order_by("gewichts_typ")  # KOERPERGEWICHT sortiert vor GESAMT/PRO_SEITE
+                .values_list("bezeichnung", flat=True)[:5]
+            )
+            if not candidates:
+                print(f"   ❌ Kein Auto-Fix: keine verfügbare Übung für {mg_display}")
+                return False
+
+            replacement_name = candidates[0]
+
+            # Verwandte Muskelgruppen für Session-Matching
+            RELATED = {
+                "HUEFTBEUGER": {"BEINE_QUAD", "BEINE_HAM", "PO", "BAUCH"},
+                "SCHULTER_HINT": {"RUECKEN_LAT", "RUECKEN_OBERER", "BIZEPS"},
+                "BAUCH": {"BEINE_QUAD", "BEINE_HAM", "HUEFTBEUGER"},
+                "ADDUKTOREN": {"BEINE_QUAD", "BEINE_HAM", "PO"},
+                "ABDUKTOREN": {"BEINE_QUAD", "BEINE_HAM", "PO"},
+                "WADEN": {"BEINE_QUAD", "BEINE_HAM"},
+            }
+            related_keys = set()
+            for k in target_keys:
+                related_keys.update(RELATED.get(k, set()))
+
+            # Beste Session finden (meiste verwandte Übungen)
+            best_session_idx = 0
+            best_score = -1
+            for idx, session in enumerate(plan_json.get("sessions", [])):
+                ex_names = [e["exercise_name"] for e in session.get("exercises", [])]
+                session_keys = set(
+                    Uebung.objects.filter(bezeichnung__in=ex_names).values_list(
+                        "muskelgruppe", flat=True
+                    )
+                )
+                score = len(session_keys & related_keys)
+                if score > best_score:
+                    best_score = score
+                    best_session_idx = idx
+
+            session = plan_json["sessions"][best_session_idx]
+            exercises = session.get("exercises", [])
+
+            if not exercises:
+                return False
+
+            # Letzte Übung mit wenigsten Sätzen ersetzen (ab Position 3+)
+            replaceable = [
+                (i, ex)
+                for i, ex in enumerate(exercises)
+                if i >= 3  # Erste 3 Übungen (Compounds) nicht antasten
+            ]
+            if not replaceable:
+                # Alle Übungen sind Compounds — füge stattdessen hinzu
+                new_ex = {
+                    "exercise_name": replacement_name,
+                    "sets": 3,
+                    "reps": "10-15",
+                    "rpe_target": 7.5,
+                    "rest_seconds": 60,
+                    "order": len(exercises) + 1,
+                    "notes": f"Auto-Fix: Schwachstelle {mg_display}",
+                }
+                exercises.append(new_ex)
+                print(
+                    f"   🔧 Auto-Fix: '{replacement_name}' hinzugefügt in "
+                    f"'{session.get('day_name', '?')}' für {mg_display}"
+                )
+                return True
+
+            # Ersetze die Übung mit den wenigsten Sätzen unter den ersetzbaren
+            min_idx, min_ex = min(replaceable, key=lambda x: x[1].get("sets", 99))
+            old_name = min_ex.get("exercise_name", "?")
+            min_ex["exercise_name"] = replacement_name
+            min_ex["notes"] = f"Auto-Fix: ersetzt '{old_name}' für Schwachstelle {mg_display}"
+            print(
+                f"   🔧 Auto-Fix: '{old_name}' → '{replacement_name}' in "
+                f"'{session.get('day_name', '?')}' für {mg_display}"
+            )
+            return True
+
+        except Exception as e:
+            print(f"   ❌ Auto-Fix Fehler für {mg_display}: {e}")
+            return False
 
     def _format_macrocycle_summary(self, plan_json: dict) -> str:
         """Formatiert benutzerfreundliche Makrozyklus-Zusammenfassung mit konkreten Anweisungen"""
