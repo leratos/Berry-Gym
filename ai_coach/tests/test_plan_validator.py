@@ -11,8 +11,6 @@ Testet alle 5 Sub-Tasks:
 
 import pytest
 
-from core.tests.factories import UebungFactory
-
 from ai_coach.plan_validator import (
     _check_anatomical_requirements,
     _check_cross_session_duplicates,
@@ -21,7 +19,7 @@ from ai_coach.plan_validator import (
     _fix_rest_times,
     validate_plan_structure,
 )
-
+from core.tests.factories import UebungFactory
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Test-Helfer (analog zu test_plan_generator.py)
