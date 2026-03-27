@@ -5,7 +5,6 @@ Provides comprehensive analysis for training progression, consistency, and perfo
 
 from datetime import timedelta
 
-from django.db.models import Avg
 from django.utils import timezone
 
 
@@ -272,115 +271,81 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     """
     Calculates fatigue index and deload recommendations.
 
-    HINWEIS: Die Gewichtungen (40/30/30) und Schwellwerte sind praxisbasierte
-    Heuristiken, keine direkt aus Studien abgeleiteten Werte.
-    Deload-Empfehlungen orientieren sich an Israetel et al. (2019) "Scientific
-    Principles of Hypertrophy Training" – konkrete Zahlen variieren individuell.
+    Delegiert an die Dashboard-Helfer in training_stats.py (Phase 14 Konsolidierung),
+    damit Dashboard und PDF-Export identische Fatigue-Berechnung verwenden.
+
+    Die Dashboard-Version (Phase 9.4+) nutzt RPE-10-Verteilung statt einfachem
+    RPE-Durchschnitt, berücksichtigt Cardio, und hat Block-Age-Awareness.
 
     Returns dict with:
-    - fatigue_index: Score 0-100 (higher = more fatigue) [Heuristischer Score]
-    - volumen_spike: Boolean if volume increased >20%
-    - rpe_steigend: Boolean if RPE trending up
-    - deload_empfohlen: Boolean if deload recommended
-    - naechste_deload: Suggested date for next deload
-    - warnungen: List of warning messages
+    - fatigue_index, bewertung, bewertung_farbe, empfehlung
+    - volumen_spike, rpe_steigend, deload_empfohlen
+    - naechste_deload, warnungen
     """
+    from core.views.training_stats import (
+        _get_cardio_fatigue,
+        _get_frequency_fatigue,
+        _get_rpe_fatigue,
+        _get_volume_spike_fatigue,
+    )
+
     heute = timezone.now()
-    vier_wochen = heute - timedelta(days=28)
+
+    # User aus QuerySet ableiten (alle_trainings ist user-gefiltert)
+    user = None
+    first_training = alle_trainings.first()
+    if first_training:
+        user = first_training.user
 
     fatigue_index = 0
     warnungen = []
 
-    # 1. Volumen-Spike Detection (40% Gewichtung)
-    volumen_spike = False
+    # Volumen-Spike: weekly_volume_data in Dashboard-Format konvertieren
     if len(weekly_volume_data) >= 2:
-        letzte_woche = weekly_volume_data[-1]["volumen"]
-        vorletzte_woche = weekly_volume_data[-2]["volumen"]
+        dashboard_volumes = [{"volume": w.get("volumen", 0)} for w in reversed(weekly_volume_data)]
+        pts, warns = _get_volume_spike_fatigue(dashboard_volumes)
+        fatigue_index += pts
+        warnungen.extend(warns)
 
-        if vorletzte_woche > 0:
-            volumen_change = ((letzte_woche - vorletzte_woche) / vorletzte_woche) * 100
+    volumen_spike = fatigue_index > 0
 
-            if volumen_change > 30:
-                fatigue_index += 40
-                volumen_spike = True
-                warnungen.append(f"Sehr starker Volumen-Anstieg: +{round(volumen_change)}%")
-            elif volumen_change > 20:
-                fatigue_index += 30
-                volumen_spike = True
-                warnungen.append(f"Starker Volumen-Anstieg: +{round(volumen_change)}%")
-            elif volumen_change > 10:
-                fatigue_index += 15
-
-    # 2. RPE-Trend (30% Gewichtung)
+    # RPE + Frequenz + Cardio: nutzen User-Objekt
     rpe_steigend = False
-    if rpe_saetze.exists() and rpe_saetze.count() >= 10:
-        # Vergleiche letzte 2 Wochen mit 2-4 Wochen davor
-        zwei_wochen = heute - timedelta(days=14)
+    if user and alle_trainings.count() >= 4:
+        rpe_pts, rpe_warns = _get_rpe_fatigue(user, heute)
+        fatigue_index += rpe_pts
+        warnungen.extend(rpe_warns)
+        rpe_steigend = rpe_pts > 0
 
-        recent_rpe = rpe_saetze.filter(einheit__datum__gte=zwei_wochen).aggregate(Avg("rpe"))[
-            "rpe__avg"
-        ]
+        freq_pts, freq_warns = _get_frequency_fatigue(user, heute)
+        fatigue_index += freq_pts
+        warnungen.extend(freq_warns)
 
-        older_rpe = rpe_saetze.filter(
-            einheit__datum__gte=vier_wochen, einheit__datum__lt=zwei_wochen
-        ).aggregate(Avg("rpe"))["rpe__avg"]
+    if user:
+        cardio_pts, cardio_warns, _, _ = _get_cardio_fatigue(user, heute)
+        fatigue_index += cardio_pts
+        warnungen.extend(cardio_warns)
 
-        if recent_rpe and older_rpe:
-            if recent_rpe > 8.5:
-                fatigue_index += 30
-                rpe_steigend = True
-                warnungen.append(f"Sehr hohe Trainingsintensität (RPE {round(recent_rpe, 1)})")
-            elif recent_rpe > 8.0:
-                fatigue_index += 20
-                rpe_steigend = True
-                warnungen.append(f"Hohe Trainingsintensität (RPE {round(recent_rpe, 1)})")
-
-            # Prüfe ob RPE steigt bei gleichem/sinkendem Gewicht
-            rpe_change = recent_rpe - older_rpe
-            if rpe_change > 0.5:
-                fatigue_index += 10
-                warnungen.append("RPE steigt trotz Training (mögliche Ermüdung)")
-
-    # 3. Trainingsfrequenz ohne Ruhetag (30% Gewichtung)
-    letzte_7_tage = alle_trainings.filter(datum__gte=heute - timedelta(days=7)).count()
-
-    if letzte_7_tage >= 7:
-        fatigue_index += 30
-        warnungen.append("Jeden Tag trainiert - KEIN Ruhetag!")
-    elif letzte_7_tage >= 6:
-        fatigue_index += 20
-        warnungen.append("Fast täglich trainiert - mehr Ruhe empfohlen")
-    elif letzte_7_tage >= 5:
-        fatigue_index += 10
-
-    # Deload-Empfehlung
+    # Deload-Empfehlung + Bewertung (identisch mit Dashboard)
     deload_empfohlen = fatigue_index >= 50
+    naechste_deload = heute + timedelta(weeks=6)
 
-    # Nächste Deload berechnen (alle 6-8 Wochen empfohlen)
-    letzte_deload = None  # TODO: Aus User-Settings/Historie holen
-    if not letzte_deload:
-        # Annahme: Sollte alle 6 Wochen sein
-        naechste_deload = heute + timedelta(weeks=6)
-    else:
-        naechste_deload = letzte_deload + timedelta(weeks=6)
-
-    # Bewertung
-    if fatigue_index >= 70:
-        bewertung = "🚨 Kritisch"
+    if fatigue_index >= 60:
+        bewertung = "🚨 Hoch"
         bewertung_farbe = "danger"
-        empfehlung = "SOFORT Deload-Woche! Reduziere Volumen um 40-50% für 1 Woche."
-    elif fatigue_index >= 50:
-        bewertung = "⚠️ Hoch"
-        bewertung_farbe = "danger"
-        empfehlung = "Deload-Woche dringend empfohlen. Reduziere Volumen um 40%."
-    elif fatigue_index >= 30:
+        empfehlung = "Deload-Woche empfohlen! Reduziere Volumen um 40-50%."
+    elif fatigue_index >= 40:
         bewertung = "⚠️ Moderat"
         bewertung_farbe = "warning"
-        empfehlung = "Achte auf Regeneration. Erwäge Deload in 1-2 Wochen."
+        empfehlung = "Achte auf ausreichend Regeneration."
+    elif fatigue_index >= 20:
+        bewertung = "ℹ️ Niedrig"
+        bewertung_farbe = "info"
+        empfehlung = "Gute Balance zwischen Training und Erholung."
     else:
-        bewertung = "✅ Niedrig"
+        bewertung = "✅ Sehr niedrig"
         bewertung_farbe = "success"
-        empfehlung = "Gute Erholung. Weiter so!"
+        empfehlung = "Du kannst noch mehr trainieren!"
 
     return {
         "fatigue_index": fatigue_index,

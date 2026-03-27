@@ -4977,3 +4977,90 @@ berechnet — massiv verfälschter 1RM-Trend.
 
 **Geänderte Dateien:**
 - `docs/PROJECT_ROADMAP.md` – Phase 14 definiert
+
+
+---
+
+## Phase 13: LLM-Planqualität & Dynamische Periodisierung
+
+**Datum:** 2026-03-27
+
+### 13.1: Muskelgruppen-Überrepräsentation pro Session
+Neue Validierung in `plan_validator.py`: Max 7 Sätze gleiche primäre Muskelgruppe pro Session.
+Auto-Fix: überzählige Übung (Position 3+, wenigste Sätze) durch Übung einer unterrepräsentierten
+Gruppe ersetzen. Ersatzgruppe wird nur aus bereits in der Session vorhandenen Gruppen gewählt
+(kontextuell passend). `validate_plan_structure()` akzeptiert jetzt `available_exercises` Parameter.
+
+### 13.2: Weakness-Coverage hilfsmuskeln-only unzureichend
+`_validate_weakness_coverage()` trennt jetzt `primary_keys` (muskelgruppe) und `secondary_keys`
+(hilfsmuskeln). Nur primäre Muskelgruppe gilt als Coverage für Pflicht-Schwachstellen.
+Beispiel: Hanging Leg Raises (muskelgruppe=BAUCH, hilfsmuskeln=["HUEFTBEUGER"]) zählt NICHT
+als HUEFTBEUGER-Coverage. Bei hilfsmuskeln-only wird Auto-Fix versucht, Warning enthält
+"nur als Hilfsmuskel" Hinweis.
+
+### 13.3: Dynamische Periodisierungs-Beschreibung
+Neue Funktion `_build_periodization_note(periodization, target_profile)` in `prompt_builder.py`
+ersetzt statisches Dict. Kombiniert Periodisierungs-Typ + Zielprofil:
+- Kraft: RPE-basierte Steigerung, lange Pausen
+- Hypertrophie: Wdh-basierte Steigerung, +1 Satz
+- Definition: Gewicht halten, Pausen reduzieren
+
+`_format_macrocycle_summary()` in `plan_generator.py` generiert profilabhängige Progressions-Texte
+und leitet Deload-% aus Macrocycle-Daten ab statt hardcodiert.
+
+**Tests:** 257 passed (ai_coach/tests/)
+
+**Geänderte Dateien:**
+- `ai_coach/plan_validator.py` – 13.1: _check_muscle_overrepresentation() + _fix_overrepresentation()
+- `ai_coach/plan_generator.py` – 13.2: primary/secondary Coverage-Split, 13.3: dynamische Summary
+- `ai_coach/prompt_builder.py` – 13.3: _build_periodization_note()
+- `ai_coach/tests/test_plan_validator.py` – 6 neue Tests
+- `ai_coach/tests/test_plan_generator.py` – 9 neue Tests
+- `ai_coach/tests/test_prompt_builder.py` – 7 neue Tests
+
+
+---
+
+## Phase 14: Körpergewicht-Übungen – Gegengewicht & Historisches Gewicht
+
+**Datum:** 2026-03-27
+
+### 14.1: Gegengewicht-Modus für assistierte Übungen
+Neues Feld `Uebung.gewichts_richtung` (ZUSATZ/GEGEN) + DB-Migration.
+Entscheidung: Auf Übungs-Ebene statt Satz-Ebene, da "Assistierte Dips" und "Dips"
+sowieso verschiedene Übungen sind. Bei GEGEN:
+`effektives_gewicht = max(0, (user_kg * faktor) - gegengewicht)`
+UI zeigt "Gegengewicht (kg)" Label statt "Zusatzgewicht (kg)".
+
+### 14.2: Historisches Körpergewicht für 1RM-Berechnung
+Neue Helfer in `training_stats.py`:
+- `_get_koerpergewicht_for_date(user, datum)` — nächster KoerperWerte-Eintrag ≤ datum
+- `_get_koerpergewicht_map(user, dates)` — Batch-Lookup per Bisect (1 DB-Query statt N+1)
+`exercise_stats()` und ML-Trainer nutzen jetzt historisches Gewicht pro Trainingstag.
+
+### 14.3: Progressions-Korrektur (PR-Detection + Tonnage)
+- `_check_pr()` berechnet jetzt effektives Gewicht für KG-Übungen (inkl. historisches
+  Körpergewicht für alte Sätze). Vorher: reine KG-Übungen (gewicht=0) konnten nie PRs erzielen.
+- `_calc_muscle_balance()` Tonnage nutzt effektives Gewicht für KG-Übungen.
+  Vorher: Dips ohne Zusatzgewicht = 0 Tonnage (obwohl 56 kg effektive Last).
+
+### Technische Schuld: calculate_fatigue_index() Konsolidierung
+`advanced_stats.py:calculate_fatigue_index()` (PDF-Export) divergierte von
+`training_stats.py:_calculate_fatigue_index()` (Dashboard):
+- Alt: einfacher RPE-Durchschnitt, keine Cardio, andere Schwellwerte
+- Neu: delegiert an Dashboard-Helfer (RPE-10-Verteilung, Cardio, Block-Age-Awareness)
+Dashboard und PDF nutzen jetzt identische Fatigue-Berechnung.
+
+**Tests:** 334+ passed
+
+**Geänderte Dateien:**
+- `core/models/constants.py` – GEWICHTS_RICHTUNG Choices
+- `core/models/exercise.py` – Uebung.gewichts_richtung Feld
+- `core/migrations/0080_add_uebung_gewichts_richtung.py` – Migration
+- `core/views/training_stats.py` – 14.2 Helfer, 14.3 Tonnage, Gegengewicht-Formel
+- `core/views/training_session.py` – 14.3 PR-Detection Fix
+- `core/templates/core/training_session.html` – UI Gegengewicht-Label
+- `ml_coach/ml_trainer.py` – Historisches Gewicht + Gegengewicht
+- `core/utils/advanced_stats.py` – Fatigue-Index Konsolidierung
+- `core/tests/test_koerpergewicht_support.py` – 20 neue Tests
+- `docs/PROJECT_ROADMAP.md` – Phase 13+14 Status aktualisiert
