@@ -213,7 +213,7 @@ Volumen-Schwellenwerte differenzieren nach Muskelgruppengröße statt one-size-f
 
 ## Phase 13 – LLM-Planqualität & Dynamische Periodisierung *(mittlerer Aufwand, Planqualität)*
 **Branch:** `feature/phase13-plan-quality`
-**Status:** Offen
+**Status:** ✅ Abgeschlossen (2026-03-27)
 **Quelle:** Testauswertung KI-generierter Pläne nach Phase 11 Deploy (März 2026)
 
 Trotz Phase-11-Validierung produziert das LLM weiterhin strukturelle Fehler, die
@@ -236,7 +236,7 @@ Deload-Prozente sind hardcodiert statt aus den Plan-Metadaten abgeleitet.
 
 ## Phase 14 – Körpergewicht-Übungen: Gegengewicht & Historisches Gewicht *(mittlerer Aufwand, Datenintegrität)*
 **Branch:** `feature/phase14-bodyweight-accuracy`
-**Status:** Offen
+**Status:** ✅ Abgeschlossen (2026-03-27)
 **Quelle:** Praxistest – 15 kg Gewichtsverlust verfälscht Progressions-Tracking bei Dips/Klimmzügen
 
 Körpergewicht-Übungen (`gewichts_typ=KOERPERGEWICHT`) nutzen `koerpergewicht_faktor` und
