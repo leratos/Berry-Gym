@@ -234,6 +234,33 @@ Deload-Prozente sind hardcodiert statt aus den Plan-Metadaten abgeleitet.
 
 ---
 
+## Phase 14 – Körpergewicht-Übungen: Gegengewicht & Historisches Gewicht *(mittlerer Aufwand, Datenintegrität)*
+**Branch:** `feature/phase14-bodyweight-accuracy`
+**Status:** Offen
+**Quelle:** Praxistest – 15 kg Gewichtsverlust verfälscht Progressions-Tracking bei Dips/Klimmzügen
+
+Körpergewicht-Übungen (`gewichts_typ=KOERPERGEWICHT`) nutzen `koerpergewicht_faktor` und
+berechnen `effektives_gewicht = (user_kg * faktor) + zusatzgewicht`. Zwei fundamentale Lücken:
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 14.1 | Gegengewicht-Modus für assistierte Übungen | Neues Feld `Satz.ist_gegengewicht` (Boolean) oder `Uebung.gewichts_richtung` (ZUSATZ/GEGEN). Bei `ist_gegengewicht=True`: `effektives_gewicht = (user_kg * faktor) - gewicht` statt `+ gewicht`. Betrifft assistierte Dips, assistierte Klimmzüge. UI: Toggle "Gegengewicht" im Satz-Eingabeformular |
+| 14.2 | Historisches Körpergewicht für 1RM-Berechnung | `_compute_1rm_and_weight()` nutzt aktuell immer das aktuelle Körpergewicht. Fix: bei KOERPERGEWICHT-Übungen das Körpergewicht vom Trainingstag verwenden (nächster `KoerperWerte`-Eintrag ≤ Trainingsdatum). Fallback: aktuelles Gewicht wenn kein historischer Wert existiert |
+| 14.3 | Progressions-Korrektur in Trend-Charts | 1RM-Trend und Volumen-Charts für KOERPERGEWICHT-Übungen mit historischem Gewicht neu berechnen. Bestehende Berechnungen in `exercise_stats`, Tonnage (Phase 9.5), und Forecast (Phase 8) anpassen |
+
+### Abhängigkeiten
+- 14.2 nutzt bestehende `KoerperWerte`-Tabelle (Gewichtsverlauf ist bereits erfasst)
+- 14.3 betrifft `training_stats.py` (`_compute_1rm_and_weight`), Tonnage-Berechnung, Forecast
+- 14.1 benötigt DB-Migration (neues Feld auf Satz oder Uebung)
+
+### Betroffene Berechnungen
+- `_compute_1rm_and_weight()` in `training_stats.py` (zentral)
+- PR-Detection (Phase 2): 1RM-Vergleich muss historisches Gewicht nutzen
+- Forecast (Phase 8): Regression auf korrigierten 1RM-Werten
+- Tonnage (Phase 9.5): Volumen = effektives_gewicht × reps × sets
+
+---
+
 ## Bewusst NICHT in dieser Roadmap
 
 - **Ernährungstracking:** Scope bleibt Trainings-Tool. Ein Basismodul (kcal + Protein) bringt zu wenig Nutzen bei zu wenig konsequenter Eingabe. Wer Ernährung trackt, nutzt ein dediziertes Tool dafür

@@ -4959,3 +4959,21 @@ Drei verbleibende Probleme:
 - `docs/PROJECT_ROADMAP.md` – Phase 13 eingefügt
 
 **Nächster Schritt:** Phase 13.1 in neuem Chat starten
+
+
+---
+
+## Roadmap-Update: Phase 14 (Körpergewicht-Übungen: Gegengewicht & Historisches Gewicht)
+
+**Datum:** 2026-03-27
+
+Bestehende Berechnung: `effektives_gewicht = (user_kg * faktor) + zusatzgewicht`
+Zwei Lücken:
+1. Kein Gegengewicht-Modus: assistierte Dips/Klimmzüge müssten subtrahieren
+2. Historisches Körpergewicht ignoriert: 1RM nutzt aktuelles statt Trainingstag-Gewicht
+
+Beispiel: 100kg→85kg = 15kg Differenz. Alle alten Dips werden mit 85kg statt 100kg
+berechnet — massiv verfälschter 1RM-Trend.
+
+**Geänderte Dateien:**
+- `docs/PROJECT_ROADMAP.md` – Phase 14 definiert
