@@ -1186,6 +1186,70 @@ class TestValidateWeaknessCoverage:
 
         assert warnings == []
 
+    def test_hilfsmuskeln_only_nicht_als_coverage(self):
+        """Phase 13.2: Übung mit hilfsmuskeln=KEY aber muskelgruppe≠KEY ist NICHT covered."""
+        # Hanging Leg Raises: muskelgruppe=BAUCH, hilfsmuskeln=["HUEFTBEUGER"]
+        UebungFactory(
+            bezeichnung="Hanging Leg Raises",
+            muskelgruppe="BAUCH",
+            hilfsmuskeln=["HUEFTBEUGER"],
+            gewichts_typ="KOERPERGEWICHT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Legs", [_make_exercise("Hanging Leg Raises")])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json, weaknesses=["Hüftbeuger: Untertrainiert (0 Sätze/Woche)"]
+        )
+        # Nur als Hilfsmuskel → Warning
+        assert len(warnings) >= 1
+        assert any("Hüftbeuger" in w for w in warnings)
+
+    def test_primaere_muskelgruppe_ist_coverage(self):
+        """Phase 13.2: Übung mit muskelgruppe=KEY gilt als Coverage."""
+        UebungFactory(
+            bezeichnung="Hüftbeuger-Stretch",
+            muskelgruppe="HUEFTBEUGER",
+            gewichts_typ="KOERPERGEWICHT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Legs", [_make_exercise("Hüftbeuger-Stretch")])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json, weaknesses=["Hüftbeuger: Untertrainiert (0 Sätze/Woche)"]
+        )
+        assert len(warnings) == 0
+
+    def test_hilfsmuskeln_only_warning_text(self):
+        """Phase 13.2: Warning-Text enthält 'nur als Hilfsmuskel'."""
+        UebungFactory(
+            bezeichnung="Kreuzheben",
+            muskelgruppe="BEINE_HAM",
+            hilfsmuskeln=["RUECKEN_UNTEN", "PO"],
+            gewichts_typ="GESAMT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Pull", [_make_exercise("Kreuzheben")])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json,
+            weaknesses=["Unterer Rücken: Untertrainiert (1 Satz/Woche)"],
+        )
+        assert len(warnings) >= 1
+        assert any("Hilfsmuskel" in w for w in warnings)
+
 
 class TestPhase4HelperContracts:
     """Phase 4 (Welle 2): direkte Contracts für Mikrozyklus/Progression-Helper."""
@@ -1221,6 +1285,59 @@ class TestPhase4HelperContracts:
         assert "RPE Ziel 6.5-8" in result["rpe_guardrails"]
         assert "~22 Sätzen pro Tag" in result["volume"]
         assert "Deload" in result["progression"]
+
+
+class TestFormatMacrocycleSummary:
+    """Phase 13.3: _format_macrocycle_summary erzeugt profilabhängige Texte."""
+
+    def _make_plan_with_meta(self, profile, periodization):
+        gen = PlanGenerator(user_id=1, target_profile=profile, periodization=periodization)
+        plan_json = {
+            "target_profile": profile,
+            "periodization": periodization,
+            "deload_weeks": [4, 8, 12],
+        }
+        gen._ensure_periodization_metadata(plan_json)
+        return gen, plan_json
+
+    def test_kraft_hat_rpe_progression(self):
+        gen, plan = self._make_plan_with_meta("kraft", "linear")
+        summary = gen._format_macrocycle_summary(plan)
+        assert "RPE" in summary
+        assert "Gewicht priorisieren" in summary
+        # Kein ">12 Wdh" für Kraft
+        assert ">12 Wdh" not in summary
+
+    def test_hypertrophie_hat_wdh_progression(self):
+        gen, plan = self._make_plan_with_meta("hypertrophie", "linear")
+        summary = gen._format_macrocycle_summary(plan)
+        assert ">12 Wdh" in summary or ">12" in summary
+        assert "+1 Satz" in summary
+
+    def test_definition_hat_pausen_reduktion(self):
+        gen, plan = self._make_plan_with_meta("definition", "linear")
+        summary = gen._format_macrocycle_summary(plan)
+        assert "Halte" in summary or "Pausen" in summary
+        assert "60-90s" in summary
+
+    def test_wellenfoermig_hat_heavy_medium_light(self):
+        gen, plan = self._make_plan_with_meta("hypertrophie", "wellenfoermig")
+        summary = gen._format_macrocycle_summary(plan)
+        assert "Heavy" in summary
+        assert "Medium" in summary
+        assert "Light" in summary
+
+    def test_block_hat_block_phasen(self):
+        gen, plan = self._make_plan_with_meta("kraft", "block")
+        summary = gen._format_macrocycle_summary(plan)
+        assert "Block 1" in summary or "Volumen" in summary
+        assert "Block 2" in summary or "Kraft" in summary
+
+    def test_deload_volume_aus_macrocycle(self):
+        gen, plan = self._make_plan_with_meta("hypertrophie", "linear")
+        summary = gen._format_macrocycle_summary(plan)
+        # Deload-Volumen sollte 80% sein (aus macrocycle abgeleitet)
+        assert "80%" in summary
 
 
 @pytest.mark.django_db
