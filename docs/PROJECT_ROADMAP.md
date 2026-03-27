@@ -211,6 +211,29 @@ Volumen-Schwellenwerte differenzieren nach Muskelgruppengröße statt one-size-f
 
 ---
 
+## Phase 13 – LLM-Planqualität & Dynamische Periodisierung *(mittlerer Aufwand, Planqualität)*
+**Branch:** `feature/phase13-plan-quality`
+**Status:** Offen
+**Quelle:** Testauswertung KI-generierter Pläne nach Phase 11 Deploy (März 2026)
+
+Trotz Phase-11-Validierung produziert das LLM weiterhin strukturelle Fehler, die
+programmatisch abfangbar sind. Zusätzlich ist die Periodisierungs-Beschreibung im
+Plan-PDF quasi-identisch bei jedem Profil — Werte wie RPE-Range, Wdh-Schwellen und
+Deload-Prozente sind hardcodiert statt aus den Plan-Metadaten abgeleitet.
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 13.1 | Muskelgruppen-Überrepräsentation pro Session | Max ~7 Sätze gleiche primäre Muskelgruppe pro Session. Verhindert z.B. 3× Quad (Kniebeuge + Bulgarian Split Squat + Frontkniebeuge = 10 Sätze Quad). Auto-Fix: überzählige Übung durch unterrepräsentierte Gruppe ersetzen |
+| 13.2 | Weakness-Coverage: hilfsmuskeln-only unzureichend | `hilfsmuskeln` allein gilt nicht als Coverage für Pflicht-Schwachstellen. Bei identifizierter Schwachstelle muss mind. 1 Übung mit `muskelgruppe=KEY` (primär) vorhanden sein. hilfsmuskeln nur als Bonus werten |
+| 13.3 | Dynamische Periodisierungs-Beschreibung | Progressions-Text abhängig von `target_profile` und `periodization` statt hardcodiert. Kraft: "Steigere Gewicht wenn RPE < 7" statt ">12 Wdh". Definition: "Halte Gewicht, reduziere Pausen" statt "+1 Satz". Wellenförmig: Woche-für-Woche-Variation. Werte (RPE-Range, Wdh-Range, Deload-%) aus Plan-Metadaten ableiten |
+
+### Abhängigkeiten
+- 13.1 erweitert `plan_validator.py` (Phase 11 Infrastruktur)
+- 13.2 ändert `_validate_weakness_coverage()` in `plan_generator.py`
+- 13.3 ändert `prompt_builder.py` und ggf. Plan-Beschreibungs-Generierung
+
+---
+
 ## Bewusst NICHT in dieser Roadmap
 
 - **Ernährungstracking:** Scope bleibt Trainings-Tool. Ein Basismodul (kcal + Protein) bringt zu wenig Nutzen bei zu wenig konsequenter Eingabe. Wer Ernährung trackt, nutzt ein dediziertes Tool dafür
