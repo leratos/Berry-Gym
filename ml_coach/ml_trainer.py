@@ -40,21 +40,37 @@ class MLTrainer:
         (user_koerpergewicht * koerpergewicht_faktor) + zusatzgewicht berechnet.
         Damit lernt das Modell auf sinnvollen Gewichtswerten statt reinen Nullen.
         """
-        from core.models import KoerperWerte, PlanUebung, Satz
+        from core.models import PlanUebung, Satz
 
-        # Körpergewicht einmalig laden (Fallback 80 kg)
-        kg_eintrag = KoerperWerte.objects.filter(user=self.user).order_by("-datum").first()
-        user_koerpergewicht = (
-            float(kg_eintrag.gewicht) if kg_eintrag and kg_eintrag.gewicht else 80.0
-        )
+        # Phase 14.2: Historisches Körpergewicht pro Trainingstag
+        from core.views.training_stats import _get_koerpergewicht_map, _get_user_koerpergewicht
 
         is_kg_uebung = self.uebung.gewichts_typ == "KOERPERGEWICHT"
         kg_faktor = getattr(self.uebung, "koerpergewicht_faktor", 1.0) or 1.0
+        kg_richtung = getattr(self.uebung, "gewichts_richtung", "ZUSATZ") or "ZUSATZ"
+        user_koerpergewicht = _get_user_koerpergewicht(self.user)
+        _kg_map: dict | None = None  # Lazy init nach saetze-Query
+
+        def _get_kg_for_satz(satz):
+            nonlocal _kg_map
+            if not is_kg_uebung:
+                return user_koerpergewicht
+            if _kg_map is None:
+                dates = list(
+                    Satz.objects.filter(einheit__user=self.user, uebung=self.uebung)
+                    .values_list("einheit__datum", flat=True)
+                    .distinct()
+                )
+                _kg_map = _get_koerpergewicht_map(self.user, dates)
+            return _kg_map.get(satz.einheit.datum, user_koerpergewicht)
 
         def effective_weight(satz):
             zusatz = float(satz.gewicht)
             if is_kg_uebung:
-                return (user_koerpergewicht * kg_faktor) + zusatz
+                basis = _get_kg_for_satz(satz) * kg_faktor
+                if kg_richtung == "GEGEN":
+                    return max(0.0, basis - zusatz)
+                return basis + zusatz
             if self.uebung.gewichts_typ == "PRO_SEITE":
                 return zusatz * 2
             return zusatz

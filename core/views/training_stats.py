@@ -1096,6 +1096,75 @@ def _get_user_koerpergewicht(user) -> float:
     return 80.0  # Trainings-Durchschnitt als Fallback
 
 
+def _get_koerpergewicht_for_date(user, datum) -> float:
+    """Gibt das Körpergewicht des Users am angegebenen Datum zurück.
+
+    Sucht den nächsten KoerperWerte-Eintrag ≤ datum.
+    Fallback: aktuellstes Gewicht, dann 80 kg.
+    """
+    eintrag = (
+        KoerperWerte.objects.filter(user=user, datum__lte=datum)
+        .order_by("-datum")
+        .values_list("gewicht", flat=True)
+        .first()
+    )
+    if eintrag:
+        return float(eintrag)
+    # Kein Eintrag vor datum → aktuellstes Gewicht als Fallback
+    return _get_user_koerpergewicht(user)
+
+
+def _get_koerpergewicht_map(user, dates) -> dict:
+    """Batch-Lookup: Körpergewicht pro Datum für effiziente Verarbeitung.
+
+    Vermeidet N+1-Queries bei vielen Trainingstagen.
+    Gibt {datum: gewicht_float} zurück.
+
+    Algorithmus: Alle KoerperWerte sortiert laden, dann per Bisect
+    für jedes Datum den passenden Eintrag finden.
+    """
+    from bisect import bisect_right
+
+    if not dates:
+        return {}
+
+    # Alle Gewichtseinträge chronologisch laden (eine Query)
+    entries = list(
+        KoerperWerte.objects.filter(user=user).order_by("datum").values_list("datum", "gewicht")
+    )
+
+    if not entries:
+        fallback = 80.0
+        return {d: fallback for d in dates}
+
+    # Sicherstellen dass alle Datumsangaben date-Objekte sind (nicht datetime)
+    from datetime import date as _date_type
+    from datetime import datetime as _dt_type
+
+    entry_dates = [
+        (
+            e[0]
+            if isinstance(e[0], _date_type) and not isinstance(e[0], _dt_type)
+            else e[0].date() if isinstance(e[0], _dt_type) else e[0]
+        )
+        for e in entries
+    ]
+    entry_weights = [float(e[1]) for e in entries]
+    latest_weight = entry_weights[-1]
+
+    result = {}
+    for d in dates:
+        # Normalisiere auf date (falls datetime übergeben wird)
+        d_date = d.date() if isinstance(d, _dt_type) else d
+        # bisect_right: Index des ersten Eintrags > d
+        idx = bisect_right(entry_dates, d_date)
+        if idx > 0:
+            result[d] = entry_weights[idx - 1]  # Nächster Eintrag ≤ d_date
+        else:
+            result[d] = latest_weight  # Kein Eintrag vor d_date → aktuellstes
+    return result
+
+
 def _compute_1rm_and_weight(satz, uebung, user_koerpergewicht: float = 80.0) -> tuple[float, float]:
     """Return (estimated_1rm, effective_weight) for a single set.
 
@@ -1107,8 +1176,10 @@ def _compute_1rm_and_weight(satz, uebung, user_koerpergewicht: float = 80.0) -> 
     Für relative Vergleiche (Progression über Zeit) ist die Formel trotzdem konsistent.
 
     Körpergewichts-Übungen (KOERPERGEWICHT):
-        effektives_gewicht = (user_koerpergewicht * koerpergewicht_faktor) + zusatzgewicht
+        ZUSATZ: effektives_gewicht = (user_kg * faktor) + zusatzgewicht
+        GEGEN:  effektives_gewicht = (user_kg * faktor) - gegengewicht
         Beispiel Dips (Faktor 0.70, 80kg User, 0kg Zusatz): 80 * 0.70 = 56 kg effektiv
+        Beispiel Assistierte Dips (GEGEN, 80kg, 20kg Hilfe): 80 * 0.70 - 20 = 36 kg effektiv
     """
     zusatzgewicht = float(satz.gewicht)
 
@@ -1116,7 +1187,12 @@ def _compute_1rm_and_weight(satz, uebung, user_koerpergewicht: float = 80.0) -> 
         effektives_gewicht = zusatzgewicht * 2
     elif uebung.gewichts_typ == "KOERPERGEWICHT":
         faktor = getattr(uebung, "koerpergewicht_faktor", 1.0) or 1.0
-        effektives_gewicht = (user_koerpergewicht * faktor) + zusatzgewicht
+        richtung = getattr(uebung, "gewichts_richtung", "ZUSATZ") or "ZUSATZ"
+        basis = user_koerpergewicht * faktor
+        if richtung == "GEGEN":
+            effektives_gewicht = max(0.0, basis - zusatzgewicht)
+        else:
+            effektives_gewicht = basis + zusatzgewicht
     else:
         effektives_gewicht = zusatzgewicht
 
@@ -1176,9 +1252,14 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
     if not saetze.exists():
         return render(request, "core/stats_exercise.html", {"uebung": uebung, "no_data": True})
 
-    # Körpergewicht einmalig laden (für KOERPERGEWICHT-Übungen)
-    user_koerpergewicht = _get_user_koerpergewicht(request.user)
+    # Phase 14.2: Historisches Körpergewicht pro Trainingstag laden
     is_kg_uebung = uebung.gewichts_typ == "KOERPERGEWICHT"
+    if is_kg_uebung:
+        training_dates = list(saetze.values_list("einheit__datum", flat=True).distinct())
+        kg_map = _get_koerpergewicht_map(request.user, training_dates)
+    else:
+        kg_map = {}
+    user_koerpergewicht = _get_user_koerpergewicht(request.user)
 
     # Best 1RM per day + overall records
     history_data: dict[str, float] = {}
@@ -1189,7 +1270,13 @@ def exercise_stats(request: HttpRequest, uebung_id: int) -> HttpResponse:
     best_reps = 0
 
     for satz in saetze:
-        one_rm, eff_weight = _compute_1rm_and_weight(satz, uebung, user_koerpergewicht)
+        # Historisches Gewicht für KG-Übungen, aktuelles für andere
+        kg = (
+            kg_map.get(satz.einheit.datum, user_koerpergewicht)
+            if is_kg_uebung
+            else user_koerpergewicht
+        )
+        one_rm, eff_weight = _compute_1rm_and_weight(satz, uebung, kg)
         datum_str = satz.einheit.datum.strftime("%d.%m.%Y")
         if datum_str not in history_data or one_rm > history_data[datum_str]:
             history_data[datum_str] = round(one_rm, 1)
@@ -1327,12 +1414,16 @@ def _calc_weekly_volume(trainings) -> tuple[list, list]:
 _DEFAULT_RPE = 7.0  # Fallback für Sätze ohne RPE-Bewertung (moderate Anstrengung)
 
 
-def _calc_muscle_balance(trainings) -> tuple[list, list, list, dict]:
+def _calc_muscle_balance(trainings, user=None) -> tuple[list, list, list, dict]:
     """Return (sorted_items, mg_labels, mg_data, stats_by_code) for RPE-weighted muscle balance.
 
     Sätze ohne RPE-Bewertung werden mit einem Fallback-RPE von 7.0 gewichtet
     (moderate Anstrengung). Sätze ohne Wiederholungen werden weiterhin ignoriert.
+
+    Phase 14.3: Tonnage für KOERPERGEWICHT-Übungen nutzt effektives Gewicht
+    (Körpergewicht × Faktor ± Zusatzgewicht) statt nur Zusatzgewicht.
     """
+    user_kg = _get_user_koerpergewicht(user) if user else 80.0
     stats: dict[str, dict] = {}
     stats_code: dict[str, float] = {}
     for training in trainings:
@@ -1345,7 +1436,18 @@ def _calc_muscle_balance(trainings) -> tuple[list, list, list, dict]:
             mg_display = satz.uebung.get_muskelgruppe_display()
             mg_code = satz.uebung.muskelgruppe
             eff_wdh = satz.wiederholungen * (rpe / 10.0)
-            tonnage = float(satz.gewicht) * satz.wiederholungen if satz.gewicht else 0.0
+            # Phase 14.3: Tonnage mit effektivem Gewicht für KG-Übungen
+            raw_gewicht = float(satz.gewicht) if satz.gewicht else 0.0
+            if satz.uebung.gewichts_typ == "KOERPERGEWICHT":
+                faktor = getattr(satz.uebung, "koerpergewicht_faktor", 1.0) or 1.0
+                richtung = getattr(satz.uebung, "gewichts_richtung", "ZUSATZ") or "ZUSATZ"
+                basis = user_kg * faktor
+                if richtung == "GEGEN":
+                    tonnage = max(0.0, basis - raw_gewicht) * satz.wiederholungen
+                else:
+                    tonnage = (basis + raw_gewicht) * satz.wiederholungen
+            else:
+                tonnage = raw_gewicht * satz.wiederholungen
             if mg_display not in stats:
                 stats[mg_display] = {"saetze": 0, "volumen": 0.0, "tonnage": 0.0}
             stats[mg_display]["saetze"] += 1
@@ -1450,7 +1552,9 @@ def training_stats(request: HttpRequest) -> HttpResponse:
 
     volumen_labels, volumen_data, deload_flags = _calc_per_training_volume(trainings)
     weekly_labels, weekly_data = _calc_weekly_volume(trainings)
-    muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(trainings)
+    muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(
+        trainings, request.user
+    )
     svg_muscle_data = _build_svg_muscle_data(stats_code)
     heute = timezone.now().date()
     deload_warnings = _detect_volume_warnings(
