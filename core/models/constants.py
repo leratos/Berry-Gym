@@ -37,6 +37,11 @@ GEWICHTS_TYP = [
     ("ZEIT", "Zeit / Dauer (Sekunden)"),
 ]
 
+GEWICHTS_RICHTUNG = [
+    ("ZUSATZ", "Zusatzgewicht (wird addiert)"),
+    ("GEGEN", "Gegengewicht (wird subtrahiert, z.B. assistierte Dips)"),
+]
+
 BEWEGUNGS_TYP = [
     ("DRUECKEN", "Drücken (Push)"),
     ("ZIEHEN", "Ziehen (Pull)"),
