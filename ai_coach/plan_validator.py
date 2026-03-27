@@ -28,6 +28,9 @@ _ISOLATION_REST_RANGE = (60, 90)
 _COMPOUND_REST_DEFAULT = 150
 _ISOLATION_REST_DEFAULT = 75
 
+# Mindest-Satz-Budget pro Session (verhindert zu kurze Trainingstage)
+_MIN_SETS_PER_SESSION = 14
+
 # 11.2: Verbotene Kombinationen
 # Vordere-Schulter-Isolation (Front Raises) nicht mit schwerem Drücken kombinieren
 _FORBIDDEN_COMBINATIONS = [
@@ -109,6 +112,9 @@ def validate_plan_structure(
     warnings.extend(overrep_warnings)
     if overrep_fixed > 0:
         fixes["overrep_fixed"] = overrep_fixed
+
+    # Mindest-Satz-Budget pro Session
+    warnings.extend(_check_min_sets_per_session(plan_json))
 
     return warnings, fixes
 
@@ -490,3 +496,30 @@ def _fix_overrepresentation(
             return True
 
     return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mindest-Satz-Budget pro Session
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _check_min_sets_per_session(plan_json: dict) -> list[str]:
+    """Warnt wenn eine Session deutlich unter dem Satz-Budget liegt.
+
+    Verhindert asymmetrische Pläne wie Push 18 / Pull 18 / Legs 13.
+    """
+    warnings = []
+    sessions = plan_json.get("sessions", [])
+
+    for i, session in enumerate(sessions):
+        day_name = session.get("day_name", f"Session {i + 1}")
+        exercises = session.get("exercises", [])
+        total_sets = sum(ex.get("sets", 0) for ex in exercises)
+
+        if total_sets < _MIN_SETS_PER_SESSION:
+            warnings.append(
+                f"Session '{day_name}': nur {total_sets} Sätze "
+                f"(Minimum: {_MIN_SETS_PER_SESSION}). Plan ist asymmetrisch."
+            )
+
+    return warnings

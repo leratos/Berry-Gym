@@ -1015,7 +1015,30 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             if not exercises:
                 return False
 
-            # Letzte Übung mit wenigsten Sätzen ersetzen (ab Position 3+)
+            # Session-Satz-Budget prüfen: unter Budget → hinzufügen statt ersetzen
+            current_sets = sum(ex.get("sets", 0) for ex in exercises)
+            max_budget = self.sets_per_session  # Typ. 18
+
+            if current_sets < max_budget - 2:
+                # Session hat Platz → Übung hinzufügen
+                new_ex = {
+                    "exercise_name": replacement_name,
+                    "sets": min(3, max_budget - current_sets),
+                    "reps": "10-15",
+                    "rpe_target": 7.5,
+                    "rest_seconds": 60,
+                    "order": len(exercises) + 1,
+                    "notes": f"Auto-Fix: Schwachstelle {mg_display}",
+                }
+                exercises.append(new_ex)
+                print(
+                    f"   🔧 Auto-Fix: '{replacement_name}' hinzugefügt in "
+                    f"'{session.get('day_name', '?')}' für {mg_display} "
+                    f"({current_sets}→{current_sets + new_ex['sets']} Sätze)"
+                )
+                return True
+
+            # Session ist voll → letzte Übung mit wenigsten Sätzen ersetzen (ab Position 3+)
             replaceable = [
                 (i, ex)
                 for i, ex in enumerate(exercises)
