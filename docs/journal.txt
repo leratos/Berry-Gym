@@ -4941,3 +4941,21 @@ wurde nicht als HUEFTBEUGER-Coverage erkannt. Fix: Query iteriert jetzt auch
 über `hilfsmuskeln` (JSONField) jeder Plan-Übung.
 
 **Tests:** 235 passed (ai_coach/tests/)
+
+
+---
+
+## Roadmap-Update: Phase 13 (LLM-Planqualität & Dynamische Periodisierung) definiert
+
+**Datum:** 2026-03-27
+
+Basierend auf Testauswertung KI-generierter Pläne nach Phase 11 Deploy.
+Drei verbleibende Probleme:
+1. Muskelgruppen-Überrepräsentation (3× Quad auf Legs-Tag)
+2. hilfsmuskeln-only Coverage reicht nicht für Pflicht-Schwachstellen
+3. Periodisierungs-Beschreibung hardcodiert statt profilabhängig
+
+**Geänderte Dateien:**
+- `docs/PROJECT_ROADMAP.md` – Phase 13 eingefügt
+
+**Nächster Schritt:** Phase 13.1 in neuem Chat starten
