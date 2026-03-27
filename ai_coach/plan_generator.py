@@ -375,7 +375,26 @@ class PlanGenerator:
             )
             print(f"   ℹ️  Plan-Name war generisch – ersetzt durch: '{plan_json['plan_name']}'")
         else:
-            print(f"   ✓ Plan-Name: '{raw_name}'")
+            # Datum im LLM-generierten Namen korrigieren (LLM halluziniert oft falsche Daten)
+            import re
+            from datetime import date as _date
+
+            today_str = _date.today().strftime("%d.%m.%Y")
+            # Ersetze jedes Datum-Pattern im Namen durch heute
+            # Formate: DD.MM.YYYY, YYYY-MM-DD, DD/MM/YYYY
+            date_patterns = [
+                r"\d{2}\.\d{2}\.\d{4}",  # 29.07.2024
+                r"\d{4}-\d{2}-\d{2}",  # 2024-07-29
+                r"\d{2}/\d{2}/\d{4}",  # 29/07/2024
+            ]
+            name_fixed = raw_name
+            for pattern in date_patterns:
+                name_fixed = re.sub(pattern, today_str, name_fixed)
+            if name_fixed != raw_name:
+                plan_json["plan_name"] = name_fixed
+                print(f"   🔧 Datum im Plan-Name korrigiert: '{raw_name}' → '{name_fixed}'")
+            else:
+                print(f"   ✓ Plan-Name: '{raw_name}'")
 
         # 6. In Django DB speichern
         if save_to_db:
@@ -856,7 +875,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             "hüftbeuger": ["HUEFTBEUGER"],
         }
 
-        # Welche Muskelgruppen-Keys kommen im Plan vor? (1 DB-Query)
+        # Welche Muskelgruppen-Keys kommen im Plan vor? (primär + hilfsmuskeln)
         try:
             from core.models import Uebung
 
@@ -865,11 +884,12 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
                 for session in plan_json.get("sessions", [])
                 for ex in session.get("exercises", [])
             }
-            plan_muscle_keys = set(
-                Uebung.objects.filter(bezeichnung__in=all_ex_names)
-                .values_list("muskelgruppe", flat=True)
-                .distinct()
-            )
+            plan_exercises = Uebung.objects.filter(bezeichnung__in=all_ex_names)
+            plan_muscle_keys = set(plan_exercises.values_list("muskelgruppe", flat=True).distinct())
+            # Auch hilfsmuskeln berücksichtigen (JSONField mit Liste von Keys)
+            for ex in plan_exercises:
+                if ex.hilfsmuskeln:
+                    plan_muscle_keys.update(ex.hilfsmuskeln)
         except Exception as e:
             print(f"   ⚠️ Coverage-Check DB-Fehler: {e}")
             return []
