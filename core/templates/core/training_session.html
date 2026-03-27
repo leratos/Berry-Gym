@@ -621,7 +621,8 @@
                 name: "{{ uebung.bezeichnung|escapejs }}",
                 muscleKey: "{{ uebung.muskelgruppe|escapejs }}",
                 gewichtsTyp: "{{ uebung.gewichts_typ }}",
-                kgFaktor: {% localize off %}{{ uebung.koerpergewicht_faktor }}{% endlocalize %}
+                kgFaktor: {% localize off %}{{ uebung.koerpergewicht_faktor }}{% endlocalize %},
+                gewichtsRichtung: "{{ uebung.gewichts_richtung }}"
             },
             {% endfor %}
         ];
@@ -650,11 +651,17 @@
         function updateGewichtLabel(uebungId) {
             const ex = allExercises.find(e => String(e.id) === String(uebungId));
             if (ex && ex.gewichtsTyp === 'KOERPERGEWICHT') {
-                gewichtLabel.textContent = '{% trans "Zusatzgewicht (kg)" %}';
+                const isGegen = ex.gewichtsRichtung === 'GEGEN';
+                gewichtLabel.textContent = isGegen
+                    ? '{% trans "Gegengewicht (kg)" %}'
+                    : '{% trans "Zusatzgewicht (kg)" %}';
                 gewichtInput.placeholder = '0';
                 if (ex.kgFaktor > 0) {
                     const pct = Math.round(ex.kgFaktor * 100);
-                    kgHint.textContent = `{% trans "Körpergewicht-Übung · ca." %} ${pct}% {% trans "KG wirkt als Last" %}`;
+                    const suffix = isGegen
+                        ? '{% trans "KG wirkt als Last · Gegengewicht wird abgezogen" %}'
+                        : '{% trans "KG wirkt als Last" %}';
+                    kgHint.textContent = `{% trans "Körpergewicht-Übung · ca." %} ${pct}% ${suffix}`;
                 } else {
                     kgHint.textContent = '{% trans "Körpergewicht-Übung · isometrisch (kein Heben)" %}';
                 }

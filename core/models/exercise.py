@@ -3,7 +3,14 @@
 from django.contrib.auth.models import User
 from django.db import models
 
-from .constants import BEWEGUNGS_TYP, EQUIPMENT_CHOICES, GEWICHTS_TYP, MUSKELGRUPPEN, TAG_KATEGORIEN
+from .constants import (
+    BEWEGUNGS_TYP,
+    EQUIPMENT_CHOICES,
+    GEWICHTS_RICHTUNG,
+    GEWICHTS_TYP,
+    MUSKELGRUPPEN,
+    TAG_KATEGORIEN,
+)
 
 
 class UebungTag(models.Model):
@@ -63,6 +70,16 @@ class Uebung(models.Model):
             "Anteil des Körpergewichts der bei dieser Übung bewegt wird (0.0–1.0). "
             "Nur relevant für KOERPERGEWICHT-Übungen. "
             "Dips/Klimmzüge ≈ 0.70, Crunch ≈ 0.30, volle KG-Übung = 1.0"
+        ),
+    )
+    gewichts_richtung = models.CharField(
+        max_length=10,
+        choices=GEWICHTS_RICHTUNG,
+        default="ZUSATZ",
+        verbose_name="Gewichtsrichtung",
+        help_text=(
+            "ZUSATZ: Gewicht wird zum Körpergewicht addiert (normale Dips/Klimmzüge). "
+            "GEGEN: Gewicht wird subtrahiert (assistierte Dips/Klimmzüge am Gerät)."
         ),
     )
     bewegungstyp = models.CharField(

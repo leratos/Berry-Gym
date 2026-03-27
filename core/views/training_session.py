@@ -530,22 +530,43 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
 def _check_pr(user, uebung, neuer_satz, gewicht_float: float, wdh_int: int) -> str | None:
     """Prüft ob ein neuer PR erzielt wurde und speichert ihn in der DB.
 
-    Setzt is_pr, pr_type und pr_previous_value direkt auf neuer_satz (ohne save – Caller
-    muss nach PR-Check ggf. save() aufrufen oder direkt update() verwenden).
+    Phase 14.3: Für KOERPERGEWICHT-Übungen wird das effektive Gewicht
+    (inkl. Körpergewicht × Faktor) verwendet statt nur das Zusatzgewicht.
+    Historische Sätze nutzen das Körpergewicht vom jeweiligen Trainingstag.
 
     Returns:
         PR-Meldung (str) oder None wenn kein PR.
     """
-    current_1rm = gewicht_float * (1 + wdh_int / 30)
-    alte_saetze = Satz.objects.filter(
-        uebung=uebung,
-        ist_aufwaermsatz=False,
-        einheit__user=user,
-        einheit__ist_deload=False,
-    ).exclude(id=neuer_satz.id)
+    from core.views.training_stats import _get_koerpergewicht_map, _get_user_koerpergewicht
+
+    # Effektives Gewicht für aktuellen Satz berechnen
+    is_kg = uebung.gewichts_typ == "KOERPERGEWICHT"
+    if is_kg:
+        faktor = getattr(uebung, "koerpergewicht_faktor", 1.0) or 1.0
+        richtung = getattr(uebung, "gewichts_richtung", "ZUSATZ") or "ZUSATZ"
+        user_kg = _get_user_koerpergewicht(user)
+        basis = user_kg * faktor
+        if richtung == "GEGEN":
+            current_eff = max(0.0, basis - gewicht_float)
+        else:
+            current_eff = basis + gewicht_float
+    else:
+        current_eff = gewicht_float
+
+    current_1rm = current_eff * (1 + wdh_int / 30) if current_eff > 0 else 0.0
+
+    alte_saetze = (
+        Satz.objects.filter(
+            uebung=uebung,
+            ist_aufwaermsatz=False,
+            einheit__user=user,
+            einheit__ist_deload=False,
+        )
+        .exclude(id=neuer_satz.id)
+        .select_related("einheit")
+    )
 
     if not alte_saetze.exists():
-        # Erster Satz dieser Übung
         Satz.objects.filter(id=neuer_satz.id).update(
             is_pr=True,
             pr_type="first",
@@ -553,7 +574,27 @@ def _check_pr(user, uebung, neuer_satz, gewicht_float: float, wdh_int: int) -> s
         )
         return f"🏆 Erster Rekord gesetzt! {uebung.bezeichnung}: {round(current_1rm, 1)} kg (1RM)"
 
-    max_alter_1rm = max(float(s.gewicht) * (1 + int(s.wiederholungen) / 30) for s in alte_saetze)
+    # Historische 1RMs berechnen (mit historischem Körpergewicht)
+    if is_kg:
+        hist_dates = list(alte_saetze.values_list("einheit__datum", flat=True).distinct())
+        kg_map = _get_koerpergewicht_map(user, hist_dates)
+
+        def _alt_1rm(s):
+            hist_kg = kg_map.get(s.einheit.datum, user_kg)
+            alt_basis = hist_kg * faktor
+            alt_zusatz = float(s.gewicht)
+            if richtung == "GEGEN":
+                eff = max(0.0, alt_basis - alt_zusatz)
+            else:
+                eff = alt_basis + alt_zusatz
+            return eff * (1 + int(s.wiederholungen) / 30) if eff > 0 else 0.0
+
+        max_alter_1rm = max(_alt_1rm(s) for s in alte_saetze)
+    else:
+        max_alter_1rm = max(
+            float(s.gewicht) * (1 + int(s.wiederholungen) / 30) for s in alte_saetze
+        )
+
     if current_1rm > max_alter_1rm:
         diff = round(current_1rm - max_alter_1rm, 1)
         Satz.objects.filter(id=neuer_satz.id).update(
