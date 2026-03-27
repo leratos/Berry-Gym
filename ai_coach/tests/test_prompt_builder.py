@@ -163,7 +163,7 @@ def test_build_user_prompt_covers_frequency_and_periodization_branches(monkeypat
         periodization="unknown",
     )
     assert "3er- oder 4er-Split optimal" in prompt_none
-    assert "Linear mit Deload 4/8/12" in prompt_none
+    assert "Linear" in prompt_none and "Deload" in prompt_none
 
 
 def test_build_messages_structure(monkeypatch):
@@ -254,3 +254,65 @@ def test_main_guard_success_and_exception_paths(monkeypatch):
     monkeypatch.setitem(sys.modules, "db_client", fake_db_client_fail)
 
     runpy.run_module("ai_coach.prompt_builder", run_name="__main__")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 13.3: Dynamische Periodisierungs-Beschreibung
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestBuildPeriodizationNote:
+    """Phase 13.3: _build_periodization_note erzeugt profilabhängige Texte."""
+
+    def test_kraft_linear(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        note = _build_periodization_note("linear", "kraft")
+        assert "Linear" in note
+        assert "RPE < 7.5" in note
+        assert "150-180s" in note
+
+    def test_hypertrophie_linear(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        note = _build_periodization_note("linear", "hypertrophie")
+        assert "Linear" in note
+        assert ">12 Wdh" in note
+        assert "+1 Satz" in note
+
+    def test_definition_linear(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        note = _build_periodization_note("linear", "definition")
+        assert "Linear" in note
+        assert "Halte Gewicht" in note
+        assert "60-90s" in note
+
+    def test_wellenfoermig_hypertrophie(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        note = _build_periodization_note("wellenfoermig", "hypertrophie")
+        assert "Wellenförmig" in note
+        assert "Heavy/Medium/Light" in note
+
+    def test_block_kraft(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        note = _build_periodization_note("block", "kraft")
+        assert "Blockperiodisierung" in note
+        assert "Block 1 Volumen" in note
+        assert "RPE < 7.5" in note
+
+    def test_unknown_profile_uses_hypertrophie_defaults(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        note = _build_periodization_note("linear", "custom")
+        assert ">12 Wdh" in note
+
+    def test_deload_always_mentioned(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        for p in ("linear", "wellenfoermig", "block"):
+            for t in ("kraft", "hypertrophie", "definition"):
+                note = _build_periodization_note(p, t)
+                assert "Deload" in note, f"Deload fehlt für {p}/{t}"

@@ -55,6 +55,52 @@ KEY_TO_DISPLAY: Dict[str, str] = {
 }
 
 
+_PROFILE_DEFAULTS = {
+    "kraft": {"rep_range": "3-6", "rpe_range": "7.5-9"},
+    "hypertrophie": {"rep_range": "6-12", "rpe_range": "7-8.5"},
+    "definition": {"rep_range": "10-15", "rpe_range": "6.5-8"},
+}
+
+
+def _build_periodization_note(periodization: str, target_profile: str) -> str:
+    """Phase 13.3: Dynamische Periodisierungs-Beschreibung.
+
+    Kombiniert Periodisierungs-Typ und Zielprofil zu spezifischem Text
+    statt hardcodierter Einheitsbeschreibung.
+    """
+    defaults = _PROFILE_DEFAULTS.get(target_profile, _PROFILE_DEFAULTS["hypertrophie"])
+    rpe_range = defaults["rpe_range"]
+    rep_range = defaults["rep_range"]
+
+    # Profil-spezifische Progression
+    if target_profile == "kraft":
+        progression = (
+            f"Steigere Gewicht wenn RPE < {rpe_range.split('-')[0]} bei 2+ Trainings, "
+            f"Wdh-Range {rep_range}, lange Pausen (150-180s)"
+        )
+    elif target_profile == "definition":
+        progression = (
+            f"Halte Gewicht stabil, reduziere Pausen schrittweise, "
+            f"Wdh-Range {rep_range}, RPE {rpe_range}, kürzere Pausen (60-90s)"
+        )
+    else:
+        rep_upper = rep_range.split("-")[-1]
+        progression = (
+            f"Steigere Gewicht wenn >{rep_upper} Wdh bei RPE {rpe_range}, "
+            f"+1 Satz auf Hauptübungen in Nicht-Deload-Wochen"
+        )
+
+    # Periodisierungs-spezifischer Aufbau
+    if periodization == "wellenfoermig":
+        structure = "Wellenförmig: Heavy/Medium/Light innerhalb jedes 4-Wochen-Blocks"
+    elif periodization == "block":
+        structure = "Blockperiodisierung: Block 1 Volumen, Block 2 Kraft, Block 3 Peaking"
+    else:
+        structure = "Linear steigende Intensität pro Block"
+
+    return f"{structure} + Deload in Woche 4/8/12. Progression: {progression}"
+
+
 class PromptBuilder:
 
     def __init__(self):
@@ -347,11 +393,9 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             else f"{profile_label}-{split_label} ({today_str})"
         )
 
-        periodization_note = {
-            "linear": "Linear steigende Intensität pro Block, Deload in Woche 4/8/12 (Volumen 80%, Intensität 90%)",
-            "wellenfoermig": "Wellenförmig: Heavy/Medium/Light innerhalb jedes 4-Wochen-Blocks + Deload in Woche 4/8/12",
-            "block": "Blockperiodisierung: Block 1 Volumen, Block 2 Kraft, Block 3 Peaking/Definition mit Deload in Woche 4/8/12",
-        }.get(periodization, "Linear mit Deload 4/8/12")
+        # Phase 13.3: Dynamische Periodisierungs-Beschreibung
+        # Kombiniert target_profile + periodization statt hardcodiertem Text
+        periodization_note = _build_periodization_note(periodization, target_profile)
 
         # Frequenz-basierte Split-Empfehlung
         if freq < 2:
