@@ -1,12 +1,13 @@
 """
-Tests für Phase 11 – KI-Planvalidierung.
+Tests für Phase 11 + 13 – KI-Planvalidierung.
 
-Testet alle 5 Sub-Tasks:
+Testet alle Sub-Tasks:
 - 11.1: Cross-Session-Duplikate
 - 11.2: Verbotene Kombinationen
 - 11.3: Anatomische Pflichtgruppen
 - 11.4: Compound-vor-Isolation Reihenfolge
 - 11.5: Pausenzeiten-Plausibilität
+- 13.1: Muskelgruppen-Überrepräsentation pro Session
 """
 
 import pytest
@@ -15,6 +16,7 @@ from ai_coach.plan_validator import (
     _check_anatomical_requirements,
     _check_cross_session_duplicates,
     _check_forbidden_combinations,
+    _check_muscle_overrepresentation,
     _fix_exercise_order,
     _fix_rest_times,
     validate_plan_structure,
@@ -606,3 +608,180 @@ class TestValidatePlanStructure:
         warnings, fixes = validate_plan_structure({})
         assert warnings == []
         assert fixes == {}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 13.1: Muskelgruppen-Überrepräsentation pro Session
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestMuscleOverrepresentation:
+    def test_8_saetze_gleiche_gruppe_warnt(self):
+        """3× Quad-Übungen mit insgesamt 10 Sätzen → Warning."""
+        kniebeuge = UebungFactory(
+            bezeichnung="Kniebeuge", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        bss = UebungFactory(
+            bezeichnung="Bulgarian Split Squat", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        front_kb = UebungFactory(
+            bezeichnung="Frontkniebeuge", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        uebungen_map = {
+            kniebeuge.bezeichnung: kniebeuge,
+            bss.bezeichnung: bss,
+            front_kb.bezeichnung: front_kb,
+        }
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Legs",
+                    [
+                        _make_exercise("Kniebeuge", sets=4, order=1),
+                        _make_exercise("Bulgarian Split Squat", sets=3, order=2),
+                        _make_exercise("Frontkniebeuge", sets=3, order=3),
+                    ],
+                )
+            ]
+        )
+        warnings, fix_count = _check_muscle_overrepresentation(plan, uebungen_map)
+        assert len(warnings) == 1
+        assert "BEINE_QUAD" in warnings[0]
+        assert "10" in warnings[0]
+        assert fix_count == 0
+
+    def test_7_saetze_gleiche_gruppe_ok(self):
+        """7 Sätze = genau am Limit → kein Warning."""
+        kniebeuge = UebungFactory(
+            bezeichnung="Kniebeuge", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        bss = UebungFactory(
+            bezeichnung="Bulgarian Split Squat", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        uebungen_map = {
+            kniebeuge.bezeichnung: kniebeuge,
+            bss.bezeichnung: bss,
+        }
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Legs",
+                    [
+                        _make_exercise("Kniebeuge", sets=4, order=1),
+                        _make_exercise("Bulgarian Split Squat", sets=3, order=2),
+                    ],
+                )
+            ]
+        )
+        warnings, fix_count = _check_muscle_overrepresentation(plan, uebungen_map)
+        assert warnings == []
+        assert fix_count == 0
+
+    def test_autofix_ersetzt_ueberrepraesentation(self):
+        """Auto-Fix: 3× Quad → ersetzt letzte durch Hamstring-Übung."""
+        kniebeuge = UebungFactory(
+            bezeichnung="Kniebeuge", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        bss = UebungFactory(
+            bezeichnung="Bulgarian Split Squat", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        front_kb = UebungFactory(
+            bezeichnung="Frontkniebeuge", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        rdl = UebungFactory(bezeichnung="RDL", muskelgruppe="BEINE_HAM", bewegungstyp="HEBEN")
+        UebungFactory(bezeichnung="Beinbeuger", muskelgruppe="BEINE_HAM", bewegungstyp="ISOLATION")
+        uebungen_map = {
+            kniebeuge.bezeichnung: kniebeuge,
+            bss.bezeichnung: bss,
+            front_kb.bezeichnung: front_kb,
+            rdl.bezeichnung: rdl,
+        }
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Legs",
+                    [
+                        _make_exercise("Kniebeuge", sets=4, order=1),
+                        _make_exercise("RDL", sets=3, order=2),
+                        _make_exercise("Bulgarian Split Squat", sets=3, order=3),
+                        _make_exercise("Frontkniebeuge", sets=3, order=4),
+                    ],
+                )
+            ]
+        )
+        available = [
+            "Kniebeuge",
+            "RDL",
+            "Bulgarian Split Squat",
+            "Frontkniebeuge",
+            "Beinbeuger",
+        ]
+        warnings, fix_count = _check_muscle_overrepresentation(plan, uebungen_map, available)
+        assert warnings == []
+        assert fix_count == 1
+        # Frontkniebeuge (wenigste Sätze ab Pos 3+) wurde ersetzt
+        ex_names = [e["exercise_name"] for e in plan["sessions"][0]["exercises"]]
+        assert "Frontkniebeuge" not in ex_names
+        assert "Beinbeuger" in ex_names
+
+    def test_autofix_schuetzt_erste_3_uebungen(self):
+        """Compounds auf Pos 0-2 werden nicht ersetzt → Warning statt Fix."""
+        u1 = UebungFactory(
+            bezeichnung="Kniebeuge", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        u2 = UebungFactory(bezeichnung="BSS", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN")
+        u3 = UebungFactory(bezeichnung="Front KB", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN")
+        UebungFactory(bezeichnung="Beinbeuger", muskelgruppe="BEINE_HAM", bewegungstyp="ISOLATION")
+        uebungen_map = {u.bezeichnung: u for u in [u1, u2, u3]}
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Legs",
+                    [
+                        _make_exercise("Kniebeuge", sets=4, order=1),
+                        _make_exercise("BSS", sets=3, order=2),
+                        _make_exercise("Front KB", sets=3, order=3),
+                    ],
+                )
+            ]
+        )
+        available = ["Kniebeuge", "BSS", "Front KB", "Beinbeuger"]
+        warnings, fix_count = _check_muscle_overrepresentation(plan, uebungen_map, available)
+        # Alle 3 Übungen auf Pos 0-2 → nicht ersetzbar → Warning
+        assert len(warnings) == 1
+        assert fix_count == 0
+
+    def test_verschiedene_gruppen_kein_warning(self):
+        """Verschiedene Muskelgruppen → kein Warning auch bei vielen Sätzen."""
+        brust = UebungFactory(
+            bezeichnung="Bankdrücken", muskelgruppe="BRUST", bewegungstyp="DRUECKEN"
+        )
+        schulter = UebungFactory(
+            bezeichnung="Schulterdrücken", muskelgruppe="SCHULTER_VORN", bewegungstyp="DRUECKEN"
+        )
+        trizeps = UebungFactory(
+            bezeichnung="Trizeps Pushdown", muskelgruppe="TRIZEPS", bewegungstyp="ISOLATION"
+        )
+        uebungen_map = {u.bezeichnung: u for u in [brust, schulter, trizeps]}
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Push",
+                    [
+                        _make_exercise("Bankdrücken", sets=4, order=1),
+                        _make_exercise("Schulterdrücken", sets=4, order=2),
+                        _make_exercise("Trizeps Pushdown", sets=4, order=3),
+                    ],
+                )
+            ]
+        )
+        warnings, fix_count = _check_muscle_overrepresentation(plan, uebungen_map)
+        assert warnings == []
+        assert fix_count == 0
+
+    def test_leere_session_kein_crash(self):
+        plan = _make_plan([_make_session("Empty", [])])
+        warnings, fix_count = _check_muscle_overrepresentation(plan, {})
+        assert warnings == []
+        assert fix_count == 0

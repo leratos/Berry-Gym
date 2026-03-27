@@ -1,5 +1,5 @@
 """
-Phase 11: Erweiterte KI-Plan-Validierung.
+Phase 11 + 13: Erweiterte KI-Plan-Validierung.
 
 Programmatische Post-Validierungen die nach der LLM-Antwort laufen.
 Die bestehende validate_plan() in llm_client.py prüft nur Pflichtfelder,
@@ -10,6 +10,7 @@ Die bestehende validate_plan() in llm_client.py prüft nur Pflichtfelder,
 11.3: Anatomische Pflichtgruppen
 11.4: Compound-vor-Isolation Reihenfolge (Auto-Fix)
 11.5: Pausenzeiten-Plausibilität (Auto-Fix)
+13.1: Muskelgruppen-Überrepräsentation pro Session (Auto-Fix)
 """
 
 from __future__ import annotations
@@ -47,23 +48,30 @@ _FORBIDDEN_COMBINATIONS = [
 _MIN_SCHULTER_HINT_SETS = 2
 _PULL_SESSION_KEYWORDS = ("pull", "zug", "ziehen")
 
+# 13.1: Muskelgruppen-Überrepräsentation
+_MAX_SETS_PER_MUSCLE_GROUP = 7
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry-Point
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def validate_plan_structure(plan_json: dict) -> tuple[list[str], dict]:
-    """Führt alle Phase-11-Checks aus und wendet Auto-Fixes an.
+def validate_plan_structure(
+    plan_json: dict,
+    available_exercises: list[str] | None = None,
+) -> tuple[list[str], dict]:
+    """Führt alle Phase-11/13-Checks aus und wendet Auto-Fixes an.
 
     Args:
         plan_json: Plan-Dict mit sessions[].exercises[].
-                   Wird bei Auto-Fixes (11.4, 11.5) in-place modifiziert.
+                   Wird bei Auto-Fixes (11.4, 11.5, 13.1) in-place modifiziert.
+        available_exercises: Optionale Liste verfügbarer Übungen für Auto-Fix 13.1.
 
     Returns:
         (warnings, fixes_applied):
             warnings: Liste von Hinweis-Strings.
-            fixes_applied: Dict mit Zählern (order_fixed, rest_fixed).
+            fixes_applied: Dict mit Zählern (order_fixed, rest_fixed, overrep_fixed).
     """
     sessions = plan_json.get("sessions", [])
     if not sessions:
@@ -93,6 +101,14 @@ def validate_plan_structure(plan_json: dict) -> tuple[list[str], dict]:
     rest_fixed = _fix_rest_times(plan_json, uebungen_map)
     if rest_fixed > 0:
         fixes["rest_fixed"] = rest_fixed
+
+    # 13.1: Muskelgruppen-Überrepräsentation (Auto-Fix)
+    overrep_warnings, overrep_fixed = _check_muscle_overrepresentation(
+        plan_json, uebungen_map, available_exercises
+    )
+    warnings.extend(overrep_warnings)
+    if overrep_fixed > 0:
+        fixes["overrep_fixed"] = overrep_fixed
 
     return warnings, fixes
 
@@ -354,3 +370,123 @@ def _fix_rest_times(plan_json: dict, uebungen_map: dict[str, Uebung]) -> int:
                 fixed_count += 1
 
     return fixed_count
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 13.1: Muskelgruppen-Überrepräsentation pro Session (Auto-Fix)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _check_muscle_overrepresentation(
+    plan_json: dict,
+    uebungen_map: dict[str, Uebung],
+    available_exercises: list[str] | None = None,
+) -> tuple[list[str], int]:
+    """Prüft ob eine Muskelgruppe >7 Sätze pro Session hat.
+
+    Verhindert z.B. 3× Quad (Kniebeuge + Bulgarian Split Squat + Frontkniebeuge = 10 Sätze).
+    Auto-Fix (wenn available_exercises): überzählige Übung durch unterrepräsentierte ersetzen.
+
+    Returns:
+        (warnings, fix_count)
+    """
+    warnings: list[str] = []
+    fix_count = 0
+
+    for session in plan_json.get("sessions", []):
+        day_name = session.get("day_name", "?")
+        exercises = session.get("exercises", [])
+
+        # Sätze pro primärer Muskelgruppe zählen
+        group_sets: dict[str, int] = {}
+        group_exercises: dict[str, list[tuple[int, dict]]] = {}
+
+        for idx, ex in enumerate(exercises):
+            uebung = uebungen_map.get(ex.get("exercise_name", ""))
+            if not uebung:
+                continue
+            mg = uebung.muskelgruppe
+            sets = ex.get("sets", 0)
+            group_sets[mg] = group_sets.get(mg, 0) + sets
+            group_exercises.setdefault(mg, []).append((idx, ex))
+
+        for mg, total_sets in group_sets.items():
+            if total_sets <= _MAX_SETS_PER_MUSCLE_GROUP:
+                continue
+
+            # Auto-Fix versuchen
+            if available_exercises:
+                fixed = _fix_overrepresentation(
+                    session, mg, group_exercises[mg], group_sets, available_exercises
+                )
+                if fixed:
+                    fix_count += 1
+                    continue
+
+            ex_names = [ex.get("exercise_name", "?") for _, ex in group_exercises[mg]]
+            warnings.append(
+                f"Session '{day_name}': {mg} hat {total_sets} Sätze "
+                f"(max {_MAX_SETS_PER_MUSCLE_GROUP}) – Übungen: {', '.join(ex_names)}"
+            )
+
+    return warnings, fix_count
+
+
+def _fix_overrepresentation(
+    session: dict,
+    overrep_mg: str,
+    overrep_exercises: list[tuple[int, dict]],
+    group_sets: dict[str, int],
+    available_exercises: list[str],
+) -> bool:
+    """Ersetzt die kleinste Übung der überrepräsentierten Gruppe durch eine unterrepräsentierte.
+
+    Wählt Ersatzübung nur aus Muskelgruppen die bereits in der Session vorkommen
+    (kontextuell passend, z.B. kein Quad-Ersatz auf Push-Tag).
+    """
+    exercises = session.get("exercises", [])
+
+    # Ersetzbare Übung finden (Position 3+, wenigste Sätze in über-rep. Gruppe)
+    replaceable = [(idx, ex) for idx, ex in overrep_exercises if idx >= 3]
+    if not replaceable:
+        return False
+
+    _, rep_ex = min(replaceable, key=lambda x: x[1].get("sets", 99))
+
+    # Andere Gruppen in der Session, sortiert nach wenigsten Sätzen
+    other_groups = sorted(
+        [(mg, s) for mg, s in group_sets.items() if mg != overrep_mg],
+        key=lambda x: x[1],
+    )
+    if not other_groups:
+        return False
+
+    session_ex_names = {ex.get("exercise_name") for ex in exercises}
+
+    for target_mg, _ in other_groups:
+        try:
+            replacement = (
+                Uebung.objects.filter(
+                    muskelgruppe=target_mg,
+                    bezeichnung__in=available_exercises,
+                )
+                .exclude(bezeichnung__in=session_ex_names)
+                .values_list("bezeichnung", flat=True)
+                .first()
+            )
+        except Exception:
+            continue
+
+        if replacement:
+            old_name = rep_ex.get("exercise_name", "?")
+            rep_ex["exercise_name"] = replacement
+            rep_ex["notes"] = (
+                f"Auto-Fix 13.1: '{old_name}' ersetzt (Überrepräsentation {overrep_mg})"
+            )
+            print(
+                f"   🔧 Auto-Fix 13.1: '{old_name}' → '{replacement}' in "
+                f"'{session.get('day_name', '?')}' ({overrep_mg} → {target_mg})"
+            )
+            return True
+
+    return False

@@ -317,7 +317,9 @@ class PlanGenerator:
 
         from ai_coach.plan_validator import validate_plan_structure
 
-        structure_warnings, structure_fixes = validate_plan_structure(plan_json)
+        structure_warnings, structure_fixes = validate_plan_structure(
+            plan_json, available_exercises
+        )
         if structure_fixes.get("order_fixed", 0) > 0:
             print(
                 f"   🔧 Übungsreihenfolge korrigiert in "
@@ -325,6 +327,11 @@ class PlanGenerator:
             )
         if structure_fixes.get("rest_fixed", 0) > 0:
             print(f"   🔧 Pausenzeiten korrigiert bei " f"{structure_fixes['rest_fixed']} Übungen")
+        if structure_fixes.get("overrep_fixed", 0) > 0:
+            print(
+                f"   🔧 Überrepräsentation korrigiert in "
+                f"{structure_fixes['overrep_fixed']} Sessions"
+            )
         if structure_warnings:
             for w in structure_warnings:
                 print(f"   ⚠️ {w}")
@@ -875,7 +882,9 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             "hüftbeuger": ["HUEFTBEUGER"],
         }
 
-        # Welche Muskelgruppen-Keys kommen im Plan vor? (primär + hilfsmuskeln)
+        # Welche Muskelgruppen-Keys kommen im Plan vor?
+        # Phase 13.2: Primär (muskelgruppe) und sekundär (hilfsmuskeln) getrennt tracken.
+        # hilfsmuskeln allein gilt NICHT als Coverage für Pflicht-Schwachstellen.
         try:
             from core.models import Uebung
 
@@ -885,11 +894,11 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
                 for ex in session.get("exercises", [])
             }
             plan_exercises = Uebung.objects.filter(bezeichnung__in=all_ex_names)
-            plan_muscle_keys = set(plan_exercises.values_list("muskelgruppe", flat=True).distinct())
-            # Auch hilfsmuskeln berücksichtigen (JSONField mit Liste von Keys)
+            primary_keys = set(plan_exercises.values_list("muskelgruppe", flat=True).distinct())
+            secondary_keys: set[str] = set()
             for ex in plan_exercises:
                 if ex.hilfsmuskeln:
-                    plan_muscle_keys.update(ex.hilfsmuskeln)
+                    secondary_keys.update(ex.hilfsmuskeln)
         except Exception as e:
             print(f"   ⚠️ Coverage-Check DB-Fehler: {e}")
             return []
@@ -903,12 +912,21 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             if not target_keys:
                 continue
 
-            covered = any(k in plan_muscle_keys for k in target_keys)
-            if covered:
+            # Phase 13.2: Nur primäre Muskelgruppe zählt als Coverage
+            covered_primary = any(k in primary_keys for k in target_keys)
+            if covered_primary:
                 print(f"   ✓ Coverage OK: {weakness.split(':')[0].strip()}")
                 continue
 
             mg_display = weakness.split(":")[0].strip()
+
+            # Nur sekundär abgedeckt → nicht ausreichend, Auto-Fix versuchen
+            covered_secondary = any(k in secondary_keys for k in target_keys)
+            if covered_secondary:
+                print(
+                    f"   ⚠️ {mg_display}: nur als Hilfsmuskel abgedeckt, "
+                    f"nicht primär – Auto-Fix wird versucht"
+                )
 
             # --- Auto-Fix: passende Übung finden und einsetzen ---
             if available_exercises:
@@ -916,12 +934,13 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
                     plan_json, target_keys, available_exercises, mg_display
                 )
                 if fixed:
-                    plan_muscle_keys.update(target_keys)
+                    primary_keys.update(target_keys)
                     continue
 
+            qualifier = " (nur als Hilfsmuskel)" if covered_secondary else ""
             warnings.append(
-                f"⚠️ Schwachstelle nicht abgedeckt: {mg_display} – "
-                f"keine Übung im Plan trainiert diese Muskelgruppe"
+                f"⚠️ Schwachstelle nicht abgedeckt: {mg_display}{qualifier} – "
+                f"keine Übung mit primärer Muskelgruppe im Plan"
             )
             print(f"   ⚠️ Coverage fehlt: {mg_display} (Keys: {target_keys})")
 
@@ -1071,19 +1090,62 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             lines.append("")
             lines.append("")
 
-        # Progression klar formuliert
+        # Phase 13.3: Progressions-Text abhängig von Profil + Periodisierung
+        defaults = self._get_profile_defaults(profile)
+        rep_range = micro.get("rep_range") if micro else None
+        rpe_range = micro.get("rpe_range") if micro else None
+        if not rep_range:
+            rep_range = defaults["rep_range"]
+        if not rpe_range:
+            rpe_range = defaults["rpe_range"]
+
+        # Obere Rep-Grenze für Steigerungsregel ableiten
+        rep_upper = rep_range.split("-")[-1] if "-" in rep_range else rep_range
+
         lines.append("PROGRESSION (Wochen 1-3, 5-7, 9-11):")
-        lines.append("   - Steigere das Gewicht, wenn du >12 Wdh schaffst")
-        lines.append("   - Füge +1 Satz bei Hauptübungen hinzu (z.B. von 3 auf 4 Sätze)")
-        lines.append("   - Ziel: RPE bleibt bei 7-8.5 (noch 1-2 Wdh Reserve)")
+        if profile == "kraft":
+            lines.append(
+                f"   - Steigere Gewicht wenn RPE < {rpe_range.split('-')[0]} bei 2+ Trainings"
+            )
+            lines.append("   - Wiederholungen im unteren Range halten, Gewicht priorisieren")
+            lines.append(f"   - Ziel: RPE {rpe_range}, längere Pausen (150-180s)")
+        elif profile == "definition":
+            lines.append("   - Halte das Gewicht stabil, reduziere Pausen schrittweise")
+            lines.append("   - +1 Satz bei Hauptübungen statt Gewichtssteigerung")
+            lines.append(f"   - Ziel: RPE {rpe_range}, kürzere Pausen (60-90s)")
+        else:  # hypertrophie (default)
+            lines.append(f"   - Steigere das Gewicht, wenn du >{rep_upper} Wdh schaffst")
+            lines.append("   - Füge +1 Satz bei Hauptübungen hinzu (z.B. von 3 auf 4 Sätze)")
+            lines.append(f"   - Ziel: RPE {rpe_range} (noch 1-2 Wdh Reserve)")
+
+        if periodization.startswith("w"):
+            lines.append("   - Wellenförmig: Heavy → Medium → Light innerhalb jedes Blocks")
+        elif periodization.startswith("b"):
+            lines.append(
+                "   - Block 1: Volumen aufbauen → Block 2: Kraft steigern → Block 3: Peaking"
+            )
+
         lines.append("")
         lines.append("")
 
-        # Deload-Wochen klar erklären
+        # Deload-Wochen: Werte aus Makrozyklus ableiten
         deload_str = ", ".join(map(str, deload_weeks)) if deload_weeks else "4, 8, 12"
+        # Deload-Multiplier aus macrocycle ableiten wenn vorhanden
+        deload_volume_pct = "80%"
+        deload_intensity_pct = "~90%"
+        if macro and isinstance(macro, dict):
+            for week_data in macro.get("weeks", []):
+                if week_data.get("is_deload"):
+                    vol_mult = week_data.get("volume_multiplier")
+                    if vol_mult:
+                        deload_volume_pct = f"{int(vol_mult * 100)}%"
+                    break
+
         lines.append(f"DELOAD-WOCHEN ({deload_str}):")
-        lines.append("   - Reduziere das Volumen auf 80% (z.B. 4 Sätze → 3 Sätze)")
-        lines.append("   - Senke das Gewicht leicht (~10%), RPE sollte bei 6-7 liegen")
+        lines.append(f"   - Reduziere das Volumen auf {deload_volume_pct} (z.B. 4 Sätze → 3 Sätze)")
+        lines.append(
+            f"   - Senke das Gewicht leicht ({deload_intensity_pct}), RPE sollte bei 6-7 liegen"
+        )
         lines.append("   - Fokus auf Technik und Regeneration")
         lines.append("")
         lines.append("")
