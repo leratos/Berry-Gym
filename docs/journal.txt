@@ -4920,3 +4920,24 @@ anatomisch falsch. Korrigiert zu `["HUEFTBEUGER"]`. Fixture UND DB aktualisiert.
 - Fallback auf Warning wenn kein Auto-Fix möglich
 
 **Tests:** 235 passed (ai_coach/tests/)
+
+
+---
+
+## Fix: LLM-Datum-Halluzination + Coverage-Check hilfsmuskeln
+
+**Datum:** 2026-03-27
+
+### Fix 1: Datum im Plan-Namen
+LLM halluziniert regelmäßig falsche Daten im Plan-Namen (z.B. "2024-07-29" statt "2026-03-27").
+Der bestehende Fallback griff nur bei generischen Namen. Neuer Fix: Regex ersetzt jedes
+erkannte Datum-Pattern (DD.MM.YYYY, YYYY-MM-DD, DD/MM/YYYY) durch `date.today()`.
+Greift auch bei nicht-generischen LLM-generierten Namen.
+
+### Fix 2: Coverage-Check berücksichtigt hilfsmuskeln
+`_validate_weakness_coverage()` prüfte nur `muskelgruppe` (Primärmuskel).
+Hanging Leg Raises (`muskelgruppe=BAUCH`, `hilfsmuskeln=["HUEFTBEUGER"]`)
+wurde nicht als HUEFTBEUGER-Coverage erkannt. Fix: Query iteriert jetzt auch
+über `hilfsmuskeln` (JSONField) jeder Plan-Übung.
+
+**Tests:** 235 passed (ai_coach/tests/)
