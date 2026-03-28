@@ -13,7 +13,6 @@ from .db_client import DatabaseClient
 from .llm_client import LLMClient
 from .prompt_builder import PromptBuilder
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helfer: DB-Konstanten → lesbare Muskelgruppen-Namen
 # ─────────────────────────────────────────────────────────────────────────────
