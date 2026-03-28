@@ -1228,6 +1228,49 @@ class TestValidateWeaknessCoverage:
         )
         assert len(warnings) == 0
 
+    def test_db_constant_label_hueftbeuger_resolves(self):
+        """Bug-Fix: data_analyzer liefert 'HUEFTBEUGER: Untertrainiert' (DB-Konstante).
+        LABEL_TO_KEYS muss auch 'hueftbeuger' (ohne Umlaut) als Key erkennen."""
+        UebungFactory(
+            bezeichnung="Bankdrücken",
+            muskelgruppe="BRUST",
+            gewichts_typ="GESAMT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Push", [_make_exercise("Bankdrücken")])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json, weaknesses=["HUEFTBEUGER: Untertrainiert (nur 154 eff. Wdh vs. Ø 286)"]
+        )
+        # DB-Konstante als Label → muss erkannt werden und Warning erzeugen
+        assert len(warnings) >= 1
+        assert any("HUEFTBEUGER" in w for w in warnings)
+
+    def test_db_constant_label_schulter_hint_resolves(self):
+        """Bug-Fix: data_analyzer liefert 'SCHULTER_HINT: Untertrainiert' (DB-Konstante).
+        LABEL_TO_KEYS muss auch 'schulter_hint' als Key erkennen."""
+        UebungFactory(
+            bezeichnung="Bankdrücken",
+            muskelgruppe="BRUST",
+            gewichts_typ="GESAMT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Push", [_make_exercise("Bankdrücken")])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json, weaknesses=["SCHULTER_HINT: Untertrainiert (nur 26 eff. Wdh vs. Ø 286)"]
+        )
+        assert len(warnings) >= 1
+        assert any("SCHULTER_HINT" in w for w in warnings)
+
     def test_hilfsmuskeln_only_warning_text(self):
         """Phase 13.2: Warning-Text enthält 'nur als Hilfsmuskel'."""
         UebungFactory(

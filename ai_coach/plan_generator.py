@@ -880,6 +880,18 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             "abduktoren": ["ABDUKTOREN"],
             "hüfte": ["HUEFTBEUGER", "ADDUKTOREN", "ABDUKTOREN"],
             "hüftbeuger": ["HUEFTBEUGER"],
+            # DB-Konstanten als Keys (data_analyzer liefert z.B. "HUEFTBEUGER: Untertrainiert")
+            "hueftbeuger": ["HUEFTBEUGER"],
+            "schulter_hint": ["SCHULTER_HINT"],
+            "schulter_vorn": ["SCHULTER_VORN"],
+            "schulter_seit": ["SCHULTER_SEIT"],
+            "ruecken_lat": ["RUECKEN_LAT"],
+            "ruecken_trapez": ["RUECKEN_TRAPEZ"],
+            "ruecken_unten": ["RUECKEN_UNTEN"],
+            "ruecken_oberer": ["RUECKEN_OBERER"],
+            "beine_quad": ["BEINE_QUAD"],
+            "beine_ham": ["BEINE_HAM"],
+            "po": ["PO"],
         }
 
         # Welche Muskelgruppen-Keys kommen im Plan vor?
