@@ -53,6 +53,8 @@
             font-size: 20px;
             margin: 18px 0 10px 0;
             page-break-after: avoid;
+            -pdf-outline: true;
+            -pdf-outline-level: 0;
         }
 
         h2 {
@@ -387,43 +389,9 @@
 
     <pdf:nextpage />
 
-    <!-- INHALTSVERZEICHNIS -->
+    <!-- INHALTSVERZEICHNIS (automatisch von xhtml2pdf generiert) -->
     <h1>■ Inhaltsverzeichnis</h1>
-    <table>
-        <tr>
-            <td>1. Executive Summary</td>
-        </tr>
-        <tr>
-            <td>2. Körperwerte Entwicklung</td>
-        </tr>
-        <tr>
-            <td>3. Muskelgruppen-Analyse</td>
-        </tr>
-        <tr>
-            <td>4. Push/Pull Balance</td>
-        </tr>
-        <tr>
-            <td>5. Trainingsfortschritt</td>
-        </tr>
-        <tr>
-            <td>6. Plateau-Analyse</td>
-        </tr>
-        <tr>
-            <td>7. Trainings-Konsistenz</td>
-        </tr>
-        <tr>
-            <td>8. Ermüdungs-Index & Deload</td>
-        </tr>
-        <tr>
-            <td>9. 1RM-Entwicklung & Standards</td>
-        </tr>
-        <tr>
-            <td>10. RPE-Qualitätsanalyse</td>
-        </tr>
-        <tr>
-            <td>11. Trainer-Empfehlungen</td>
-        </tr>
-    </table>
+    <pdf:toc />
 
     <pdf:nextpage />
 
