@@ -5094,3 +5094,14 @@ Neuer Check `_check_min_sets_per_session()` in `plan_validator.py`:
 **Geänderte Dateien:**
 - `ai_coach/plan_generator.py` – 15.1: Budget-Check in _auto_fix_weakness()
 - `ai_coach/plan_validator.py` – 15.2: _check_min_sets_per_session() + Konstante _MIN_SETS_PER_SESSION
+
+### 15.3: Bug-Fix LABEL_TO_KEYS – DB-Konstanten als Weakness-Labels
+`_validate_weakness_coverage()` in `plan_generator.py` ignorierte Schwachstellen die als
+DB-Konstanten geliefert wurden (z.B. "HUEFTBEUGER: Untertrainiert", "SCHULTER_HINT: Untertrainiert").
+Ursache: `LABEL_TO_KEYS` hatte nur menschenlesbare Keys ("hüftbeuger" mit Umlaut, "hintere schulter"),
+aber `data_analyzer` liefert Labels als DB-Konstanten ("HUEFTBEUGER", "SCHULTER_HINT").
+Fix: DB-Konstanten (hueftbeuger, schulter_hint, schulter_vorn, ruecken_lat, beine_quad etc.)
+als zusätzliche Keys aufgenommen.
+Verifiziert auf Prod: Auto-Fix ersetzt jetzt korrekt Wadenheben → Lying Leg Raises für HUEFTBEUGER.
+
+**Tests:** 259 ai_coach passed (+2 neue Tests für DB-Konstanten-Labels)
