@@ -1294,6 +1294,47 @@ class TestValidateWeaknessCoverage:
         assert any("Hilfsmuskel" in w for w in warnings)
 
 
+class TestHumanizePlanName:
+    """Tests für _humanize_muskelgruppe und _humanize_plan_name."""
+
+    def test_humanize_muskelgruppe_known(self):
+        from ai_coach.plan_generator import _humanize_muskelgruppe
+
+        assert _humanize_muskelgruppe("SCHULTER_HINT") == "Hintere Schulter"
+        assert _humanize_muskelgruppe("HUEFTBEUGER") == "Hüftbeuger"
+        assert _humanize_muskelgruppe("BAUCH") == "Bauch"
+
+    def test_humanize_muskelgruppe_unknown_passthrough(self):
+        from ai_coach.plan_generator import _humanize_muskelgruppe
+
+        assert _humanize_muskelgruppe("UNKNOWN_KEY") == "UNKNOWN_KEY"
+
+    def test_humanize_plan_name_db_constants(self):
+        from ai_coach.plan_generator import _humanize_plan_name
+
+        name = "Hypertrophie-UPPER/LOWER – Fokus BAUCH_HUEFTBEUGER_SCHULTER_HINT (28.03.2026)"
+        result = _humanize_plan_name(name)
+        assert "Bauch" in result
+        assert "Hüftbeuger" in result
+        assert "Hintere Schulter" in result
+        assert "BAUCH" not in result
+        assert "HUEFTBEUGER" not in result
+        assert "SCHULTER_HINT" not in result
+
+    def test_humanize_plan_name_already_clean(self):
+        from ai_coach.plan_generator import _humanize_plan_name
+
+        name = "Hypertrophie-3ER/SPLIT – Fokus Bauch (28.03.2026)"
+        assert _humanize_plan_name(name) == name
+
+    def test_humanize_plan_name_single_constant(self):
+        from ai_coach.plan_generator import _humanize_plan_name
+
+        name = "Plan – Fokus SCHULTER_HINT"
+        result = _humanize_plan_name(name)
+        assert result == "Plan – Fokus Hintere Schulter"
+
+
 class TestPhase4HelperContracts:
     """Phase 4 (Welle 2): direkte Contracts für Mikrozyklus/Progression-Helper."""
 

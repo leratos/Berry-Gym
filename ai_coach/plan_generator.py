@@ -14,6 +14,56 @@ from .llm_client import LLMClient
 from .prompt_builder import PromptBuilder
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helfer: DB-Konstanten → lesbare Muskelgruppen-Namen
+# ─────────────────────────────────────────────────────────────────────────────
+
+_MUSKELGRUPPE_LABELS: dict[str, str] = {
+    "BRUST": "Brust",
+    "RUECKEN_LAT": "Lat",
+    "RUECKEN_TRAPEZ": "Trapez",
+    "RUECKEN_UNTEN": "Unterer Rücken",
+    "RUECKEN_OBERER": "Oberer Rücken",
+    "SCHULTER_VORN": "Vordere Schulter",
+    "SCHULTER_SEIT": "Seitliche Schulter",
+    "SCHULTER_HINT": "Hintere Schulter",
+    "BIZEPS": "Bizeps",
+    "TRIZEPS": "Trizeps",
+    "BAUCH": "Bauch",
+    "BEINE_QUAD": "Quadrizeps",
+    "BEINE_HAM": "Hamstrings",
+    "PO": "Gesäß",
+    "WADEN": "Waden",
+    "UNTERARME": "Unterarme",
+    "ADDUKTOREN": "Adduktoren",
+    "ABDUKTOREN": "Abduktoren",
+    "HUEFTBEUGER": "Hüftbeuger",
+}
+
+
+def _humanize_muskelgruppe(label: str) -> str:
+    """Wandelt DB-Konstante in lesbaren Namen: 'SCHULTER_HINT' → 'Hintere Schulter'."""
+    return _MUSKELGRUPPE_LABELS.get(label, label)
+
+
+def _humanize_plan_name(name: str) -> str:
+    """Ersetzt DB-Konstanten im Plan-Namen durch Klartext.
+
+    'Fokus BAUCH_HUEFTBEUGER_SCHULTER_HINT' → 'Fokus Bauch, Hüftbeuger, Hintere Schulter'
+    """
+    import re
+
+    for const, human in _MUSKELGRUPPE_LABELS.items():
+        # Ersetze alleinstehende Konstanten (mit Wort-/Unterstrich-Grenzen)
+        name = re.sub(rf"(?<![A-Za-z]){const}(?![A-Za-z])", human, name)
+
+    # Unterstriche zwischen Klartext-Wörtern durch Komma+Leerzeichen ersetzen
+    # z.B. "Bauch_Hüftbeuger_Hintere Schulter" → "Bauch, Hüftbeuger, Hintere Schulter"
+    name = re.sub(r"(?<=[a-zäöüß])_(?=[A-ZÄÖÜ])", ", ", name)
+
+    return name
+
+
 class PlanGenerator:
     """
     Generiert personalisierte Trainingspläne mit AI
@@ -366,11 +416,16 @@ class PlanGenerator:
         if not raw_name or raw_name.lower() in generic_names or len(raw_name) < 10:
             from datetime import date as _date
 
-            # Top-Schwachstelle für Namen
+            # Schwachstellen für Namen (alle "Untertrainiert"-Einträge)
             weaknesses = analysis_data.get("weaknesses", [])
+            focus_labels = [
+                _humanize_muskelgruppe(w.split(":")[0].strip())
+                for w in weaknesses
+                if ":" in w and "Untertrainiert" in w
+            ]
             focus = ""
-            if weaknesses and ":" in weaknesses[0]:
-                focus = f" – Fokus {weaknesses[0].split(':')[0].strip()}"
+            if focus_labels:
+                focus = f" – Fokus {', '.join(focus_labels)}"
             profile_label = {
                 "kraft": "Kraft",
                 "hypertrophie": "Hypertrophie",
@@ -400,7 +455,16 @@ class PlanGenerator:
             if name_fixed != raw_name:
                 plan_json["plan_name"] = name_fixed
                 print(f"   🔧 Datum im Plan-Name korrigiert: '{raw_name}' → '{name_fixed}'")
-            else:
+
+            # DB-Konstanten im LLM-generierten Namen durch Klartext ersetzen
+            name_humanized = _humanize_plan_name(plan_json["plan_name"])
+            if name_humanized != plan_json["plan_name"]:
+                print(
+                    f"   🔧 DB-Konstanten im Plan-Name ersetzt: "
+                    f"'{plan_json['plan_name']}' → '{name_humanized}'"
+                )
+                plan_json["plan_name"] = name_humanized
+            elif name_fixed == raw_name:
                 print(f"   ✓ Plan-Name: '{raw_name}'")
 
         # 6. In Django DB speichern
