@@ -431,7 +431,7 @@
                 <td>{{ letzter_koerperwert.gewicht|floatformat:1 }} kg</td>
                 {% if vormonats_delta %}
                 <td style="font-weight:bold; color:{% if vormonats_delta.gewicht != None %}{% if vormonats_delta.gewicht > 0 %}#dc3545{% elif vormonats_delta.gewicht < 0 %}#28a745{% else %}#6c757d{% endif %}{% else %}#6c757d{% endif %};">
-                    {% if vormonats_delta.gewicht != None %}{% if vormonats_delta.gewicht > 0 %}+{% endif %}{{ vormonats_delta.gewicht|floatformat:1 }} kg{% else %}-{% endif %}
+                    {% if vormonats_delta.gewicht != None %}{% if vormonats_delta.gewicht > 0 %}▲ +{% elif vormonats_delta.gewicht < 0 %}▼ {% endif %}{{ vormonats_delta.gewicht|floatformat:1 }} kg{% else %}-{% endif %}
                 </td>
                 {% endif %}
                 <td>
@@ -482,7 +482,7 @@
                 </td>
                 {% if vormonats_delta %}
                 <td style="font-weight:bold; color:{% if vormonats_delta.kfa != None %}{% if vormonats_delta.kfa > 0 %}#dc3545{% elif vormonats_delta.kfa < 0 %}#28a745{% else %}#6c757d{% endif %}{% else %}#6c757d{% endif %};">
-                    {% if vormonats_delta.kfa != None %}{% if vormonats_delta.kfa > 0 %}+{% endif %}{{ vormonats_delta.kfa|floatformat:1 }} %{% else %}-{% endif %}
+                    {% if vormonats_delta.kfa != None %}{% if vormonats_delta.kfa > 0 %}▲ +{% elif vormonats_delta.kfa < 0 %}▼ {% endif %}{{ vormonats_delta.kfa|floatformat:1 }} %{% else %}-{% endif %}
                 </td>
                 {% endif %}
                 <td>-</td>
@@ -497,7 +497,7 @@
                 </td>
                 {% if vormonats_delta %}
                 <td style="font-weight:bold; color:{% if vormonats_delta.muskelmasse_kg != None %}{% if vormonats_delta.muskelmasse_kg > 0 %}#28a745{% elif vormonats_delta.muskelmasse_kg < 0 %}#dc3545{% else %}#6c757d{% endif %}{% else %}#6c757d{% endif %};">
-                    {% if vormonats_delta.muskelmasse_kg != None %}{% if vormonats_delta.muskelmasse_kg > 0 %}+{% endif %}{{ vormonats_delta.muskelmasse_kg|floatformat:1 }} kg{% else %}-{% endif %}
+                    {% if vormonats_delta.muskelmasse_kg != None %}{% if vormonats_delta.muskelmasse_kg > 0 %}▲ +{% elif vormonats_delta.muskelmasse_kg < 0 %}▼ {% endif %}{{ vormonats_delta.muskelmasse_kg|floatformat:1 }} kg{% else %}-{% endif %}
                 </td>
                 {% endif %}
                 <td>-</td>
@@ -512,7 +512,7 @@
                 </td>
                 {% if vormonats_delta %}
                 <td style="font-weight:bold; color:{% if vormonats_delta.koerperwasser_pct != None %}{% if vormonats_delta.koerperwasser_pct > 0 %}#28a745{% elif vormonats_delta.koerperwasser_pct < 0 %}#dc3545{% else %}#6c757d{% endif %}{% else %}#6c757d{% endif %};">
-                    {% if vormonats_delta.koerperwasser_pct != None %}{% if vormonats_delta.koerperwasser_pct > 0 %}+{% endif %}{{ vormonats_delta.koerperwasser_pct|floatformat:1 }} %{% else %}-{% endif %}
+                    {% if vormonats_delta.koerperwasser_pct != None %}{% if vormonats_delta.koerperwasser_pct > 0 %}▲ +{% elif vormonats_delta.koerperwasser_pct < 0 %}▼ {% endif %}{{ vormonats_delta.koerperwasser_pct|floatformat:1 }} %{% else %}-{% endif %}
                 </td>
                 {% endif %}
                 <td>-</td>
