@@ -719,6 +719,7 @@ def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         "rpe_verteilung": rpe_verteilung,
         "volumen_wochen": volumen_wochen[-8:],
         "koerperwerte": koerperwerte,
+        "any_viszeral": any(kw.viszeralfett for kw in koerperwerte),
         "koerperwerte_chart": koerperwerte_chart,
         "letzter_koerperwert": letzter_koerperwert,
         "gewichts_rate": gewichts_rate,
