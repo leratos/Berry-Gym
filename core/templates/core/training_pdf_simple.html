@@ -875,7 +875,7 @@
                 </td>
                 <td>{{ item.letzter_pr }} kg</td>
                 <td>{{ item.pr_datum }}</td>
-                <td>{{ item.tage_seit_pr }}</td>
+                <td>{% if item.tage_seit_pr == 0 %}Heute{% elif item.tage_seit_pr == 1 %}Gestern{% else %}{{ item.tage_seit_pr }} Tage{% endif %}</td>
                 <td>+{{ item.progression_pro_monat }} kg</td>
                 <td>
                     {% if item.status_farbe == 'success' %}
