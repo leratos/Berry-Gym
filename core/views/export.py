@@ -592,6 +592,25 @@ def _analyze_weight_loss_context(stats: dict) -> dict | None:
     }
 
 
+def _calc_vormonats_delta(aktuell, vormonat) -> dict:
+    """Berechnet Deltas zwischen aktuellem und Vormonats-Körperwert."""
+
+    def _delta(akt_val, vor_val):
+        if akt_val is not None and vor_val is not None:
+            diff = float(akt_val) - float(vor_val)
+            return round(diff, 1) if diff != 0.0 else None
+        return None
+
+    return {
+        "datum": vormonat.datum,
+        "gewicht": _delta(aktuell.gewicht, vormonat.gewicht),
+        "kfa": _delta(aktuell.koerperfett_prozent, vormonat.koerperfett_prozent),
+        "muskelmasse_kg": _delta(aktuell.muskelmasse_kg, vormonat.muskelmasse_kg),
+        "muskelmasse_pct": _delta(aktuell.muskelmasse_prozent, vormonat.muskelmasse_prozent),
+        "koerperwasser_pct": _delta(aktuell.koerperwasser_prozent, vormonat.koerperwasser_prozent),
+    }
+
+
 def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     """Sammelt alle Statistiken für den PDF-Report.
 
@@ -645,6 +664,14 @@ def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     koerperwerte_chart = list(koerperwerte_qs.order_by("datum"))
     letzter_koerperwert = koerperwerte[0] if koerperwerte else None
     user_gewicht = letzter_koerperwert.gewicht if letzter_koerperwert else None
+
+    # Vormonats-Delta für Executive Summary
+    vormonats_delta = None
+    if letzter_koerperwert:
+        vormonat_grenze = heute - timedelta(days=25)
+        vormonat_kw = koerperwerte_qs.filter(datum__lte=vormonat_grenze.date()).first()
+        if vormonat_kw:
+            vormonats_delta = _calc_vormonats_delta(letzter_koerperwert, vormonat_kw)
     gewichts_rate = (
         letzter_koerperwert.gewichts_veraenderung_rate() if letzter_koerperwert else None
     )
@@ -689,6 +716,7 @@ def _collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         "letzter_koerperwert": letzter_koerperwert,
         "gewichts_rate": gewichts_rate,
         "gewichts_trend": gewichts_trend,
+        "vormonats_delta": vormonats_delta,
         "plateau_analysis": plateau_analysis,
         "consistency_metrics": consistency_metrics,
         "fatigue_analysis": fatigue_analysis,

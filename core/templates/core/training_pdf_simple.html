@@ -450,8 +450,9 @@
     <table>
         <thead>
             <tr>
+                <th>Messwert</th>
                 <th>Aktuell ({{ letzter_koerperwert.datum|date:"d.m.Y" }})</th>
-                <th>Wert</th>
+                {% if vormonats_delta %}<th>Delta Vormonat</th>{% endif %}
                 <th>Bewertung</th>
             </tr>
         </thead>
@@ -459,6 +460,11 @@
             <tr>
                 <td>Gewicht</td>
                 <td>{{ letzter_koerperwert.gewicht|floatformat:1 }} kg</td>
+                {% if vormonats_delta %}
+                <td style="font-weight:bold; color:{% if vormonats_delta.gewicht != None %}{% if vormonats_delta.gewicht > 0 %}#dc3545{% elif vormonats_delta.gewicht < 0 %}#28a745{% else %}#6c757d{% endif %}{% else %}#6c757d{% endif %};">
+                    {% if vormonats_delta.gewicht != None %}{% if vormonats_delta.gewicht > 0 %}+{% endif %}{{ vormonats_delta.gewicht|floatformat:1 }} kg{% else %}-{% endif %}
+                </td>
+                {% endif %}
                 <td>
                     {% if gewichts_trend %}
                         {% if gewichts_trend.diff > 0 %}▲{% else %}▼{% endif %}
@@ -470,6 +476,7 @@
             <tr>
                 <td>BMI</td>
                 <td>{{ letzter_koerperwert.bmi }}</td>
+                {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>
                     {% with bmi=letzter_koerperwert.bmi %}
                     {% if bmi < 18.5 %}Untergewicht
@@ -484,6 +491,7 @@
             <tr>
                 <td>FFMI</td>
                 <td>{{ letzter_koerperwert.ffmi }}</td>
+                {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>
                     {% with ffmi=letzter_koerperwert.ffmi %}
                     {% if ffmi < 18 %}Unterdurchschnittlich
@@ -503,6 +511,11 @@
                     ({{ letzter_koerperwert.fettmasse_kg|floatformat:1 }} kg)
                     {% endif %}
                 </td>
+                {% if vormonats_delta %}
+                <td style="font-weight:bold; color:{% if vormonats_delta.kfa != None %}{% if vormonats_delta.kfa > 0 %}#dc3545{% elif vormonats_delta.kfa < 0 %}#28a745{% else %}#6c757d{% endif %}{% else %}#6c757d{% endif %};">
+                    {% if vormonats_delta.kfa != None %}{% if vormonats_delta.kfa > 0 %}+{% endif %}{{ vormonats_delta.kfa|floatformat:1 }} %{% else %}-{% endif %}
+                </td>
+                {% endif %}
                 <td>-</td>
             </tr>
             {% endif %}
@@ -513,6 +526,11 @@
                     {% if letzter_koerperwert.muskelmasse_kg %}{{ letzter_koerperwert.muskelmasse_kg|floatformat:1 }} kg{% endif %}
                     {% if letzter_koerperwert.muskelmasse_prozent %}({{ letzter_koerperwert.muskelmasse_prozent|floatformat:1 }} %){% endif %}
                 </td>
+                {% if vormonats_delta %}
+                <td style="font-weight:bold; color:{% if vormonats_delta.muskelmasse_kg != None %}{% if vormonats_delta.muskelmasse_kg > 0 %}#28a745{% elif vormonats_delta.muskelmasse_kg < 0 %}#dc3545{% else %}#6c757d{% endif %}{% else %}#6c757d{% endif %};">
+                    {% if vormonats_delta.muskelmasse_kg != None %}{% if vormonats_delta.muskelmasse_kg > 0 %}+{% endif %}{{ vormonats_delta.muskelmasse_kg|floatformat:1 }} kg{% else %}-{% endif %}
+                </td>
+                {% endif %}
                 <td>-</td>
             </tr>
             {% endif %}
@@ -523,6 +541,11 @@
                     {% if letzter_koerperwert.koerperwasser_kg %}{{ letzter_koerperwert.koerperwasser_kg|floatformat:1 }} kg{% endif %}
                     {% if letzter_koerperwert.koerperwasser_prozent %}({{ letzter_koerperwert.koerperwasser_prozent|floatformat:1 }} %){% endif %}
                 </td>
+                {% if vormonats_delta %}
+                <td style="font-weight:bold; color:{% if vormonats_delta.koerperwasser_pct != None %}{% if vormonats_delta.koerperwasser_pct > 0 %}#28a745{% elif vormonats_delta.koerperwasser_pct < 0 %}#dc3545{% else %}#6c757d{% endif %}{% else %}#6c757d{% endif %};">
+                    {% if vormonats_delta.koerperwasser_pct != None %}{% if vormonats_delta.koerperwasser_pct > 0 %}+{% endif %}{{ vormonats_delta.koerperwasser_pct|floatformat:1 }} %{% else %}-{% endif %}
+                </td>
+                {% endif %}
                 <td>-</td>
             </tr>
             {% endif %}
@@ -530,6 +553,7 @@
             <tr>
                 <td>Fettfreie Masse (LBM)</td>
                 <td>{{ letzter_koerperwert.lbm_kg|floatformat:1 }} kg</td>
+                {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>-</td>
             </tr>
             {% endif %}
@@ -537,6 +561,7 @@
             <tr>
                 <td>Muskel/Fett-Ratio</td>
                 <td>{{ letzter_koerperwert.muskel_fett_ratio }}:1</td>
+                {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>
                     {% with ratio=letzter_koerperwert.muskel_fett_ratio %}
                     {% if ratio < 1.0 %}Mehr Fett als Muskeln
@@ -551,6 +576,7 @@
             <tr>
                 <td>Viszeralfett</td>
                 <td>Stufe {{ letzter_koerperwert.viszeralfett }}</td>
+                {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>
                     {% with vf=letzter_koerperwert.viszeralfett %}
                     {% if vf <= 9 %}✅ Normal
@@ -564,6 +590,7 @@
             <tr>
                 <td>Grundumsatz (BMR)</td>
                 <td>{{ letzter_koerperwert.grundumsatz_kcal }} kcal</td>
+                {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>-</td>
             </tr>
             {% endif %}
@@ -576,6 +603,7 @@
                     <br><span style="font-size:7px;color:#888;">Basis: {{ weight_loss_analysis.referenz_info }}</span>
                     {% endif %}
                 </td>
+                {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>
                     {% if gewichts_rate > 1.0 %}&#9888; Schnelle Zunahme
                     {% elif gewichts_rate > 0 %}Leichte Zunahme
