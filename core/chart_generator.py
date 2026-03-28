@@ -812,3 +812,70 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
     plt.close(fig)
 
     return image_base64
+
+
+def generate_rpe_donut(rpe_verteilung: dict, avg_rpe: float = 0.0) -> str | None:
+    """Donut-Chart für RPE-Verteilung (leicht/mittel/schwer).
+
+    Args:
+        rpe_verteilung: Dict mit Keys 'leicht', 'mittel', 'schwer' und Anzahl als Werte.
+        avg_rpe: Durchschnittlicher RPE-Wert für die Mitte des Donuts.
+
+    Returns:
+        Base64-encoded PNG oder None bei fehlenden Daten.
+    """
+    if not rpe_verteilung:
+        return None
+
+    labels = []
+    sizes = []
+    colors = []
+
+    mapping = [
+        ("leicht", "Leicht (RPE 1-6)", "#28a745"),
+        ("mittel", "Mittel (RPE 7-8)", "#ffc107"),
+        ("schwer", "Schwer (RPE 9-10)", "#dc3545"),
+    ]
+
+    for key, label, color in mapping:
+        val = rpe_verteilung.get(key, 0)
+        if val > 0:
+            labels.append(label)
+            sizes.append(val)
+            colors.append(color)
+
+    if not sizes or sum(sizes) == 0:
+        return None
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    wedges, texts, autotexts = ax.pie(
+        sizes,
+        labels=labels,
+        colors=colors,
+        autopct="%1.0f%%",
+        startangle=90,
+        pctdistance=0.78,
+        wedgeprops={"width": 0.4, "edgecolor": "white", "linewidth": 2},
+        textprops={"fontsize": 9},
+    )
+
+    for at in autotexts:
+        at.set_fontsize(9)
+        at.set_fontweight("bold")
+
+    # Zentraler Text: Durchschnittlicher RPE
+    if avg_rpe > 0:
+        ax.text(0, 0, f"Ø {avg_rpe:.1f}", ha="center", va="center", fontsize=18, fontweight="bold")
+
+    ax.set_title("RPE-Verteilung", fontsize=12, fontweight="bold", pad=15)
+
+    plt.tight_layout()
+
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+    buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.read()).decode("utf-8")
+    plt.close(fig)
+
+    return image_base64
