@@ -633,16 +633,35 @@ def generate_volume_chart(volumen_wochen):
     fig, ax = plt.subplots(figsize=(10, 4))
 
     # Line chart mit Area fill
-    ax.plot(wochen, volumen, marker="o", linewidth=2, color="#0d6efd", markersize=8)
-    ax.fill_between(range(len(wochen)), volumen, alpha=0.3, color="#0d6efd")
+    x = range(len(wochen))
+    ax.plot(
+        x, volumen, marker="o", linewidth=2, color="#0d6efd", markersize=8, label="Wochenvolumen"
+    )
+    ax.fill_between(x, volumen, alpha=0.3, color="#0d6efd")
+
+    # Gleitender 4-Wochen-Durchschnitt
+    if len(volumen) >= 4:
+        vol_arr = np.array(volumen, dtype=float)
+        ma = np.convolve(vol_arr, np.ones(4) / 4, mode="valid")
+        ma_x = range(3, len(volumen))  # Start bei Index 3 (4. Datenpunkt)
+        ax.plot(
+            list(ma_x),
+            list(ma),
+            linewidth=2,
+            color="#ff6b6b",
+            linestyle="--",
+            label="Ø 4 Wochen",
+            alpha=0.8,
+        )
 
     # Beschriftung
     ax.set_xlabel("Kalenderwoche", fontsize=10, fontweight="bold")
     ax.set_ylabel("Trainingsvolumen (kg)", fontsize=10, fontweight="bold")
     ax.set_title("Trainingsvolumen-Entwicklung", fontsize=12, fontweight="bold", pad=20)
+    ax.legend(fontsize=8, loc="upper left")
 
     # Werte auf Punkten anzeigen
-    for i, (woche, vol) in enumerate(zip(wochen, volumen)):
+    for i, vol in enumerate(volumen):
         ax.text(
             i,
             vol + max(volumen) * 0.03,
@@ -653,12 +672,13 @@ def generate_volume_chart(volumen_wochen):
             fontweight="bold",
         )
 
+    # X-Achsen-Labels setzen
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(wochen, rotation=45, ha="right")
+
     # Grid
     ax.grid(True, alpha=0.3, linestyle=":", linewidth=0.5)
     ax.set_axisbelow(True)
-
-    # X-Achse lesbar machen
-    plt.xticks(rotation=45, ha="right")
 
     plt.tight_layout()
 
