@@ -1093,8 +1093,13 @@
     {% endif %}
 
     <!-- RPE-Verteilung -->
+    {% if rpe_donut_chart %}
+    <div style="text-align: center; margin: 10px 0;">
+        <img src="data:image/png;base64,{{ rpe_donut_chart }}" alt="RPE-Verteilung" style="width: 280px; max-width: 100%;">
+    </div>
+    {% endif %}
     <div class="rpe-distribution">
-        <h3 style="margin-top: 0;">RPE-Verteilung:</h3>
+        <h3 style="margin-top: 0;">RPE-Verteilung (Detail):</h3>
         <ul>
             <li>Sehr leicht (RPE &lt;5): {{ rpe_quality.rpe_verteilung_prozent.sehr_leicht }}%</li>
             <li>Leicht (RPE 5-6): {{ rpe_quality.rpe_verteilung_prozent.leicht }}%</li>

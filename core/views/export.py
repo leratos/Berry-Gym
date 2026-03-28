@@ -39,6 +39,7 @@ from core.chart_generator import (
     generate_body_trend_chart,
     generate_muscle_heatmap,
     generate_push_pull_pie,
+    generate_rpe_donut,
     generate_volume_chart,
 )
 
@@ -772,6 +773,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         muskelgruppen_stats, volumen_wochen, push_saetze, pull_saetze
     )
     body_trend_chart = generate_body_trend_chart(stats.get("koerperwerte_chart", []))
+    rpe_donut_chart = generate_rpe_donut(stats.get("rpe_verteilung", {}), stats.get("avg_rpe", 0.0))
 
     context = {
         "user": request.user,
@@ -781,6 +783,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         "push_pull_chart": push_pull_chart,
         "body_map_image": body_map_image,
         "body_trend_chart": body_trend_chart,
+        "rpe_donut_chart": rpe_donut_chart,
         **stats,
     }
 
