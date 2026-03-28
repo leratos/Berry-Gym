@@ -5105,3 +5105,15 @@ als zusätzliche Keys aufgenommen.
 Verifiziert auf Prod: Auto-Fix ersetzt jetzt korrekt Wadenheben → Lying Leg Raises für HUEFTBEUGER.
 
 **Tests:** 259 ai_coach passed (+2 neue Tests für DB-Konstanten-Labels)
+
+### 15.4: Plan-Titel – DB-Konstanten durch Klartext ersetzen
+Plan-Namen enthielten rohe DB-Konstanten wie "Fokus BAUCH_HUEFTBEUGER_SCHULTER_HINT".
+Neue Helfer in `plan_generator.py`:
+- `_MUSKELGRUPPE_LABELS`: Dict mit allen 19 DB-Konstanten → Klartext-Mappings
+- `_humanize_muskelgruppe(label)`: Einzelne Konstante → Klartext
+- `_humanize_plan_name(name)`: Regex-basierte Ersetzung im gesamten Plan-Namen,
+  Unterstriche zwischen Klartext-Wörtern werden zu ", " konvertiert
+Greift an zwei Stellen: (1) Fallback-Namensgenerierung, (2) LLM-generierte Namen nachträglich.
+Ergebnis: "Fokus Bauch, Hüftbeuger, Hintere Schulter" statt DB-Konstanten.
+
+**Tests:** 264 ai_coach passed (+5 neue Tests für Humanize-Helfer)
