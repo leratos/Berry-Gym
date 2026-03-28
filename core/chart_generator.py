@@ -598,7 +598,13 @@ def generate_muscle_heatmap(muskelgruppen_stats):
         mpatches.Patch(color="#dc3545", label="Übertrainiert"),
         mpatches.Patch(color="#6c757d", label="Nicht trainiert"),
     ]
-    ax.legend(handles=legend_elements, loc="lower right", fontsize=8)
+    ax.legend(
+        handles=legend_elements,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.05),
+        ncol=4,
+        fontsize=8,
+    )
 
     # Grid
     ax.grid(axis="x", alpha=0.3, linestyle=":", linewidth=0.5)
@@ -821,7 +827,15 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
     # Gemeinsame Legende
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=8, framealpha=0.8)
+    ax1.legend(
+        lines1 + lines2,
+        labels1 + labels2,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.15),
+        ncol=3,
+        fontsize=8,
+        framealpha=0.8,
+    )
 
     plt.tight_layout()
 
