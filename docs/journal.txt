@@ -5064,3 +5064,33 @@ Dashboard und PDF nutzen jetzt identische Fatigue-Berechnung.
 - `core/utils/advanced_stats.py` – Fatigue-Index Konsolidierung
 - `core/tests/test_koerpergewicht_support.py` – 20 neue Tests
 - `docs/PROJECT_ROADMAP.md` – Phase 13+14 Status aktualisiert
+
+
+---
+
+## Phase 15: Mindest-Satz-Budget Validierung & Auto-Fix
+
+**Datum:** 2026-03-28
+
+### 15.1: Session-Satz-Budget in _auto_fix_weakness()
+`plan_generator.py:_auto_fix_weakness()` prüft jetzt das Session-Satz-Budget bevor
+entschieden wird ob eine Übung ersetzt oder hinzugefügt wird:
+- `current_sets < max_budget - 2` → Übung HINZUFÜGEN (statt ersetzen)
+- Sätze = min(3, verbleibendes Budget)
+- Fallback: wenn alle Übungen Compounds (< 3 ersetzbar) → ebenfalls hinzufügen
+- Sonst: ersetze Übung mit wenigsten Sätzen ab Position 3+
+
+Verhindert, dass bei Sessions mit Luft (z.B. 13/18 Sätze) eine funktionierende
+Übung unnötig durch eine Schwachstellen-Übung ersetzt wird.
+
+### 15.2: Mindest-Satz-Budget Validierung
+Neuer Check `_check_min_sets_per_session()` in `plan_validator.py`:
+- Warnt wenn Session < 14 Sätze hat (Konstante `_MIN_SETS_PER_SESSION`)
+- Verhindert asymmetrische Pläne wie Push 18 / Pull 18 / Legs 13
+- Eingebunden in `validate_plan_structure()` Entry-Point
+
+**Tests:** 1711 passed (257 ai_coach + 1454 core), 5 skipped
+
+**Geänderte Dateien:**
+- `ai_coach/plan_generator.py` – 15.1: Budget-Check in _auto_fix_weakness()
+- `ai_coach/plan_validator.py` – 15.2: _check_min_sets_per_session() + Konstante _MIN_SETS_PER_SESSION
