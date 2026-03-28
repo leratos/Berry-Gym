@@ -798,7 +798,7 @@
                 <th>Übung</th>
                 <th>Start-Gewicht</th>
                 <th>Aktuell</th>
-                <th>Entwicklung</th>
+                <th>Steigerung</th>
             </tr>
         </thead>
         <tbody>
@@ -807,7 +807,9 @@
                 <td><strong>{{ prog.uebung }}</strong></td>
                 <td>{{ prog.start_gewicht|floatformat:1 }} kg</td>
                 <td>{{ prog.aktuell_gewicht|floatformat:1 }} kg</td>
-                <td style="color: #28a745; font-weight: bold;">Gewinn</td>
+                <td style="font-weight: bold; color: {% if prog.progression > 100 %}#DAA520{% elif prog.progression > 50 %}#28a745{% elif prog.progression > 20 %}#0d6efd{% elif prog.progression > 0 %}#6c757d{% else %}#dc3545{% endif %};">
+                    {% if prog.progression > 0 %}+{% endif %}{{ prog.progression|floatformat:1 }}%
+                </td>
             </tr>
             {% endfor %}
         </tbody>
