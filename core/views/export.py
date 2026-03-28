@@ -313,16 +313,45 @@ def _collect_intensity_data(alle_saetze, letzte_30_tage) -> tuple[float, dict]:
 
 
 def _collect_weekly_volume_pdf(alle_saetze) -> list[dict]:
-    """Build weekly volume progression (last 12 weeks) for PDF report."""
+    """Build weekly volume progression (last 12 weeks) for PDF report.
+
+    Fills gaps between calendar weeks with 0 so the chart shows
+    missing weeks instead of skipping them.
+    """
     weekly_volume: dict[str, float] = defaultdict(float)
     for satz in alle_saetze.filter(ist_aufwaermsatz=False):
         if satz.gewicht and satz.wiederholungen:
             iso_year, iso_week, _ = satz.einheit.datum.isocalendar()
             week_key = f"{iso_year}-W{iso_week:02d}"
             weekly_volume[week_key] += float(satz.gewicht) * satz.wiederholungen
-    labels = sorted(weekly_volume.keys())[-12:]
+
+    if not weekly_volume:
+        return []
+
+    # Fill gaps between first and last week
+    all_keys = sorted(weekly_volume.keys())
+    first_key, last_key = all_keys[0], all_keys[-1]
+    first_year, first_week = int(first_key.split("-W")[0]), int(first_key.split("-W")[1])
+    last_year, last_week = int(last_key.split("-W")[0]), int(last_key.split("-W")[1])
+
+    filled: list[str] = []
+    y, w = first_year, first_week
+    while (y, w) <= (last_year, last_week):
+        key = f"{y}-W{w:02d}"
+        filled.append(key)
+        # Advance to next ISO week
+        w += 1
+        # ISO weeks: most years have 52, some have 53
+        from datetime import date
+
+        max_week = date(y, 12, 28).isocalendar()[1]
+        if w > max_week:
+            w = 1
+            y += 1
+
+    labels = filled[-12:]
     return [
-        {"woche": f"KW{label.split('-W')[1]}", "volumen": round(weekly_volume[label], 0)}
+        {"woche": f"KW{label.split('-W')[1]}", "volumen": round(weekly_volume.get(label, 0), 0)}
         for label in labels
     ]
 
