@@ -675,7 +675,7 @@
                 <th>KFA %</th>
                 <th>Muskeln %</th>
                 <th>Wasser %</th>
-                <th>Viszeral</th>
+                {% if any_viszeral %}<th>Viszeral</th>{% endif %}
                 <th>BMR</th>
             </tr>
         </thead>
@@ -689,7 +689,7 @@
                 <td>{{ wert.koerperfett_prozent|floatformat:1|default:"-" }}{% if wert.koerperfett_prozent %} %{% endif %}</td>
                 <td>{{ wert.muskelmasse_prozent|floatformat:1|default:"-" }}{% if wert.muskelmasse_prozent %} %{% endif %}</td>
                 <td>{{ wert.koerperwasser_prozent|floatformat:1|default:"-" }}{% if wert.koerperwasser_prozent %} %{% endif %}</td>
-                <td>{{ wert.viszeralfett|default:"-" }}</td>
+                {% if any_viszeral %}<td>{{ wert.viszeralfett|default:"-" }}</td>{% endif %}
                 <td>{% if wert.grundumsatz_kcal %}{{ wert.grundumsatz_kcal }}{% else %}-{% endif %}</td>
             </tr>
             {% endfor %}
