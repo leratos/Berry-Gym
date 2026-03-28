@@ -409,9 +409,16 @@ def _render_training_pdf_response(request: HttpRequest, context: dict, heute) ->
             messages.error(request, "Fehler beim PDF-Export (pisaDocument failed)")
             return redirect("training_stats")
         response = HttpResponse(result.getvalue(), content_type="application/pdf")
-        response["Content-Disposition"] = (
-            f'attachment; filename="homegym_report_{heute.strftime("%Y%m%d")}.pdf"'
-        )
+        username = request.user.username
+        start = context.get("start_datum")
+        end = context.get("end_datum")
+        if start and end:
+            filename = (
+                f"TrainingReport_{username}_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.pdf"
+            )
+        else:
+            filename = f"TrainingReport_{username}_{heute.strftime('%Y%m%d')}.pdf"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
     except Exception as e:
         logger.error(f"PDF export failed: {str(e)}", exc_info=True)
