@@ -261,35 +261,35 @@
 
         .exercise-1rm-card {
             background: #f8f9fa;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
             page-break-inside: avoid;
         }
 
         .rm-value {
-            font-size: 16px;
-            margin: 10px 0;
+            font-size: 13px;
+            margin: 4px 0;
             color: #198754;
         }
 
         .rm-chart {
-            margin: 15px 0;
+            margin: 6px 0;
             font-size: 9px;
         }
 
         .monat-data {
             display: inline-block;
-            margin-right: 15px;
+            margin-right: 10px;
         }
 
         .standards-comparison {
-            margin-top: 20px;
+            margin-top: 8px;
         }
 
         .standards-list {
             display: table;
             width: 100%;
-            margin: 15px 0;
+            margin: 6px 0;
         }
 
         .standards-row {
@@ -298,10 +298,10 @@
 
         .standard-item {
             display: table-cell;
-            padding: 10px;
+            padding: 4px 8px;
             background: white;
-            border: 2px solid #e9ecef;
-            width: 50%;
+            border: 1px solid #e9ecef;
+            font-size: 9px;
         }
 
         .standard-item.erreicht {
@@ -1016,46 +1016,35 @@
     {% if rm_standards %}
     {% for item in rm_standards %}
     <div class="exercise-1rm-card">
-        <h3 style="margin-top: 0;">{{ item.uebung }}</h3>
-        <div class="rm-value">Geschätzter 1RM: <strong>{{ item.geschaetzter_1rm }} kg</strong></div>
+        <h3 style="margin-top: 0; margin-bottom: 4px;">{{ item.uebung }}
+            {% if item.standard_info %}<span class="badge badge-success" style="margin-left: 8px;">{{ item.standard_info.level_label }}</span>{% endif %}
+        </h3>
+        <div class="rm-value">1RM: <strong>{{ item.geschaetzter_1rm }} kg</strong></div>
 
         <!-- 6-Monats-Entwicklung -->
         <div class="rm-chart">
-            <strong>Entwicklung (6 Monate):</strong><br>
+            <strong>6 Monate:</strong>
             {% for monat in item.1rm_entwicklung %}
-                <span class="monat-data">
-                    {{ monat.monat }}:
-                    {% if monat.1rm %}{{ monat.1rm }} kg{% else %}-{% endif %}
-                </span>
+                <span class="monat-data">{{ monat.monat }}: {% if monat.1rm %}{{ monat.1rm }} kg{% else %}-{% endif %}</span>
             {% endfor %}
         </div>
 
-        <!-- Kraftstandards (falls vorhanden) -->
+        <!-- Kraftstandards kompakt -->
         {% if item.standard_info %}
         <div class="standards-comparison">
-            <p><strong>Aktuelles Level:</strong>
-               <span class="badge badge-success">{{ item.standard_info.level_label }}</span>
-            </p>
-
-            <div class="standards-list">
+            <table style="width: 100%; font-size: 9px; margin: 4px 0;">
+                <tr>
                 {% for level, gewicht in item.standard_info.alle_levels.items %}
-                <div class="standards-row">
-                    <div class="standard-item {% if level in item.standard_info.erreicht %}erreicht{% endif %}">
-                        <span style="font-weight: bold;">{{ level }}</span>:
-                        <span>{{ gewicht }} kg</span>
-                        {% if level in item.standard_info.erreicht %} ✅{% endif %}
-                    </div>
-                </div>
+                    <td style="padding: 3px 6px; text-align: center; border: 1px solid #e9ecef; {% if level in item.standard_info.erreicht %}background: #d1e7dd; border-color: #198754;{% endif %}">
+                        <strong>{{ level }}</strong><br>{{ gewicht }} kg
+                    </td>
                 {% endfor %}
-            </div>
-
-            <p style="font-size: 9px; margin-top: 10px; margin-bottom: 3px;">
-                Noch <strong>{{ item.standard_info.naechstes_gewicht|floatformat:1 }} kg</strong> bis
-                <strong>{{ item.standard_info.naechstes_level }}</strong>
-            </p>
-            <div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ item.standard_info.prozent_bis_naechstes }}%; background: #198754;">
+                </tr>
+            </table>
+            <div style="font-size: 9px; margin-top: 4px;">
+                Noch <strong>{{ item.standard_info.naechstes_gewicht|floatformat:1 }} kg</strong> bis <strong>{{ item.standard_info.naechstes_level }}</strong>
+                <div class="progress-bar" style="height: 14px; margin-top: 2px;">
+                    <div class="progress-fill" style="width: {{ item.standard_info.prozent_bis_naechstes }}%; background: #198754; line-height: 14px; font-size: 7px;">
                         {{ item.standard_info.prozent_bis_naechstes }}%
                     </div>
                 </div>
@@ -1069,8 +1058,6 @@
         Noch nicht genügend Daten für 1RM-Analyse verfügbar.
     </div>
     {% endif %}
-
-    <pdf:nextpage />
 
     <!-- RPE-QUALITÄT -->
     <h1>📈 Trainings-Qualität (RPE-Analyse)</h1>
