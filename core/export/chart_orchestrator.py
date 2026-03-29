@@ -27,7 +27,7 @@ CHART_CACHE_TTL = 3600  # 1 hour
 def _data_hash(*args) -> str:
     """Create a stable hash from JSON-serializable data for cache keys."""
     raw = json.dumps(args, sort_keys=True, default=str)
-    return hashlib.md5(raw.encode()).hexdigest()[:12]
+    return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()[:12]
 
 
 def _get_or_generate(cache_key: str, generator_fn, *args):
