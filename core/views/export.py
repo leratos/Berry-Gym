@@ -17,7 +17,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
@@ -34,6 +33,7 @@ except ImportError:
 from core.chart_generator import generate_body_trend_chart, generate_rpe_donut
 
 from ..export.chart_orchestrator import generate_pdf_charts
+from ..export.pdf_renderer import render_training_pdf_response
 from ..export.stats_collector import calc_volume_trend_weekly, collect_pdf_stats
 from ..export.weight_analysis import analyze_weight_loss_context
 from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung
@@ -105,44 +105,6 @@ def export_training_csv(request: HttpRequest) -> HttpResponse:
     return response
 
 
-def _render_training_pdf_response(request: HttpRequest, context: dict, heute) -> HttpResponse:
-    """Render training PDF template and return PDF download response.
-
-    Handles both template rendering errors and xhtml2pdf generation errors,
-    returning redirect to training_stats with error message on failure.
-    """
-    try:
-        html_string = render_to_string("core/training_pdf_simple.html", context)
-    except Exception as e:
-        logger.error(f"Template rendering failed: {str(e)}", exc_info=True)
-        messages.error(request, "Template-Fehler: PDF konnte nicht erstellt werden.")
-        return redirect("training_stats")
-
-    try:
-        result = BytesIO()
-        pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
-        if pdf.err:
-            logger.error(f"PDF generation failed with {pdf.err} errors")
-            messages.error(request, "Fehler beim PDF-Export (pisaDocument failed)")
-            return redirect("training_stats")
-        response = HttpResponse(result.getvalue(), content_type="application/pdf")
-        username = request.user.username
-        start = context.get("start_datum")
-        end = context.get("end_datum")
-        if start and end:
-            filename = (
-                f"TrainingReport_{username}_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.pdf"
-            )
-        else:
-            filename = f"TrainingReport_{username}_{heute.strftime('%Y%m%d')}.pdf"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        return response
-    except Exception as e:
-        logger.error(f"PDF export failed: {str(e)}", exc_info=True)
-        messages.error(request, "PDF-Generierung fehlgeschlagen. Bitte später erneut versuchen.")
-        return redirect("training_stats")
-
-
 @login_required
 def export_training_pdf(request: HttpRequest) -> HttpResponse:
     """Export training statistics as PDF.
@@ -196,7 +158,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         **stats,
     }
 
-    return _render_training_pdf_response(request, context, heute)
+    return render_training_pdf_response(request, context, heute)
 
 
 def _generate_qr_code_base64(url: str) -> str:
