@@ -43,6 +43,7 @@ from core.chart_generator import (
     generate_volume_chart,
 )
 
+from ..export.constants import EMPFOHLENE_SAETZE, PULL_GROUPS, PUSH_GROUPS
 from ..models import MUSKELGRUPPEN, KoerperWerte, Plan, PlanUebung, Satz, Trainingseinheit, Uebung
 from ..utils.advanced_stats import (
     calculate_1rm_standards,
@@ -53,6 +54,11 @@ from ..utils.advanced_stats import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Backward-compatible aliases used throughout this module
+_EMPFOHLENE_SAETZE = EMPFOHLENE_SAETZE
+_PUSH_GROUPS = PUSH_GROUPS
+_PULL_GROUPS = PULL_GROUPS
 
 
 @login_required
@@ -113,34 +119,6 @@ def export_training_csv(request: HttpRequest) -> HttpResponse:
             )
 
     return response
-
-
-_EMPFOHLENE_SAETZE: dict[str, tuple[int, int]] = {
-    "brust": (12, 20),
-    "ruecken_breiter": (15, 25),
-    "ruecken_unterer": (10, 18),
-    "schulter_vordere": (8, 15),
-    "schulter_seitliche": (12, 20),
-    "schulter_hintere": (12, 20),
-    "bizeps": (10, 18),
-    "trizeps": (10, 18),
-    "quadrizeps": (15, 25),
-    "hamstrings": (12, 20),
-    "glutaeus": (10, 18),
-    "waden": (12, 20),
-    "bauch": (12, 25),
-    "unterer_ruecken": (8, 15),
-}
-
-_PUSH_GROUPS = ["BRUST", "SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS"]
-_PULL_GROUPS = [
-    "RUECKEN_LAT",
-    "RUECKEN_TRAPEZ",
-    "RUECKEN_UNTEN",
-    "RUECKEN_OBERER",
-    "SCHULTER_HINT",
-    "BIZEPS",
-]
 
 
 def _muscle_status(anzahl: int, min_s: int, max_s: int, wenig_daten: bool) -> tuple[str, str, str]:
