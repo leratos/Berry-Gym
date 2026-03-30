@@ -5,12 +5,17 @@
     <title>HomeGym Training Report</title>
     <style>
         @page {
-            margin: 2cm 1.5cm;
-            @bottom-center {
-                content: "Seite " counter(page) " von " counter(pages);
-                font-size: 8px;
-                color: #999;
-            }
+            margin: 2cm 1.5cm 2.5cm 1.5cm;
+        }
+
+        #page-footer {
+            position: fixed;
+            bottom: -1.8cm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 8px;
+            color: #999;
         }
 
         body {
@@ -350,6 +355,9 @@
     </style>
 </head>
 <body>
+    <div id="page-footer">
+        Seite <pdf:pagenumber/> von <pdf:pagecount/>
+    </div>
     <!-- DECKBLATT -->
     <div class="cover-page">
         <div class="cover-title">Training Report</div>
