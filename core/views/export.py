@@ -30,7 +30,12 @@ try:
 except ImportError:
     qrcode = None
 
-from core.chart_generator import generate_body_trend_chart, generate_rpe_donut
+from core.chart_generator import (
+    generate_body_trend_chart,
+    generate_exercise_progression_chart,
+    generate_rpe_donut,
+    generate_training_heatmap,
+)
 
 from ..export.chart_orchestrator import generate_pdf_charts
 from ..export.pdf_renderer import render_training_pdf_response
@@ -146,6 +151,63 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     body_trend_chart = generate_body_trend_chart(stats.get("koerperwerte_chart", []))
     rpe_donut_chart = generate_rpe_donut(stats.get("rpe_verteilung", {}), stats.get("avg_rpe", 0.0))
 
+    # Phase D: Heatmap + Übungsdetail-Charts
+    training_heatmap_chart = generate_training_heatmap(stats.get("training_heatmap_data", []))
+
+    exercise_detail_charts = []
+    for ex_data in stats.get("exercise_detail_data", []):
+        chart_img = generate_exercise_progression_chart(ex_data["verlauf"])
+        if chart_img:
+            exercise_detail_charts.append(
+                {
+                    "uebung": ex_data["uebung"],
+                    "muskelgruppe": ex_data["muskelgruppe"],
+                    "chart": chart_img,
+                    "start_gewicht": ex_data["verlauf"][0]["max_gewicht"],
+                    "aktuell_gewicht": ex_data["verlauf"][-1]["max_gewicht"],
+                    "sessions": len(ex_data["verlauf"]),
+                }
+            )
+
+    # Phase D4: Zusammenfassung — Top 3 Fortschritte + Handlungsfelder
+    top_fortschritte = []
+    for prog in stats.get("kraft_progression", [])[:3]:
+        top_fortschritte.append(
+            f"{prog['uebung']}: +{prog['progression']:.1f}% ({prog['start_gewicht']:.0f} → {prog['aktuell_gewicht']:.0f} kg)"
+        )
+    consistency = stats.get("consistency_metrics")
+    if consistency and consistency.get("adherence_rate", 0) >= 70:
+        top_fortschritte.append(
+            f"Trainings-Adherence: {consistency['adherence_rate']}%"
+        )
+    staerken_list = stats.get("staerken", [])
+    if staerken_list:
+        top_fortschritte.append(
+            f"{len(staerken_list)} Muskelgruppe(n) im optimalen Bereich"
+        )
+    top_fortschritte = top_fortschritte[:3]
+
+    handlungsfelder = []
+    for schwach in stats.get("schwachstellen", [])[:2]:
+        handlungsfelder.append(f"{schwach['name']}: {schwach['erklaerung']}")
+    fatigue = stats.get("fatigue_analysis")
+    if fatigue and fatigue.get("fatigue_index", 0) > 60:
+        handlungsfelder.append(f"Ermüdungs-Index bei {fatigue['fatigue_index']}/100 — Deload empfohlen")
+    plateau_items = [
+        p for p in stats.get("plateau_analysis", [])
+        if p.get("status_farbe") in ("warning", "danger")
+    ]
+    if plateau_items:
+        handlungsfelder.append(
+            f"Plateau bei: {', '.join(p['uebung'] for p in plateau_items[:2])}"
+        )
+    rpe_q = stats.get("rpe_quality")
+    if rpe_q and rpe_q.get("junk_volume_rate", 0) > 30:
+        handlungsfelder.append(
+            f"Junk Volume bei {rpe_q['junk_volume_rate']}% — Intensität steigern"
+        )
+    handlungsfelder = handlungsfelder[:3]
+
     context = {
         "user": request.user,
         "datum": heute,
@@ -155,6 +217,10 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         "body_map_image": body_map_image,
         "body_trend_chart": body_trend_chart,
         "rpe_donut_chart": rpe_donut_chart,
+        "training_heatmap_chart": training_heatmap_chart,
+        "exercise_detail_charts": exercise_detail_charts,
+        "top_fortschritte": top_fortschritte,
+        "handlungsfelder": handlungsfelder,
         **stats,
     }
 

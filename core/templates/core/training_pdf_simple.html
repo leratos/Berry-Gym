@@ -69,6 +69,8 @@
             font-size: 14px;
             margin: 12px 0 8px 0;
             page-break-after: avoid;
+            -pdf-outline: true;
+            -pdf-outline-level: 1;
         }
 
         h3 {
@@ -925,6 +927,17 @@
     </div>
     {% endif %}
 
+    <!-- TRAININGSAKTIVITÄT HEATMAP -->
+    {% if training_heatmap_chart %}
+    <div style="page-break-inside: avoid; margin-top: 15px;">
+        <h2 style="margin-bottom: 10px;">Trainingsaktivität (Heatmap)</h2>
+        <div style="text-align: center; margin: 0;">
+            <img src="data:image/png;base64,{{ training_heatmap_chart }}" style="max-width: 100%; height: auto;" alt="Trainings-Heatmap">
+        </div>
+        <p class="text-muted" style="text-align: center; margin-top: 4px;">Dunklere Felder = höhere Trainingsintensität (basierend auf RPE)</p>
+    </div>
+    {% endif %}
+
     <!-- ERMÜDUNGS-INDEX -->
     <h1>■ Ermüdungs-Index & Deload-Empfehlung</h1>
 
@@ -1091,6 +1104,34 @@
     </div>
     {% endif %}
 
+    <!-- ÜBUNGSDETAIL-SEITEN -->
+    {% if exercise_detail_charts %}
+    <pdf:nextpage />
+    <h1>■ Übungsdetails — Gewichtsverlauf</h1>
+
+    <div class="info-box">
+        <p style="font-size: 9px; margin: 0;"><strong>Übungsdetails:</strong>
+        Für jede deiner Top-Übungen wird hier der Gewichtsverlauf über alle Trainingseinheiten dargestellt.
+        Die Trendlinie zeigt die langfristige Entwicklung — eine steigende Linie bedeutet progressive Überlastung.</p>
+    </div>
+
+    {% for ex in exercise_detail_charts %}
+    <div style="page-break-inside: avoid; margin-bottom: 15px;">
+        <h2 style="margin-bottom: 4px;">{{ ex.uebung }}
+            <span style="font-size: 9px; color: #6c757d; font-weight: normal;">{{ ex.muskelgruppe }}</span>
+        </h2>
+        <div style="font-size: 9px; margin-bottom: 6px;">
+            <strong>Start:</strong> {{ ex.start_gewicht|floatformat:1 }} kg →
+            <strong>Aktuell:</strong> {{ ex.aktuell_gewicht|floatformat:1 }} kg |
+            <strong>Sessions:</strong> {{ ex.sessions }}
+        </div>
+        <div style="text-align: center;">
+            <img src="data:image/png;base64,{{ ex.chart }}" style="max-width: 100%; height: auto;" alt="Gewichtsverlauf {{ ex.uebung }}">
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
     <pdf:nextpage />
 
     <!-- TRAINER-EMPFEHLUNGEN -->
@@ -1137,6 +1178,44 @@
             <li style="margin: 4px 0;">Steigere Trainingsgewichte progressiv (2,5-5% pro Woche bei guter Form)</li>
         </ol>
     </div>
+
+    <!-- ZUSAMMENFASSUNG (1-Page-Summary) -->
+    {% if top_fortschritte or handlungsfelder %}
+    <pdf:nextpage />
+    <h1>■ Zusammenfassung</h1>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <p style="font-size: 11px; color: #555;">Dein Training auf einen Blick — die wichtigsten Erkenntnisse dieses Reports.</p>
+    </div>
+
+    {% if top_fortschritte %}
+    <div class="info-box success" style="margin-bottom: 15px;">
+        <h2 style="margin-top: 0; color: #198754; border-bottom-color: #198754;">Top Fortschritte</h2>
+        <ol style="margin: 8px 0; padding-left: 20px; font-size: 10px; line-height: 1.8;">
+            {% for fortschritt in top_fortschritte %}
+            <li style="margin: 6px 0;"><strong>{{ fortschritt }}</strong></li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% endif %}
+
+    {% if handlungsfelder %}
+    <div class="info-box warning" style="margin-bottom: 15px;">
+        <h2 style="margin-top: 0; color: #856404; border-bottom-color: #ffc107;">Handlungsfelder</h2>
+        <ol style="margin: 8px 0; padding-left: 20px; font-size: 10px; line-height: 1.8;">
+            {% for feld in handlungsfelder %}
+            <li style="margin: 6px 0;"><strong>{{ feld }}</strong></li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% endif %}
+
+    <div class="info-box" style="margin-top: 20px;">
+        <p style="font-size: 9px; margin: 0;"><strong>Nächster Schritt:</strong>
+        Konzentriere dich auf das wichtigste Handlungsfeld und integriere es in dein Training der kommenden Woche.
+        Fortschritt entsteht durch konsistente, kleine Verbesserungen — nicht durch radikale Änderungen.</p>
+    </div>
+    {% endif %}
 
     <!-- FOOTER -->
     <div class="page-footer">
