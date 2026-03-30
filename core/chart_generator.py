@@ -848,6 +848,141 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
     return image_base64
 
 
+def generate_training_heatmap(training_dates: list[dict]) -> str | None:
+    """GitHub-Contribution-Style Heatmap der Trainingsaktivität.
+
+    Args:
+        training_dates: Liste von dicts mit 'datum' (date) und 'intensitaet' (float 0-1).
+
+    Returns:
+        Base64-encoded PNG oder None bei fehlenden Daten.
+    """
+    if not training_dates:
+        return None
+
+    from datetime import date, timedelta
+
+    # Build date→intensity mapping
+    date_intensity: dict[date, float] = {}
+    for entry in training_dates:
+        d = entry["datum"]
+        intens = entry.get("intensitaet", 1.0)
+        # Accumulate if multiple sessions per day
+        date_intensity[d] = min(date_intensity.get(d, 0) + intens, 1.0)
+
+    if not date_intensity:
+        return None
+
+    # Determine grid range: last 12 weeks ending on the most recent Sunday
+    end_date = max(date_intensity.keys())
+    # Align to end-of-week (Sunday = 6 in weekday())
+    days_to_sunday = (6 - end_date.weekday()) % 7
+    grid_end = end_date + timedelta(days=days_to_sunday)
+    num_weeks = 12
+    grid_start = grid_end - timedelta(days=num_weeks * 7 - 1)
+
+    # Build grid: rows=weekdays (Mon-Sun), cols=weeks
+    grid = np.zeros((7, num_weeks))
+    labels_weeks = []
+    for w in range(num_weeks):
+        week_start = grid_start + timedelta(days=w * 7)
+        labels_weeks.append(week_start.strftime("KW%V"))
+        for d in range(7):
+            current = week_start + timedelta(days=d)
+            if current in date_intensity:
+                grid[d, w] = date_intensity[current]
+
+    fig, ax = plt.subplots(figsize=(10, 2.5))
+
+    # Custom colormap: light gray (no training) → green (intense)
+    from matplotlib.colors import LinearSegmentedColormap
+
+    cmap = LinearSegmentedColormap.from_list(
+        "training", ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"]
+    )
+
+    im = ax.imshow(grid, cmap=cmap, aspect="equal", vmin=0, vmax=1)
+
+    # Axis labels
+    day_labels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    ax.set_yticks(range(7))
+    ax.set_yticklabels(day_labels, fontsize=8)
+
+    # Show every 2nd week label to avoid crowding
+    ax.set_xticks(range(0, num_weeks, 2))
+    ax.set_xticklabels(labels_weeks[::2], fontsize=7, rotation=45, ha="right")
+
+    ax.set_title("Trainingsaktivität (12 Wochen)", fontsize=12, fontweight="bold", pad=10)
+
+    # Draw cell borders
+    for i in range(7):
+        for j in range(num_weeks):
+            rect = plt.Rectangle(
+                (j - 0.5, i - 0.5), 1, 1, linewidth=0.5, edgecolor="white", facecolor="none"
+            )
+            ax.add_patch(rect)
+
+    # Colorbar
+    cbar = plt.colorbar(im, ax=ax, orientation="horizontal", fraction=0.08, pad=0.25)
+    cbar.set_ticks([0, 0.5, 1.0])
+    cbar.set_ticklabels(["Kein Training", "Moderat", "Intensiv"], fontsize=7)
+
+    plt.tight_layout()
+
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+    buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.read()).decode("utf-8")
+    plt.close(fig)
+
+    return image_base64
+
+
+def generate_exercise_progression_chart(exercise_data: list[dict]) -> str | None:
+    """Gewichtsverlauf-Chart für eine einzelne Übung.
+
+    Args:
+        exercise_data: Liste von dicts mit 'datum' (str dd.mm.yy), 'gewicht' (float), 'max_gewicht' (float).
+
+    Returns:
+        Base64-encoded PNG oder None.
+    """
+    if not exercise_data or len(exercise_data) < 2:
+        return None
+
+    dates = [e["datum"] for e in exercise_data]
+    max_weights = [e["max_gewicht"] for e in exercise_data]
+
+    fig, ax = plt.subplots(figsize=(8, 3))
+
+    x = range(len(dates))
+    ax.plot(x, max_weights, marker="o", linewidth=2, color="#0d6efd", markersize=5, label="Max Gewicht")
+    ax.fill_between(x, max_weights, min(max_weights) - 1, alpha=0.15, color="#0d6efd")
+
+    # Trend line
+    if len(max_weights) >= 3:
+        z = np.polyfit(list(x), max_weights, 1)
+        p = np.poly1d(z)
+        ax.plot(list(x), [p(i) for i in x], "--", color="#dc3545", linewidth=1.5, alpha=0.7, label="Trend")
+
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(dates, rotation=45, ha="right", fontsize=7)
+    ax.set_ylabel("Gewicht (kg)", fontsize=9)
+    ax.legend(fontsize=7, loc="upper left")
+    ax.grid(True, alpha=0.3, linestyle=":", linewidth=0.5)
+    ax.set_axisbelow(True)
+
+    plt.tight_layout()
+
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+    buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.read()).decode("utf-8")
+    plt.close(fig)
+
+    return image_base64
+
+
 def generate_rpe_donut(rpe_verteilung: dict, avg_rpe: float = 0.0) -> str | None:
     """Donut-Chart für RPE-Verteilung (leicht/mittel/schwer).
 

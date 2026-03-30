@@ -349,6 +349,66 @@ def calc_vormonats_delta(aktuell, vormonat) -> dict:
     }
 
 
+def collect_training_heatmap_data(alle_trainings, alle_saetze) -> list[dict]:
+    """Collect per-day training dates with intensity for the heatmap chart.
+
+    Intensity is derived from average RPE of the session (normalized to 0-1).
+    Sessions without RPE data get intensity 0.5 (moderate).
+    """
+    from django.db.models import Avg
+
+    result = []
+    for training in alle_trainings.order_by("datum"):
+        session_saetze = alle_saetze.filter(einheit=training)
+        avg_rpe = session_saetze.filter(rpe__isnull=False).aggregate(Avg("rpe"))["rpe__avg"]
+        if avg_rpe:
+            intensitaet = min(float(avg_rpe) / 10.0, 1.0)
+        else:
+            intensitaet = 0.5
+        result.append({"datum": training.datum.date(), "intensitaet": intensitaet})
+    return result
+
+
+def collect_exercise_detail_data(alle_saetze, top_uebungen: list) -> list[dict]:
+    """Collect per-session weight progression for top 5 exercises.
+
+    Returns list of dicts with 'uebung', 'muskelgruppe', and 'verlauf' (list of
+    date/max_weight entries).
+    """
+    result = []
+    for uebung_info in top_uebungen[:5]:
+        uebung_name = uebung_info["uebung__bezeichnung"]
+        mg_display = uebung_info.get("muskelgruppe_display", "")
+
+        # Get all sessions for this exercise, grouped by date
+        saetze = (
+            alle_saetze.filter(uebung__bezeichnung=uebung_name)
+            .values("einheit__datum")
+            .annotate(max_gewicht=Max("gewicht"))
+            .order_by("einheit__datum")
+        )
+
+        verlauf = []
+        for entry in saetze:
+            if entry["max_gewicht"] and float(entry["max_gewicht"]) > 0:
+                verlauf.append(
+                    {
+                        "datum": entry["einheit__datum"].strftime("%d.%m.%y"),
+                        "max_gewicht": float(entry["max_gewicht"]),
+                    }
+                )
+
+        if len(verlauf) >= 2:
+            result.append(
+                {
+                    "uebung": uebung_name,
+                    "muskelgruppe": mg_display,
+                    "verlauf": verlauf,
+                }
+            )
+    return result
+
+
 def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     """Sammelt alle Statistiken für den PDF-Report.
 
@@ -416,6 +476,10 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     rm_standards = calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht)
     gewichts_trend = collect_weight_trend(koerperwerte)
 
+    # Phase D: Heatmap + Übungsdetail-Daten
+    training_heatmap_data = collect_training_heatmap_data(alle_trainings, alle_saetze)
+    exercise_detail_data = collect_exercise_detail_data(alle_saetze, top_uebungen)
+
     push_saetze = int(push_pull_balance.get("push_saetze", 0))
     pull_saetze = int(push_pull_balance.get("pull_saetze", 0))
 
@@ -461,4 +525,6 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         "fatigue_analysis": fatigue_analysis,
         "rm_standards": rm_standards,
         "rpe_quality": rpe_quality,
+        "training_heatmap_data": training_heatmap_data,
+        "exercise_detail_data": exercise_detail_data,
     }
