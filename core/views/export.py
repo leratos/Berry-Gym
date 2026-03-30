@@ -177,14 +177,10 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         )
     consistency = stats.get("consistency_metrics")
     if consistency and consistency.get("adherence_rate", 0) >= 70:
-        top_fortschritte.append(
-            f"Trainings-Adherence: {consistency['adherence_rate']}%"
-        )
+        top_fortschritte.append(f"Trainings-Adherence: {consistency['adherence_rate']}%")
     staerken_list = stats.get("staerken", [])
     if staerken_list:
-        top_fortschritte.append(
-            f"{len(staerken_list)} Muskelgruppe(n) im optimalen Bereich"
-        )
+        top_fortschritte.append(f"{len(staerken_list)} Muskelgruppe(n) im optimalen Bereich")
     top_fortschritte = top_fortschritte[:3]
 
     handlungsfelder = []
@@ -192,15 +188,16 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         handlungsfelder.append(f"{schwach['name']}: {schwach['erklaerung']}")
     fatigue = stats.get("fatigue_analysis")
     if fatigue and fatigue.get("fatigue_index", 0) > 60:
-        handlungsfelder.append(f"Ermüdungs-Index bei {fatigue['fatigue_index']}/100 — Deload empfohlen")
+        handlungsfelder.append(
+            f"Ermüdungs-Index bei {fatigue['fatigue_index']}/100 — Deload empfohlen"
+        )
     plateau_items = [
-        p for p in stats.get("plateau_analysis", [])
+        p
+        for p in stats.get("plateau_analysis", [])
         if p.get("status_farbe") in ("warning", "danger")
     ]
     if plateau_items:
-        handlungsfelder.append(
-            f"Plateau bei: {', '.join(p['uebung'] for p in plateau_items[:2])}"
-        )
+        handlungsfelder.append(f"Plateau bei: {', '.join(p['uebung'] for p in plateau_items[:2])}")
     rpe_q = stats.get("rpe_quality")
     if rpe_q and rpe_q.get("junk_volume_rate", 0) > 30:
         handlungsfelder.append(
