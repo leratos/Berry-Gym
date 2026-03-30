@@ -2160,6 +2160,49 @@
         "Trainingsmatte"
       ],
       "beschreibung": "Seitlich auf Unterarm stuetzen, Koerper gerade Linie. Huefte oben halten, Bauch/seitliche Rumpfmuskulatur anspannen. Zeit in Sekunden."
+    },
+    {
+      "id": 117,
+      "bezeichnung": "Assistierte Dips (Gegengewicht)",
+      "muskelgruppe": "TRIZEPS",
+      "hilfsmuskeln": [
+        "BRUST",
+        "SCHULTER_VORN"
+      ],
+      "bewegungstyp": "DRUECKEN",
+      "gewichts_typ": "KOERPERGEWICHT",
+      "koerpergewicht_faktor": 0.7,
+      "gewichts_richtung": "GEGEN",
+      "standard_beginner": null,
+      "standard_intermediate": null,
+      "standard_advanced": null,
+      "standard_elite": null,
+      "equipment": [
+        "Dip-Maschine mit Gegengewicht"
+      ],
+      "beschreibung": "Assistierte Dips am Gerät mit Gegengewicht. Knie auf Polster, Gewicht wird vom Körpergewicht abgezogen. Schulterblätter stabil, kontrolliert absenken."
+    },
+    {
+      "id": 118,
+      "bezeichnung": "Assistierte Klimmzüge (Gegengewicht)",
+      "muskelgruppe": "RUECKEN_LAT",
+      "hilfsmuskeln": [
+        "BIZEPS",
+        "UNTERARME",
+        "BAUCH"
+      ],
+      "bewegungstyp": "ZIEHEN",
+      "gewichts_typ": "KOERPERGEWICHT",
+      "koerpergewicht_faktor": 0.7,
+      "gewichts_richtung": "GEGEN",
+      "standard_beginner": null,
+      "standard_intermediate": null,
+      "standard_advanced": null,
+      "standard_elite": null,
+      "equipment": [
+        "Klimmzug-Maschine mit Gegengewicht"
+      ],
+      "beschreibung": "Assistierte Klimmzüge am Gerät mit Gegengewicht. Knie auf Polster, Gewicht wird vom Körpergewicht abgezogen. Schulterblätter zuerst aktivieren, Brust zur Stange."
     }
   ]
 }
