@@ -956,14 +956,24 @@ def generate_exercise_progression_chart(exercise_data: list[dict]) -> str | None
     fig, ax = plt.subplots(figsize=(8, 3))
 
     x = range(len(dates))
-    ax.plot(x, max_weights, marker="o", linewidth=2, color="#0d6efd", markersize=5, label="Max Gewicht")
+    ax.plot(
+        x, max_weights, marker="o", linewidth=2, color="#0d6efd", markersize=5, label="Max Gewicht"
+    )
     ax.fill_between(x, max_weights, min(max_weights) - 1, alpha=0.15, color="#0d6efd")
 
     # Trend line
     if len(max_weights) >= 3:
         z = np.polyfit(list(x), max_weights, 1)
         p = np.poly1d(z)
-        ax.plot(list(x), [p(i) for i in x], "--", color="#dc3545", linewidth=1.5, alpha=0.7, label="Trend")
+        ax.plot(
+            list(x),
+            [p(i) for i in x],
+            "--",
+            color="#dc3545",
+            linewidth=1.5,
+            alpha=0.7,
+            label="Trend",
+        )
 
     ax.set_xticks(list(x))
     ax.set_xticklabels(dates, rotation=45, ha="right", fontsize=7)
