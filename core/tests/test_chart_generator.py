@@ -237,9 +237,10 @@ class TestGenerateVolumeChart(TestCase):
         result = generate_volume_chart(daten)
 
         plot_args, _ = ax.plot.call_args
-        self.assertEqual(plot_args[0], ["KW3", "KW1", "KW2"])
+        # generate_volume_chart uses range(len(wochen)) as x-axis, not string labels
+        self.assertEqual(list(plot_args[0]), list(range(3)))
         self.assertEqual(plot_args[1], [5500, 5000, 6000])
-        self.assertEqual(len(plot_args[0]), len(plot_args[1]))
+        self.assertEqual(len(list(plot_args[0])), len(plot_args[1]))
 
         decoded = base64.b64decode(result)
         self.assertEqual(decoded[:4], b"\x89PNG")
