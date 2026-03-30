@@ -17,7 +17,7 @@ from django.utils import timezone
 
 import pytest
 
-from core.models import Plan, UserProfile
+from core.models import Plan, Trainingseinheit, UserProfile
 from core.tests.factories import (
     PlanFactory,
     SatzFactory,
@@ -502,9 +502,13 @@ class TestAiRecommendationRemainingBranches:
 
     def test_stagnation_appends_recommendation_when_uebung_exists(self, user, monkeypatch):
         uebung = UebungFactory(muskelgruppe="BRUST", bezeichnung="Bankdrücken")
-        base_day = timezone.now().date()
+        base_day = timezone.now()
         for delta in range(4):
-            einheit = TrainingseinheitFactory(user=user, datum=base_day - timedelta(days=delta))
+            target_date = base_day - timedelta(days=delta)
+            einheit = TrainingseinheitFactory(user=user)
+            # auto_now_add ignores explicit datum, so force-update it
+            Trainingseinheit.objects.filter(pk=einheit.pk).update(datum=target_date)
+            einheit.refresh_from_db()
             SatzFactory(
                 einheit=einheit,
                 uebung=uebung,
