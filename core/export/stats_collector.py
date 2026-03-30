@@ -192,14 +192,17 @@ def collect_intensity_data(alle_saetze, letzte_30_tage) -> tuple[float, dict]:
     return avg_rpe, rpe_verteilung
 
 
-def collect_weekly_volume_pdf(alle_saetze) -> list[dict]:
+def collect_weekly_volume_pdf(alle_saetze, alle_trainings=None) -> list[dict]:
     """Build weekly volume progression (last 12 weeks) for PDF report.
 
-    Fills gaps between calendar weeks with 0 so the chart shows
-    missing weeks instead of skipping them.
+    Includes deload weeks with their actual (reduced) volume, marked via
+    'ist_deload' flag.  Fills gaps between calendar weeks with 0.
     """
+    # Use ALL sets (incl. deload) for volume so deload weeks aren't 0
+    saetze_qs = alle_saetze.filter(ist_aufwaermsatz=False)
+
     weekly_volume: dict[str, float] = defaultdict(float)
-    for satz in alle_saetze.filter(ist_aufwaermsatz=False):
+    for satz in saetze_qs:
         if satz.gewicht and satz.wiederholungen:
             iso_year, iso_week, _ = satz.einheit.datum.isocalendar()
             week_key = f"{iso_year}-W{iso_week:02d}"
@@ -207,6 +210,13 @@ def collect_weekly_volume_pdf(alle_saetze) -> list[dict]:
 
     if not weekly_volume:
         return []
+
+    # Identify deload weeks
+    deload_weeks: set[str] = set()
+    if alle_trainings is not None:
+        for t in alle_trainings.filter(ist_deload=True):
+            iso_year, iso_week, _ = t.datum.isocalendar()
+            deload_weeks.add(f"{iso_year}-W{iso_week:02d}")
 
     # Fill gaps between first and last week
     all_keys = sorted(weekly_volume.keys())
@@ -231,7 +241,11 @@ def collect_weekly_volume_pdf(alle_saetze) -> list[dict]:
 
     labels = filled[-12:]
     return [
-        {"woche": f"KW{label.split('-W')[1]}", "volumen": round(weekly_volume.get(label, 0), 0)}
+        {
+            "woche": f"KW{label.split('-W')[1]}",
+            "volumen": round(weekly_volume.get(label, 0), 0),
+            "ist_deload": label in deload_weeks,
+        }
         for label in labels
     ]
 
@@ -453,7 +467,12 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     avg_rpe, rpe_verteilung = collect_intensity_data(alle_saetze, letzte_30_tage)
     rpe_saetze = alle_saetze.filter(rpe__isnull=False, einheit__datum__gte=letzte_30_tage)
     rpe_quality = calculate_rpe_quality_analysis(alle_saetze)
-    volumen_wochen = collect_weekly_volume_pdf(alle_saetze)
+    # Volume chart uses ALL sets (incl. deload) so deload weeks show real volume
+    alle_saetze_inkl_deload = Satz.objects.filter(
+        einheit__user=user,
+        ist_aufwaermsatz=False,
+    )
+    volumen_wochen = collect_weekly_volume_pdf(alle_saetze_inkl_deload, alle_trainings)
     fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
 
     koerperwerte_qs = KoerperWerte.objects.filter(user=user).order_by("-datum")

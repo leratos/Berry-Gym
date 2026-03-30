@@ -626,6 +626,7 @@ def generate_muscle_heatmap(muskelgruppen_stats):
 def generate_volume_chart(volumen_wochen):
     """
     Generiert ein Volumen-Entwicklungs-Chart über Wochen.
+    Deload-Wochen werden mit grauem Marker und gestrichelter Linie markiert.
 
     Returns:
         str: Base64-encoded PNG image
@@ -635,21 +636,39 @@ def generate_volume_chart(volumen_wochen):
 
     wochen = [w["woche"] for w in volumen_wochen]
     volumen = [w["volumen"] for w in volumen_wochen]
+    deload_flags = [w.get("ist_deload", False) for w in volumen_wochen]
 
     fig, ax = plt.subplots(figsize=(10, 4))
 
+    x = list(range(len(wochen)))
+
     # Line chart mit Area fill
-    x = range(len(wochen))
     ax.plot(
         x, volumen, marker="o", linewidth=2, color="#0d6efd", markersize=8, label="Wochenvolumen"
     )
     ax.fill_between(x, volumen, alpha=0.3, color="#0d6efd")
 
+    # Deload-Wochen hervorheben
+    deload_x = [i for i, d in enumerate(deload_flags) if d]
+    deload_y = [volumen[i] for i in deload_x]
+    if deload_x:
+        ax.scatter(
+            deload_x,
+            deload_y,
+            marker="D",
+            s=120,
+            color="#ffc107",
+            edgecolors="#333",
+            linewidths=1.5,
+            zorder=5,
+            label="Deload",
+        )
+
     # Gleitender 4-Wochen-Durchschnitt
     if len(volumen) >= 4:
         vol_arr = np.array(volumen, dtype=float)
         ma = np.convolve(vol_arr, np.ones(4) / 4, mode="valid")
-        ma_x = range(3, len(volumen))  # Start bei Index 3 (4. Datenpunkt)
+        ma_x = range(3, len(volumen))
         ax.plot(
             list(ma_x),
             list(ma),
@@ -667,19 +686,25 @@ def generate_volume_chart(volumen_wochen):
     ax.legend(fontsize=8, loc="upper left")
 
     # Werte auf Punkten anzeigen
+    max_vol = max(volumen) if volumen else 1
     for i, vol in enumerate(volumen):
+        label = "Deload" if deload_flags[i] and vol == 0 else f"{int(vol)}kg"
         ax.text(
             i,
-            vol + max(volumen) * 0.03,
-            f"{int(vol)}kg",
+            vol + max_vol * 0.03,
+            label,
             ha="center",
             va="bottom",
             fontsize=8,
             fontweight="bold",
+            color="#856404" if deload_flags[i] else "#333",
         )
 
+    # Y-Achse: extra Platz oben für Labels (Fix: Beschriftung wird nicht abgeschnitten)
+    ax.set_ylim(top=max_vol * 1.15)
+
     # X-Achsen-Labels setzen
-    ax.set_xticks(list(x))
+    ax.set_xticks(x)
     ax.set_xticklabels(wochen, rotation=45, ha="right")
 
     # Grid

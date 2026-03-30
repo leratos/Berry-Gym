@@ -360,18 +360,18 @@
     <div id="page-footer">
         Seite <pdf:pagenumber/> von <pdf:pagecount/>
     </div>
-    <!-- DECKBLATT -->
+    <!-- DECKBLATT (Seite 1) -->
     <div class="cover-page">
         <div class="cover-title">Training Report</div>
         <div class="cover-subtitle">Professional Edition - Trainer Analysis</div>
 
         {% if body_map_image %}
-        <div style="text-align: center; margin: 20px 0;">
-            <img src="data:image/png;base64,{{ body_map_image }}" style="width: auto; height: 500px; margin: 0 auto" alt="Body Map">
+        <div style="text-align: center; margin: 15px 0;">
+            <img src="data:image/png;base64,{{ body_map_image }}" style="width: auto; height: 420px; margin: 0 auto" alt="Body Map">
         </div>
 
         <!-- Legende unter der Body-Map -->
-        <div style="text-align: center; margin: 15px 0 30px 0;">
+        <div style="text-align: center; margin: 10px 0 20px 0;">
             <table style="margin: 0 auto; border: none; font-size: 16px;">
                 <tr>
                     <td style="width: 35px; height: 25px; background-color: #28a745; border: 1px solid #000;"></td>
@@ -389,13 +389,29 @@
 
         <div class="cover-info">
             <strong>Athlet:</strong> {{ user.get_full_name|default:user.username }}<br>
-            <strong>Berichtszeitraum:</strong> {{ start_datum|date:"d.m.Y" }} - {{ end_datum|date:"d.m.Y" }}
-        </div>
-
-        <div style="position: absolute; bottom: 80px; width: 100%; text-align: center; font-size: 12px; color: #555;">
+            <strong>Berichtszeitraum:</strong> {{ start_datum|date:"d.m.Y" }} - {{ end_datum|date:"d.m.Y" }}<br>
             <strong>Erstellt am:</strong> {{ current_date|date:"d.m.Y H:i" }}
         </div>
     </div>
+
+    <pdf:nextpage />
+
+    <!-- INHALTSVERZEICHNIS (Seite 2) -->
+    <h1>■ Inhaltsverzeichnis</h1>
+    <table style="border: none; font-size: 11px; line-height: 2.2;">
+        <tr><td style="border: none; padding: 2px 0;"><strong>1.</strong> Executive Summary</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>2.</strong> Muskelgruppen-Analyse (30 Tage)</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>3.</strong> Push/Pull Balance</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>4.</strong> Trainingsfortschritt</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>5.</strong> Plateau-Analyse - Progression-Tracking</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>6.</strong> Trainings-Konsistenz</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>7.</strong> Ermüdungs-Index &amp; Deload-Empfehlung</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>8.</strong> 1RM-Entwicklung &amp; Kraftstandards</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>9.</strong> Trainings-Qualität (RPE-Analyse)</td></tr>
+        {% if exercise_detail_charts %}<tr><td style="border: none; padding: 2px 0;"><strong>10.</strong> Übungsdetails — Gewichtsverlauf</td></tr>{% endif %}
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}11{% else %}10{% endif %}.</strong> Trainer-Empfehlungen</td></tr>
+        {% if top_fortschritte or handlungsfelder %}<tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}12{% else %}11{% endif %}.</strong> Zusammenfassung</td></tr>{% endif %}
+    </table>
 
     <pdf:nextpage />
 
