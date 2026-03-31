@@ -24,13 +24,11 @@ class TestCheckPrFunction(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user("pr_user", password="x")
-        self.uebung = Uebung.objects.filter(is_custom=False).first()
-        if self.uebung is None:
-            self.uebung = Uebung.objects.create(
-                bezeichnung="Test Übung",
-                muskelgruppe="BRUST",
-                gewichts_typ="GESAMT",
-            )
+        self.uebung = Uebung.objects.create(
+            bezeichnung="Test Übung PR",
+            muskelgruppe="BRUST",
+            gewichts_typ="GESAMT",
+        )
         self.training = Trainingseinheit.objects.create(
             user=self.user,
             datum=timezone.now(),
@@ -60,7 +58,7 @@ class TestCheckPrFunction(TestCase):
 
     def test_neuer_1rm_ist_pr(self):
         # Ersten (schwächeren) Satz anlegen
-        alter_satz = self._make_satz(80, 8)  # 1RM ≈ 101.3
+        self._make_satz(80, 8)  # 1RM ≈ 101.3
         # Neuen stärkeren Satz anlegen
         neuer_satz = self._make_satz(100, 5)  # 1RM ≈ 116.7
         msg = _check_pr(self.user, self.uebung, neuer_satz, 100.0, 5)
@@ -72,7 +70,7 @@ class TestCheckPrFunction(TestCase):
         self.assertIsNotNone(neuer_satz.pr_previous_value)
 
     def test_kein_pr_wenn_schlechter(self):
-        alter_satz = self._make_satz(100, 5)  # 1RM ≈ 116.7
+        self._make_satz(100, 5)  # 1RM ≈ 116.7
         schlechterer_satz = self._make_satz(80, 5)  # 1RM ≈ 93.3
         msg = _check_pr(self.user, self.uebung, schlechterer_satz, 80.0, 5)
         self.assertIsNone(msg)
