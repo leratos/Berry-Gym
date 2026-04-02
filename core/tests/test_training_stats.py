@@ -888,3 +888,297 @@ class TestWeaknessTracker(StatsBase):
         result = get_weakness_comparison(self.user)
         self.assertEqual(result[0]["baseline"], 5)
         self.assertEqual(result[0]["aktuell"], 15)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 21: Stats-Seite Erweiterungen
+# ─────────────────────────────────────────────────────────────────────────────
+from core.views.training_stats import (
+    _calc_kraftstandards_live,
+    _calc_muscle_soll_bereiche,
+    _calc_plateau_live,
+    _calc_push_pull_ratio,
+)
+
+
+class TestMuscleSollBereiche(StatsBase):
+    """21.1: Muskelgruppen-Balance mit Soll-Bereich."""
+
+    def test_empty_returns_all_non_spezial(self):
+        result = _calc_muscle_soll_bereiche({}, self.user)
+        # Should return entries for all non-spezial muscle groups
+        self.assertTrue(len(result) > 0)
+        for item in result:
+            self.assertIn("soll_min", item)
+            self.assertIn("soll_max", item)
+            self.assertIn("status", item)
+
+    def test_unter_status_when_few_sets(self):
+        """Muscle group with 0 sets should be 'unter'."""
+        result = _calc_muscle_soll_bereiche({}, self.user)
+        brust = next((r for r in result if r["code"] == "BRUST"), None)
+        self.assertIsNotNone(brust)
+        self.assertEqual(brust["status"], "unter")
+        self.assertEqual(brust["saetze"], 0)
+
+    def test_ok_status_within_range(self):
+        """Muscle group within soll range should be 'ok'."""
+        session = self._session(days_ago=5)
+        for _ in range(15):
+            self._satz(session, gewicht=80, wdh=8)
+        result = _calc_muscle_soll_bereiche({"BRUST": 100}, self.user)
+        brust = next((r for r in result if r["code"] == "BRUST"), None)
+        self.assertIsNotNone(brust)
+        self.assertEqual(brust["saetze"], 15)
+        self.assertEqual(brust["status"], "ok")
+
+    def test_ueber_status_above_range(self):
+        """Muscle group above max soll should be 'ueber'."""
+        session = self._session(days_ago=5)
+        for _ in range(30):
+            self._satz(session, gewicht=80, wdh=8)
+        result = _calc_muscle_soll_bereiche({"BRUST": 100}, self.user)
+        brust = next((r for r in result if r["code"] == "BRUST"), None)
+        self.assertIsNotNone(brust)
+        self.assertEqual(brust["status"], "ueber")
+
+    def test_block_typ_affects_schwellenwerte(self):
+        """Definition block should lower target ranges via volumen_faktor."""
+        Trainingsblock.objects.create(
+            user=self.user, typ="definition", start_datum=timezone.now().date()
+        )
+        result = _calc_muscle_soll_bereiche({}, self.user)
+        brust = next((r for r in result if r["code"] == "BRUST"), None)
+        self.assertIsNotNone(brust)
+        # Definition factor 0.85 → soll_max should be < 25
+        self.assertLess(brust["soll_max"], 25)
+
+
+class TestPushPullRatio(StatsBase):
+    """21.2: Push/Pull-Ratio."""
+
+    def test_none_without_data(self):
+        result = _calc_push_pull_ratio(self.user)
+        self.assertIsNone(result)
+
+    def test_balanced_ratio(self):
+        """Equal push and pull sets → ratio ~1.0, green."""
+        session = self._session(days_ago=5)
+        # Push: BRUST
+        for _ in range(10):
+            self._satz(session, gewicht=80, wdh=8)
+        # Pull: Create a pull exercise
+        pull_uebung = Uebung.objects.create(
+            bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT", bewegungstyp="COMPOUND"
+        )
+        for _ in range(10):
+            Satz.objects.create(
+                einheit=session,
+                uebung=pull_uebung,
+                satz_nr=1,
+                gewicht=60,
+                wiederholungen=8,
+                ist_aufwaermsatz=False,
+            )
+        result = _calc_push_pull_ratio(self.user)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["ratio"], 1.0)
+        self.assertEqual(result["farbe"], "success")
+
+    def test_push_dominant(self):
+        """Many push, few pull → red."""
+        session = self._session(days_ago=5)
+        for _ in range(20):
+            self._satz(session, gewicht=80, wdh=8)
+        pull_uebung = Uebung.objects.create(
+            bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT", bewegungstyp="COMPOUND"
+        )
+        for _ in range(5):
+            Satz.objects.create(
+                einheit=session,
+                uebung=pull_uebung,
+                satz_nr=1,
+                gewicht=60,
+                wiederholungen=8,
+                ist_aufwaermsatz=False,
+            )
+        result = _calc_push_pull_ratio(self.user)
+        self.assertGreater(result["ratio"], 1.5)
+        self.assertEqual(result["farbe"], "danger")
+
+    def test_warmup_excluded(self):
+        """Warmup sets should not be counted."""
+        session = self._session(days_ago=5)
+        for _ in range(10):
+            self._satz(session, gewicht=80, wdh=8, warmup=True)
+        result = _calc_push_pull_ratio(self.user)
+        self.assertIsNone(result)
+
+
+class TestPlateauLive(StatsBase):
+    """21.3: Plateau-Tracking."""
+
+    def test_empty_without_data(self):
+        result = _calc_plateau_live(self.user)
+        self.assertEqual(result, [])
+
+    def test_recent_pr_green(self):
+        """PR within 14 days → green badge."""
+        session = self._session(days_ago=3)
+        satz = self._satz(session, gewicht=100, wdh=5)
+        satz.is_pr = True
+        satz.save()
+        result = _calc_plateau_live(self.user)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["farbe"], "success")
+        self.assertEqual(result[0]["status"], "Kürzlich")
+
+    def test_old_pr_red(self):
+        """PR > 42 days ago → red badge."""
+        session = self._session(days_ago=60)
+        satz = self._satz(session, gewicht=100, wdh=5)
+        satz.is_pr = True
+        satz.save()
+        result = _calc_plateau_live(self.user)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["farbe"], "danger")
+
+    def test_stagnating_pr_yellow(self):
+        """PR 15-42 days ago → yellow badge."""
+        session = self._session(days_ago=25)
+        satz = self._satz(session, gewicht=100, wdh=5)
+        satz.is_pr = True
+        satz.save()
+        result = _calc_plateau_live(self.user)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["farbe"], "warning")
+        self.assertEqual(result[0]["status"], "Stagnierend")
+
+    def test_max_5_exercises(self):
+        """Should return at most 5 exercises."""
+        for i in range(7):
+            ueb = Uebung.objects.create(
+                bezeichnung=f"Übung_{i}", muskelgruppe="BRUST", bewegungstyp="COMPOUND"
+            )
+            session = self._session(days_ago=i + 1)
+            Satz.objects.create(
+                einheit=session,
+                uebung=ueb,
+                satz_nr=1,
+                gewicht=50,
+                wiederholungen=8,
+                ist_aufwaermsatz=False,
+                is_pr=True,
+            )
+        result = _calc_plateau_live(self.user)
+        self.assertLessEqual(len(result), 5)
+
+
+class TestKraftstandardsLive(StatsBase):
+    """21.4: Kraftstandards-Übersicht."""
+
+    def setUp(self):
+        super().setUp()
+        # Add strength standards to the exercise
+        self.uebung.standard_beginner = 60.0
+        self.uebung.standard_intermediate = 80.0
+        self.uebung.standard_advanced = 110.0
+        self.uebung.standard_elite = 140.0
+        self.uebung.save()
+
+    def test_empty_without_data(self):
+        result = _calc_kraftstandards_live(self.user)
+        self.assertEqual(result, [])
+
+    def test_returns_level_and_progress(self):
+        """Should compute 1RM and level classification."""
+        session = self._session(days_ago=5)
+        # 80kg × 8 reps → 1RM ≈ 101.3 kg → "advanced" level (≥80, <110)
+        self._satz(session, gewicht=80, wdh=8)
+        result = _calc_kraftstandards_live(self.user)
+        self.assertEqual(len(result), 1)
+        item = result[0]
+        self.assertEqual(item["uebung"], "Bankdrücken")
+        self.assertGreater(item["geschaetzter_1rm"], 100)
+        self.assertEqual(item["level"], "intermediate")
+        self.assertEqual(item["level_label"], "Fortgeschritten")
+        self.assertIn("naechstes_level", item)
+        self.assertIn("prozent", item)
+
+    def test_no_standards_skipped(self):
+        """Exercises without standards should not appear."""
+        no_std_uebung = Uebung.objects.create(
+            bezeichnung="Kurzhantelpresse", muskelgruppe="BRUST", bewegungstyp="COMPOUND"
+        )
+        session = self._session(days_ago=5)
+        Satz.objects.create(
+            einheit=session,
+            uebung=no_std_uebung,
+            satz_nr=1,
+            gewicht=40,
+            wiederholungen=10,
+            ist_aufwaermsatz=False,
+        )
+        result = _calc_kraftstandards_live(self.user)
+        names = [r["uebung"] for r in result]
+        self.assertNotIn("Kurzhantelpresse", names)
+
+    def test_elite_level_100_percent(self):
+        """Exercise at/above elite level should show 100%."""
+        session = self._session(days_ago=5)
+        # 140kg × 1 rep → 1RM ≈ 144.7 kg → above elite (140)
+        self._satz(session, gewicht=140, wdh=1)
+        result = _calc_kraftstandards_live(self.user)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["level"], "elite")
+        self.assertEqual(result[0]["prozent"], 100)
+
+    def test_max_5_results(self):
+        """Should return at most 5 exercises."""
+        for i in range(7):
+            ueb = Uebung.objects.create(
+                bezeichnung=f"Std_Übung_{i}",
+                muskelgruppe="BRUST",
+                bewegungstyp="COMPOUND",
+                standard_beginner=50,
+                standard_intermediate=70,
+                standard_advanced=100,
+                standard_elite=130,
+            )
+            session = self._session(days_ago=i + 1)
+            Satz.objects.create(
+                einheit=session,
+                uebung=ueb,
+                satz_nr=1,
+                gewicht=60,
+                wiederholungen=8,
+                ist_aufwaermsatz=False,
+            )
+        result = _calc_kraftstandards_live(self.user)
+        self.assertLessEqual(len(result), 5)
+
+
+class TestStatsViewPhase21Integration(StatsBase):
+    """Integration test: /stats/ view includes Phase 21 context data."""
+
+    def test_stats_page_includes_phase21_data(self):
+        """The stats page should return 200 and include Phase 21 context."""
+        session = self._session(days_ago=5)
+        self._satz(session, gewicht=80, wdh=8, rpe=8.0)
+        self.uebung.standard_beginner = 60.0
+        self.uebung.standard_intermediate = 80.0
+        self.uebung.standard_advanced = 110.0
+        self.uebung.standard_elite = 140.0
+        self.uebung.save()
+        response = self.client.get(reverse("training_stats"))
+        self.assertEqual(response.status_code, 200)
+        # Check Phase 21 context keys exist
+        self.assertIn("muscle_soll_json", response.context)
+        self.assertIn("push_pull_json", response.context)
+        self.assertIn("plateau_live", response.context)
+        self.assertIn("kraftstandards", response.context)
+
+    def test_stats_page_no_data_still_200(self):
+        """Stats with no data should still work (no_data template)."""
+        response = self.client.get(reverse("training_stats"))
+        self.assertEqual(response.status_code, 200)

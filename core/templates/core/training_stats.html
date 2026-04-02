@@ -179,6 +179,136 @@
             </div>
         </div>
 
+        {# ── Phase 21.1: Muskelgruppen-Balance mit Soll-Bereich ── #}
+        <div class="card card-stat border-secondary mb-4">
+            <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-3">
+                    <i class="bi bi-bullseye me-2"></i>{% trans "Muskelgruppen: Ist vs. Soll (30 Tage)" %}
+                </h6>
+                <canvas id="muskelSollChart" style="max-height: 400px;"></canvas>
+                <div class="d-flex align-items-center gap-3 mt-2">
+                    <span style="width:12px;height:12px;background:#0d6efd;display:inline-block;border-radius:2px;"></span>
+                    <small class="text-muted">{% trans "Ist-Sätze" %}</small>
+                    <span style="width:12px;height:12px;background:rgba(25,135,84,0.25);display:inline-block;border-radius:2px;margin-left:8px;"></span>
+                    <small class="text-muted">{% trans "Soll-Bereich" %}</small>
+                </div>
+            </div>
+        </div>
+
+        {# ── Phase 21.2: Push/Pull-Ratio ── #}
+        {% if push_pull %}
+        <div class="card card-stat border-secondary mb-4">
+            <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-3">
+                    <i class="bi bi-arrow-left-right me-2"></i>{% trans "Push/Pull-Ratio (30 Tage)" %}
+                </h6>
+                <div class="row align-items-center">
+                    <div class="col-md-5 text-center">
+                        <canvas id="pushPullChart" style="max-height: 220px;"></canvas>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>{% trans "Push-Sätze" %}</span>
+                                <span class="badge bg-primary fs-6">{{ push_pull.push }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>{% trans "Pull-Sätze" %}</span>
+                                <span class="badge bg-info fs-6">{{ push_pull.pull }}</span>
+                            </div>
+                            <hr class="my-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">{% trans "Ratio" %}</span>
+                                <span class="badge bg-{{ push_pull.farbe }} fs-6">{{ push_pull.ratio }}</span>
+                            </div>
+                            <small class="text-{{ push_pull.farbe }}">{{ push_pull.status_text }}</small>
+                            <small class="text-muted mt-1">{% trans "Ideal: ≤ 1.3 (Grün), 1.3–1.5 (Gelb), > 1.5 (Rot)" %}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Phase 21.3: Plateau-Tracking ── #}
+        {% if plateau_live %}
+        <div class="card card-stat border-secondary mb-4">
+            <div class="card-header border-secondary">
+                <h6 class="mb-0 text-white">
+                    <i class="bi bi-graph-down-arrow me-2"></i>{% trans "Plateau-Tracker (Top-5 Übungen)" %}
+                </h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead class="text-secondary small">
+                        <tr>
+                            <th>{% trans "Übung" %}</th>
+                            <th class="text-center">{% trans "Tage seit PR" %}</th>
+                            <th class="text-center">{% trans "Letzter PR" %}</th>
+                            <th class="text-end">{% trans "Status" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in plateau_live %}
+                        <tr>
+                            <td class="fw-bold">{{ item.uebung }}</td>
+                            <td class="text-center">{{ item.tage_seit_pr }}</td>
+                            <td class="text-center text-muted">{{ item.letzter_pr_datum }}</td>
+                            <td class="text-end">
+                                <span class="badge bg-{{ item.farbe }}">{{ item.status }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Phase 21.4: Kraftstandards-Übersicht ── #}
+        {% if kraftstandards %}
+        <div class="card card-stat border-secondary mb-4">
+            <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-3">
+                    <i class="bi bi-trophy me-2"></i>{% trans "Kraftstandards (geschätztes 1RM)" %}
+                </h6>
+                {% for ks in kraftstandards %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold">{{ ks.uebung }}</span>
+                        <span>
+                            <span class="badge bg-{{ ks.farbe }}">{{ ks.level_label }}</span>
+                            <small class="text-muted ms-2">{{ ks.geschaetzter_1rm }} kg</small>
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-{{ ks.farbe }}" role="progressbar"
+                             style="width: {{ ks.prozent }}%"
+                             aria-valuenow="{{ ks.prozent }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ ks.prozent }}%
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">{{ ks.level_label }}</small>
+                        {% if ks.diff_kg > 0 %}
+                        <small class="text-muted">{% trans "Noch" %} {{ ks.diff_kg }} kg {% trans "bis" %} {{ ks.naechstes_level }}</small>
+                        {% else %}
+                        <small class="text-success">{% trans "Höchstes Level erreicht!" %}</small>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-1 mt-1">
+                        {% for label, val in ks.standards.items %}
+                        <small class="text-muted" style="font-size:0.7rem;">{{ label }}: {{ val }}kg</small>
+                        {% if not forloop.last %}<small class="text-muted">|</small>{% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if not forloop.last %}<hr class="border-secondary">{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card card-stat border-secondary mb-4">
             <div class="card-body">
                 <h6 class="text-secondary text-uppercase mb-3">
@@ -340,6 +470,116 @@
             }
         }
     });
+
+    // Phase 21.1: Muskelgruppen Ist vs. Soll Chart
+    const muskelSollData = {{ muscle_soll_json|safe }};
+    if (muskelSollData.length > 0) {
+        const sollLabels = muskelSollData.map(d => d.muskelgruppe);
+        const sollIst = muskelSollData.map(d => d.saetze);
+        const sollMin = muskelSollData.map(d => d.soll_min);
+        const sollMax = muskelSollData.map(d => d.soll_max);
+        const barColors = muskelSollData.map(d => {
+            if (d.status === 'unter') return '#dc3545';
+            if (d.status === 'ueber') return '#ffc107';
+            return '#0d6efd';
+        });
+
+        new Chart(document.getElementById('muskelSollChart'), {
+            type: 'bar',
+            data: {
+                labels: sollLabels,
+                datasets: [
+                    {
+                        label: '{% trans "Soll-Bereich" %}',
+                        data: sollMax,
+                        backgroundColor: 'rgba(25, 135, 84, 0.15)',
+                        borderColor: 'rgba(25, 135, 84, 0.4)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.8,
+                        order: 2
+                    },
+                    {
+                        label: '{% trans "Ist-Sätze" %}',
+                        data: sollIst,
+                        backgroundColor: barColors,
+                        borderWidth: 0,
+                        borderRadius: 4,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.8,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true, indexAxis: 'y',
+                plugins: {
+                    legend: { display: true, labels: { color: '#adb5bd' } },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(ctx) {
+                                const i = ctx.dataIndex;
+                                return '{% trans "Soll" %}: ' + sollMin[i] + '–' + sollMax[i] + ' {% trans "Sätze" %}';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' }, beginAtZero: true,
+                         title: { display: true, text: '{% trans "Sätze / 30 Tage" %}', color: '#adb5bd' } },
+                    y: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' } }
+                }
+            }
+        });
+    }
+
+    // Phase 21.2: Push/Pull-Ratio Donut
+    {% if push_pull %}
+    const ppData = {{ push_pull_json|safe }};
+    const ppColor = ppData.farbe === 'success' ? '#198754' : ppData.farbe === 'warning' ? '#ffc107' : '#dc3545';
+    new Chart(document.getElementById('pushPullChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Push', 'Pull'],
+            datasets: [{
+                data: [ppData.push, ppData.pull],
+                backgroundColor: ['#0d6efd', '#0dcaf0'],
+                borderColor: ['#0d6efd', '#0dcaf0'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            cutout: '65%',
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { color: '#adb5bd' } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.label + ': ' + ctx.parsed + ' {% trans "Sätze" %}';
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            id: 'centerText',
+            afterDraw: function(chart) {
+                const { ctx, chartArea: {top, bottom, left, right} } = chart;
+                const cx = (left + right) / 2;
+                const cy = (top + bottom) / 2;
+                ctx.save();
+                ctx.font = 'bold 24px sans-serif';
+                ctx.fillStyle = ppColor;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(ppData.ratio.toFixed(2), cx, cy);
+                ctx.restore();
+            }
+        }]
+    });
+    {% endif %}
 
     // Heatmap
     const heatmapData = {{ heatmap_data_json|safe }};
