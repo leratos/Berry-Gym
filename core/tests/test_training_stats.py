@@ -14,7 +14,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import Equipment, Plan, Satz, Trainingseinheit, Uebung
+from core.models import Equipment, Plan, Satz, Trainingsblock, Trainingseinheit, Uebung
 from core.views.training_stats import (
     _calc_rpe_trend,
     _check_rpe10_warning,
@@ -24,7 +24,9 @@ from core.views.training_stats import (
     _get_motivation_quote,
     _get_rpe10_anteil,
     _get_session_rpe_trend,
+    _get_weakness_progress,
     _get_week_start,
+    get_weakness_comparison,
 )
 
 
@@ -670,3 +672,219 @@ class TestSessionRpeTrend(StatsBase):
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
         self.assertIn("session_rpe_trend", response.context)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 20: Schwachstellen-Tracker Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestWeaknessTracker(StatsBase):
+    """Tests für Schwachstellen-Fortschritt und Monatsende-Vergleich."""
+
+    def setUp(self):
+        super().setUp()
+        self.block = Trainingsblock.objects.create(
+            user=self.user,
+            name="Testblock",
+            typ="masse",
+            start_datum=date.today() - timedelta(days=30),
+        )
+
+    def _create_sets(self, muskelgruppe, count, days_ago=0):
+        """Erstelle Arbeitssätze für eine Muskelgruppe."""
+        ueb = Uebung.objects.create(
+            bezeichnung=f"Übung_{muskelgruppe}_{count}",
+            muskelgruppe=muskelgruppe,
+            bewegungstyp="COMPOUND",
+            gewichts_typ="GESAMT",
+        )
+        session = self._session(days_ago=days_ago)
+        for i in range(count):
+            Satz.objects.create(
+                einheit=session,
+                uebung=ueb,
+                satz_nr=i + 1,
+                gewicht=50,
+                wiederholungen=10,
+                rpe=8,
+                ist_aufwaermsatz=False,
+            )
+
+    # --- 20.1: Schwachstellen-Snapshot auf Trainingsblock ---
+
+    def test_trainingsblock_schwachstellen_snapshot_field(self):
+        """Trainingsblock hat schwachstellen_snapshot JSONField."""
+        self.assertIsNone(self.block.schwachstellen_snapshot)
+        snapshot = [{"muskelgruppe": "BAUCH", "ist_saetze": 4, "soll_min": 10, "soll_max": 18}]
+        self.block.schwachstellen_snapshot = snapshot
+        self.block.save()
+        self.block.refresh_from_db()
+        self.assertEqual(len(self.block.schwachstellen_snapshot), 1)
+        self.assertEqual(self.block.schwachstellen_snapshot[0]["muskelgruppe"], "BAUCH")
+
+    def test_snapshot_save_weakness_method(self):
+        """_save_weakness_snapshot speichert korrekte Daten."""
+        from ai_coach.plan_generator import PlanGenerator
+
+        gen = PlanGenerator.__new__(PlanGenerator)
+        gen.user_id = self.user.id
+        analysis_data = {
+            "weaknesses": [
+                "BAUCH: Untertrainiert (nur 10 eff. Wdh vs. Ø 55)",
+            ]
+        }
+        self._create_sets("BAUCH", 4, days_ago=5)
+        gen._save_weakness_snapshot(analysis_data)
+        self.block.refresh_from_db()
+        self.assertIsNotNone(self.block.schwachstellen_snapshot)
+        self.assertEqual(len(self.block.schwachstellen_snapshot), 1)
+        entry = self.block.schwachstellen_snapshot[0]
+        self.assertEqual(entry["muskelgruppe"], "BAUCH")
+        self.assertEqual(entry["ist_saetze"], 4)
+        self.assertGreater(entry["soll_min"], 0)
+
+    def test_snapshot_no_active_block(self):
+        """Kein Snapshot wenn kein aktiver Block."""
+        self.block.end_datum = date.today()
+        self.block.save()
+        from ai_coach.plan_generator import PlanGenerator
+
+        gen = PlanGenerator.__new__(PlanGenerator)
+        gen.user_id = self.user.id
+        gen._save_weakness_snapshot({"weaknesses": ["BAUCH: Untertrainiert (nur 5)"]})
+        self.block.refresh_from_db()
+        self.assertIsNone(self.block.schwachstellen_snapshot)
+
+    def test_snapshot_no_weaknesses(self):
+        """Kein Snapshot wenn keine Schwachstellen."""
+        from ai_coach.plan_generator import PlanGenerator
+
+        gen = PlanGenerator.__new__(PlanGenerator)
+        gen.user_id = self.user.id
+        gen._save_weakness_snapshot({"weaknesses": []})
+        self.block.refresh_from_db()
+        self.assertIsNone(self.block.schwachstellen_snapshot)
+
+    # --- 20.2: Laufendes Satz-Tracking ---
+
+    def test_weakness_progress_no_snapshot(self):
+        """Leere Liste wenn kein Snapshot existiert."""
+        result = _get_weakness_progress(self.user, self.block)
+        self.assertEqual(result, [])
+
+    def test_weakness_progress_erreicht(self):
+        """Status 'erreicht' wenn Ist >= Soll-Min."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "BRUST", "ist_saetze": 5, "soll_min": 12, "soll_max": 25}
+        ]
+        self.block.save()
+        self._create_sets("BRUST", 14)
+        result = _get_weakness_progress(self.user, self.block)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status"], "erreicht")
+        self.assertEqual(result[0]["ist_saetze"], 14)
+        self.assertEqual(result[0]["prozent"], 100)
+
+    def test_weakness_progress_auf_kurs(self):
+        """Status 'auf_kurs' wenn Ist >= 60% von Soll-Min."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "BRUST", "ist_saetze": 3, "soll_min": 12, "soll_max": 25}
+        ]
+        self.block.save()
+        self._create_sets("BRUST", 8)  # 8/12 = 67%
+        result = _get_weakness_progress(self.user, self.block)
+        self.assertEqual(result[0]["status"], "auf_kurs")
+
+    def test_weakness_progress_hinter_plan(self):
+        """Status 'hinter_plan' wenn Ist < 60% von Soll-Min."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "BRUST", "ist_saetze": 2, "soll_min": 12, "soll_max": 25}
+        ]
+        self.block.save()
+        self._create_sets("BRUST", 3)  # 3/12 = 25%
+        result = _get_weakness_progress(self.user, self.block)
+        self.assertEqual(result[0]["status"], "hinter_plan")
+
+    def test_weakness_progress_label(self):
+        """Label wird korrekt humanisiert."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "SCHULTER_HINT", "ist_saetze": 2, "soll_min": 10, "soll_max": 18}
+        ]
+        self.block.save()
+        result = _get_weakness_progress(self.user, self.block)
+        self.assertEqual(result[0]["label"], "Hintere Schulter")
+
+    # --- 20.3: Dashboard-Widget ---
+
+    def test_dashboard_context_weakness_progress(self):
+        """Dashboard-Context enthält weakness_progress."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "BAUCH", "ist_saetze": 4, "soll_min": 10, "soll_max": 18}
+        ]
+        self.block.save()
+        response = self.client.get(reverse("dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("weakness_progress", response.context)
+
+    def test_dashboard_widget_visible(self):
+        """Widget ist sichtbar wenn Snapshot existiert."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "BAUCH", "ist_saetze": 4, "soll_min": 10, "soll_max": 18}
+        ]
+        self.block.save()
+        self._create_sets("BAUCH", 6)
+        response = self.client.get(reverse("dashboard"))
+        self.assertContains(response, "Schwachstellen-Fortschritt")
+
+    def test_dashboard_widget_hidden_without_snapshot(self):
+        """Widget ist nicht sichtbar ohne Snapshot."""
+        from django.core.cache import cache
+
+        cache.clear()  # Sicherstellen dass kein gecachter Context den Test verfaelscht
+        response = self.client.get(reverse("dashboard"))
+        self.assertNotContains(response, "Schwachstellen-Fortschritt")
+
+    # --- 20.4: Monatsende-Vergleich ---
+
+    def test_comparison_behoben(self):
+        """Vergleich zeigt 'Behoben' wenn Soll-Min erreicht."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "BAUCH", "ist_saetze": 4, "soll_min": 10, "soll_max": 18}
+        ]
+        self.block.save()
+        self._create_sets("BAUCH", 12)
+        result = get_weakness_comparison(self.user)
+        self.assertEqual(len(result), 1)
+        self.assertTrue(result[0]["behoben"])
+        self.assertIn("Behoben", result[0]["zusammenfassung"])
+        self.assertIn("→", result[0]["zusammenfassung"])
+
+    def test_comparison_noch_untertrainiert(self):
+        """Vergleich zeigt 'Noch untertrainiert' wenn Soll-Min nicht erreicht."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "BAUCH", "ist_saetze": 4, "soll_min": 10, "soll_max": 18}
+        ]
+        self.block.save()
+        self._create_sets("BAUCH", 6)
+        result = get_weakness_comparison(self.user)
+        self.assertFalse(result[0]["behoben"])
+        self.assertIn("Noch untertrainiert", result[0]["zusammenfassung"])
+
+    def test_comparison_no_block(self):
+        """Leere Liste wenn kein aktiver Block."""
+        self.block.end_datum = date.today()
+        self.block.save()
+        result = get_weakness_comparison(self.user)
+        self.assertEqual(result, [])
+
+    def test_comparison_baseline_vs_aktuell(self):
+        """Baseline und aktueller Wert stimmen."""
+        self.block.schwachstellen_snapshot = [
+            {"muskelgruppe": "BRUST", "ist_saetze": 5, "soll_min": 12, "soll_max": 25}
+        ]
+        self.block.save()
+        self._create_sets("BRUST", 15)
+        result = get_weakness_comparison(self.user)
+        self.assertEqual(result[0]["baseline"], 5)
+        self.assertEqual(result[0]["aktuell"], 15)

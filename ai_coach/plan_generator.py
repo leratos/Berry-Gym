@@ -481,6 +481,9 @@ class PlanGenerator:
             print(f"✓ {len(plan_ids)} Pläne gespeichert (IDs: {', '.join(map(str, plan_ids))})")
             print(f"   Basis-Name: {plan_json['plan_name']}")
             print(f"   Sessions: {len(plan_json['sessions'])}")
+
+            # 6b. Schwachstellen-Snapshot auf aktivem Block speichern
+            self._save_weakness_snapshot(analysis_data)
         else:
             plan_ids = []
             print("\n💾 SCHRITT 6: ÜBERSPRUNGEN (save_to_db=False)")
@@ -645,6 +648,112 @@ class PlanGenerator:
             )
 
         return plan_ids
+
+    def _save_weakness_snapshot(self, analysis_data: dict) -> None:
+        """Speichert Schwachstellen-Snapshot auf dem aktiven Trainingsblock.
+
+        Baut eine Liste von {muskelgruppe, ist_saetze, soll_min, soll_max} aus den
+        identifizierten Schwachstellen und den aktuellen Satz-Zahlen.
+        """
+        from datetime import timedelta
+
+        from django.contrib.auth.models import User
+        from django.db.models import Count
+        from django.utils import timezone
+
+        from core.models import Satz, Trainingsblock
+        from core.utils.periodization import MUSKELGRUPPEN_GROESSE, get_volumen_schwellenwerte
+
+        try:
+            user = User.objects.get(id=self.user_id)
+            active_block = (
+                Trainingsblock.objects.filter(user=user, end_datum__isnull=True)
+                .order_by("-start_datum")
+                .first()
+            )
+            if not active_block:
+                print("   [INFO] Kein aktiver Block - Schwachstellen-Snapshot uebersprungen")
+                return
+
+            weaknesses = analysis_data.get("weaknesses", [])
+            if not weaknesses:
+                print("   [INFO] Keine Schwachstellen identifiziert - Snapshot uebersprungen")
+                return
+
+            # Aktuelle Arbeitssätze pro Muskelgruppe (letzte 30 Tage)
+            seit = timezone.now() - timedelta(days=30)
+            mg_counts = dict(
+                Satz.objects.filter(
+                    einheit__user=user,
+                    einheit__datum__gte=seit,
+                    ist_aufwaermsatz=False,
+                    einheit__ist_deload=False,
+                )
+                .values_list("uebung__muskelgruppe")
+                .annotate(count=Count("id"))
+                .values_list("uebung__muskelgruppe", "count")
+            )
+
+            snapshot = []
+            for weakness in weaknesses:
+                if ":" not in weakness or "Untertrainiert" not in weakness:
+                    continue
+                label = weakness.split(":")[0].strip()
+                # Label → DB-Key Mapping (gleiche Logik wie _validate_weakness_coverage)
+                mg_key = label.upper().replace(" ", "_").replace("Ä", "AE").replace("Ü", "UE")
+                # Spezial-Mappings für Klartext-Labels
+                label_to_key = {
+                    "Brust": "BRUST",
+                    "Lat": "RUECKEN_LAT",
+                    "Trapez": "RUECKEN_TRAPEZ",
+                    "Unterer Rücken": "RUECKEN_UNTEN",
+                    "Oberer Rücken": "RUECKEN_OBERER",
+                    "Vordere Schulter": "SCHULTER_VORN",
+                    "Seitliche Schulter": "SCHULTER_SEIT",
+                    "Hintere Schulter": "SCHULTER_HINT",
+                    "Bizeps": "BIZEPS",
+                    "Trizeps": "TRIZEPS",
+                    "Bauch": "BAUCH",
+                    "Quadrizeps": "BEINE_QUAD",
+                    "Hamstrings": "BEINE_HAM",
+                    "Gesäß": "PO",
+                    "Waden": "WADEN",
+                    "Unterarme": "UNTERARME",
+                    "Adduktoren": "ADDUKTOREN",
+                    "Abduktoren": "ABDUKTOREN",
+                    "Hüftbeuger": "HUEFTBEUGER",
+                }
+                resolved_key = label_to_key.get(label, mg_key)
+                # Nur Muskelgruppen mit bekannten Volumen-Schwellenwerten
+                if resolved_key not in MUSKELGRUPPEN_GROESSE:
+                    continue
+                schwelle = get_volumen_schwellenwerte(resolved_key, active_block.typ)
+                if not schwelle:
+                    continue
+                ist_saetze = mg_counts.get(resolved_key, 0)
+                snapshot.append(
+                    {
+                        "muskelgruppe": resolved_key,
+                        "ist_saetze": ist_saetze,
+                        "soll_min": schwelle[0],
+                        "soll_max": schwelle[1],
+                    }
+                )
+
+            if snapshot:
+                active_block.schwachstellen_snapshot = snapshot
+                active_block.save(update_fields=["schwachstellen_snapshot"])
+                print(f"   [OK] Schwachstellen-Snapshot gespeichert: {len(snapshot)} Muskelgruppen")
+                for entry in snapshot:
+                    mg = _humanize_muskelgruppe(entry["muskelgruppe"])
+                    print(
+                        f"      {mg}: {entry['ist_saetze']} Saetze "
+                        f"(Soll: {entry['soll_min']}-{entry['soll_max']})"
+                    )
+            else:
+                print("   [INFO] Keine trackbaren Schwachstellen - Snapshot uebersprungen")
+        except Exception as e:
+            print(f"   [WARN] Schwachstellen-Snapshot Fehler: {e}")
 
     def _fix_invalid_exercises(
         self, plan_json: dict, errors: list, available_exercises: list, llm_client

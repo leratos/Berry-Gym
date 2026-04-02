@@ -411,7 +411,7 @@ ist ein Frühindikator für Fatigue-Akkumulation – bevor der Fatigue-Index ans
 
 ## Phase 20 – Schwachstellen-Tracker / Feedback-Loop *(mittel, Dashboard)*
 **Branch:** `feature/phase20-weakness-tracker`
-**Status:** 📋 Konzept
+**Status:** ✅ Fertig
 
 ### Hintergrund / Problem
 Der Report identifiziert Schwachstellen, der Generator baut einen Plan dagegen. Aber es gibt

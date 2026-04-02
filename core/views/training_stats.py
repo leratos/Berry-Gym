@@ -939,6 +939,121 @@ def _check_session_rpe_trend_warning(user, heute) -> list[dict]:
     ]
 
 
+def _get_weakness_progress(user, active_block) -> list[dict]:
+    """Berechne laufenden Fortschritt pro Schwachstelle aus dem Block-Snapshot.
+
+    Für jede Muskelgruppe im Snapshot: aktuelle Arbeitssätze im laufenden
+    Monat zählen und gegen Soll-Bereich vergleichen.
+
+    Returns:
+        Liste von Dicts mit muskelgruppe, label, ist_saetze, soll_min, soll_max,
+        prozent, status ('erreicht', 'auf_kurs', 'hinter_plan'),
+        baseline_saetze (Ausgangswert bei Snapshot).
+    """
+    if not active_block or not active_block.schwachstellen_snapshot:
+        return []
+
+    from ai_coach.plan_generator import _humanize_muskelgruppe
+
+    snapshot = active_block.schwachstellen_snapshot
+    # Aktuelle Arbeitssätze pro Muskelgruppe (letzte 30 Tage)
+    seit = timezone.now() - timedelta(days=30)
+    mg_counts = dict(
+        Satz.objects.filter(
+            einheit__user=user,
+            einheit__datum__gte=seit,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        )
+        .values_list("uebung__muskelgruppe")
+        .annotate(count=Count("id"))
+        .values_list("uebung__muskelgruppe", "count")
+    )
+
+    result = []
+    for entry in snapshot:
+        mg = entry["muskelgruppe"]
+        soll_min = entry["soll_min"]
+        soll_max = entry["soll_max"]
+        baseline = entry["ist_saetze"]
+        ist = mg_counts.get(mg, 0)
+
+        # Fortschritt als % des Soll-Min
+        prozent = round((ist / soll_min) * 100) if soll_min > 0 else 100
+
+        if ist >= soll_min:
+            status = "erreicht"
+        elif soll_min > 0 and (ist / soll_min) >= 0.6:
+            status = "auf_kurs"
+        else:
+            status = "hinter_plan"
+
+        result.append(
+            {
+                "muskelgruppe": mg,
+                "label": _humanize_muskelgruppe(mg),
+                "ist_saetze": ist,
+                "soll_min": soll_min,
+                "soll_max": soll_max,
+                "prozent": min(prozent, 100),
+                "status": status,
+                "baseline_saetze": baseline,
+            }
+        )
+
+    return result
+
+
+def get_weakness_comparison(user) -> list[dict]:
+    """Monatsende-Vergleich: aktuelle Sätze vs. Ausgangswert aus dem Snapshot.
+
+    Returns:
+        Liste von Dicts mit muskelgruppe, label, baseline, aktuell, behoben (bool),
+        zusammenfassung (str).
+    """
+    from ai_coach.plan_generator import _humanize_muskelgruppe
+
+    active_block = _get_active_trainingsblock(user)
+    if not active_block or not active_block.schwachstellen_snapshot:
+        return []
+
+    seit = timezone.now() - timedelta(days=30)
+    mg_counts = dict(
+        Satz.objects.filter(
+            einheit__user=user,
+            einheit__datum__gte=seit,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        )
+        .values_list("uebung__muskelgruppe")
+        .annotate(count=Count("id"))
+        .values_list("uebung__muskelgruppe", "count")
+    )
+
+    result = []
+    for entry in active_block.schwachstellen_snapshot:
+        mg = entry["muskelgruppe"]
+        baseline = entry["ist_saetze"]
+        soll_min = entry["soll_min"]
+        aktuell = mg_counts.get(mg, 0)
+        behoben = aktuell >= soll_min
+        label = _humanize_muskelgruppe(mg)
+        symbol = "\u2713" if behoben else "\u2717"
+        status_text = "Behoben" if behoben else "Noch untertrainiert"
+        result.append(
+            {
+                "muskelgruppe": mg,
+                "label": label,
+                "baseline": baseline,
+                "aktuell": aktuell,
+                "soll_min": soll_min,
+                "behoben": behoben,
+                "zusammenfassung": f"{label}: {baseline} \u2192 {aktuell} Sätze {symbol} {status_text}",
+            }
+        )
+    return result
+
+
 def _get_performance_warnings(user, heute, favoriten, gesamt_trainings: int) -> list[dict]:
     """Aggregate performance warnings (plateau, regression, stagnation, balance, rpe10, rpe_trend), max 3."""
     if gesamt_trainings < 4:
@@ -1081,6 +1196,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         )
         # Phase 19: Session-RPE-Trend
         session_rpe_trend = _get_session_rpe_trend(request.user)
+        # Phase 20: Schwachstellen-Fortschritt
+        weakness_progress = _get_weakness_progress(request.user, active_block)
         computed = {
             "trainings_diese_woche": trainings_diese_woche,
             "streak": streak,
@@ -1102,6 +1219,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "performance_warnings": performance_warnings,
             # Phase 19: Session-RPE-Trend
             "session_rpe_trend": session_rpe_trend,
+            # Phase 20: Schwachstellen-Fortschritt
+            "weakness_progress": weakness_progress,
         }
         cache.set(cache_key, computed, timeout=DASHBOARD_CACHE_TTL)
 

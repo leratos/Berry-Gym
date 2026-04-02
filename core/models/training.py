@@ -151,6 +151,12 @@ class Trainingsblock(models.Model):
     plan_dauer_wochen = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Geplante Dauer (Wochen)"
     )
+    schwachstellen_snapshot = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name="Schwachstellen-Snapshot",
+        help_text="JSON-Liste von {muskelgruppe, ist_saetze, soll_min, soll_max} zum Zeitpunkt der Plananalyse",
+    )
     notiz = models.TextField(blank=True, verbose_name="Notiz")
 
     class Meta:
