@@ -54,6 +54,24 @@ _PULL_SESSION_KEYWORDS = ("pull", "zug", "ziehen")
 # 13.1: Muskelgruppen-Überrepräsentation
 _MAX_SETS_PER_MUSCLE_GROUP = 7
 
+# 16.1: Push/Pull-Klassifikation basierend auf Muskelgruppe
+_PUSH_MUSKELGRUPPEN = {"BRUST", "SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS"}
+_PULL_MUSKELGRUPPEN = {
+    "RUECKEN_LAT",
+    "RUECKEN_TRAPEZ",
+    "RUECKEN_UNTEN",
+    "RUECKEN_OBERER",
+    "BIZEPS",
+    "UNTERARME",
+    "SCHULTER_HINT",
+}
+# Neutral (nicht Push/Pull): BEINE_QUAD, BEINE_HAM, PO, WADEN, ADDUKTOREN,
+# ABDUKTOREN, HUEFTBEUGER, BAUCH, GANZKOERPER
+
+# 16.2: Push/Pull-Ratio Schwellenwerte
+_PUSH_PULL_WARN_RATIO = 1.5
+_PUSH_PULL_AUTOFIX_RATIO = 1.8
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry-Point
@@ -115,6 +133,12 @@ def validate_plan_structure(
 
     # Mindest-Satz-Budget pro Session
     warnings.extend(_check_min_sets_per_session(plan_json))
+
+    # 16: Push/Pull-Balance über Gesamtplan
+    pp_warnings, pp_fixed = _check_push_pull_ratio(plan_json, uebungen_map, available_exercises)
+    warnings.extend(pp_warnings)
+    if pp_fixed > 0:
+        fixes["push_pull_fixed"] = pp_fixed
 
     return warnings, fixes
 
@@ -523,3 +547,184 @@ def _check_min_sets_per_session(plan_json: dict) -> list[str]:
             )
 
     return warnings
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 16: Push/Pull-Balance über Gesamtplan
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _classify_push_pull(muskelgruppe: str) -> str | None:
+    """Klassifiziert eine Muskelgruppe als 'push', 'pull' oder None (neutral)."""
+    if muskelgruppe in _PUSH_MUSKELGRUPPEN:
+        return "push"
+    if muskelgruppe in _PULL_MUSKELGRUPPEN:
+        return "pull"
+    return None
+
+
+def _count_push_pull_sets(plan_json: dict, uebungen_map: dict[str, Uebung]) -> tuple[int, int]:
+    """Zählt Push- und Pull-Sätze über den gesamten Plan.
+
+    Returns:
+        (push_sets, pull_sets)
+    """
+    push_sets = 0
+    pull_sets = 0
+    for session in plan_json.get("sessions", []):
+        for ex in session.get("exercises", []):
+            uebung = uebungen_map.get(ex.get("exercise_name", ""))
+            if not uebung:
+                continue
+            classification = _classify_push_pull(uebung.muskelgruppe)
+            sets = ex.get("sets", 0)
+            if classification == "push":
+                push_sets += sets
+            elif classification == "pull":
+                pull_sets += sets
+    return push_sets, pull_sets
+
+
+def _check_push_pull_ratio(
+    plan_json: dict,
+    uebungen_map: dict[str, Uebung],
+    available_exercises: list[str] | None = None,
+) -> tuple[list[str], int]:
+    """Prüft die Push/Pull-Balance über den Gesamtplan.
+
+    Ratio > 1.5 → Warnung.
+    Ratio > 1.8 → Auto-Fix (Push-Isolation durch Pull-Isolation ersetzen).
+
+    Returns:
+        (warnings, fix_count)
+    """
+    push_sets, pull_sets = _count_push_pull_sets(plan_json, uebungen_map)
+
+    if pull_sets == 0 or push_sets == 0:
+        return [], 0
+
+    ratio = push_sets / pull_sets
+    if ratio <= _PUSH_PULL_WARN_RATIO:
+        return [], 0
+
+    # Auto-Fix bei Ratio > 1.8
+    if ratio > _PUSH_PULL_AUTOFIX_RATIO and available_exercises:
+        fixed = _fix_push_pull_imbalance(plan_json, uebungen_map, available_exercises)
+        if fixed > 0:
+            return [], fixed
+
+    # Warnung bei Ratio > 1.5 (oder wenn Auto-Fix fehlschlägt)
+    return [
+        f"Push/Pull-Imbalance: {push_sets} Push-Sätze vs. {pull_sets} Pull-Sätze "
+        f"(Ratio {ratio:.2f}:1, empfohlen ≤{_PUSH_PULL_WARN_RATIO}:1)"
+    ], 0
+
+
+def _fix_push_pull_imbalance(
+    plan_json: dict,
+    uebungen_map: dict[str, Uebung],
+    available_exercises: list[str],
+) -> int:
+    """Ersetzt Push-Isolation durch Pull-Isolation um die Balance zu verbessern.
+
+    Nur Isolation-Übungen werden getauscht, Compounds nie.
+
+    Returns:
+        Anzahl der ersetzten Übungen.
+    """
+    fix_count = 0
+    sessions = plan_json.get("sessions", [])
+
+    # Alle Push-Isolationen sammeln (sortiert nach wenigsten Sätzen)
+    push_isolations: list[tuple[int, int, dict]] = []
+    for s_idx, session in enumerate(sessions):
+        for e_idx, ex in enumerate(session.get("exercises", [])):
+            uebung = uebungen_map.get(ex.get("exercise_name", ""))
+            if not uebung:
+                continue
+            if (
+                uebung.muskelgruppe in _PUSH_MUSKELGRUPPEN
+                and uebung.bewegungstyp not in _COMPOUND_BEWEGUNGSTYPEN
+            ):
+                push_isolations.append((s_idx, e_idx, ex))
+
+    # Sortiere nach wenigsten Sätzen (ersetze zuerst die mit wenigsten Sätzen)
+    push_isolations.sort(key=lambda x: x[2].get("sets", 0))
+
+    # Bereits im Plan verwendete Übungen
+    all_plan_names = {
+        ex.get("exercise_name") for session in sessions for ex in session.get("exercises", [])
+    }
+
+    for s_idx, e_idx, ex in push_isolations:
+        # Nach jedem Fix prüfen ob Ratio jetzt ok ist
+        push_sets, pull_sets = _count_push_pull_sets(plan_json, uebungen_map)
+        if pull_sets == 0:
+            break
+        if push_sets / pull_sets <= _PUSH_PULL_WARN_RATIO:
+            break
+
+        # Pull-Isolation als Ersatz finden
+        replacement = _find_pull_replacement(available_exercises, all_plan_names)
+        if not replacement:
+            break
+
+        old_name = ex.get("exercise_name", "?")
+        ex["exercise_name"] = replacement
+        ex["notes"] = f"Auto-Fix 16.3: '{old_name}' ersetzt (Push/Pull-Imbalance)"
+        # uebungen_map aktualisieren
+        new_uebung = Uebung.objects.filter(bezeichnung=replacement).first()
+        if new_uebung:
+            uebungen_map[replacement] = new_uebung
+        all_plan_names.discard(old_name)
+        all_plan_names.add(replacement)
+        fix_count += 1
+        print(
+            f"   🔧 Auto-Fix 16.3: '{old_name}' → '{replacement}' in "
+            f"'{sessions[s_idx].get('day_name', '?')}' (Push → Pull)"
+        )
+
+    return fix_count
+
+
+def _find_pull_replacement(
+    available_exercises: list[str],
+    exclude_names: set[str],
+) -> str | None:
+    """Findet eine Pull-Isolation-Übung als Ersatz.
+
+    Bevorzugt hintere Schulter und oberen Rücken (typisch unterrepräsentiert).
+    """
+    preferred_groups = ["SCHULTER_HINT", "RUECKEN_OBERER", "RUECKEN_TRAPEZ", "BIZEPS"]
+
+    for mg in preferred_groups:
+        try:
+            replacement = (
+                Uebung.objects.filter(
+                    muskelgruppe=mg,
+                    bezeichnung__in=available_exercises,
+                    bewegungstyp="ISOLATION",
+                )
+                .exclude(bezeichnung__in=exclude_names)
+                .values_list("bezeichnung", flat=True)
+                .first()
+            )
+        except Exception:
+            continue
+        if replacement:
+            return replacement
+
+    # Fallback: beliebige Pull-Isolation
+    try:
+        return (
+            Uebung.objects.filter(
+                muskelgruppe__in=_PULL_MUSKELGRUPPEN,
+                bezeichnung__in=available_exercises,
+                bewegungstyp="ISOLATION",
+            )
+            .exclude(bezeichnung__in=exclude_names)
+            .values_list("bezeichnung", flat=True)
+            .first()
+        )
+    except Exception:
+        return None
