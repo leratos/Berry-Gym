@@ -447,43 +447,47 @@ Feedback-Loop: Diagnose → Plan → Tracking → Re-Diagnose.
 
 ---
 
-## Phase 21 – In-App Report-Dashboard *(groß, kann unterteilt werden)*
-**Branch:** `feature/phase21-report-dashboard`
+## Phase 21 – Statistik-Seite erweitern *(mittel, kann unterteilt werden)*
+**Branch:** `feature/phase21-stats-upgrade`
 **Status:** 📋 Konzept
 
 ### Hintergrund / Problem
-Die besten Analysen (Muskelgruppen-Balance-Visualisierung, Plateau-Tracking, Kraftstandards,
-Push/Pull-Ratio, Kraftentwicklung Top 5) existieren nur im PDF-Report. Das Dashboard hat
-einzelne Widgets (RPE-Warnung, Fatigue-Index, Wochenvolumen), aber kein Gesamtbild. Der User
-muss einen PDF exportieren um den vollständigen Trainingsstatus zu sehen.
+Die besten Analysen (Plateau-Tracking, Kraftstandards, Push/Pull-Ratio, Kraftentwicklung Top 5)
+existieren nur im PDF-Report. Die Statistik-Seite (`/stats/`) hat Volumen-Progression,
+Muskelgruppen-Balance und Heatmap, aber nicht das vollständige Bild. Der User muss einen PDF
+exportieren um alle Analysen zu sehen.
+
+Ursprüngliches Konzept sah eine separate View `/training/report/` vor. Verworfen, weil:
+- Muskelgruppen-Balance und Wochenvolumen wären doppelt vorhanden
+- User müsste zwischen zwei Seiten springen für ein Gesamtbild
+- Berechnungen überlappen stark (gleiche Helfer-Funktionen)
+- 1-User-Tool – keine verschiedenen Zielgruppen die separate Views rechtfertigen
 
 ### Geplante Lösung
+Bestehende `/stats/`-Seite um die fehlenden Report-Analysen erweitern. Kein neues Template,
+keine neue Route – alles in `training_stats.py` + `training_stats.html` ergänzen.
 
 | # | Aufgabe | Details |
 |---|---|---|
-| 21.1 | Report-Seite als eigene View | Neue View `/training/report/` mit den Report-Analysen als interaktive Seite. Kein PDF-Ersatz – Ergänzung. PDF bleibt für Archivierung/Teilen |
-| 21.2 | Muskelgruppen-Balance (interaktiv) | Horizontales Balkendiagramm mit Soll-Bereich-Overlay (Chart.js). Klick auf Muskelgruppe → Detail mit Übungsliste und Satz-Verteilung |
-| 21.3 | Push/Pull-Ratio (live) | Donut-Chart mit aktuellem Monatswert. Farbcodiert: Grün (<1,3), Gelb (1,3–1,5), Rot (>1,5) |
-| 21.4 | Plateau-Tracking (live) | Tabelle der Top-5-Übungen mit Tage-seit-letztem-PR, Status-Badge. Analog zum PDF aber mit Live-Daten statt Report-Zeitraum |
-| 21.5 | Kraftstandards-Übersicht | 1RM pro Übung mit Kraftstandard-Einordnung (Untrainiert→Elite). Progress-Bar zum nächsten Level. Bereits in PDF berechnet, hier als interaktive Ansicht |
-| 21.6 | Trainingsvolumen-Entwicklung | Wochenvolumen-Chart mit Deload-Markierung (bereits im Dashboard als Widget, hier als Vollansicht mit mehr Kontext) |
+| 21.1 | Muskelgruppen-Balance mit Soll-Bereich | Bestehendes Balkendiagramm um Soll-Bereich-Overlay erweitern (aus `VOLUMEN_SCHWELLENWERTE`). Klick auf Muskelgruppe → Detail mit Übungsliste und Satz-Verteilung |
+| 21.2 | Push/Pull-Ratio (live) | Donut-Chart mit aktuellem Monatswert. Farbcodiert: Grün (<1,3), Gelb (1,3–1,5), Rot (>1,5) |
+| 21.3 | Plateau-Tracking (live) | Tabelle der Top-5-Übungen mit Tage-seit-letztem-PR, Status-Badge. Analog zum PDF aber mit Live-Daten statt Report-Zeitraum |
+| 21.4 | Kraftstandards-Übersicht | 1RM pro Übung mit Kraftstandard-Einordnung (Untrainiert→Elite). Progress-Bar zum nächsten Level. Bereits in PDF berechnet, hier als interaktive Ansicht |
 
 ### Betroffene Dateien
-- Neue View + Template: `core/views/training_report.py` + `core/templates/core/training_report.html`
-- `core/views/training_stats.py` – bestehende Berechnungen wiederverwenden oder extrahieren
+- `core/views/training_stats.py` – `training_stats()` View erweitern, neue Helfer-Funktionen
+- `core/templates/core/training_stats.html` – neue Sektionen für 21.1–21.4
 - `core/utils/advanced_stats.py` – Report-Logik ggf. refactoren für Dual-Use (PDF + Web)
-- `core/urls.py` – neue Route
-- Tests: View-Tests + Berechnungs-Tests
+- Tests: bestehende `test_training_stats.py` erweitern
 
 ### Abhängigkeiten
-- Phase 16 (Push/Pull-Ratio) – für 21.3
-- Phase 19 (Session-RPE-Trend) – kann als Widget eingebettet werden
-- Phase 20 (Schwachstellen-Tracker) – kann als Widget eingebettet werden
+- Phase 16 (Push/Pull-Ratio) – für 21.2
 
 ### Abgrenzung
-- PDF-Export bleibt bestehen – Report-Dashboard ist Ergänzung, kein Ersatz
-- Keine neuen Berechnungen – nur bestehende Report-Logik in Web-UI überführen
-- Kann in Sub-Phasen aufgeteilt werden (21.1–21.3 als erster Schritt, 21.4–21.6 als zweiter)
+- PDF-Export bleibt bestehen – `/stats/` ist die interaktive Variante, PDF für Archivierung/Teilen
+- Keine neuen Berechnungen – nur bestehende Report-Logik in die Stats-Seite überführen
+- 21.6 (Wochenvolumen-Vollansicht) entfällt – `/stats/` hat das bereits
+- Kann in Sub-Phasen aufgeteilt werden (21.1–21.2 als erster Schritt, 21.3–21.4 als zweiter)
 
 ---
 
