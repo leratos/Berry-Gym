@@ -380,7 +380,7 @@ Trainingsstart nur das letzte verwendete Gewicht ohne RPE-Kontext.
 
 ## Phase 19 – Session-RPE-Trend *(klein, Dashboard)*
 **Branch:** `feature/phase19-session-rpe-trend`
-**Status:** 📋 Konzept
+**Status:** ✅ Abgeschlossen (2026-04-02)
 
 ### Hintergrund / Problem
 RPE wird pro Satz erfasst, aber nur als Gesamtverteilung ausgewertet (Phase 9.3).

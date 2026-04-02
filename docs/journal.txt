@@ -5280,3 +5280,45 @@ Integration in:
 - `core/templates/core/training_session.html` – RPE-Empfehlung Badge
 - `core/tests/test_training_session_views.py` – 9 neue Tests
 - `docs/PROJECT_ROADMAP.md` – Phase 18 Status aktualisiert
+
+
+---
+
+## Phase 19: Session-RPE-Trend
+
+**Datum:** 2026-04-02
+**Branch:** `feature/phase19-session-rpe-trend`
+
+### 19.1: Session-RPE berechnen
+Neue Funktion `_get_session_rpe_trend()` in `training_stats.py`:
+- Aggregiert Avg-RPE pro Session (gewichtet nach Sätzen, min 2 Arbeitssätze mit RPE)
+- Letzte 12 Sessions (konfigurierbar)
+- Lineare Regression über Session-Index → RPE
+- Trend-Klassifikation: slope > 0.1 = "rising", < -0.1 = "falling", sonst "stable"
+- Returns: sessions[], trend, slope, current_avg
+
+### 19.2: RPE-Trend-Chart im Dashboard
+- Chart.js Line-Chart mit farbkodierter Linie (gelb=steigend, grün=fallend, cyan=stabil)
+- Y-Achse dynamisch skaliert (min/max ± Puffer)
+- Badge mit Trend-Richtung (Pfeil + Label)
+- Aktueller Ø RPE + Steigung als Text unter dem Chart
+- Nur sichtbar wenn ≥3 Sessions mit RPE-Daten
+
+### 19.3: Frühwarnung bei steigendem RPE
+Neue Funktion `_check_session_rpe_trend_warning()`:
+- Triggert wenn: Trend = "rising" UND aktueller Ø RPE > 8.5 UND letzte 3 Sessions strikt steigend
+- Warnung: "Trainingsintensität steigt seit 3+ Sessions"
+- Empfehlung: Deload oder Gewicht/Volumen reduzieren
+- Priorität 1 (nach rpe10, vor regression) in `_get_performance_warnings()`
+
+**Tests:** 11 neue Tests in TestSessionRpeTrend:
+- keine Sessions, zu wenige, steigend, fallend, stabil
+- current_avg korrekt, Aufwärmsätze ignoriert
+- Warnung steigend+>8.5, keine Warnung unter 8.5, keine bei fallend
+- Dashboard-Context enthält session_rpe_trend
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – _get_session_rpe_trend(), _check_session_rpe_trend_warning(), dashboard context
+- `core/templates/core/dashboard.html` – RPE-Trend-Chart + Script
+- `core/tests/test_training_stats.py` – 11 neue Tests
+- `docs/PROJECT_ROADMAP.md` – Phase 19 Status aktualisiert
