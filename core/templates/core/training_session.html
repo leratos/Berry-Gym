@@ -339,6 +339,20 @@
                     {% endwith %}
                 {% endif %}
 
+                {% if rpe_start_empfehlungen %}
+                    {% with rpe_empf=rpe_start_empfehlungen|get_item:uebung_group.grouper.id %}
+                        {% if rpe_empf %}
+                        <div class="px-3 py-2 bg-dark bg-opacity-50 border-bottom border-secondary">
+                            <small class="text-warning">
+                                <i class="bi bi-calculator me-1"></i>
+                                <strong>{% trans "RPE-Empfehlung" %}:</strong> {{ rpe_empf.empfohlen_kg }} kg
+                                <span class="text-muted ms-1">({% trans "Ø RPE" %} {{ rpe_empf.avg_rpe }} → {% trans "Ziel" %} {{ rpe_empf.ziel_rpe }}, −{{ rpe_empf.reduktion_pct }}%)</span>
+                            </small>
+                        </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
+
                 {% if plan_uebung_hinweise %}
                     {% with hinweis=plan_uebung_hinweise|get_item:uebung_group.grouper.id %}
                         {% if hinweis %}
