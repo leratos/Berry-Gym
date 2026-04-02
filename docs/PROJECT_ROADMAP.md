@@ -345,7 +345,7 @@ Startvolumen und andere Progressionserwartungen als ein 12-Wochen-Plan.
 
 ## Phase 18 – Startgewicht-Empfehlung beim Planwechsel *(mittel, UX)*
 **Branch:** `feature/phase18-start-weight`
-**Status:** 📋 Konzept
+**Status:** ✅ Abgeschlossen (2026-04-02)
 
 ### Hintergrund / Problem
 Beim Wechsel auf einen neuen Plan weiß der User nicht, mit welchem Gewicht er starten soll.
