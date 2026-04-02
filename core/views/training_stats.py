@@ -1788,6 +1788,307 @@ def _build_90day_heatmap(trainings, heute) -> list[dict]:
     return result
 
 
+def _calc_muscle_soll_bereiche(stats_code: dict, user) -> list[dict]:
+    """Calculate target volume ranges per muscle group for 21.1 overlay.
+
+    Returns list of dicts with: muskelgruppe (display), code, saetze (actual),
+    soll_min, soll_max, status ('ok', 'unter', 'ueber').
+    """
+    from ..utils.periodization import MUSKELGRUPPEN_GROESSE, get_volumen_schwellenwerte
+
+    active_block = _get_active_trainingsblock(user)
+    block_typ = active_block.typ if active_block else None
+
+    # stats_code has mg_code -> eff_wdh, but we need set counts per mg
+    # We'll count actual sets from DB for the last 30 days
+    heute = timezone.now()
+    dreissig_tage = heute - timedelta(days=30)
+    muscle_counts = (
+        Satz.objects.filter(
+            einheit__user=user,
+            einheit__datum__gte=dreissig_tage,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        )
+        .values("uebung__muskelgruppe")
+        .annotate(count=Count("id"))
+    )
+    counts = {r["uebung__muskelgruppe"]: r["count"] for r in muscle_counts}
+
+    mg_display_map = dict(MUSKELGRUPPEN)
+    result = []
+    for mg_code, groesse in MUSKELGRUPPEN_GROESSE.items():
+        if groesse == "spezial":
+            continue
+        schwelle = get_volumen_schwellenwerte(mg_code, block_typ)
+        if not schwelle:
+            continue
+        saetze = counts.get(mg_code, 0)
+        soll_min, soll_max = schwelle
+        if saetze < soll_min:
+            status = "unter"
+        elif saetze > soll_max:
+            status = "ueber"
+        else:
+            status = "ok"
+        result.append(
+            {
+                "muskelgruppe": mg_display_map.get(mg_code, mg_code),
+                "code": mg_code,
+                "saetze": saetze,
+                "soll_min": soll_min,
+                "soll_max": soll_max,
+                "status": status,
+            }
+        )
+    result.sort(key=lambda x: x["saetze"], reverse=True)
+    return result
+
+
+def _calc_push_pull_ratio(user) -> dict | None:
+    """Calculate push/pull ratio for current month (21.2).
+
+    Returns dict with: push, pull, ratio, farbe, status_text.
+    """
+    heute = timezone.now()
+    dreissig_tage = heute - timedelta(days=30)
+    muscle_counts = (
+        Satz.objects.filter(
+            einheit__user=user,
+            einheit__datum__gte=dreissig_tage,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        )
+        .values("uebung__muskelgruppe")
+        .annotate(count=Count("id"))
+    )
+    counts = {r["uebung__muskelgruppe"]: r["count"] for r in muscle_counts}
+    push = sum(counts.get(mg, 0) for mg in _PUSH_MUSCLES)
+    pull = sum(counts.get(mg, 0) for mg in _PULL_MUSCLES)
+
+    if push == 0 and pull == 0:
+        return None
+
+    ratio = round(push / pull, 2) if pull > 0 else (99.0 if push > 0 else 0.0)
+    if ratio <= 1.3:
+        farbe = "success"
+        status_text = "Ausgeglichen"
+    elif ratio <= 1.5:
+        farbe = "warning"
+        status_text = "Leicht Push-lastig"
+    else:
+        farbe = "danger"
+        status_text = "Push-Dominanz"
+
+    return {
+        "push": push,
+        "pull": pull,
+        "ratio": ratio,
+        "farbe": farbe,
+        "status_text": status_text,
+    }
+
+
+def _calc_plateau_live(user) -> list[dict]:
+    """Calculate plateau data for top-5 favorite exercises (21.3).
+
+    Returns list of dicts with: uebung, tage_seit_pr, status, farbe, letzter_pr_datum.
+    Uses Satz.is_pr field for PR detection.
+    """
+    heute = timezone.now()
+
+    # Top 5 exercises by set count
+    top_uebungen = (
+        Satz.objects.filter(
+            einheit__user=user,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        )
+        .values("uebung__bezeichnung", "uebung__id")
+        .annotate(anzahl=Count("id"))
+        .order_by("-anzahl")[:5]
+    )
+
+    result = []
+    for uebung in top_uebungen:
+        uebung_name = uebung["uebung__bezeichnung"]
+        uebung_id = uebung["uebung__id"]
+
+        # Find last PR via is_pr flag first, fallback to max weight
+        letzter_pr_satz = (
+            Satz.objects.filter(
+                einheit__user=user,
+                uebung_id=uebung_id,
+                is_pr=True,
+            )
+            .select_related("einheit")
+            .order_by("-einheit__datum")
+            .first()
+        )
+
+        if not letzter_pr_satz:
+            # Fallback: find the set with highest estimated 1RM
+            alle_saetze = Satz.objects.filter(
+                einheit__user=user,
+                uebung_id=uebung_id,
+                ist_aufwaermsatz=False,
+                gewicht__isnull=False,
+            ).select_related("einheit")
+            best_1rm = 0
+            best_satz = None
+            for satz in alle_saetze:
+                wdh = satz.wiederholungen or 1
+                est = float(satz.gewicht) * (1 + wdh / 30.0)
+                if est > best_1rm:
+                    best_1rm = est
+                    best_satz = satz
+            letzter_pr_satz = best_satz
+
+        if not letzter_pr_satz:
+            continue
+
+        pr_datum = letzter_pr_satz.einheit.datum
+        tage_seit_pr = (heute.date() - pr_datum.date()).days
+
+        if tage_seit_pr <= 14:
+            status = "Kürzlich"
+            farbe = "success"
+        elif tage_seit_pr <= 42:
+            status = "Stagnierend"
+            farbe = "warning"
+        else:
+            status = "Lange kein PR"
+            farbe = "danger"
+
+        result.append(
+            {
+                "uebung": uebung_name,
+                "tage_seit_pr": tage_seit_pr,
+                "status": status,
+                "farbe": farbe,
+                "letzter_pr_datum": pr_datum.strftime("%d.%m.%Y"),
+            }
+        )
+
+    return result
+
+
+def _calc_kraftstandards_live(user) -> list[dict]:
+    """Calculate 1RM strength standards for top exercises (21.4).
+
+    Returns list of dicts with: uebung, geschaetzter_1rm, level, level_label,
+    naechstes_level, prozent, farbe, diff_kg.
+    """
+    user_gewicht = _get_user_koerpergewicht(user)
+
+    top_uebungen = (
+        Satz.objects.filter(
+            einheit__user=user,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+            gewicht__isnull=False,
+        )
+        .values("uebung__bezeichnung", "uebung__id")
+        .annotate(anzahl=Count("id"))
+        .order_by("-anzahl")[:10]
+    )
+
+    result = []
+    for uebung in top_uebungen:
+        uebung_name = uebung["uebung__bezeichnung"]
+        uebung_id = uebung["uebung__id"]
+
+        try:
+            uebung_obj = Uebung.objects.get(id=uebung_id)
+        except Uebung.DoesNotExist:
+            continue
+
+        if not uebung_obj.standard_beginner:
+            continue
+
+        # Calculate best 1RM
+        saetze = Satz.objects.filter(
+            einheit__user=user,
+            uebung_id=uebung_id,
+            ist_aufwaermsatz=False,
+            gewicht__isnull=False,
+        )
+        beste_1rm = 0
+        for satz in saetze:
+            wdh = satz.wiederholungen or 1
+            est = float(satz.gewicht) * (1 + wdh / 30.0)
+            if est > beste_1rm:
+                beste_1rm = est
+
+        if beste_1rm == 0:
+            continue
+
+        # Allometric scaling
+        scaling_factor = (float(user_gewicht) / 80.0) ** (2 / 3)
+        standards = {
+            "beginner": round(float(uebung_obj.standard_beginner) * scaling_factor, 1),
+            "intermediate": round(float(uebung_obj.standard_intermediate) * scaling_factor, 1),
+            "advanced": round(float(uebung_obj.standard_advanced) * scaling_factor, 1),
+            "elite": round(float(uebung_obj.standard_elite) * scaling_factor, 1),
+        }
+
+        level_labels = {
+            "untrainiert": "Untrainiert",
+            "beginner": "Anfänger",
+            "intermediate": "Fortgeschritten",
+            "advanced": "Erfahren",
+            "elite": "Elite",
+        }
+        levels_order = ["beginner", "intermediate", "advanced", "elite"]
+
+        level = "untrainiert"
+        naechstes_level = "beginner"
+        prozent = (
+            round((beste_1rm / standards["beginner"]) * 100, 1) if standards["beginner"] else 0
+        )
+
+        if beste_1rm >= standards["beginner"]:
+            for lv in levels_order:
+                if beste_1rm >= standards[lv]:
+                    level = lv
+                else:
+                    naechstes_level = lv
+                    prev_std = standards[levels_order[levels_order.index(lv) - 1]]
+                    diff = standards[lv] - prev_std
+                    progress = beste_1rm - prev_std
+                    prozent = round((progress / diff) * 100, 1) if diff > 0 else 0
+                    break
+            else:
+                naechstes_level = None
+                prozent = 100
+
+        diff_kg = round(standards[naechstes_level] - beste_1rm, 1) if naechstes_level else 0
+
+        farben = {
+            "untrainiert": "secondary",
+            "beginner": "info",
+            "intermediate": "primary",
+            "advanced": "warning",
+            "elite": "success",
+        }
+
+        result.append(
+            {
+                "uebung": uebung_name,
+                "geschaetzter_1rm": round(beste_1rm, 1),
+                "level": level,
+                "level_label": level_labels[level],
+                "naechstes_level": level_labels.get(naechstes_level, "—"),
+                "prozent": min(prozent, 100),
+                "farbe": farben.get(level, "secondary"),
+                "diff_kg": diff_kg,
+                "standards": {level_labels[k]: v for k, v in standards.items()},
+            }
+        )
+
+    return result[:5]
+
+
 @login_required
 def training_stats(request: HttpRequest) -> HttpResponse:
     """Erweiterte Trainingsstatistiken mit Volumen-Progression und Analyse."""
@@ -1826,6 +2127,18 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     # RPE-10 metric (Phase 9.3)
     rpe10_anteil = _get_rpe10_anteil(request.user, heute)
 
+    # Phase 21.1: Muskelgruppen-Balance Soll-Bereich
+    muscle_soll = _calc_muscle_soll_bereiche(stats_code, request.user)
+
+    # Phase 21.2: Push/Pull-Ratio
+    push_pull = _calc_push_pull_ratio(request.user)
+
+    # Phase 21.3: Plateau-Tracking
+    plateau_live = _calc_plateau_live(request.user)
+
+    # Phase 21.4: Kraftstandards
+    kraftstandards = _calc_kraftstandards_live(request.user)
+
     # Body stats trend data (optional – only if measurements exist)
     body_werte = KoerperWerte.objects.filter(user=request.user).order_by("datum")
     body_chart_ctx = {}
@@ -1853,6 +2166,12 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "deload_warnings": deload_warnings,
         "svg_muscle_data_json": json.dumps(svg_muscle_data),
         "rpe10_anteil": rpe10_anteil,
+        # Phase 21
+        "muscle_soll_json": json.dumps(muscle_soll),
+        "push_pull": push_pull,
+        "push_pull_json": json.dumps(push_pull),
+        "plateau_live": plateau_live,
+        "kraftstandards": kraftstandards,
         **body_chart_ctx,
     }
     return render(request, "core/training_stats.html", context)
