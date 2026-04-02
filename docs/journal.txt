@@ -5117,3 +5117,71 @@ Greift an zwei Stellen: (1) Fallback-Namensgenerierung, (2) LLM-generierte Namen
 Ergebnis: "Fokus Bauch, Hüftbeuger, Hintere Schulter" statt DB-Konstanten.
 
 **Tests:** 264 ai_coach passed (+5 neue Tests für Humanize-Helfer)
+
+
+---
+
+## In Arbeit: Phasen 16–21 – Konzepte für Roadmap erstellen
+
+**Datum:** 2026-04-02
+
+Sechs neue Feature-Phasen als Konzept in PROJECT_ROADMAP.md aufnehmen:
+- Phase 16: Push/Pull-Validierung im Plangenerator
+- Phase 17: Plandauer als Plan-Input
+- Phase 18: Startgewicht-Empfehlung beim Planwechsel
+- Phase 19: Session-RPE-Trend
+- Phase 20: Schwachstellen-Tracker (Feedback-Loop)
+- Phase 21: In-App Report-Dashboard
+
+Auslöser: Analyse Training Report März 2026 + neuer Trainingsplan.
+
+## Abgeschlossen: Phasen 16–21 Konzepte in PROJECT_ROADMAP.md
+
+Alle sechs Phasen mit vollständigen Konzepten dokumentiert:
+- Phase 16: Push/Pull-Validierung (klein) – plan_validator.py
+- Phase 17: Plandauer als Input (mittel) – prompt_builder, plan_generator, UI
+- Phase 18: Startgewicht-Empfehlung (mittel) – training_stats, training_session UI
+- Phase 19: Session-RPE-Trend (klein) – training_stats, dashboard
+- Phase 20: Schwachstellen-Tracker (mittel) – neues Datenmodell, dashboard widget
+- Phase 21: In-App Report-Dashboard (groß, unterteilbar) – neue View
+
+
+---
+
+## Phase 16: Push/Pull-Validierung im Plangenerator
+
+**Datum:** 2026-04-02
+
+### 16.1: Push/Pull-Klassifikation pro Übung
+Muskelgruppen-basierte Klassifikation in `plan_validator.py`:
+- **Push:** BRUST, SCHULTER_VORN, SCHULTER_SEIT, TRIZEPS
+- **Pull:** RUECKEN_LAT, RUECKEN_TRAPEZ, RUECKEN_UNTEN, RUECKEN_OBERER, BIZEPS, UNTERARME, SCHULTER_HINT
+- **Neutral:** Alle Bein-Gruppen, BAUCH, GANZKOERPER (werden ignoriert)
+
+Helfer `_classify_push_pull()` gibt "push", "pull" oder None zurück.
+`_count_push_pull_sets()` aggregiert Push/Pull-Sätze über den gesamten Plan.
+
+### 16.2: Gesamtplan Push/Pull-Ratio Check
+Neuer Check `_check_push_pull_ratio()` in `plan_validator.py`:
+- Ratio > 1.5:1 → Warnung mit konkreten Satz-Zahlen
+- Ratio > 1.8:1 → Auto-Fix-Versuch (16.3), bei Misserfolg Warnung
+- Division-by-Zero-sicher: kein Check wenn Push oder Pull = 0
+
+### 16.3: Auto-Fix Push/Pull-Imbalance
+`_fix_push_pull_imbalance()` ersetzt Push-Isolationen durch Pull-Isolationen:
+- Nur Isolation-Übungen werden getauscht, Compounds bleiben unangetastet
+- Sortierung: Übungen mit wenigsten Sätzen zuerst ersetzen
+- Bevorzugte Ersatz-Gruppen: SCHULTER_HINT, RUECKEN_OBERER, RUECKEN_TRAPEZ, BIZEPS
+- Nach jedem Tausch wird die Ratio neu berechnet → stoppt sobald ≤1.5
+- `_find_pull_replacement()` sucht verfügbare Pull-Isolationen, die noch nicht im Plan sind
+
+Eingebunden in `validate_plan_structure()` Entry-Point nach allen bestehenden Checks.
+
+**Tests:** 42 passed (8 neue Tests für Push/Pull-Klassifikation, Zählung, Ratio-Check, Auto-Fix)
+
+**Geänderte Dateien:**
+- `ai_coach/plan_validator.py` – 16.1/16.2/16.3: Klassifikation, Ratio-Check, Auto-Fix
+- `ai_coach/tests/test_plan_validator.py` – 8 neue Tests
+- `docs/PROJECT_ROADMAP.md` – Phase 16 Status aktualisiert
+
+Phase 15 (bisher nur in journal.txt) ebenfalls in Roadmap nachgetragen.
