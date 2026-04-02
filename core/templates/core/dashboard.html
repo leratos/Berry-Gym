@@ -655,6 +655,82 @@
   </div>
   {% endif %}
 
+  <!-- Phase 19: Session-RPE-Trend -->
+  {% if session_rpe_trend.sessions|length >= 3 %}
+  <div class="card card-stat mb-4 shadow-sm border-secondary">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">
+                <i class="bi bi-graph-up me-2"></i>{% trans "Session-RPE-Trend" %}
+            </h6>
+            {% if session_rpe_trend.trend == "rising" %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-arrow-up"></i> {% trans "Steigend" %}</span>
+            {% elif session_rpe_trend.trend == "falling" %}
+                <span class="badge bg-success"><i class="bi bi-arrow-down"></i> {% trans "Fallend" %}</span>
+            {% elif session_rpe_trend.trend == "stable" %}
+                <span class="badge bg-info text-dark"><i class="bi bi-dash"></i> {% trans "Stabil" %}</span>
+            {% endif %}
+        </div>
+        <canvas id="sessionRpeChart" height="120"></canvas>
+        {% if session_rpe_trend.current_avg %}
+        <small class="text-muted d-block mt-2">
+            {% trans "Aktuell" %}: Ø RPE {{ session_rpe_trend.current_avg }}
+            {% if session_rpe_trend.slope %}
+                ({{ session_rpe_trend.slope }} {% trans "pro Session" %})
+            {% endif %}
+        </small>
+        {% endif %}
+    </div>
+  </div>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('sessionRpeChart');
+      if (!ctx) return;
+      const data = {{ session_rpe_trend.sessions|safe }};
+      if (!data || data.length < 3) return;
+
+      const labels = data.map(s => s.date_str);
+      const values = data.map(s => s.avg_rpe);
+      const trend = '{{ session_rpe_trend.trend }}';
+      const lineColor = trend === 'rising' ? '#ffc107' : trend === 'falling' ? '#198754' : '#0dcaf0';
+
+      new Chart(ctx, {
+          type: 'line',
+          data: {
+              labels: labels,
+              datasets: [{
+                  data: values,
+                  borderColor: lineColor,
+                  backgroundColor: lineColor + '33',
+                  fill: true,
+                  tension: 0.3,
+                  pointRadius: 4,
+                  pointBackgroundColor: lineColor,
+                  borderWidth: 2,
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                  x: {
+                      ticks: { color: '#adb5bd', font: { size: 10 } },
+                      grid: { display: false },
+                  },
+                  y: {
+                      min: Math.max(5, Math.min(...values) - 1),
+                      max: Math.min(10, Math.max(...values) + 0.5),
+                      ticks: { color: '#adb5bd', stepSize: 0.5 },
+                      grid: { color: 'rgba(255,255,255,0.1)' },
+                  }
+              }
+          }
+      });
+  });
+  </script>
+  {% endif %}
+
   <!-- Motivations-Quote -->
   <div class="card bg-gradient text-center py-4 mb-4 shadow" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body">
