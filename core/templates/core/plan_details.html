@@ -139,7 +139,20 @@
                     </div>
                 </div>
             </div>
-            {% if item.letztes_gewicht %}
+            {% if item.rpe_empfehlung %}
+            <div class="alert alert-info border-info mb-0 py-2 px-3">
+                <small>
+                    <i class="bi bi-calculator me-1"></i>
+                    <strong>{% trans "Empfohlen" %}: {{ item.rpe_empfehlung.empfohlen_kg }} kg</strong>
+                    <span class="text-muted ms-1">({% trans "basierend auf RPE" %} {{ item.rpe_empfehlung.ziel_rpe }})</span>
+                    <br>
+                    <span class="text-muted">
+                        <i class="bi bi-clock-history me-1"></i>{% trans "Letztes Mal" %}: {{ item.letztes_gewicht }} kg
+                        ({% trans "Ø RPE" %} {{ item.rpe_empfehlung.avg_rpe }} → {% trans "Ziel" %} {{ item.rpe_empfehlung.ziel_rpe }}, −{{ item.rpe_empfehlung.reduktion_pct }}%)
+                    </span>
+                </small>
+            </div>
+            {% elif item.letztes_gewicht %}
             <div class="alert alert-dark border-secondary mb-0 py-2 px-3">
                 <small class="text-muted">
                     <i class="bi bi-clock-history me-1"></i>{% trans "Letztes Mal" %}:
