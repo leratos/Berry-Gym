@@ -18,10 +18,12 @@ from core.models import Equipment, Plan, Satz, Trainingseinheit, Uebung
 from core.views.training_stats import (
     _calc_rpe_trend,
     _check_rpe10_warning,
+    _check_session_rpe_trend_warning,
     _detect_volume_warnings,
     _get_fatigue_rating,
     _get_motivation_quote,
     _get_rpe10_anteil,
+    _get_session_rpe_trend,
     _get_week_start,
 )
 
@@ -580,3 +582,91 @@ class TestPDFExportRobustness(TestCase):
         response = self.client.get(reverse("export_training_pdf"))
         # Kein 500 Error
         self.assertNotEqual(response.status_code, 500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 19: Session-RPE-Trend
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestSessionRpeTrend(StatsBase):
+    """Phase 19: _get_session_rpe_trend und _check_session_rpe_trend_warning."""
+
+    def _create_sessions_with_rpe(self, rpe_values):
+        """Erstellt Sessions mit gegebenen RPE-Werten (älteste zuerst)."""
+        sessions = []
+        for i, rpe_val in enumerate(reversed(rpe_values)):
+            s = self._session(days_ago=i + 1)
+            self._satz(s, gewicht=80, wdh=8, rpe=rpe_val)
+            self._satz(s, gewicht=80, wdh=8, rpe=rpe_val)
+            sessions.append(s)
+        return sessions
+
+    def test_keine_sessions_leeres_ergebnis(self):
+        result = _get_session_rpe_trend(self.user)
+        self.assertEqual(result["sessions"], [])
+        self.assertIsNone(result["trend"])
+
+    def test_weniger_als_3_sessions_kein_trend(self):
+        self._create_sessions_with_rpe([7.0, 8.0])
+        result = _get_session_rpe_trend(self.user)
+        self.assertIsNone(result["trend"])
+
+    def test_steigende_rpe_trend_rising(self):
+        self._create_sessions_with_rpe([7.0, 7.5, 8.0, 8.5, 9.0])
+        result = _get_session_rpe_trend(self.user)
+        self.assertEqual(result["trend"], "rising")
+        self.assertGreater(result["slope"], 0)
+
+    def test_fallende_rpe_trend_falling(self):
+        self._create_sessions_with_rpe([9.0, 8.5, 8.0, 7.5, 7.0])
+        result = _get_session_rpe_trend(self.user)
+        self.assertEqual(result["trend"], "falling")
+        self.assertLess(result["slope"], 0)
+
+    def test_stabile_rpe_trend_stable(self):
+        self._create_sessions_with_rpe([8.0, 8.0, 8.0, 8.0, 8.0])
+        result = _get_session_rpe_trend(self.user)
+        self.assertEqual(result["trend"], "stable")
+
+    def test_current_avg_ist_letzter_wert(self):
+        self._create_sessions_with_rpe([7.0, 7.5, 8.0])
+        result = _get_session_rpe_trend(self.user)
+        self.assertEqual(result["current_avg"], 8.0)
+
+    def test_aufwaermsaetze_ignoriert(self):
+        s = self._session(days_ago=1)
+        self._satz(s, gewicht=80, wdh=8, rpe=9.0, warmup=True)
+        self._satz(s, gewicht=80, wdh=8, rpe=9.0, warmup=True)
+        # Nur Warmups → kein RPE-Datenpunkt
+        result = _get_session_rpe_trend(self.user)
+        self.assertEqual(len(result["sessions"]), 0)
+
+    def test_warning_steigend_und_ueber_8_5(self):
+        """Warnung wenn RPE steigend UND > 8.5."""
+        self._create_sessions_with_rpe([8.0, 8.5, 8.8, 9.0, 9.2])
+        heute = timezone.now()
+        warnings = _check_session_rpe_trend_warning(self.user, heute)
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]["type"], "rpe_trend")
+
+    def test_keine_warning_steigend_aber_unter_8_5(self):
+        """Keine Warnung wenn steigend aber aktuell unter 8.5."""
+        self._create_sessions_with_rpe([6.0, 6.5, 7.0, 7.5, 8.0])
+        heute = timezone.now()
+        warnings = _check_session_rpe_trend_warning(self.user, heute)
+        self.assertEqual(len(warnings), 0)
+
+    def test_keine_warning_fallend(self):
+        """Keine Warnung bei fallendem RPE."""
+        self._create_sessions_with_rpe([9.5, 9.0, 8.5, 8.0, 7.5])
+        heute = timezone.now()
+        warnings = _check_session_rpe_trend_warning(self.user, heute)
+        self.assertEqual(len(warnings), 0)
+
+    def test_dashboard_enthaelt_session_rpe_trend(self):
+        """Dashboard-Context enthält session_rpe_trend."""
+        self._create_sessions_with_rpe([7.0, 7.5, 8.0, 8.5, 9.0])
+        response = self.client.get(reverse("dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("session_rpe_trend", response.context)
