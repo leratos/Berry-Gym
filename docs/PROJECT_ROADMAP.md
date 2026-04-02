@@ -449,7 +449,7 @@ Feedback-Loop: Diagnose → Plan → Tracking → Re-Diagnose.
 
 ## Phase 21 – Statistik-Seite erweitern *(mittel, kann unterteilt werden)*
 **Branch:** `feature/phase21-stats-upgrade`
-**Status:** 📋 Konzept
+**Status:** ✅ Abgeschlossen (2026-04-02)
 
 ### Hintergrund / Problem
 Die besten Analysen (Plateau-Tracking, Kraftstandards, Push/Pull-Ratio, Kraftentwicklung Top 5)

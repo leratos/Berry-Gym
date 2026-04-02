@@ -5373,3 +5373,47 @@ Neue Funktion `get_weakness_comparison()` in `training_stats.py`:
 - `core/tests/test_training_stats.py` – 16 neue Tests
 - `docs/PROJECT_ROADMAP.md` – Phase 20 Status aktualisiert
 - `docs/PROJECT_ROADMAP.md` – Phase 19 Status aktualisiert
+
+## In Arbeit: Phase 21 – Statistik-Seite erweitern (02.04.2026)
+
+Branch: feature/phase21-stats-upgrade
+Ziel: Bestehende /stats/-Seite um 4 fehlende Report-Analysen erweitern (kein neues Template/Route)
+
+### 21.1: Muskelgruppen-Balance mit Soll-Bereich
+- Neuer Helper `_calc_muscle_soll_bereiche()` in training_stats.py
+- Berechnet Ist-Sätze (30 Tage) vs. Soll-Bereich aus VOLUMEN_SCHWELLENWERTE
+- Berücksichtigt aktiven Block-Typ via volumen_faktor (z.B. Definition = 0.85)
+- Horizontal Bar Chart mit Soll-Bereich als halbtransparenter Balken dahinter
+- Farbcodierung: Blau=ok, Rot=unter Soll, Gelb=über Soll
+
+### 21.2: Push/Pull-Ratio (live)
+- Neuer Helper `_calc_push_pull_ratio()` – 30-Tage-Fenster
+- Donut-Chart mit Push/Pull-Sätzen und Ratio als Zentraltext
+- Farbcodierung: Grün (≤1.3), Gelb (1.3–1.5), Rot (>1.5)
+- Push/Pull-Sätze und Status als Text neben dem Chart
+
+### 21.3: Plateau-Tracking (live)
+- Neuer Helper `_calc_plateau_live()` – Top-5 Übungen nach Satzanzahl
+- Nutzt Satz.is_pr Feld, Fallback auf höchsten geschätzten 1RM
+- Tabelle mit Tage-seit-PR und Status-Badge (grün/gelb/rot)
+- Schwellen: ≤14 Tage=Kürzlich, 15-42=Stagnierend, >42=Lange kein PR
+
+### 21.4: Kraftstandards-Übersicht
+- Neuer Helper `_calc_kraftstandards_live()` – Top-5 mit Standards
+- 1RM via Epley-Formel, allometrische Skalierung (Exponent 2/3)
+- Progress-Bar zum nächsten Level mit Prozentanzeige
+- Level: Untrainiert → Anfänger → Fortgeschritten → Erfahren → Elite
+
+**Tests:** 21 neue Tests in 5 Klassen:
+- TestMuscleSollBereiche (5): empty, unter, ok, ueber, block_typ_affects
+- TestPushPullRatio (4): none, balanced, push_dominant, warmup_excluded
+- TestPlateauLive (5): empty, recent_green, old_red, stagnating_yellow, max_5
+- TestKraftstandardsLive (5): empty, level_progress, no_standards, elite_100, max_5
+- TestStatsViewPhase21Integration (2): includes_context, no_data_200
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – 4 neue Helper + Context-Erweiterung in training_stats()
+- `core/templates/core/training_stats.html` – 4 neue Sektionen + 2 neue Charts (JS)
+- `core/tests/test_training_stats.py` – 21 neue Tests
+- `docs/PROJECT_ROADMAP.md` – Phase 21 Status aktualisiert
+- `docs/journal.txt` – Phase 21 Eintrag
