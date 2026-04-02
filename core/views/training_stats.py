@@ -860,6 +860,11 @@ def _get_session_rpe_trend(user, num_sessions: int = 12) -> dict:
     # Chronologisch sortieren (älteste zuerst)
     session_data.sort(key=lambda x: x["date"])
 
+    # date-Feld entfernen – nicht JSON-serialisierbar (datetime.date),
+    # wird im Template via |safe direkt als JS ausgegeben.
+    for entry in session_data:
+        del entry["date"]
+
     if len(session_data) < 3:
         return {"sessions": session_data, "trend": None, "slope": None, "current_avg": None}
 
