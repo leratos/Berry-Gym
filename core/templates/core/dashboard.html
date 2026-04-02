@@ -686,7 +686,7 @@
   document.addEventListener('DOMContentLoaded', function() {
       const ctx = document.getElementById('sessionRpeChart');
       if (!ctx) return;
-      const data = {{ session_rpe_trend.sessions|safe }};
+      const data = {{ session_rpe_trend.sessions_json|safe }};
       if (!data || data.length < 3) return;
 
       const labels = data.map(s => s.date_str);

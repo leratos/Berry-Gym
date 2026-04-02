@@ -1201,6 +1201,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         )
         # Phase 19: Session-RPE-Trend
         session_rpe_trend = _get_session_rpe_trend(request.user)
+        session_rpe_trend["sessions_json"] = json.dumps(session_rpe_trend["sessions"])
         # Phase 20: Schwachstellen-Fortschritt
         weakness_progress = _get_weakness_progress(request.user, active_block)
         computed = {
