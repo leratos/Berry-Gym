@@ -148,6 +148,9 @@ class Trainingsblock(models.Model):
         related_name="trainingsblöcke",
         verbose_name="Trainingsplan",
     )
+    plan_dauer_wochen = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Geplante Dauer (Wochen)"
+    )
     notiz = models.TextField(blank=True, verbose_name="Notiz")
 
     class Meta:
@@ -168,7 +171,28 @@ class Trainingsblock(models.Model):
         return self.end_datum is None
 
     @property
+    def planned_end_datum(self):
+        """Berechnet das geplante Enddatum aus start_datum + plan_dauer_wochen.
+
+        Returns:
+            date oder None wenn plan_dauer_wochen nicht gesetzt.
+        """
+        if self.plan_dauer_wochen:
+            from datetime import timedelta
+
+            return self.start_datum + timedelta(weeks=self.plan_dauer_wochen)
+        return None
+
+    @property
     def weeks_since_start(self) -> int:
         """Anzahl vollständiger Wochen seit Block-Start."""
         today = timezone.now().date()
         return max(0, (today - self.start_datum).days // 7)
+
+    @property
+    def warning_threshold_weeks(self) -> int:
+        """Schwellenwert für Block-Alter-Warnung.
+
+        Nutzt plan_dauer_wochen wenn gesetzt, sonst Fallback auf 8 Wochen.
+        """
+        return self.plan_dauer_wochen if self.plan_dauer_wochen else 8
