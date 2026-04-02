@@ -62,10 +62,48 @@ _PROFILE_DEFAULTS = {
 }
 
 
-def _build_periodization_note(periodization: str, target_profile: str) -> str:
-    """Phase 13.3: Dynamische Periodisierungs-Beschreibung.
+def calculate_deload_weeks(duration_weeks: int) -> list[int]:
+    """Phase 17.2: Dynamische Deload-Platzierung alle 3-4 Wochen.
 
-    Kombiniert Periodisierungs-Typ und Zielprofil zu spezifischem Text
+    Strategie: Deload alle 4 Wochen (optimal für Erholung).
+    Bei kurzen Plänen (≤6 Wochen) nur letzte Woche als Deload.
+    Letzte Woche ist immer Deload wenn sie auf ein 4er-Intervall fällt
+    oder der Plan ≥8 Wochen dauert.
+
+    Args:
+        duration_weeks: Plandauer in Wochen (4-16).
+
+    Returns:
+        Sortierte Liste der Deload-Wochen (1-basiert).
+    """
+    if duration_weeks <= 0:
+        return []
+    if duration_weeks <= 6:
+        # Kurze Pläne: nur letzte Woche als Deload
+        return [duration_weeks]
+
+    deloads = []
+    week = 4
+    while week <= duration_weeks:
+        deloads.append(week)
+        week += 4
+
+    # Letzte Woche als Deload wenn Plan ≥8 Wochen und letzte Woche
+    # nicht bereits ein Deload ist (z.B. 10 Wochen → [4, 8, 10])
+    if duration_weeks >= 8 and duration_weeks not in deloads:
+        # Nur wenn Abstand zur letzten Deload-Woche ≥ 2
+        if not deloads or (duration_weeks - deloads[-1]) >= 2:
+            deloads.append(duration_weeks)
+
+    return sorted(deloads)
+
+
+def _build_periodization_note(
+    periodization: str, target_profile: str, duration_weeks: int = 12
+) -> str:
+    """Phase 13.3 + 17.3: Dynamische Periodisierungs-Beschreibung.
+
+    Kombiniert Periodisierungs-Typ, Zielprofil und Plandauer zu spezifischem Text
     statt hardcodierter Einheitsbeschreibung.
     """
     defaults = _PROFILE_DEFAULTS.get(target_profile, _PROFILE_DEFAULTS["hypertrophie"])
@@ -90,15 +128,20 @@ def _build_periodization_note(periodization: str, target_profile: str) -> str:
             f"+1 Satz auf Hauptübungen in Nicht-Deload-Wochen"
         )
 
+    # Dynamische Deload-Wochen (Phase 17.2)
+    deload_weeks = calculate_deload_weeks(duration_weeks)
+    deload_str = "/".join(str(w) for w in deload_weeks)
+
     # Periodisierungs-spezifischer Aufbau
     if periodization == "wellenfoermig":
-        structure = "Wellenförmig: Heavy/Medium/Light innerhalb jedes 4-Wochen-Blocks"
+        block_len = 4 if duration_weeks >= 8 else duration_weeks
+        structure = f"Wellenförmig: Heavy/Medium/Light innerhalb jedes {block_len}-Wochen-Blocks"
     elif periodization == "block":
         structure = "Blockperiodisierung: Block 1 Volumen, Block 2 Kraft, Block 3 Peaking"
     else:
         structure = "Linear steigende Intensität pro Block"
 
-    return f"{structure} + Deload in Woche 4/8/12. Progression: {progression}"
+    return f"{structure} + Deload in Woche {deload_str}. Progression: {progression}"
 
 
 class PromptBuilder:
@@ -266,7 +309,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 **DUPLIKATE & PROGRESSION:**
 - ❌ KEINE Duplikate INNERHALB EINER SESSION (jede Übung nur 1x pro Tag)
 - ✅ ÜBER MEHRERE SESSIONS sind identische Übungen ERLAUBT und ERWÜNSCHT (Progression!)
-- Erstelle eine EINWÖCHIGE Session-Struktur, die für den 12-Wochen-Makrozyklus verwendet wird (inkl. Deload-Wochen)
+- Erstelle eine EINWÖCHIGE Session-Struktur, die für den Makrozyklus verwendet wird (inkl. Deload-Wochen)
 - Übungen & Reihenfolge bleiben gleich, Progression kommt in progression_notes
 
 **PAUSENZEITEN (rest_seconds):**
@@ -287,6 +330,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         sets_per_session: int = 18,
         target_profile: str = "hypertrophie",
         periodization: str = "linear",
+        duration_weeks: int = 12,
     ) -> str:
         # Plan-Type spezifische Anweisungen (Frontend-kompatible Keys)
         plan_instructions = {
@@ -393,9 +437,15 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             else f"{profile_label}-{split_label} ({today_str})"
         )
 
-        # Phase 13.3: Dynamische Periodisierungs-Beschreibung
-        # Kombiniert target_profile + periodization statt hardcodiertem Text
-        periodization_note = _build_periodization_note(periodization, target_profile)
+        # Phase 13.3 + 17.3: Dynamische Periodisierungs-Beschreibung
+        # Kombiniert target_profile + periodization + duration_weeks
+        periodization_note = _build_periodization_note(
+            periodization, target_profile, duration_weeks
+        )
+
+        # Phase 17.2: Dynamische Deload-Wochen
+        deload_weeks = calculate_deload_weeks(duration_weeks)
+        deload_weeks_str = ", ".join(str(w) for w in deload_weeks)
 
         # Frequenz-basierte Split-Empfehlung
         if freq < 2:
@@ -447,8 +497,8 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 ═══════════════════════════════════════════════════════════
 
 {weakness_section}**Trainingsprogrammierung Defaults:**
-- Makrozyklus: 12 Wochen, Periodisierung: {periodization_note}
-- Deload: Wochen 4, 8, 12 → Volumen 80%, Intensität ~90% der Vorwoche
+- Makrozyklus: {duration_weeks} Wochen, Periodisierung: {periodization_note}
+- Deload: Wochen {deload_weeks_str} → Volumen 80%, Intensität ~90% der Vorwoche
 - Zielprofil: {target_profile} → {profile_guides.get(target_profile, profile_guides['hypertrophie'])}
 - Mikrozyklus: Nutze das Satz-Budget ({min_sets}-{max_sets}) voll aus, +1 Satz auf Hauptübungen in Nicht-Deload-Wochen, danach Deload-Reset
 
@@ -502,7 +552,7 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 5. Compound Movements (Langhantel-Kniebeuge, Bankdrücken, Kreuzheben) priorisieren als erste Übung
 6. RPE-Targets: 7-9 für Hypertrophie, Compound Movements können RPE 8-9 haben
 7. ** DUPLIKATE**: ❌ KEINE doppelten Übungen INNERHALB einer Session! ✅ ABER gleiche Übungen in verschiedenen Sessions sind ERWÜNSCHT!
-8. Periodisierung: Fülle periodization, deload_weeks, macrocycle, microcycle_template, progression_strategy gemäß Defaults oben aus (12 Wochen!)
+8. Periodisierung: Fülle periodization, deload_weeks, macrocycle, microcycle_template, progression_strategy gemäß Defaults oben aus ({duration_weeks} Wochen!)
 
 Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
 
@@ -516,6 +566,7 @@ Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
         sets_per_session: int = 18,
         target_profile: str = "hypertrophie",
         periodization: str = "linear",
+        duration_weeks: int = 12,
     ) -> List[Dict[str, str]]:
         return [
             {"role": "system", "content": self.system_prompt},
@@ -528,6 +579,7 @@ Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
                     sets_per_session,
                     target_profile,
                     periodization,
+                    duration_weeks,
                 ),
             },
         ]

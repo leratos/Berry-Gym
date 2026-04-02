@@ -80,6 +80,7 @@ class PlanGenerator:
         use_openrouter: bool = False,
         fallback_to_openrouter: bool = True,
         progress_callback=None,
+        duration_weeks: int = 12,
     ):
         """
         Args:
@@ -93,6 +94,7 @@ class PlanGenerator:
             use_openrouter: True = nutze nur OpenRouter (skip Ollama)
             fallback_to_openrouter: True = Fallback zu OpenRouter bei Ollama-Fehler
             progress_callback: Optional callable(percent: int, step: str) für SSE-Streaming
+            duration_weeks: Plandauer in Wochen (4-16, Default 12)
         """
         self.user_id = user_id
         self.analysis_days = analysis_days
@@ -104,6 +106,7 @@ class PlanGenerator:
         self.use_openrouter = use_openrouter
         self.fallback_to_openrouter = fallback_to_openrouter
         self._progress_callback = progress_callback
+        self.duration_weeks = duration_weeks
 
     def _progress(self, percent: int, step: str) -> None:
         """Sendet Fortschrittsupdate – no-op wenn kein Callback gesetzt."""
@@ -245,6 +248,7 @@ class PlanGenerator:
             sets_per_session=self.sets_per_session,
             target_profile=self.target_profile,
             periodization=self.periodization,
+            duration_weeks=self.duration_weeks,
         )
 
         print(f"✓ System Prompt: {len(messages[0]['content'])} Zeichen")
