@@ -5321,4 +5321,55 @@ Neue Funktion `_check_session_rpe_trend_warning()`:
 - `core/views/training_stats.py` – _get_session_rpe_trend(), _check_session_rpe_trend_warning(), dashboard context
 - `core/templates/core/dashboard.html` – RPE-Trend-Chart + Script
 - `core/tests/test_training_stats.py` – 11 neue Tests
+
+
+---
+
+## Phase 20: Schwachstellen-Tracker / Feedback-Loop
+
+**Datum:** 2026-04-02
+**Branch:** `feature/phase20-weakness-tracker`
+
+### 20.1: Schwachstellen bei Plangenerierung persistieren
+Neues JSONField `schwachstellen_snapshot` auf `Trainingsblock`:
+- Liste von `{muskelgruppe, ist_saetze, soll_min, soll_max}` zum Zeitpunkt der Plananalyse
+- Neue Methode `_save_weakness_snapshot()` in `plan_generator.py`
+- Wird nach erfolgreicher Plangenerierung automatisch auf dem aktiven Block gespeichert
+- Nutzt `MUSKELGRUPPEN_GROESSE` + `get_volumen_schwellenwerte()` aus `periodization.py`
+- Label-zu-DB-Key-Mapping für sowohl Klartext- als auch DB-Konstanten-Labels
+
+### 20.2: Laufendes Satz-Tracking gegen Ziel
+Neue Funktion `_get_weakness_progress()` in `training_stats.py`:
+- Pro Muskelgruppe aus Snapshot: aktuelle Arbeitssätze (30 Tage) zählen
+- Vergleich Ist vs. Soll-Bereich aus Snapshot
+- Status-Klassifikation: "erreicht" (≥ soll_min), "auf_kurs" (≥ 60%), "hinter_plan" (< 60%)
+- Fortschritt als Prozent des Soll-Min (gedeckelt bei 100%)
+
+### 20.3: Dashboard-Widget
+- Card "Schwachstellen-Fortschritt" mit Bootstrap-Fortschrittsbalken
+- Pro Muskelgruppe: Label, Ist/Soll-Sätze, farbiger Balken + Status-Badge
+- Grün = Ziel erreicht, Gelb = Auf Kurs, Rot = Hinter Plan
+- Baseline-Vergleich: zeigt Ausgangswert → aktueller Wert
+- Nur sichtbar wenn aktiver Block mit schwachstellen_snapshot existiert
+
+### 20.4: Monatsende-Vergleich
+Neue Funktion `get_weakness_comparison()` in `training_stats.py`:
+- Vergleich aktuelle Sätze vs. Ausgangswert aus Snapshot
+- Pro Muskelgruppe: "Bauch: 4 → 12 Sätze ✓ Behoben" oder "Brust: 5 → 8 Sätze ✗ Noch untertrainiert"
+- Öffentliche Funktion für Report-Export oder manuellen Abruf
+
+**Tests:** 16 neue Tests in TestWeaknessTracker:
+- Trainingsblock JSONField, _save_weakness_snapshot mit/ohne Block/Weaknesses
+- Fortschritt: erreicht, auf_kurs, hinter_plan, kein Snapshot, Label-Humanisierung
+- Dashboard-Context, Widget sichtbar/versteckt
+- Monatsende-Vergleich: behoben, untertrainiert, kein Block, Baseline vs. aktuell
+
+**Geänderte Dateien:**
+- `core/models/training.py` – schwachstellen_snapshot JSONField auf Trainingsblock
+- `core/migrations/0083_add_schwachstellen_snapshot_to_trainingsblock.py`
+- `ai_coach/plan_generator.py` – _save_weakness_snapshot(), Aufruf nach Plangenerierung
+- `core/views/training_stats.py` – _get_weakness_progress(), get_weakness_comparison(), Dashboard-Context
+- `core/templates/core/dashboard.html` – Schwachstellen-Fortschritt Widget
+- `core/tests/test_training_stats.py` – 16 neue Tests
+- `docs/PROJECT_ROADMAP.md` – Phase 20 Status aktualisiert
 - `docs/PROJECT_ROADMAP.md` – Phase 19 Status aktualisiert

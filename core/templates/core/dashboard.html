@@ -731,6 +731,48 @@
   </script>
   {% endif %}
 
+  {% if weakness_progress %}
+  <!-- Phase 20: Schwachstellen-Fortschritt -->
+  <div class="card card-stat mb-4 shadow-sm border-secondary">
+    <div class="card-body">
+      <h6 class="mb-3">
+        <i class="bi bi-bullseye me-2"></i>{% trans "Schwachstellen-Fortschritt" %}
+      </h6>
+      {% for wp in weakness_progress %}
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="fw-semibold">{{ wp.label }}</span>
+          <span class="small">
+            {{ wp.ist_saetze }} / {{ wp.soll_min }}–{{ wp.soll_max }} {% trans "Sätze" %}
+            {% if wp.status == "erreicht" %}
+              <span class="badge bg-success ms-1">{% trans "Ziel erreicht" %}</span>
+            {% elif wp.status == "auf_kurs" %}
+              <span class="badge bg-warning text-dark ms-1">{% trans "Auf Kurs" %}</span>
+            {% else %}
+              <span class="badge bg-danger ms-1">{% trans "Hinter Plan" %}</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="progress" style="height: 8px;">
+          <div class="progress-bar {% if wp.status == 'erreicht' %}bg-success{% elif wp.status == 'auf_kurs' %}bg-warning{% else %}bg-danger{% endif %}"
+               role="progressbar"
+               style="width: {{ wp.prozent }}%"
+               aria-valuenow="{{ wp.prozent }}"
+               aria-valuemin="0"
+               aria-valuemax="100">
+          </div>
+        </div>
+        {% if wp.baseline_saetze != wp.ist_saetze %}
+        <small class="text-muted">
+          {% trans "Ausgangswert" %}: {{ wp.baseline_saetze }} {% trans "Sätze" %} → {{ wp.ist_saetze }} {% trans "Sätze" %}
+        </small>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Motivations-Quote -->
   <div class="card bg-gradient text-center py-4 mb-4 shadow" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body">
