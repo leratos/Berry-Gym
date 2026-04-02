@@ -126,15 +126,27 @@ def plan_details(request: HttpRequest, plan_id: int) -> HttpResponse:
         if satz.uebung_id not in letzte_saetze_map:
             letzte_saetze_map[satz.uebung_id] = satz
 
+    # Phase 18: RPE-korrigierte Startgewichte für Plan-Vorschau
+    plan_uebungen_map = {pu.uebung_id: pu for pu in plan_uebungen}
+    rpe_adjusted = {}
+    if is_owner:
+        rpe_adjusted = _get_rpe_adjusted_weights(
+            request.user,
+            uebung_ids,
+            plan_uebungen_map,
+        )
+
     # Für jede Übung das letzte verwendete Gewicht holen (für Vorschau)
     uebungen_mit_historie = []
     for plan_uebung in plan_uebungen:
+        adj = rpe_adjusted.get(plan_uebung.uebung_id)
         letzter_satz = letzte_saetze_map.get(plan_uebung.uebung_id)
         uebungen_mit_historie.append(
             {
                 "plan_uebung": plan_uebung,
                 "letztes_gewicht": letzter_satz.gewicht if letzter_satz else None,
                 "letzte_wdh": letzter_satz.wiederholungen if letzter_satz else None,
+                "rpe_empfehlung": adj,
             }
         )
 
@@ -176,6 +188,85 @@ def _get_deload_config(user, plan) -> tuple[bool, float, float, float]:
     return False, 0.8, 0.9, 7.0
 
 
+def _get_rpe_adjusted_weights(
+    user, uebung_ids: list[int], plan_uebungen_map: dict[int, Any]
+) -> dict[int, dict]:
+    """Phase 18: Berechnet RPE-korrigierte Startgewichte für Übungen.
+
+    Für jede Übung werden die letzten 5 Arbeitssätze mit RPE-Wert geladen.
+    Wenn das Ziel-RPE des Plans niedriger ist als der historische Durchschnitt,
+    wird das Gewicht proportional reduziert (~2.5% pro RPE-Punkt Differenz).
+
+    Args:
+        user: Django User
+        uebung_ids: Liste der Übungs-IDs
+        plan_uebungen_map: Dict[uebung_id → PlanUebung] (für rpe_ziel)
+
+    Returns:
+        Dict[uebung_id → {empfohlen_kg, letztes_kg, avg_rpe, ziel_rpe, reduktion_pct}]
+        Nur Übungen mit ≥3 historischen RPE-Sätzen und relevanter Differenz.
+    """
+    if not uebung_ids:
+        return {}
+
+    # Letzte 5 Arbeitssätze mit RPE pro Übung laden
+    saetze_qs = (
+        Satz.objects.filter(
+            einheit__user=user,
+            uebung_id__in=uebung_ids,
+            ist_aufwaermsatz=False,
+            rpe__isnull=False,
+            gewicht__gt=0,
+        )
+        .order_by("-einheit__datum", "-satz_nr")
+        .values_list("uebung_id", "gewicht", "rpe")
+    )
+
+    # Pro Übung die letzten 5 sammeln
+    history: dict[int, list[tuple[float, float]]] = {}
+    for uid, gewicht, rpe in saetze_qs:
+        if uid not in history:
+            history[uid] = []
+        if len(history[uid]) < 5:
+            history[uid].append((float(gewicht), float(rpe)))
+
+    result = {}
+    for uid, satz_data in history.items():
+        if len(satz_data) < 3:
+            continue
+
+        avg_gewicht = sum(g for g, _ in satz_data) / len(satz_data)
+        avg_rpe = sum(r for _, r in satz_data) / len(satz_data)
+        letztes_kg = satz_data[0][0]  # Neuester Satz
+
+        plan_uebung = plan_uebungen_map.get(uid)
+        ziel_rpe = plan_uebung.rpe_ziel if plan_uebung and plan_uebung.rpe_ziel else None
+
+        if ziel_rpe is None or avg_rpe <= ziel_rpe:
+            continue
+
+        # ~2.5% Reduktion pro RPE-Punkt Differenz
+        rpe_diff = avg_rpe - ziel_rpe
+        reduktion_faktor = 1.0 - (rpe_diff * 0.025)
+        reduktion_faktor = max(reduktion_faktor, 0.8)  # Max 20% Reduktion
+
+        empfohlen_kg = round(avg_gewicht * reduktion_faktor, 1)
+        # Auf 1.25 kg runden (kleinste Hantelscheibe)
+        empfohlen_kg = round(empfohlen_kg / 1.25) * 1.25
+
+        reduktion_pct = round((1 - reduktion_faktor) * 100, 1)
+
+        result[uid] = {
+            "empfohlen_kg": empfohlen_kg,
+            "letztes_kg": letztes_kg,
+            "avg_rpe": round(avg_rpe, 1),
+            "ziel_rpe": ziel_rpe,
+            "reduktion_pct": reduktion_pct,
+        }
+
+    return result
+
+
 def _create_ghost_saetze(
     training, plan, is_deload: bool, deload_vol_factor: float, deload_weight_factor: float
 ) -> None:
@@ -194,11 +285,23 @@ def _create_ghost_saetze(
         if satz.uebung_id not in letzte_saetze_ghost:
             letzte_saetze_ghost[satz.uebung_id] = satz
 
+    # Phase 18: RPE-korrigierte Startgewichte berechnen
+    plan_uebungen_map = {pu.uebung_id: pu for pu in plan_uebungen}
+    rpe_adjusted = _get_rpe_adjusted_weights(
+        training.user,
+        uebung_ids_ghost,
+        plan_uebungen_map,
+    )
+
     for plan_uebung in plan_uebungen:
         uebung = plan_uebung.uebung
         letzter_satz = letzte_saetze_ghost.get(uebung.id)
         start_gewicht = letzter_satz.gewicht if letzter_satz else 0
         start_wdh = 0
+
+        # Phase 18: RPE-korrigiertes Gewicht verwenden wenn verfügbar
+        if uebung.id in rpe_adjusted:
+            start_gewicht = rpe_adjusted[uebung.id]["empfohlen_kg"]
 
         ziel_text = plan_uebung.wiederholungen_ziel
         match = re.search(r"\d{1,4}", str(ziel_text)) if ziel_text else None
@@ -508,10 +611,18 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
 
     # PlanUebung-Hinweise für Template (Technik-Tipps pro Übung)
     plan_uebung_hinweise: dict[int, str] = {}
+    rpe_start_empfehlungen: dict = {}
     if training.plan:
+        plan_ue_map: dict[int, Any] = {}
         for pu in training.plan.uebungen.all():
             if pu.notiz:
                 plan_uebung_hinweise[pu.uebung_id] = pu.notiz
+            plan_ue_map[pu.uebung_id] = pu
+        # Phase 18: RPE-korrigierte Startempfehlungen
+        uebung_ids_session = list(training.saetze.values_list("uebung_id", flat=True).distinct())
+        rpe_start_empfehlungen = _get_rpe_adjusted_weights(
+            request.user, uebung_ids_session, plan_ue_map
+        )
 
     context = {
         "training": training,
@@ -521,6 +632,7 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
         "arbeitssaetze_count": arbeitssaetze.count(),
         "plan_ziele": _get_plan_ziele(training),
         "gewichts_empfehlungen": _get_gewichts_empfehlungen(request.user, training),
+        "rpe_start_empfehlungen": rpe_start_empfehlungen,
         "is_deload_week": is_deload_week,
         "plan_uebung_hinweise": plan_uebung_hinweise,
     }

@@ -5236,3 +5236,47 @@ Neue Funktion `calculate_deload_weeks(duration_weeks)` in `prompt_builder.py`:
 - `core/tests/test_periodization.py` – 12 neue Tests
 - `core/tests/test_ai_recommendations.py` – 4 neue/geänderte Tests
 - `docs/PROJECT_ROADMAP.md` – Phase 17 Status aktualisiert
+
+
+---
+
+## Phase 18: Startgewicht-Empfehlung beim Planwechsel
+
+**Datum:** 2026-04-02
+**Branch:** `feature/phase18-start-weight`
+
+### 18.1: Historisches RPE-Gewicht-Mapping
+Neue Funktion `_get_rpe_adjusted_weights()` in `training_session.py`:
+- Lädt letzte 5 Arbeitssätze mit RPE pro Übung (Batch-Query)
+- Minimum 3 Sätze mit RPE-Wert nötig für Empfehlung
+- Berechnet Durchschnitts-Gewicht und Durchschnitts-RPE
+
+### 18.2: RPE-korrigierte Startempfehlung
+Wenn Ziel-RPE < historischer Durchschnitts-RPE:
+- ~2.5% Gewichtsreduktion pro RPE-Punkt Differenz
+- Max 20% Reduktion (Faktor 0.8)
+- Ergebnis auf 1.25 kg gerundet (kleinste Hantelscheibe)
+- Beispiel: 80 kg, Avg RPE 9.5, Ziel RPE 8.0 → 77.5 kg (-3.75%)
+
+Integration in:
+- `_create_ghost_saetze()`: Ghost-Sätze verwenden RPE-adjustiertes Gewicht
+- `plan_details()`: Empfehlung im Plan-Vorschau-Context
+- `training_session()`: Empfehlung im Training-Context
+
+### 18.3: UI-Anzeige
+- `plan_details.html`: Info-Alert mit "Empfohlen: X kg (basierend auf RPE Y)" inkl. Reduktions-%
+- `training_session.html`: RPE-Empfehlung als gelbes Badge unter ML-Empfehlung
+- Zeigt: Ø RPE → Ziel RPE, Reduktions-Prozent
+- Kein Hinweis bei neuen Übungen oder wenn RPE bereits im Zielbereich
+
+**Tests:** 9 neue Tests in TestRpeAdjustedWeights:
+- keine Historie, zu wenige Sätze, RPE unter Ziel, RPE über Ziel
+- Max-Reduktion (20%), kein RPE-Ziel, Aufwärmsätze ignoriert
+- Ghost-Sätze nutzen adjusted weight, Plan-Details-View zeigt Empfehlung
+
+**Geänderte Dateien:**
+- `core/views/training_session.py` – _get_rpe_adjusted_weights(), Integration in ghost/details/session
+- `core/templates/core/plan_details.html` – RPE-Empfehlung Alert
+- `core/templates/core/training_session.html` – RPE-Empfehlung Badge
+- `core/tests/test_training_session_views.py` – 9 neue Tests
+- `docs/PROJECT_ROADMAP.md` – Phase 18 Status aktualisiert

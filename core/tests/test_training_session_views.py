@@ -42,6 +42,7 @@ from core.views.training_session import (
     _get_deload_config,
     _get_gewichts_empfehlungen,
     _get_plan_ziele,
+    _get_rpe_adjusted_weights,
     _get_sorted_saetze,
     _parse_set_post_data,
     _parse_ziel_wdh,
@@ -1161,3 +1162,132 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
         self.assertIsNone(
             captured["dauer_geschaetzt"]
         )  # historisch + kein Datum → None statt Fallback 60
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 18: RPE-korrigierte Startgewichte
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestRpeAdjustedWeights(SessionBase):
+    """Phase 18: _get_rpe_adjusted_weights berechnet RPE-korrigierte Startgewichte."""
+
+    def _create_history_sets(self, rpe_values, gewicht=80):
+        """Erstellt historische Sätze mit gegebenem RPE."""
+        for i, rpe_val in enumerate(rpe_values):
+            t = self._training(abgeschlossen=True, days_ago=i + 1)
+            self._satz(t, gewicht=gewicht, wdh=8, rpe=rpe_val)
+
+    def test_keine_historie_gibt_leeres_dict(self):
+        plan_ue_map = {self.uebung.id: self.plan.uebungen.first()}
+        result = _get_rpe_adjusted_weights(self.user, [self.uebung.id], plan_ue_map)
+        self.assertEqual(result, {})
+
+    def test_weniger_als_3_saetze_gibt_leeres_dict(self):
+        """Mindestens 3 historische RPE-Sätze nötig."""
+        self._create_history_sets([9.0, 9.5])
+        plan_ue_map = {self.uebung.id: self.plan.uebungen.first()}
+        result = _get_rpe_adjusted_weights(self.user, [self.uebung.id], plan_ue_map)
+        self.assertEqual(result, {})
+
+    def test_rpe_unter_ziel_keine_empfehlung(self):
+        """Wenn Avg-RPE ≤ Ziel-RPE → keine Reduktion nötig."""
+        pu = self.plan.uebungen.first()
+        pu.rpe_ziel = 9.0
+        pu.save()
+        self._create_history_sets([8.0, 8.5, 7.5])
+        plan_ue_map = {self.uebung.id: pu}
+        result = _get_rpe_adjusted_weights(self.user, [self.uebung.id], plan_ue_map)
+        self.assertEqual(result, {})
+
+    def test_rpe_ueber_ziel_reduktion(self):
+        """Avg-RPE 9.5, Ziel-RPE 8.0 → 1.5 Punkte × 2.5% = 3.75% Reduktion."""
+        pu = self.plan.uebungen.first()
+        pu.rpe_ziel = 8.0
+        pu.save()
+        self._create_history_sets([9.5, 9.5, 9.5], gewicht=80)
+        plan_ue_map = {self.uebung.id: pu}
+        result = _get_rpe_adjusted_weights(self.user, [self.uebung.id], plan_ue_map)
+        self.assertIn(self.uebung.id, result)
+        empf = result[self.uebung.id]
+        # 80 * (1 - 1.5*0.025) = 80 * 0.9625 = 77.0 → gerundet auf 1.25: 77.5
+        self.assertEqual(empf["empfohlen_kg"], 77.5)
+        self.assertEqual(empf["ziel_rpe"], 8.0)
+        self.assertEqual(empf["avg_rpe"], 9.5)
+
+    def test_max_20_prozent_reduktion(self):
+        """RPE-Differenz > 8 Punkte → max 20% Reduktion."""
+        pu = self.plan.uebungen.first()
+        pu.rpe_ziel = 1.0
+        pu.save()
+        self._create_history_sets([10.0, 10.0, 10.0], gewicht=100)
+        plan_ue_map = {self.uebung.id: pu}
+        result = _get_rpe_adjusted_weights(self.user, [self.uebung.id], plan_ue_map)
+        empf = result[self.uebung.id]
+        # Max 20% Reduktion: 100 * 0.8 = 80 kg
+        self.assertEqual(empf["empfohlen_kg"], 80.0)
+
+    def test_kein_rpe_ziel_keine_empfehlung(self):
+        """Wenn PlanUebung kein rpe_ziel hat → keine Empfehlung."""
+        pu = self.plan.uebungen.first()
+        pu.rpe_ziel = None
+        pu.save()
+        self._create_history_sets([9.5, 9.5, 9.5])
+        plan_ue_map = {self.uebung.id: pu}
+        result = _get_rpe_adjusted_weights(self.user, [self.uebung.id], plan_ue_map)
+        self.assertEqual(result, {})
+
+    def test_aufwaermsaetze_werden_ignoriert(self):
+        """Warmup-Sätze zählen nicht für RPE-Historie."""
+        pu = self.plan.uebungen.first()
+        pu.rpe_ziel = 8.0
+        pu.save()
+        # 3 Warmup-Sätze + 2 Arbeitssätze = nur 2 gültige → unter Minimum
+        for i in range(3):
+            t = self._training(abgeschlossen=True, days_ago=i + 1)
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=80,
+                wiederholungen=8,
+                rpe=9.5,
+                ist_aufwaermsatz=True,
+            )
+        for i in range(2):
+            t = self._training(abgeschlossen=True, days_ago=i + 4)
+            self._satz(t, gewicht=80, wdh=8, rpe=9.5)
+        plan_ue_map = {self.uebung.id: pu}
+        result = _get_rpe_adjusted_weights(self.user, [self.uebung.id], plan_ue_map)
+        self.assertEqual(result, {})
+
+    def test_ghost_saetze_nutzen_rpe_adjusted_weight(self):
+        """Ghost-Sätze verwenden RPE-korrigiertes Gewicht statt letztem Gewicht."""
+        pu = self.plan.uebungen.first()
+        pu.rpe_ziel = 8.0
+        pu.save()
+        self._create_history_sets([9.5, 9.5, 9.5], gewicht=80)
+
+        training = Trainingseinheit.objects.create(user=self.user, plan=self.plan)
+        _create_ghost_saetze(
+            training, self.plan, is_deload=False, deload_vol_factor=0.8, deload_weight_factor=0.9
+        )
+
+        ghost = training.saetze.filter(uebung=self.uebung).first()
+        self.assertIsNotNone(ghost)
+        # Sollte RPE-adjustiert sein: 77.5 kg statt 80 kg
+        self.assertEqual(float(ghost.gewicht), 77.5)
+
+    def test_plan_details_zeigt_empfehlung(self):
+        """Plan-Details-View enthält rpe_empfehlung im Context."""
+        pu = self.plan.uebungen.first()
+        pu.rpe_ziel = 8.0
+        pu.save()
+        self._create_history_sets([9.5, 9.5, 9.5], gewicht=80)
+
+        response = self.client.get(reverse("plan_details", args=[self.plan.id]), secure=True)
+        self.assertEqual(response.status_code, 200)
+        items = response.context["uebungen_mit_historie"]
+        self.assertEqual(len(items), 1)
+        self.assertIsNotNone(items[0]["rpe_empfehlung"])
+        self.assertEqual(items[0]["rpe_empfehlung"]["empfohlen_kg"], 77.5)
