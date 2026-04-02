@@ -177,17 +177,21 @@ def get_block_age_warning(active_block) -> dict | None:
         return None
 
     weeks = active_block.weeks_since_start
-    if weeks < BLOCK_AGE_WARNING_THRESHOLD:
+    # Phase 17.4: Nutze geplante Dauer wenn vorhanden, sonst Fallback
+    threshold = getattr(active_block, "warning_threshold_weeks", BLOCK_AGE_WARNING_THRESHOLD)
+    if weeks < threshold:
         return None
 
     recommendation = get_next_block_recommendation(active_block.typ)
     primary = recommendation["primary"]
 
+    # Severity: danger wenn 50% über Schwellenwert
+    danger_threshold = int(threshold * 1.5)
     return {
         "weeks": weeks,
         "block_type_display": active_block.get_typ_display(),
         "recommendation": primary,
-        "severity": "danger" if weeks >= 12 else "warning",
+        "severity": "danger" if weeks >= danger_threshold else "warning",
     }
 
 

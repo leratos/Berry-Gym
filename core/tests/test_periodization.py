@@ -94,11 +94,13 @@ class TestGetNextBlockRecommendation(TestCase):
 class TestGetBlockAgeWarning(TestCase):
     """Tests für get_block_age_warning()."""
 
-    def _make_block(self, weeks_ago: int, typ: str = "kraft"):
+    def _make_block(self, weeks_ago: int, typ: str = "kraft", plan_dauer_wochen: int | None = None):
         """Erstellt einen Mock-Trainingsblock der vor weeks_ago Wochen gestartet wurde."""
         block = MagicMock()
         block.typ = typ
         block.weeks_since_start = weeks_ago
+        block.plan_dauer_wochen = plan_dauer_wochen
+        block.warning_threshold_weeks = plan_dauer_wochen if plan_dauer_wochen else 8
         block.get_typ_display.return_value = dict(
             kraft="Kraft",
             masse="Masseaufbau",
@@ -392,3 +394,96 @@ class TestKlassifiziereRepRange(TestCase):
         self.assertEqual(klassifiziere_rep_range(7), "hypertrophie")
         self.assertEqual(klassifiziere_rep_range(12), "hypertrophie")
         self.assertEqual(klassifiziere_rep_range(13), "ausdauer")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 17: Plandauer-bezogene Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestBlockAgeWarningWithPlannedDuration(TestCase):
+    """Phase 17.4: Block-Alter-Warnung nutzt geplante Dauer statt pauschal 8 Wochen."""
+
+    def _make_block(self, weeks_ago: int, typ: str = "kraft", plan_dauer_wochen: int | None = None):
+        block = MagicMock()
+        block.typ = typ
+        block.weeks_since_start = weeks_ago
+        block.plan_dauer_wochen = plan_dauer_wochen
+        block.warning_threshold_weeks = plan_dauer_wochen if plan_dauer_wochen else 8
+        block.get_typ_display.return_value = "Kraft"
+        return block
+
+    def test_6_wochen_plan_warnt_ab_woche_6(self):
+        block = self._make_block(weeks_ago=6, plan_dauer_wochen=6)
+        warning = get_block_age_warning(block)
+        self.assertIsNotNone(warning)
+        self.assertEqual(warning["weeks"], 6)
+
+    def test_6_wochen_plan_keine_warnung_bei_woche_5(self):
+        block = self._make_block(weeks_ago=5, plan_dauer_wochen=6)
+        warning = get_block_age_warning(block)
+        self.assertIsNone(warning)
+
+    def test_16_wochen_plan_keine_warnung_bei_woche_15(self):
+        block = self._make_block(weeks_ago=15, plan_dauer_wochen=16)
+        warning = get_block_age_warning(block)
+        self.assertIsNone(warning)
+
+    def test_16_wochen_plan_warnt_ab_woche_16(self):
+        block = self._make_block(weeks_ago=16, plan_dauer_wochen=16)
+        warning = get_block_age_warning(block)
+        self.assertIsNotNone(warning)
+
+    def test_severity_danger_bei_150_prozent_der_plandauer(self):
+        # 6 Wochen Plan, danger bei 9 Wochen (6 * 1.5)
+        block = self._make_block(weeks_ago=9, plan_dauer_wochen=6)
+        warning = get_block_age_warning(block)
+        self.assertEqual(warning["severity"], "danger")
+
+    def test_severity_warning_knapp_ueber_threshold(self):
+        block = self._make_block(weeks_ago=7, plan_dauer_wochen=6)
+        warning = get_block_age_warning(block)
+        self.assertEqual(warning["severity"], "warning")
+
+    def test_ohne_plan_dauer_fallback_auf_8_wochen(self):
+        block = self._make_block(weeks_ago=7, plan_dauer_wochen=None)
+        warning = get_block_age_warning(block)
+        self.assertIsNone(warning)
+
+        block2 = self._make_block(weeks_ago=8, plan_dauer_wochen=None)
+        warning2 = get_block_age_warning(block2)
+        self.assertIsNotNone(warning2)
+
+
+class TestTrainingsblockPlanDauer(TestCase):
+    """Phase 17.4: Trainingsblock-Modell mit plan_dauer_wochen."""
+
+    def test_planned_end_datum_berechnung(self):
+        from core.tests.factories import TrainingsblockFactory
+
+        block = TrainingsblockFactory(
+            start_datum=date(2026, 1, 1),
+            plan_dauer_wochen=8,
+        )
+        self.assertEqual(block.planned_end_datum, date(2026, 2, 26))
+
+    def test_planned_end_datum_none_wenn_nicht_gesetzt(self):
+        from core.tests.factories import TrainingsblockFactory
+
+        block = TrainingsblockFactory(
+            start_datum=date(2026, 1, 1),
+            plan_dauer_wochen=None,
+        )
+        self.assertIsNone(block.planned_end_datum)
+
+    def test_warning_threshold_mit_plan_dauer(self):
+        from core.tests.factories import TrainingsblockFactory
+
+        block = TrainingsblockFactory(plan_dauer_wochen=10)
+        self.assertEqual(block.warning_threshold_weeks, 10)
+
+    def test_warning_threshold_fallback_auf_8(self):
+        from core.tests.factories import TrainingsblockFactory
+
+        block = TrainingsblockFactory(plan_dauer_wochen=None)
+        self.assertEqual(block.warning_threshold_weeks, 8)

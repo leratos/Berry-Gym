@@ -138,6 +138,21 @@
                         </select>
                     </div>
 
+                    <!-- Plandauer (Phase 17) -->
+                    <div class="mb-3">
+                        <label for="durationWeeks" class="form-label">
+                            <i class="bi bi-calendar-range"></i> {% trans "Plandauer:" %} <strong id="durationValue">12</strong> {% trans "Wochen" %}
+                        </label>
+                        <input type="range" class="form-range" id="durationWeeks" name="duration_weeks"
+                               min="4" max="16" value="12" step="1" oninput="updateDurationValue(this.value)">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">4 {% trans "Wo." %}</small>
+                            <small class="text-muted">12 {% trans "Wo." %}</small>
+                            <small class="text-muted">16 {% trans "Wo." %}</small>
+                        </div>
+                        <div class="form-text" id="deloadHint">{% trans "Deload in Woche 4, 8, 12" %}</div>
+                    </div>
+
                     <!-- Periodisierung -->
                     <div class="mb-3">
                         <label for="periodization" class="form-label">
@@ -148,7 +163,6 @@
                             <option value="wellenfoermig">{% trans "Wellenförmig (Heavy/Medium/Light)" %}</option>
                             <option value="block">{% trans "Block (Volumen → Kraft → Peak)" %}</option>
                         </select>
-                        <div class="form-text">{% trans "12 Wochen mit Deload in Woche 4/8/12" %}</div>
                     </div>
 
                     <!-- Zielprofil -->
@@ -265,6 +279,31 @@
             document.getElementById('setsValue').textContent = value;
         };
 
+        // Phase 17: Plandauer-Slider mit dynamischem Deload-Hinweis
+        function calculateDeloadWeeks(duration) {
+            if (duration <= 0) return [];
+            if (duration <= 6) return [duration];
+            const deloads = [];
+            for (let w = 4; w <= duration; w += 4) {
+                deloads.push(w);
+            }
+            if (duration >= 8 && !deloads.includes(duration)) {
+                if (!deloads.length || (duration - deloads[deloads.length - 1]) >= 2) {
+                    deloads.push(duration);
+                }
+            }
+            return deloads.sort((a, b) => a - b);
+        }
+
+        window.updateDurationValue = function(value) {
+            document.getElementById('durationValue').textContent = value;
+            const deloads = calculateDeloadWeeks(parseInt(value));
+            const hint = document.getElementById('deloadHint');
+            if (hint) {
+                hint.textContent = 'Deload in Woche ' + deloads.join(', ');
+            }
+        };
+
         // Frequenz → Split-Empfehlung
         const FREQ_TO_SPLIT = {
             2: { value: 'ganzkörper', label: 'Ganzkörper empfohlen bei 2x/Woche', hint: 'Bei 2x/Woche ist Ganzkörper die effizienteste Wahl.' },
@@ -367,6 +406,7 @@
             const analysisDays = document.getElementById('analysisDays').value;
             const periodization = document.getElementById('periodization').value;
             const targetProfile = document.getElementById('targetProfile').value;
+            const durationWeeks = document.getElementById('durationWeeks').value;
 
             if (skipPreview) {
                 // Lokal (Ollama): klassischer POST, kein SSE
@@ -376,6 +416,7 @@
                     analysis_days: parseInt(analysisDays),
                     periodization: periodization,
                     target_profile: targetProfile,
+                    duration_weeks: parseInt(durationWeeks),
                     previewOnly: false,
                 });
                 return;
@@ -388,6 +429,7 @@
                 analysis_days: analysisDays,
                 periodization: periodization,
                 target_profile: targetProfile,
+                duration_weeks: durationWeeks,
             });
 
             setProgress(0, '🚀 Starte Plan-Generierung...');

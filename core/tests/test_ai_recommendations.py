@@ -559,6 +559,27 @@ class TestAiRecommendationRemainingBranches:
         assert isinstance(normalized, tuple)
         assert normalized[3] == "linear"
         assert normalized[4] == "hypertrophie"
+        # Phase 17: Default duration_weeks = 12
+        assert normalized[6] == 12
+
+    def test_validate_plan_gen_params_duration_weeks(self):
+        """Phase 17: duration_weeks Validierung (4-16)."""
+        # Zu kurz
+        bad_short = ai_views._validate_plan_gen_params({"duration_weeks": 3})
+        assert isinstance(bad_short, ai_views.JsonResponse)
+        assert bad_short.status_code == 400
+
+        # Zu lang
+        bad_long = ai_views._validate_plan_gen_params({"duration_weeks": 17})
+        assert isinstance(bad_long, ai_views.JsonResponse)
+        assert bad_long.status_code == 400
+
+        # Gültig
+        ok = ai_views._validate_plan_gen_params(
+            {"plan_type": "3er-split", "sets_per_session": 18, "duration_weeks": 8}
+        )
+        assert isinstance(ok, tuple)
+        assert ok[6] == 8
 
     def test_execute_plan_generation_preview_and_apply_mesocycle(self, monkeypatch):
         user = UserFactory()
@@ -619,7 +640,7 @@ class TestAiRecommendationRemainingBranches:
         client.force_login(user)
         url = reverse("generate_plan_api")
 
-        mock_validate.return_value = ("3er-split", 18, 30, "linear", "hypertrophie", False)
+        mock_validate.return_value = ("3er-split", 18, 30, "linear", "hypertrophie", False, 12)
         mock_execute.return_value = ai_views.JsonResponse({"ok": True})
 
         resp = client.post(

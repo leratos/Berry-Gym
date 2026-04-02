@@ -674,12 +674,13 @@ def _handle_save_cached_plan(user: User, data: dict) -> JsonResponse:
 
 def _validate_plan_gen_params(
     data: dict,
-) -> tuple[str, int, int, str, str, bool] | JsonResponse:
+) -> tuple[str, int, int, str, str, bool, int] | JsonResponse:
     """Validiert und normalisiert Parameter für die Plan-Generierung.
 
     Returns:
         (plan_type, sets_per_session, analysis_days, periodization,
-         target_profile, preview_only) bei Erfolg, sonst JsonResponse mit Fehler.
+         target_profile, preview_only, duration_weeks) bei Erfolg,
+        sonst JsonResponse mit Fehler.
     """
     plan_type = data.get("plan_type", "3er-split")
     sets_per_session = int(data.get("sets_per_session", 18))
@@ -687,6 +688,7 @@ def _validate_plan_gen_params(
     periodization = data.get("periodization", "linear")
     target_profile = data.get("target_profile", "hypertrophie")
     preview_only = data.get("previewOnly", False)
+    duration_weeks = int(data.get("duration_weeks", 12))
 
     if plan_type not in _VALID_PLAN_TYPES:
         return JsonResponse(
@@ -694,12 +696,22 @@ def _validate_plan_gen_params(
         )
     if sets_per_session < 10 or sets_per_session > 30:
         return JsonResponse({"error": "Sätze pro Session muss zwischen 10-30 liegen"}, status=400)
+    if duration_weeks < 4 or duration_weeks > 16:
+        return JsonResponse({"error": "Plandauer muss zwischen 4 und 16 Wochen liegen"}, status=400)
     if periodization not in _VALID_PERIODIZATIONS:
         periodization = "linear"
     if target_profile not in _VALID_PROFILES:
         target_profile = "hypertrophie"
 
-    return plan_type, sets_per_session, analysis_days, periodization, target_profile, preview_only
+    return (
+        plan_type,
+        sets_per_session,
+        analysis_days,
+        periodization,
+        target_profile,
+        preview_only,
+        duration_weeks,
+    )
 
 
 def _execute_plan_generation(
@@ -781,9 +793,15 @@ def generate_plan_api(request: HttpRequest) -> JsonResponse:
         params = _validate_plan_gen_params(data)
         if isinstance(params, JsonResponse):
             return params
-        plan_type, sets_per_session, analysis_days, periodization, target_profile, preview_only = (
-            params
-        )
+        (
+            plan_type,
+            sets_per_session,
+            analysis_days,
+            periodization,
+            target_profile,
+            preview_only,
+            duration_weeks,
+        ) = params
 
         # Plan Generator importieren (korrekter Package-Import)
         from ai_coach.plan_generator import PlanGenerator
@@ -800,6 +818,7 @@ def generate_plan_api(request: HttpRequest) -> JsonResponse:
             target_profile=target_profile,
             use_openrouter=use_openrouter,
             fallback_to_openrouter=True,
+            duration_weeks=duration_weeks,
         )
         return _execute_plan_generation(request.user, generator, preview_only, use_openrouter)
 
@@ -1218,6 +1237,7 @@ def generate_plan_stream_api(request: HttpRequest) -> HttpResponse:
         "analysis_days": request.GET.get("analysis_days", "30"),
         "periodization": request.GET.get("periodization", "linear"),
         "target_profile": request.GET.get("target_profile", "hypertrophie"),
+        "duration_weeks": request.GET.get("duration_weeks", "12"),
         "previewOnly": True,  # Stream gibt immer Preview zurück; User bestätigt danach
     }
 
@@ -1231,7 +1251,9 @@ def generate_plan_stream_api(request: HttpRequest) -> HttpResponse:
 
         return StreamingHttpResponse(error_stream(), content_type="text/event-stream")
 
-    plan_type, sets_per_session, analysis_days, periodization, target_profile, _ = params
+    plan_type, sets_per_session, analysis_days, periodization, target_profile, _, duration_weeks = (
+        params
+    )
 
     use_openrouter = not settings.DEBUG or os.getenv("USE_OPENROUTER", "False").lower() == "true"
 
@@ -1259,6 +1281,7 @@ def generate_plan_stream_api(request: HttpRequest) -> HttpResponse:
                 use_openrouter=use_openrouter,
                 fallback_to_openrouter=True,
                 progress_callback=progress_callback,
+                duration_weeks=duration_weeks,
             )
             result = generator.generate(save_to_db=False)
 

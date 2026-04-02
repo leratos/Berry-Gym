@@ -5185,3 +5185,54 @@ Eingebunden in `validate_plan_structure()` Entry-Point nach allen bestehenden Ch
 - `docs/PROJECT_ROADMAP.md` – Phase 16 Status aktualisiert
 
 Phase 15 (bisher nur in journal.txt) ebenfalls in Roadmap nachgetragen.
+
+
+---
+
+## Phase 17: Plandauer als Plan-Input
+
+**Datum:** 2026-04-02
+**Branch:** `feature/phase17-plan-duration`
+
+### 17.1: Neues Eingabefeld plan_dauer_wochen (4-16, Default 12)
+- `ai_plan_generator.html`: Range-Slider (4-16 Wochen) mit dynamischem Deload-Hinweis
+- `ai_recommendations.py`: `_validate_plan_gen_params()` um `duration_weeks` erweitert (4-16, 400 bei Fehler)
+- `plan_generator.py`: `PlanGenerator.__init__()` nimmt `duration_weeks` entgegen
+- `prompt_builder.py`: `build_user_prompt()` und `build_messages()` mit `duration_weeks` Parameter
+- JS: `calculateDeloadWeeks()` spiegelt Python-Logik für Echtzeit-Hinweis im UI
+
+### 17.2: Dynamische Deload-Berechnung
+Neue Funktion `calculate_deload_weeks(duration_weeks)` in `prompt_builder.py`:
+- ≤6 Wochen: nur letzte Woche als Deload
+- >6 Wochen: alle 4 Wochen (4, 8, 12, ...)
+- ≥8 Wochen: letzte Woche als zusätzlicher Deload wenn Abstand zur letzten Deload-Woche ≥ 2
+- Beispiele: 4W→[4], 6W→[6], 8W→[4,8], 10W→[4,8,10], 12W→[4,8,12], 14W→[4,8,12,14]
+
+### 17.3: Periodisierungsbeschreibung dynamisch aus Plandauer
+- `_build_periodization_note()` nimmt `duration_weeks` Parameter
+- Deload-Wochen im Text dynamisch: "Deload in Woche 4/8" statt hardcodiert "4/8/12"
+- Wellenförmige Periodisierung: Block-Länge angepasst für kurze Pläne
+- Prompt-Text: Makrozyklus-Dauer, Deload-Wochen, Periodisierungs-Regel #8 dynamisch
+
+### 17.4: Trainingsblock-Integration
+- `Trainingsblock.plan_dauer_wochen`: Neues Feld (PositiveIntegerField, nullable)
+- `Trainingsblock.planned_end_datum`: Property berechnet `start_datum + plan_dauer_wochen`
+- `Trainingsblock.warning_threshold_weeks`: Nutzt `plan_dauer_wochen` oder Fallback 8 Wochen
+- `periodization.py`: `get_block_age_warning()` nutzt `warning_threshold_weeks` statt pauschal 8
+- Severity: "danger" bei 150% der geplanten Dauer statt hardcodiert 12 Wochen
+- Migration: `0082_add_plan_dauer_wochen_to_trainingsblock`
+
+**Tests:** 31 neue Tests (12 calculate_deload_weeks, 3 periodization_note, 8 block_age_warning mit plan_dauer, 4 Trainingsblock-Model, 3 validator duration_weeks, 1 bestehender Mock-Tupel-Fix)
+
+**Geänderte Dateien:**
+- `ai_coach/prompt_builder.py` – calculate_deload_weeks(), _build_periodization_note() + duration, build_user_prompt/build_messages
+- `ai_coach/plan_generator.py` – duration_weeks Parameter
+- `core/views/ai_recommendations.py` – _validate_plan_gen_params() + generate_plan_api/stream
+- `core/templates/core/ai_plan_generator.html` – Plandauer-Slider + JS
+- `core/models/training.py` – plan_dauer_wochen, planned_end_datum, warning_threshold_weeks
+- `core/utils/periodization.py` – dynamischer Threshold in get_block_age_warning()
+- `core/migrations/0082_add_plan_dauer_wochen_to_trainingsblock.py`
+- `ai_coach/tests/test_prompt_builder.py` – 15 neue Tests
+- `core/tests/test_periodization.py` – 12 neue Tests
+- `core/tests/test_ai_recommendations.py` – 4 neue/geänderte Tests
+- `docs/PROJECT_ROADMAP.md` – Phase 17 Status aktualisiert
