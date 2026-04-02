@@ -1,5 +1,5 @@
 """
-Tests für Phase 11 + 13 – KI-Planvalidierung.
+Tests für Phase 11 + 13 + 16 – KI-Planvalidierung.
 
 Testet alle Sub-Tasks:
 - 11.1: Cross-Session-Duplikate
@@ -8,6 +8,7 @@ Testet alle Sub-Tasks:
 - 11.4: Compound-vor-Isolation Reihenfolge
 - 11.5: Pausenzeiten-Plausibilität
 - 13.1: Muskelgruppen-Überrepräsentation pro Session
+- 16: Push/Pull-Balance über Gesamtplan
 """
 
 import pytest
@@ -17,6 +18,9 @@ from ai_coach.plan_validator import (
     _check_cross_session_duplicates,
     _check_forbidden_combinations,
     _check_muscle_overrepresentation,
+    _check_push_pull_ratio,
+    _classify_push_pull,
+    _count_push_pull_sets,
     _fix_exercise_order,
     _fix_rest_times,
     validate_plan_structure,
@@ -785,3 +789,308 @@ class TestMuscleOverrepresentation:
         warnings, fix_count = _check_muscle_overrepresentation(plan, {})
         assert warnings == []
         assert fix_count == 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 16: Push/Pull-Balance
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestClassifyPushPull:
+    def test_push_gruppen(self):
+        assert _classify_push_pull("BRUST") == "push"
+        assert _classify_push_pull("SCHULTER_VORN") == "push"
+        assert _classify_push_pull("SCHULTER_SEIT") == "push"
+        assert _classify_push_pull("TRIZEPS") == "push"
+
+    def test_pull_gruppen(self):
+        assert _classify_push_pull("RUECKEN_LAT") == "pull"
+        assert _classify_push_pull("BIZEPS") == "pull"
+        assert _classify_push_pull("SCHULTER_HINT") == "pull"
+        assert _classify_push_pull("RUECKEN_OBERER") == "pull"
+
+    def test_neutral_gruppen(self):
+        assert _classify_push_pull("BEINE_QUAD") is None
+        assert _classify_push_pull("BAUCH") is None
+        assert _classify_push_pull("PO") is None
+        assert _classify_push_pull("GANZKOERPER") is None
+
+
+@pytest.mark.django_db
+class TestCountPushPullSets:
+    def test_zaehlt_push_und_pull_korrekt(self):
+        brust = UebungFactory(
+            bezeichnung="Bankdrücken", muskelgruppe="BRUST", bewegungstyp="DRUECKEN"
+        )
+        ruecken = UebungFactory(
+            bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT", bewegungstyp="ZIEHEN"
+        )
+        quad = UebungFactory(
+            bezeichnung="Kniebeuge", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        uebungen_map = {u.bezeichnung: u for u in [brust, ruecken, quad]}
+        plan = _make_plan(
+            [
+                _make_session("Push", [_make_exercise("Bankdrücken", sets=4)]),
+                _make_session("Pull", [_make_exercise("Rudern", sets=3)]),
+                _make_session("Legs", [_make_exercise("Kniebeuge", sets=4)]),
+            ]
+        )
+        push, pull = _count_push_pull_sets(plan, uebungen_map)
+        assert push == 4
+        assert pull == 3
+
+    def test_leerer_plan(self):
+        push, pull = _count_push_pull_sets({"sessions": []}, {})
+        assert push == 0
+        assert pull == 0
+
+
+@pytest.mark.django_db
+class TestPushPullRatio:
+    def test_balanciert_keine_warnung(self):
+        """Push 12 / Pull 10 → Ratio 1.2 → ok."""
+        brust = UebungFactory(
+            bezeichnung="Bankdrücken", muskelgruppe="BRUST", bewegungstyp="DRUECKEN"
+        )
+        schulter = UebungFactory(
+            bezeichnung="Schulterdrücken", muskelgruppe="SCHULTER_VORN", bewegungstyp="DRUECKEN"
+        )
+        ruecken = UebungFactory(
+            bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT", bewegungstyp="ZIEHEN"
+        )
+        bizeps = UebungFactory(
+            bezeichnung="Bizepscurls", muskelgruppe="BIZEPS", bewegungstyp="ISOLATION"
+        )
+        uebungen_map = {u.bezeichnung: u for u in [brust, schulter, ruecken, bizeps]}
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Push",
+                    [
+                        _make_exercise("Bankdrücken", sets=4),
+                        _make_exercise("Schulterdrücken", sets=4),
+                    ],
+                ),
+                _make_session(
+                    "Pull",
+                    [
+                        _make_exercise("Rudern", sets=4),
+                        _make_exercise("Bizepscurls", sets=3),
+                    ],
+                ),
+            ]
+        )
+        warnings, fix_count = _check_push_pull_ratio(plan, uebungen_map)
+        assert warnings == []
+        assert fix_count == 0
+
+    def test_leichte_imbalance_warnt(self):
+        """Push 16 / Pull 10 → Ratio 1.6 → Warnung."""
+        brust = UebungFactory(
+            bezeichnung="Bankdrücken", muskelgruppe="BRUST", bewegungstyp="DRUECKEN"
+        )
+        schulter = UebungFactory(
+            bezeichnung="Schulterdrücken", muskelgruppe="SCHULTER_VORN", bewegungstyp="DRUECKEN"
+        )
+        seitheben = UebungFactory(
+            bezeichnung="Seitheben", muskelgruppe="SCHULTER_SEIT", bewegungstyp="ISOLATION"
+        )
+        trizeps = UebungFactory(
+            bezeichnung="Trizeps Pushdown", muskelgruppe="TRIZEPS", bewegungstyp="ISOLATION"
+        )
+        ruecken = UebungFactory(
+            bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT", bewegungstyp="ZIEHEN"
+        )
+        bizeps = UebungFactory(
+            bezeichnung="Bizepscurls", muskelgruppe="BIZEPS", bewegungstyp="ISOLATION"
+        )
+        uebungen_map = {
+            u.bezeichnung: u for u in [brust, schulter, seitheben, trizeps, ruecken, bizeps]
+        }
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Push",
+                    [
+                        _make_exercise("Bankdrücken", sets=4),
+                        _make_exercise("Schulterdrücken", sets=4),
+                        _make_exercise("Seitheben", sets=4),
+                        _make_exercise("Trizeps Pushdown", sets=4),
+                    ],
+                ),
+                _make_session(
+                    "Pull",
+                    [
+                        _make_exercise("Rudern", sets=4),
+                        _make_exercise("Bizepscurls", sets=3),
+                    ],
+                ),
+            ]
+        )
+        warnings, fix_count = _check_push_pull_ratio(plan, uebungen_map)
+        assert len(warnings) == 1
+        assert "Push/Pull-Imbalance" in warnings[0]
+        assert "1.6" in warnings[0] or "Ratio" in warnings[0]
+        assert fix_count == 0
+
+    def test_starke_imbalance_autofix(self):
+        """Push 20 / Pull 10 → Ratio 2.0 → Auto-Fix."""
+        brust = UebungFactory(
+            bezeichnung="Bankdrücken", muskelgruppe="BRUST", bewegungstyp="DRUECKEN"
+        )
+        schulter = UebungFactory(
+            bezeichnung="Schulterdrücken", muskelgruppe="SCHULTER_VORN", bewegungstyp="DRUECKEN"
+        )
+        seitheben = UebungFactory(
+            bezeichnung="Seitheben", muskelgruppe="SCHULTER_SEIT", bewegungstyp="ISOLATION"
+        )
+        trizeps = UebungFactory(
+            bezeichnung="Trizeps Pushdown", muskelgruppe="TRIZEPS", bewegungstyp="ISOLATION"
+        )
+        fliegende = UebungFactory(
+            bezeichnung="Fliegende", muskelgruppe="BRUST", bewegungstyp="ISOLATION"
+        )
+        ruecken = UebungFactory(
+            bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT", bewegungstyp="ZIEHEN"
+        )
+        bizeps = UebungFactory(
+            bezeichnung="Bizepscurls", muskelgruppe="BIZEPS", bewegungstyp="ISOLATION"
+        )
+        # Ersatz-Übung (DB-Seiteneffekt, wird von _find_pull_replacement gefunden)
+        UebungFactory(
+            bezeichnung="Face Pull", muskelgruppe="SCHULTER_HINT", bewegungstyp="ISOLATION"
+        )
+        uebungen_map = {
+            u.bezeichnung: u
+            for u in [brust, schulter, seitheben, trizeps, fliegende, ruecken, bizeps]
+        }
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Push",
+                    [
+                        _make_exercise("Bankdrücken", sets=4),
+                        _make_exercise("Schulterdrücken", sets=4),
+                        _make_exercise("Seitheben", sets=4),
+                        _make_exercise("Trizeps Pushdown", sets=4),
+                        _make_exercise("Fliegende", sets=4),
+                    ],
+                ),
+                _make_session(
+                    "Pull",
+                    [
+                        _make_exercise("Rudern", sets=4),
+                        _make_exercise("Bizepscurls", sets=3),
+                    ],
+                ),
+            ]
+        )
+        available = [
+            "Bankdrücken",
+            "Schulterdrücken",
+            "Seitheben",
+            "Trizeps Pushdown",
+            "Fliegende",
+            "Rudern",
+            "Bizepscurls",
+            "Face Pull",
+        ]
+        warnings, fix_count = _check_push_pull_ratio(plan, uebungen_map, available)
+        assert warnings == []
+        assert fix_count >= 1
+        # Mindestens eine Push-Isolation wurde durch Pull-Isolation ersetzt
+        ex_names = [ex["exercise_name"] for s in plan["sessions"] for ex in s["exercises"]]
+        assert "Face Pull" in ex_names
+
+    def test_compounds_werden_nicht_ersetzt(self):
+        """Nur Isolation-Übungen werden beim Auto-Fix getauscht."""
+        # Nur Compounds im Push-Teil → kein Auto-Fix möglich → Warnung
+        brust = UebungFactory(
+            bezeichnung="Bankdrücken", muskelgruppe="BRUST", bewegungstyp="DRUECKEN"
+        )
+        schulter = UebungFactory(
+            bezeichnung="Schulterdrücken", muskelgruppe="SCHULTER_VORN", bewegungstyp="DRUECKEN"
+        )
+        ruecken = UebungFactory(
+            bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT", bewegungstyp="ZIEHEN"
+        )
+        UebungFactory(
+            bezeichnung="Face Pull", muskelgruppe="SCHULTER_HINT", bewegungstyp="ISOLATION"
+        )
+        uebungen_map = {u.bezeichnung: u for u in [brust, schulter, ruecken]}
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Push",
+                    [
+                        _make_exercise("Bankdrücken", sets=5),
+                        _make_exercise("Schulterdrücken", sets=5),
+                    ],
+                ),
+                _make_session(
+                    "Pull",
+                    [_make_exercise("Rudern", sets=3)],
+                ),
+            ]
+        )
+        available = ["Bankdrücken", "Schulterdrücken", "Rudern", "Face Pull"]
+        warnings, fix_count = _check_push_pull_ratio(plan, uebungen_map, available)
+        # Kein Auto-Fix, da keine Push-Isolation vorhanden → Ratio > 1.8 → Warnung
+        assert len(warnings) == 1
+        assert fix_count == 0
+        # Compounds bleiben unverändert
+        ex_names = [ex["exercise_name"] for s in plan["sessions"] for ex in s["exercises"]]
+        assert "Bankdrücken" in ex_names
+        assert "Schulterdrücken" in ex_names
+
+    def test_kein_pull_kein_crash(self):
+        """Plan nur mit Push-Übungen → keine Division durch 0."""
+        brust = UebungFactory(
+            bezeichnung="Bankdrücken", muskelgruppe="BRUST", bewegungstyp="DRUECKEN"
+        )
+        uebungen_map = {brust.bezeichnung: brust}
+        plan = _make_plan([_make_session("Push", [_make_exercise("Bankdrücken", sets=4)])])
+        warnings, fix_count = _check_push_pull_ratio(plan, uebungen_map)
+        assert warnings == []
+        assert fix_count == 0
+
+    def test_nur_legs_kein_crash(self):
+        """Plan nur mit Legs → keine Push/Pull-Warnung."""
+        quad = UebungFactory(
+            bezeichnung="Kniebeuge", muskelgruppe="BEINE_QUAD", bewegungstyp="BEUGEN"
+        )
+        uebungen_map = {quad.bezeichnung: quad}
+        plan = _make_plan([_make_session("Legs", [_make_exercise("Kniebeuge", sets=4)])])
+        warnings, fix_count = _check_push_pull_ratio(plan, uebungen_map)
+        assert warnings == []
+        assert fix_count == 0
+
+    def test_integration_in_validate_plan_structure(self):
+        """Push/Pull-Check läuft im Entry-Point mit."""
+        UebungFactory(bezeichnung="Bankdrücken", muskelgruppe="BRUST", bewegungstyp="DRUECKEN")
+        UebungFactory(
+            bezeichnung="Schulterdrücken", muskelgruppe="SCHULTER_VORN", bewegungstyp="DRUECKEN"
+        )
+        UebungFactory(
+            bezeichnung="Seitheben", muskelgruppe="SCHULTER_SEIT", bewegungstyp="ISOLATION"
+        )
+        UebungFactory(bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT", bewegungstyp="ZIEHEN")
+        plan = _make_plan(
+            [
+                _make_session(
+                    "Push",
+                    [
+                        _make_exercise("Bankdrücken", sets=4),
+                        _make_exercise("Schulterdrücken", sets=4),
+                        _make_exercise("Seitheben", sets=4),
+                    ],
+                ),
+                _make_session(
+                    "Pull",
+                    [_make_exercise("Rudern", sets=3)],
+                ),
+            ]
+        )
+        warnings, fixes = validate_plan_structure(plan)
+        assert any("Push/Pull" in w for w in warnings)

@@ -261,6 +261,232 @@ berechnen `effektives_gewicht = (user_kg * faktor) + zusatzgewicht`. Zwei fundam
 
 ---
 
+## Phase 15 – Mindest-Satz-Budget Validierung & Auto-Fix *(klein, Planqualität)*
+**Branch:** `feature/phase15-min-sets-budget`
+**Status:** ✅ Abgeschlossen (2026-03-28)
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 15.1 | Session-Satz-Budget in `_auto_fix_weakness()` | Prüft verfügbares Budget bevor Übung ersetzt oder hinzugefügt wird. Bei Luft (current < max-2) → hinzufügen statt ersetzen |
+| 15.2 | Mindest-Satz-Budget Validierung | Neuer Check `_check_min_sets_per_session()`: Warnung wenn Session < 14 Sätze (`_MIN_SETS_PER_SESSION`) |
+| 15.3 | Bug-Fix LABEL_TO_KEYS | DB-Konstanten (HUEFTBEUGER, SCHULTER_HINT etc.) als Keys in `LABEL_TO_KEYS` aufgenommen |
+| 15.4 | Plan-Titel Humanisierung | `_humanize_plan_name()` ersetzt DB-Konstanten durch Klartext im Plan-Namen |
+
+---
+
+## Phase 16 – Push/Pull-Validierung im Plangenerator *(klein, Planqualität)*
+**Branch:** `feature/phase16-push-pull-validation`
+**Status:** ✅ Abgeschlossen (2026-04-02)
+
+### Hintergrund / Problem
+Der Training Report (März 2026) identifiziert eine Push/Pull-Ratio von 1,64:1 und empfiehlt
+mehr Pull-Übungen. Der Plangenerator validiert Muskelgruppen-Balance pro Session (Phase 13.1),
+aber prüft die Push/Pull-Balance über den Gesamtplan nicht. Das LLM tendiert zu Push-lastigen
+Plänen, weil Push-Übungen vielfältiger sind (Brust+Schulter+Trizeps vs. Rücken+Bizeps).
+
+### Geplante Lösung
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 16.1 | Push/Pull-Klassifikation pro Übung | Bestehende Muskelgruppen-Zuordnung nutzen um jede Übung als Push, Pull oder Neutral (Legs/Core) zu klassifizieren. Mapping in `plan_validator.py` oder `constants.py` |
+| 16.2 | Gesamtplan Push/Pull-Ratio Check | Nach Generierung: Push-Sätze vs. Pull-Sätze über alle Sessions zählen. Threshold: Ratio > 1,5:1 → Warnung. Ratio > 1,8:1 → Auto-Fix |
+| 16.3 | Auto-Fix: Pull-Volumen erhöhen | Bei Imbalance: unterrepräsentierte Pull-Übung (z.B. Face Pulls, Reverse Flys) hinzufügen oder Push-Isolation (z.B. extra Seitheben) durch Pull-Isolation ersetzen. Nur Isolation-Übungen tauschen, Compounds nie antasten |
+
+### Betroffene Dateien
+- `ai_coach/plan_validator.py` – neuer Check + Auto-Fix
+- `core/models/constants.py` – ggf. Push/Pull-Mapping
+- Tests: neue Testfälle für Ratio-Berechnung und Auto-Fix
+
+### Abhängigkeiten
+- Keine – arbeitet auf bestehender Validator-Infrastruktur
+
+### Abgrenzung
+- Nur Gesamtplan-Level, nicht pro Session (Session-Balance ist Phase 13.1)
+- Legs-Tag-Übungen als Neutral klassifizieren (Kniebeuge ist weder Push noch Pull im Oberkörper-Sinn)
+
+---
+
+## Phase 17 – Plandauer als Plan-Input *(mittel, Planqualität)*
+**Branch:** `feature/phase17-plan-duration`
+**Status:** 📋 Konzept
+
+### Hintergrund / Problem
+Der Plangenerator erzeugt immer 12-Wochen-Pläne mit hardcodierten Deload-Wochen (4, 8, 12).
+Die Periodisierungsbeschreibung im Plan-PDF nennt feste Wochennummern unabhängig von der
+tatsächlichen Plandauer. Ein 4-Wochen-Plan braucht andere Deload-Platzierung, aggressiveres
+Startvolumen und andere Progressionserwartungen als ein 12-Wochen-Plan.
+
+### Geplante Lösung
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 17.1 | Dauer-Feld in Plan-Erstellung | Neues Eingabefeld `plan_dauer_wochen` (Integer, 4–16, Default 12) im Plan-Erstellungs-UI und als Parameter an den Generator |
+| 17.2 | Dynamische Deload-Berechnung | Deload-Wochen automatisch platzieren: alle 3–4 Wochen eine Deload-Woche. Bei 4 Wochen: Woche 4. Bei 8 Wochen: Woche 4+8. Bei 12 Wochen: 4+8+12. Formel statt Hardcoding |
+| 17.3 | Periodisierungsbeschreibung anpassen | `prompt_builder.py`: Wochennummern im Periodisierungstext dynamisch aus Plandauer berechnen. Deload-%, RPE-Ziele und Progressionshinweise bleiben abhängig von `target_profile` (Phase 13.3) |
+| 17.4 | Trainingsblock-Integration | `Trainingsblock.end_datum` aus `start_datum + plan_dauer_wochen` berechnen. Block-Alter-Warnung (Phase 10) nutzt die geplante Dauer statt pauschal 8 Wochen |
+
+### Betroffene Dateien
+- `ai_coach/prompt_builder.py` – Dauer-Parameter + dynamische Periodisierung
+- `ai_coach/plan_generator.py` – Dauer entgegennehmen und weiterreichen
+- `core/views/plan_creation.py` (o.ä.) – UI-Feld
+- `core/models/training_block.py` – end_datum aus Dauer
+- `core/utils/periodization.py` – Block-Alter-Logik anpassen
+
+### Abhängigkeiten
+- Phase 10 (Trainingsblock-Konzept) ✅ erledigt
+- Phase 13.3 (Dynamische Periodisierungsbeschreibung) ✅ erledigt
+
+### Abgrenzung
+- KEINE Änderung der Schwachstellen-Strategie basierend auf Dauer (zweiter Schritt, ggf. Phase 22+)
+- KEINE Änderung der Validierungsregeln basierend auf Dauer
+- Nur Deload-Platzierung + Periodisierungsbeschreibung + Trainingsblock-Endedatum
+
+---
+
+## Phase 18 – Startgewicht-Empfehlung beim Planwechsel *(mittel, UX)*
+**Branch:** `feature/phase18-start-weight`
+**Status:** 📋 Konzept
+
+### Hintergrund / Problem
+Beim Wechsel auf einen neuen Plan weiß der User nicht, mit welchem Gewicht er starten soll.
+Besonders relevant wenn bisherige Gewichte mit RPE 10 erzielt wurden und der neue Plan
+RPE 8 als Ziel hat – das erfordert eine Gewichtsreduktion. Aktuell zeigt die App beim
+Trainingsstart nur das letzte verwendete Gewicht ohne RPE-Kontext.
+
+### Geplante Lösung
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 18.1 | Historisches RPE-Gewicht-Mapping | Für jede Übung im neuen Plan: letzte 3–5 Sätze mit Gewicht+RPE laden. Daraus ableiten bei welchem Gewicht der User typischerweise welche RPE erreicht |
+| 18.2 | RPE-korrigierte Startempfehlung | Wenn Ziel-RPE des neuen Plans (z.B. 8) niedriger als letzte durchschnittliche RPE (z.B. 9,5): Gewichtsreduktion empfehlen. Heuristik: ~2,5% Reduktion pro RPE-Punkt Differenz (basierend auf RPE-Last-Tabellen) |
+| 18.3 | UI: Empfehlung im Trainings-Start | Beim Start einer Session: neben jeder Übung „Empfohlen: X kg (basierend auf RPE 8)" anzeigen. Nur wenn historische Daten für die Übung existieren. Bei neuen Übungen: kein Hinweis |
+
+### Betroffene Dateien
+- `core/views/training_stats.py` – Berechnung RPE-korrigiertes Gewicht
+- `core/views/training_session.py` – Empfehlung laden und an Template übergeben
+- `core/templates/core/training_session.html` – Empfehlung anzeigen
+- Tests: Berechnung der Empfehlung mit verschiedenen RPE-Historien
+
+### Abhängigkeiten
+- Phase 9.6 (RPE-Ziel auf PlanUebung) ✅ erledigt
+- Historische Satz-Daten mit RPE müssen vorhanden sein
+
+### Abgrenzung
+- Empfehlung ist ein Hinweis, kein Zwang – User kann frei eingeben
+- Keine automatische Gewichtsanpassung in der DB
+- Nur für Übungen mit ≥3 historischen Sätzen mit RPE-Wert
+
+---
+
+## Phase 19 – Session-RPE-Trend *(klein, Dashboard)*
+**Branch:** `feature/phase19-session-rpe-trend`
+**Status:** 📋 Konzept
+
+### Hintergrund / Problem
+RPE wird pro Satz erfasst, aber nur als Gesamtverteilung ausgewertet (Phase 9.3).
+Es gibt keinen Trend auf Session-Ebene. Steigende Durchschnitts-RPE über mehrere Sessions
+ist ein Frühindikator für Fatigue-Akkumulation – bevor der Fatigue-Index anschlägt.
+
+### Geplante Lösung
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 19.1 | Session-RPE berechnen | Durchschnitts-RPE pro Trainingseinheit als neue Metrik. Gewichtet nach Sätzen (nicht Übungen). Bereits vorhandene Satz-RPE-Daten aggregieren |
+| 19.2 | RPE-Trend-Chart im Dashboard | Sparkline oder Mini-Chart: Session-RPE der letzten 8–12 Sessions. Trendlinie (lineare Regression) zeigt ob RPE steigt, fällt oder stabil ist |
+| 19.3 | Frühwarnung bei steigendem RPE | Wenn Trend über 3+ Sessions steigt UND aktueller Durchschnitt > 8,5: Warnung „Deine Trainingsintensität steigt – Deload in Betracht ziehen?" Eingebunden in bestehende `_get_performance_warnings()` |
+
+### Betroffene Dateien
+- `core/views/training_stats.py` – Session-RPE Aggregation + Trend-Berechnung
+- `core/templates/core/dashboard.html` – Mini-Chart
+- Tests: Trend-Berechnung mit steigenden/fallenden/stabilen RPE-Werten
+
+### Abhängigkeiten
+- Keine – nutzt bestehende Satz-RPE-Daten
+
+### Abgrenzung
+- Kein RPE-Trend pro Übung (das ist Phase 7.1, bereits in Roadmap)
+- Nur Session-Level-Aggregation
+
+---
+
+## Phase 20 – Schwachstellen-Tracker / Feedback-Loop *(mittel, Dashboard)*
+**Branch:** `feature/phase20-weakness-tracker`
+**Status:** 📋 Konzept
+
+### Hintergrund / Problem
+Der Report identifiziert Schwachstellen, der Generator baut einen Plan dagegen. Aber es gibt
+keinen automatischen Zwischencheck ob der Plan die Schwachstellen tatsächlich behebt. Der User
+muss manuell einen neuen Report exportieren und vergleichen. Es fehlt ein geschlossener
+Feedback-Loop: Diagnose → Plan → Tracking → Re-Diagnose.
+
+### Geplante Lösung
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 20.1 | Schwachstellen bei Plangenerierung persistieren | Neue Tabelle oder JSON-Feld auf `Trainingsblock`: identifizierte Schwachstellen mit Ist-Sätzen und Soll-Sätzen zum Zeitpunkt der Plananalyse speichern |
+| 20.2 | Laufendes Satz-Tracking gegen Ziel | Pro Muskelgruppe aus den Schwachstellen: aktuelle Sätze im laufenden Monat zählen und gegen Soll-Bereich (12–20) tracken. Berechnung analog zur Muskelgruppen-Analyse im Report |
+| 20.3 | Dashboard-Widget | Card „Schwachstellen-Fortschritt": Muskelgruppe – Ist-Sätze / Soll-Sätze – Fortschrittsbalken. Grün wenn Ziel erreicht, Gelb wenn auf Kurs, Rot wenn hinter Plan |
+| 20.4 | Monatsende-Vergleich | Am Ende eines Monats (oder bei Report-Export): automatischer Vergleich mit dem Ausgangszustand. „Bauch: 6 → 14 Sätze ✓ Behoben" oder „Seitliche Schulter: 9 → 10 Sätze ✗ Noch untertrainiert" |
+
+### Betroffene Dateien
+- `core/models/` – neues Feld/Tabelle für persistierte Schwachstellen
+- `ai_coach/plan_generator.py` – Schwachstellen bei Generierung speichern
+- `core/views/training_stats.py` – laufendes Tracking
+- `core/views/dashboard.py` – Widget-Daten
+- `core/templates/core/dashboard.html` – Widget-UI
+- Migration für neues Datenmodell
+
+### Abhängigkeiten
+- Phase 9 (Muskelgruppen-Analyse) ✅ erledigt
+- Phase 11+ (Schwachstellen-Erkennung im Generator) ✅ erledigt
+
+### Abgrenzung
+- Kein automatischer Plan-Anpassung bei Zielverfehlung (das wäre ein autonomer Planner)
+- Nur Tracking und Visualisierung – Handlung bleibt beim User
+- Persistierte Schwachstellen sind Snapshot zum Zeitpunkt der Plananalyse, nicht live-berechnet
+
+---
+
+## Phase 21 – In-App Report-Dashboard *(groß, kann unterteilt werden)*
+**Branch:** `feature/phase21-report-dashboard`
+**Status:** 📋 Konzept
+
+### Hintergrund / Problem
+Die besten Analysen (Muskelgruppen-Balance-Visualisierung, Plateau-Tracking, Kraftstandards,
+Push/Pull-Ratio, Kraftentwicklung Top 5) existieren nur im PDF-Report. Das Dashboard hat
+einzelne Widgets (RPE-Warnung, Fatigue-Index, Wochenvolumen), aber kein Gesamtbild. Der User
+muss einen PDF exportieren um den vollständigen Trainingsstatus zu sehen.
+
+### Geplante Lösung
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 21.1 | Report-Seite als eigene View | Neue View `/training/report/` mit den Report-Analysen als interaktive Seite. Kein PDF-Ersatz – Ergänzung. PDF bleibt für Archivierung/Teilen |
+| 21.2 | Muskelgruppen-Balance (interaktiv) | Horizontales Balkendiagramm mit Soll-Bereich-Overlay (Chart.js). Klick auf Muskelgruppe → Detail mit Übungsliste und Satz-Verteilung |
+| 21.3 | Push/Pull-Ratio (live) | Donut-Chart mit aktuellem Monatswert. Farbcodiert: Grün (<1,3), Gelb (1,3–1,5), Rot (>1,5) |
+| 21.4 | Plateau-Tracking (live) | Tabelle der Top-5-Übungen mit Tage-seit-letztem-PR, Status-Badge. Analog zum PDF aber mit Live-Daten statt Report-Zeitraum |
+| 21.5 | Kraftstandards-Übersicht | 1RM pro Übung mit Kraftstandard-Einordnung (Untrainiert→Elite). Progress-Bar zum nächsten Level. Bereits in PDF berechnet, hier als interaktive Ansicht |
+| 21.6 | Trainingsvolumen-Entwicklung | Wochenvolumen-Chart mit Deload-Markierung (bereits im Dashboard als Widget, hier als Vollansicht mit mehr Kontext) |
+
+### Betroffene Dateien
+- Neue View + Template: `core/views/training_report.py` + `core/templates/core/training_report.html`
+- `core/views/training_stats.py` – bestehende Berechnungen wiederverwenden oder extrahieren
+- `core/utils/advanced_stats.py` – Report-Logik ggf. refactoren für Dual-Use (PDF + Web)
+- `core/urls.py` – neue Route
+- Tests: View-Tests + Berechnungs-Tests
+
+### Abhängigkeiten
+- Phase 16 (Push/Pull-Ratio) – für 21.3
+- Phase 19 (Session-RPE-Trend) – kann als Widget eingebettet werden
+- Phase 20 (Schwachstellen-Tracker) – kann als Widget eingebettet werden
+
+### Abgrenzung
+- PDF-Export bleibt bestehen – Report-Dashboard ist Ergänzung, kein Ersatz
+- Keine neuen Berechnungen – nur bestehende Report-Logik in Web-UI überführen
+- Kann in Sub-Phasen aufgeteilt werden (21.1–21.3 als erster Schritt, 21.4–21.6 als zweiter)
+
+---
+
 ## Bewusst NICHT in dieser Roadmap
 
 - **Ernährungstracking:** Scope bleibt Trainings-Tool. Ein Basismodul (kcal + Protein) bringt zu wenig Nutzen bei zu wenig konsequenter Eingabe. Wer Ernährung trackt, nutzt ein dediziertes Tool dafür
