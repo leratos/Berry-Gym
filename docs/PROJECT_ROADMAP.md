@@ -308,7 +308,7 @@ Plänen, weil Push-Übungen vielfältiger sind (Brust+Schulter+Trizeps vs. Rück
 
 ## Phase 17 – Plandauer als Plan-Input *(mittel, Planqualität)*
 **Branch:** `feature/phase17-plan-duration`
-**Status:** 📋 Konzept
+**Status:** ✅ Abgeschlossen (2026-04-02)
 
 ### Hintergrund / Problem
 Der Plangenerator erzeugt immer 12-Wochen-Pläne mit hardcodierten Deload-Wochen (4, 8, 12).

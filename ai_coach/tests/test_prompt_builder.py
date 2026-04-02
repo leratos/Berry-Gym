@@ -316,3 +316,86 @@ class TestBuildPeriodizationNote:
             for t in ("kraft", "hypertrophie", "definition"):
                 note = _build_periodization_note(p, t)
                 assert "Deload" in note, f"Deload fehlt für {p}/{t}"
+
+    def test_duration_weeks_changes_deload_text(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        note_8 = _build_periodization_note("linear", "hypertrophie", duration_weeks=8)
+        assert "Woche 4/8" in note_8
+        assert "12" not in note_8.split("Woche")[1].split(".")[0]
+
+        note_6 = _build_periodization_note("linear", "hypertrophie", duration_weeks=6)
+        assert "Woche 6" in note_6
+
+    def test_wellenfoermig_short_plan_block_length(self):
+        from ai_coach.prompt_builder import _build_periodization_note
+
+        note = _build_periodization_note("wellenfoermig", "hypertrophie", duration_weeks=6)
+        assert "6-Wochen-Blocks" in note
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 17.2: Dynamische Deload-Berechnung
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestCalculateDeloadWeeks:
+    """Phase 17.2: calculate_deload_weeks platziert Deloads dynamisch."""
+
+    def test_4_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        assert calculate_deload_weeks(4) == [4]
+
+    def test_5_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        assert calculate_deload_weeks(5) == [5]
+
+    def test_6_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        assert calculate_deload_weeks(6) == [6]
+
+    def test_8_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        assert calculate_deload_weeks(8) == [4, 8]
+
+    def test_10_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        assert calculate_deload_weeks(10) == [4, 8, 10]
+
+    def test_12_wochen_standard(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        assert calculate_deload_weeks(12) == [4, 8, 12]
+
+    def test_16_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        assert calculate_deload_weeks(16) == [4, 8, 12, 16]
+
+    def test_9_wochen_kein_extra_deload(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        # 9 - 8 = 1 Woche Abstand → kein extra Deload
+        assert calculate_deload_weeks(9) == [4, 8]
+
+    def test_14_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        # 14 - 12 = 2 Wochen Abstand → extra Deload
+        assert calculate_deload_weeks(14) == [4, 8, 12, 14]
+
+    def test_0_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        assert calculate_deload_weeks(0) == []
+
+    def test_7_wochen(self):
+        from ai_coach.prompt_builder import calculate_deload_weeks
+
+        # 7 Wochen: Deload bei 4, aber < 8 Wochen → kein finaler Deload
+        assert calculate_deload_weeks(7) == [4]
