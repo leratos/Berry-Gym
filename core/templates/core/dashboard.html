@@ -672,7 +672,9 @@
                 <span class="badge bg-info text-dark"><i class="bi bi-dash"></i> {% trans "Stabil" %}</span>
             {% endif %}
         </div>
-        <canvas id="sessionRpeChart" height="120"></canvas>
+        <div style="position: relative; height: 150px;">
+            <canvas id="sessionRpeChart"></canvas>
+        </div>
         {% if session_rpe_trend.current_avg %}
         <small class="text-muted d-block mt-2">
             {% trans "Aktuell" %}: Ø RPE {{ session_rpe_trend.current_avg }}
