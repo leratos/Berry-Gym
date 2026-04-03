@@ -34,7 +34,6 @@ from core.tests.factories import (
     UserFactory,
 )
 
-
 # ===========================================================================
 # SiteSettings – Singleton-Pattern
 # ===========================================================================
@@ -669,9 +668,7 @@ class TestMarkOnboardingComplete:
 
     def test_fehler_gibt_500(self):
         """Exception beim Speichern → HTTP 500, success=False."""
-        with patch.object(
-            type(self.user.profile), "save", side_effect=Exception("DB-Fehler")
-        ):
+        with patch.object(type(self.user.profile), "save", side_effect=Exception("DB-Fehler")):
             resp = self.client.post(reverse("mark_onboarding_complete"))
         assert resp.status_code == 500
         assert resp.json()["success"] is False
@@ -714,9 +711,7 @@ class TestRestartOnboarding:
 
     def test_ajax_fehler_gibt_500(self):
         """AJAX-Request bei Exception → HTTP 500, success=False."""
-        with patch.object(
-            type(self.user.profile), "save", side_effect=Exception("DB-Fehler")
-        ):
+        with patch.object(type(self.user.profile), "save", side_effect=Exception("DB-Fehler")):
             resp = self.client.get(
                 reverse("restart_onboarding"),
                 HTTP_X_REQUESTED_WITH="XMLHttpRequest",
