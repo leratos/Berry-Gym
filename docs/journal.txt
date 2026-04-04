@@ -5417,3 +5417,36 @@ Ziel: Bestehende /stats/-Seite um 4 fehlende Report-Analysen erweitern (kein neu
 - `core/tests/test_training_stats.py` – 21 neue Tests
 - `docs/PROJECT_ROADMAP.md` – Phase 21 Status aktualisiert
 - `docs/journal.txt` – Phase 21 Eintrag
+
+## Abgeschlossen: Test Coverage Analyse & Verbesserung (03.04.2026)
+
+### Problem
+543+ Tests schlugen fehl wegen `SECURE_SSL_REDIRECT=True` im Test-Environment
+(DEBUG=False → Production Security Headers aktiv → alle HTTP-View-Tests 301).
+Zusätzlich fehlten Tests für: SiteSettings, Feedback, PushSubscription,
+cardio Views, onboarding Views, get_last_set API, sources_list, push notifications.
+
+### Änderungen
+
+**config/settings.py**
+- `if not DEBUG:` → `if not DEBUG and not TESTING:` für den Production-Security-Block
+- `TESTING` war bereits definiert und für RATELIMIT_BYPASS + Auth-Backends genutzt
+- Behebt alle 543+ vorherigen Test-Failures durch HTTPS-Redirect
+
+**core/tests/test_missing_coverage.py** (neu, 74 Tests)
+- TestSiteSettingsSingleton (7): load(), save() pk=1, delete() no-op, defaults, Änderungen
+- TestFeedbackModel (9): get_status_badge_class() alle 5 Status + Fallback, __str__, defaults
+- TestPushSubscriptionModel (4): __str__, UA-Kürzung, Notification-Flags, update_or_create
+- TestCardioEinheitErmuedungsFallback (4): alle 3 Intensitäten + Fallback-Koeffizient
+- TestGetLastSetApi (10): alle 4 Progressive-Overload-Branches vollständig abgedeckt
+- TestCardioListView (6): Login, leer, 30-Tage-Filter, Altersfilter, show_all, User-Isolation
+- TestCardioAddView (8): GET/POST, Validierung (kein Aktivität, ungültige/negative Dauer), Datum-Fallbacks
+- TestCardioDeleteView (3): POST löscht, 404 bei fremden, GET löscht nicht
+- TestMarkOnboardingComplete (4): POST, GET 405, Login, Exception → 500
+- TestRestartOnboarding (4): AJAX, Redirect, Login, AJAX-Fehler
+- TestSourcesListView (6): öffentlich, inaktiv gefiltert, Kategorie-Filter, gesamt_count, Context
+- TestPushNotificationViews (9): Subscribe/Unsubscribe/VAPID alle Branches
+
+**Geänderte Dateien:**
+- `config/settings.py` – SECURE_SSL_REDIRECT nur wenn nicht TESTING
+- `core/tests/test_missing_coverage.py` – 74 neue Tests (alle grün)
