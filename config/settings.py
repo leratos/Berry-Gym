@@ -455,7 +455,7 @@ AXES_VERBOSE = True  # Detailliertes Logging
 # Nur in Production aktiv (DEBUG=False).
 # In Development absichtlich deaktiviert, damit runserver ohne HTTPS funktioniert.
 
-if not DEBUG:
+if not DEBUG and not TESTING:
     # HTTPS erzwingen
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
