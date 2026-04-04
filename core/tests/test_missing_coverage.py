@@ -18,11 +18,12 @@ from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
-import pytest
 from django.contrib.auth.models import User
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
+
+import pytest
 
 from core.models import CardioEinheit, Feedback, PushSubscription, SiteSettings, TrainingSource
 from core.tests.factories import (
