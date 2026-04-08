@@ -319,25 +319,43 @@
                     </div>
                 </div>
                 <!-- Gewichtsempfehlung -->
-                {% if gewichts_empfehlungen %}
-                    {% with empf=gewichts_empfehlungen|get_item:uebung_group.grouper.id %}
-                        {% if empf %}
-                        <div class="px-3 py-2 bg-dark bg-opacity-50 border-bottom border-secondary">
-                            <small class="text-info">
-                                <i class="bi bi-cpu-fill me-1"></i>
-                                <strong>{% trans "ML-Empfehlung" %}:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
-                                <button class="btn btn-sm {% if empf.pause_from_plan %}btn-warning{% else %}btn-outline-warning{% endif %} py-0 px-2 ms-2"
-                                        onclick="setTimerDuration({{ empf.pause }}); startRestTimer();"
-                                        title="{% if empf.pause_from_plan %}{% trans 'Pause aus KI-Plan' %}{% else %}{% trans 'Berechnete Pause' %}{% endif %} - {% trans 'Klick zum Starten' %}">
-                                    <i class="bi bi-stopwatch"></i> {{ empf.pause }}s
-                                    {% if empf.pause_from_plan %}<i class="bi bi-robot ms-1" style="font-size: 0.7rem;"></i>{% endif %}
-                                </button>
-                                <span class="text-muted ms-2">({{ empf.hint }})</span>
-                            </small>
-                        </div>
+                {% with empf=gewichts_empfehlungen|get_item:uebung_group.grouper.id %}
+                    {% if empf %}
+                    <div class="px-3 py-2 bg-dark bg-opacity-50 border-bottom border-secondary">
+                        <small class="text-info">
+                            <i class="bi bi-cpu-fill me-1"></i>
+                            <strong>{% trans "ML-Empfehlung" %}:</strong> {{ empf.gewicht }} kg × {{ empf.wdh }}
+                            <button class="btn btn-sm {% if empf.pause_from_plan %}btn-warning{% else %}btn-outline-warning{% endif %} py-0 px-2 ms-2"
+                                    onclick="setTimerDuration({{ empf.pause }}); startRestTimer();"
+                                    title="{% if empf.pause_from_plan %}{% trans 'Pause aus KI-Plan' %}{% else %}{% trans 'Berechnete Pause' %}{% endif %} - {% trans 'Klick zum Starten' %}">
+                                <i class="bi bi-stopwatch"></i> {{ empf.pause }}s
+                                {% if empf.pause_from_plan %}<i class="bi bi-robot ms-1" style="font-size: 0.7rem;"></i>{% endif %}
+                            </button>
+                            <span class="text-muted ms-2">({{ empf.hint }})</span>
+                        </small>
+                    </div>
+                    {% else %}
+                        {# Fallback: Pausenzeit aus Plan anzeigen wenn keine ML-Empfehlung existiert #}
+                        {% if training.plan and plan_ziele %}
+                            {% with ziel=plan_ziele|get_item:uebung_group.grouper.id %}
+                                {% if ziel.pausenzeit %}
+                                <div class="px-3 py-2 bg-dark bg-opacity-50 border-bottom border-secondary">
+                                    <small class="text-warning">
+                                        <i class="bi bi-stopwatch me-1"></i>
+                                        <strong>{% trans "Pause" %}:</strong>
+                                        <button class="btn btn-sm btn-warning py-0 px-2 ms-1"
+                                                onclick="setTimerDuration({{ ziel.pausenzeit }}); startRestTimer();"
+                                                title="{% trans 'Pausenzeit aus Plan' %} - {% trans 'Klick zum Starten' %}">
+                                            <i class="bi bi-stopwatch"></i> {{ ziel.pausenzeit }}s
+                                            <i class="bi bi-robot ms-1" style="font-size: 0.7rem;"></i>
+                                        </button>
+                                    </small>
+                                </div>
+                                {% endif %}
+                            {% endwith %}
                         {% endif %}
-                    {% endwith %}
-                {% endif %}
+                    {% endif %}
+                {% endwith %}
 
                 {% if rpe_start_empfehlungen %}
                     {% with rpe_empf=rpe_start_empfehlungen|get_item:uebung_group.grouper.id %}
