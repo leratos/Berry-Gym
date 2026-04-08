@@ -1018,59 +1018,79 @@ class TestTrainingSessionExtendedCoverage(SessionBase):
         self.assertGreaterEqual(len(suggestions), 1)
 
     def test_build_volume_suggestion_drop_and_rise_with_mocks(self):
-        previous_ids_chain = MagicMock()
-        previous_ids_chain.order_by.return_value.values_list.return_value.__getitem__.return_value = [
-            10,
-            11,
-            12,
-        ]
+        """Tests volume suggestion using real DB objects with varied volumes."""
+        # Create 3 "previous" trainings (high volume) and 3 "recent" (low volume) → drop
+        previous_trainings = [self._training(days_ago=d, abgeschlossen=True) for d in [20, 22, 24]]
+        recent_trainings = [self._training(days_ago=d, abgeschlossen=True) for d in [1, 3, 5]]
 
-        with patch(
-            "core.views.training_session.Trainingseinheit.objects.filter",
-            return_value=previous_ids_chain,
-        ):
-            with patch("core.views.training_session.Satz.objects.filter") as satz_filter:
+        for t in previous_trainings:
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=100,
+                wiederholungen=10,
+                ist_aufwaermsatz=False,
+            )
+        for t in recent_trainings:
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=40,
+                wiederholungen=10,
+                ist_aufwaermsatz=False,
+            )
 
-                def drop_side_effect(*args, **kwargs):
-                    m = MagicMock()
-                    ids = kwargs.get("einheit_id__in", [])
-                    m.aggregate.return_value = {"total": 100 if ids == [1, 2, 3] else 200}
-                    return m
+        recent_ids = [t.id for t in recent_trainings]
+        drop = _build_volume_suggestion(self.user, recent_ids, MagicMock())
+        self.assertIsNotNone(drop)
+        self.assertEqual(drop["type"], "volume")
+        self.assertEqual(drop["color"], "danger")
 
-                satz_filter.side_effect = drop_side_effect
-                drop = _build_volume_suggestion(self.user, [1, 2, 3], MagicMock())
-                self.assertEqual(drop["type"], "volume")
-                self.assertEqual(drop["color"], "danger")
+        # Now flip: recent high, previous low → rise
+        Satz.objects.all().delete()
+        for t in previous_trainings:
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=40,
+                wiederholungen=10,
+                ist_aufwaermsatz=False,
+            )
+        for t in recent_trainings:
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=100,
+                wiederholungen=10,
+                ist_aufwaermsatz=False,
+            )
+        rise = _build_volume_suggestion(self.user, recent_ids, MagicMock())
+        self.assertIsNotNone(rise)
+        self.assertEqual(rise["type"], "volume")
+        self.assertEqual(rise["color"], "warning")
 
-                def rise_side_effect(*args, **kwargs):
-                    m = MagicMock()
-                    ids = kwargs.get("einheit_id__in", [])
-                    m.aggregate.return_value = {"total": 300 if ids == [1, 2, 3] else 100}
-                    return m
+        # Neutral: same volume → None
+        Satz.objects.all().delete()
+        for t in previous_trainings + recent_trainings:
+            Satz.objects.create(
+                einheit=t,
+                uebung=self.uebung,
+                satz_nr=1,
+                gewicht=50,
+                wiederholungen=10,
+                ist_aufwaermsatz=False,
+            )
+        neutral = _build_volume_suggestion(self.user, recent_ids, MagicMock())
+        self.assertIsNone(neutral)
 
-                satz_filter.side_effect = rise_side_effect
-                rise = _build_volume_suggestion(self.user, [1, 2, 3], MagicMock())
-                self.assertEqual(rise["type"], "volume")
-                self.assertEqual(rise["color"], "warning")
-
-                def neutral_side_effect(*args, **kwargs):
-                    m = MagicMock()
-                    m.aggregate.return_value = {"total": 100}
-                    return m
-
-                satz_filter.side_effect = neutral_side_effect
-                neutral = _build_volume_suggestion(self.user, [1, 2, 3], MagicMock())
-                self.assertIsNone(neutral)
-
-                def zero_prev_side_effect(*args, **kwargs):
-                    m = MagicMock()
-                    ids = kwargs.get("einheit_id__in", [])
-                    m.aggregate.return_value = {"total": 100 if ids == [1, 2, 3] else 0}
-                    return m
-
-                satz_filter.side_effect = zero_prev_side_effect
-                zero_prev = _build_volume_suggestion(self.user, [1, 2, 3], MagicMock())
-                self.assertIsNone(zero_prev)
+        # Zero prev volume → None
+        Satz.objects.filter(einheit__in=previous_trainings).delete()
+        zero_prev = _build_volume_suggestion(self.user, recent_ids, MagicMock())
+        self.assertIsNone(zero_prev)
 
     def test_get_ai_training_suggestion_branches(self):
         none_result, count = _get_ai_training_suggestion(self.user)
