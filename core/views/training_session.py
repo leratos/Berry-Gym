@@ -16,15 +16,35 @@ from typing import Any, Optional
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, DecimalField, F, Max, Q, Sum
+from django.db.models import Avg, Max, Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from ..models import Plan, Satz, Trainingseinheit, Uebung, UserProfile
+from ..models import KoerperWerte, Plan, Satz, Trainingseinheit, Uebung, UserProfile
 
 logger = logging.getLogger(__name__)
+
+
+def _get_user_kg(user) -> float:
+    """Gibt das aktuelle Körpergewicht des Users zurück (0.0 wenn unbekannt)."""
+    kw = KoerperWerte.objects.filter(user=user).order_by("-datum").first()
+    return float(kw.gewicht) if kw else 0.0
+
+
+def _effective_weight(satz, user_kg: float) -> float:
+    """Berechnet das effektive Gewicht eines Satzes unter Berücksichtigung von Typ/Richtung."""
+    raw = float(satz.gewicht) if satz.gewicht else 0.0
+    if satz.uebung.gewichts_typ == "KOERPERGEWICHT":
+        faktor = satz.uebung.koerpergewicht_faktor or 1.0
+        basis = user_kg * faktor
+        if satz.uebung.gewichts_richtung == "GEGEN":
+            return max(0.0, basis - raw)
+        return basis + raw
+    if satz.uebung.gewichts_typ == "PRO_SEITE":
+        return raw * 2
+    return raw
 
 
 def _build_plan_gruppen(
@@ -367,13 +387,14 @@ def _get_sorted_saetze(training):
 
 
 def _get_plan_ziele(training):
-    """Gibt Satz- und Wiederholungsziele aus dem Plan zurück (leer wenn kein Plan)."""
+    """Gibt Satz-, Wiederholungs- und Pausenziele aus dem Plan zurück (leer wenn kein Plan)."""
     plan_ziele = {}
     if training.plan:
         for pu in training.plan.uebungen.all():
             plan_ziele[pu.uebung_id] = {
                 "saetze_ziel": pu.saetze_ziel,
                 "wiederholungen_ziel": pu.wiederholungen_ziel,
+                "pausenzeit": pu.pausenzeit,
             }
     return plan_ziele
 
@@ -599,8 +620,9 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
         "muskelgruppe", "bezeichnung"
     )
     saetze = _get_sorted_saetze(training)
-    arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
-    total_volume = sum(float(s.gewicht) * s.wiederholungen for s in arbeitssaetze)
+    arbeitssaetze = training.saetze.select_related("uebung").filter(ist_aufwaermsatz=False)
+    user_kg = _get_user_kg(request.user)
+    total_volume = sum(_effective_weight(s, user_kg) * s.wiederholungen for s in arbeitssaetze)
 
     is_deload_week = False
     try:
@@ -988,12 +1010,13 @@ def _build_volume_suggestion(user, recent_training_ids: list, recent_sets) -> di
         .values_list("id", flat=True)[3:6]
     )
 
+    user_kg = _get_user_kg(user)
+
     def _calc_volume(training_ids):
-        # Einzelne aggregierte DB-Query statt N+1 (eine Query pro Training)
-        result = Satz.objects.filter(einheit_id__in=training_ids, ist_aufwaermsatz=False).aggregate(
-            total=Sum(F("gewicht") * F("wiederholungen"), output_field=DecimalField())
-        )
-        return float(result["total"] or 0)
+        saetze = Satz.objects.filter(
+            einheit_id__in=training_ids, ist_aufwaermsatz=False
+        ).select_related("uebung")
+        return sum(_effective_weight(s, user_kg) * s.wiederholungen for s in saetze)
 
     recent_vol = _calc_volume(recent_training_ids)
     prev_vol = _calc_volume(previous_ids)
@@ -1078,18 +1101,21 @@ def _get_volume_comparison(training) -> dict | None:
     if not prev_training:
         return None
 
-    prev_saetze = prev_training.saetze.filter(ist_aufwaermsatz=False)
+    user_kg = _get_user_kg(training.user)
+    prev_saetze = prev_training.saetze.select_related("uebung").filter(ist_aufwaermsatz=False)
     prev_volume = sum(
-        float(s.gewicht) * s.wiederholungen for s in prev_saetze if s.gewicht and s.wiederholungen
+        _effective_weight(s, user_kg) * s.wiederholungen
+        for s in prev_saetze
+        if s.gewicht is not None and s.wiederholungen
     )
     if prev_volume <= 0:
         return None
 
-    current_saetze = training.saetze.filter(ist_aufwaermsatz=False)
+    current_saetze = training.saetze.select_related("uebung").filter(ist_aufwaermsatz=False)
     current_volume = sum(
-        float(s.gewicht) * s.wiederholungen
+        _effective_weight(s, user_kg) * s.wiederholungen
         for s in current_saetze
-        if s.gewicht and s.wiederholungen
+        if s.gewicht is not None and s.wiederholungen
     )
     pct_change = ((current_volume - prev_volume) / prev_volume) * 100
     return {
@@ -1175,11 +1201,12 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
             return redirect("dashboard")
 
     # Statistiken für die Zusammenfassung berechnen
-    arbeitssaetze = training.saetze.filter(ist_aufwaermsatz=False)
+    arbeitssaetze = training.saetze.select_related("uebung").filter(ist_aufwaermsatz=False)
     warmup_saetze = training.saetze.filter(ist_aufwaermsatz=True)
 
-    # Volumen berechnen
-    total_volume = sum(float(s.gewicht) * s.wiederholungen for s in arbeitssaetze)
+    # Volumen berechnen (mit effektivem Gewicht für KG-Übungen)
+    user_kg = _get_user_kg(request.user)
+    total_volume = sum(_effective_weight(s, user_kg) * s.wiederholungen for s in arbeitssaetze)
 
     # Anzahl Übungen
     uebungen_count = training.saetze.values("uebung").distinct().count()
