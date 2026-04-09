@@ -13,6 +13,7 @@ from django.db.models import Avg, Count, F, Max, Sum
 from django.utils import timezone
 
 from core.export.constants import EMPFOHLENE_SAETZE, PULL_GROUPS, PUSH_GROUPS
+from core.helpers.volume import calc_volume, effective_weight, get_user_kg
 from core.models import MUSKELGRUPPEN, KoerperWerte, Satz, Trainingseinheit
 from core.utils.advanced_stats import (
     calculate_1rm_standards,
@@ -61,23 +62,21 @@ def muscle_status(anzahl: int, min_s: int, max_s: int, wenig_daten: bool) -> tup
     return "optimal", "Optimal", f"{anzahl} Sätze liegen im optimalen Bereich ({min_s}-{max_s})"
 
 
-def collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30_tage: int) -> list[dict]:
+def collect_muscle_balance(
+    alle_saetze, letzte_30_tage, trainings_30_tage: int, user_kg: float = 0.0
+) -> list[dict]:
     """Build muscle group balance stats with evidence-based set recommendations."""
     wenig_daten = trainings_30_tage < 8
     result = []
     for gruppe_key, gruppe_name in MUSKELGRUPPEN:
         gruppe_saetze = alle_saetze.filter(
             uebung__muskelgruppe=gruppe_key, einheit__datum__gte=letzte_30_tage
-        )
+        ).select_related("uebung")
         anzahl = gruppe_saetze.count()
         min_s, max_s = EMPFOHLENE_SAETZE.get(gruppe_key, (12, 20))
         status, status_label, erklaerung = muscle_status(anzahl, min_s, max_s, wenig_daten)
         if anzahl > 0:
-            volumen = sum(
-                float(s.gewicht) * s.wiederholungen
-                for s in gruppe_saetze
-                if s.gewicht and s.wiederholungen
-            )
+            volumen = calc_volume(gruppe_saetze, user_kg)
             avg_rpe_r = gruppe_saetze.aggregate(Avg("rpe"))["rpe__avg"]
             result.append(
                 {
@@ -192,21 +191,21 @@ def collect_intensity_data(alle_saetze, letzte_30_tage) -> tuple[float, dict]:
     return avg_rpe, rpe_verteilung
 
 
-def collect_weekly_volume_pdf(alle_saetze, alle_trainings=None) -> list[dict]:
+def collect_weekly_volume_pdf(alle_saetze, alle_trainings=None, user_kg: float = 0.0) -> list[dict]:
     """Build weekly volume progression (last 12 weeks) for PDF report.
 
     Includes deload weeks with their actual (reduced) volume, marked via
     'ist_deload' flag.  Fills gaps between calendar weeks with 0.
     """
     # Use ALL sets (incl. deload) for volume so deload weeks aren't 0
-    saetze_qs = alle_saetze.filter(ist_aufwaermsatz=False)
+    saetze_qs = alle_saetze.filter(ist_aufwaermsatz=False).select_related("uebung")
 
     weekly_volume: dict[str, float] = defaultdict(float)
     for satz in saetze_qs:
-        if satz.gewicht and satz.wiederholungen:
+        if satz.gewicht is not None and satz.wiederholungen:
             iso_year, iso_week, _ = satz.einheit.datum.isocalendar()
             week_key = f"{iso_year}-W{iso_week:02d}"
-            weekly_volume[week_key] += float(satz.gewicht) * satz.wiederholungen
+            weekly_volume[week_key] += effective_weight(satz, user_kg) * satz.wiederholungen
 
     if not weekly_volume:
         return []
@@ -295,11 +294,9 @@ def build_top_uebungen(alle_saetze, muskelgruppen_dict: dict) -> list[dict]:
     return result
 
 
-def sum_volume(saetze_qs) -> float:
-    """Summiert Volumen (Gewicht x Wdh) aus einem Satz-QuerySet."""
-    return sum(
-        float(s.gewicht) * s.wiederholungen for s in saetze_qs if s.gewicht and s.wiederholungen
-    )
+def sum_volume(saetze_qs, user_kg: float = 0.0) -> float:
+    """Summiert Volumen (effektives Gewicht × Wdh) aus einem Satz-QuerySet."""
+    return calc_volume(saetze_qs.select_related("uebung"), user_kg)
 
 
 def calc_volume_trend_weekly(volumen_wochen: list[dict], heute=None) -> dict | None:
@@ -446,15 +443,18 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     gesamt_saetze = alle_saetze.count()
     saetze_30_tage = alle_saetze.filter(einheit__datum__gte=letzte_30_tage).count()
 
-    gesamt_volumen = sum_volume(alle_saetze)
-    volumen_30_tage = sum_volume(alle_saetze.filter(einheit__datum__gte=letzte_30_tage))
+    user_kg = get_user_kg(user)
+    gesamt_volumen = sum_volume(alle_saetze, user_kg)
+    volumen_30_tage = sum_volume(alle_saetze.filter(einheit__datum__gte=letzte_30_tage), user_kg)
 
     trainings_pro_woche = calc_trainings_per_week(alle_trainings, heute)
     consistency_metrics = calculate_consistency_metrics(alle_trainings)
     top_uebungen = build_top_uebungen(alle_saetze, muskelgruppen_dict)
     plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
     kraft_progression = collect_strength_progression(alle_saetze, top_uebungen, muskelgruppen_dict)
-    muskelgruppen_stats = collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30_tage)
+    muskelgruppen_stats = collect_muscle_balance(
+        alle_saetze, letzte_30_tage, trainings_30_tage, user_kg
+    )
     push_pull_balance = collect_push_pull(muskelgruppen_stats)
 
     schwachstellen_status = {"untertrainiert", "nicht_trainiert"}
@@ -472,7 +472,7 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         einheit__user=user,
         ist_aufwaermsatz=False,
     )
-    volumen_wochen = collect_weekly_volume_pdf(alle_saetze_inkl_deload, alle_trainings)
+    volumen_wochen = collect_weekly_volume_pdf(alle_saetze_inkl_deload, alle_trainings, user_kg)
     fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
 
     koerperwerte_qs = KoerperWerte.objects.filter(user=user).order_by("-datum")

@@ -35,6 +35,7 @@ from django.db.models import Avg
 from django.utils import timezone
 
 from ai_coach.llm_client import LLMClient  # noqa: F401 - Für Tests + suggest_optimizations
+from core.helpers.volume import calc_volume, get_user_kg
 from core.models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung
 
 
@@ -279,18 +280,15 @@ class PlanAdapter:
             return None
 
         # Volumen pro Session berechnen
+        user_kg = get_user_kg(User.objects.get(id=self.user_id))
         volumes = []
         for session in sessions:
-            saetze = Satz.objects.filter(einheit=session, ist_aufwaermsatz=False).exclude(gewicht=0)
-
-            total_volume = sum(
-                [
-                    float(s.gewicht) * s.wiederholungen
-                    for s in saetze
-                    if s.gewicht and s.wiederholungen
-                ]
+            saetze = (
+                Satz.objects.filter(einheit=session, ist_aufwaermsatz=False)
+                .exclude(gewicht=0)
+                .select_related("uebung")
             )
-            volumes.append(total_volume)
+            volumes.append(calc_volume(saetze, user_kg))
 
         if not volumes:
             return None
@@ -523,18 +521,15 @@ Bitte analysiere und schlage Optimierungen vor."""
             :10
         ]  # Nur letzte 10 Sessions
 
+        user_kg = get_user_kg(User.objects.get(id=self.user_id))
         summary = {"total_sessions": sessions.count(), "recent_sessions": []}
 
         for session in sessions:
-            saetze = Satz.objects.filter(einheit=session, ist_aufwaermsatz=False)
-
-            total_volume = sum(
-                [
-                    float(s.gewicht) * s.wiederholungen
-                    for s in saetze
-                    if s.gewicht and s.wiederholungen
-                ]
+            saetze = Satz.objects.filter(einheit=session, ist_aufwaermsatz=False).select_related(
+                "uebung"
             )
+
+            total_volume = calc_volume(saetze, user_kg)
 
             avg_rpe = saetze.filter(rpe__isnull=False).aggregate(Avg("rpe"))["rpe__avg"]
 

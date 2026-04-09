@@ -22,29 +22,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from ..models import KoerperWerte, Plan, Satz, Trainingseinheit, Uebung, UserProfile
+from ..helpers.volume import calc_volume, effective_weight, get_user_kg
+from ..models import Plan, Satz, Trainingseinheit, Uebung, UserProfile
 
 logger = logging.getLogger(__name__)
-
-
-def _get_user_kg(user) -> float:
-    """Gibt das aktuelle Körpergewicht des Users zurück (0.0 wenn unbekannt)."""
-    kw = KoerperWerte.objects.filter(user=user).order_by("-datum").first()
-    return float(kw.gewicht) if kw else 0.0
-
-
-def _effective_weight(satz, user_kg: float) -> float:
-    """Berechnet das effektive Gewicht eines Satzes unter Berücksichtigung von Typ/Richtung."""
-    raw = float(satz.gewicht) if satz.gewicht else 0.0
-    if satz.uebung.gewichts_typ == "KOERPERGEWICHT":
-        faktor = satz.uebung.koerpergewicht_faktor or 1.0
-        basis = user_kg * faktor
-        if satz.uebung.gewichts_richtung == "GEGEN":
-            return max(0.0, basis - raw)
-        return basis + raw
-    if satz.uebung.gewichts_typ == "PRO_SEITE":
-        return raw * 2
-    return raw
 
 
 def _build_plan_gruppen(
@@ -621,8 +602,8 @@ def training_session(request: HttpRequest, training_id: int) -> HttpResponse:
     )
     saetze = _get_sorted_saetze(training)
     arbeitssaetze = training.saetze.select_related("uebung").filter(ist_aufwaermsatz=False)
-    user_kg = _get_user_kg(request.user)
-    total_volume = sum(_effective_weight(s, user_kg) * s.wiederholungen for s in arbeitssaetze)
+    user_kg = get_user_kg(request.user)
+    total_volume = sum(effective_weight(s, user_kg) * s.wiederholungen for s in arbeitssaetze)
 
     is_deload_week = False
     try:
@@ -1010,16 +991,16 @@ def _build_volume_suggestion(user, recent_training_ids: list, recent_sets) -> di
         .values_list("id", flat=True)[3:6]
     )
 
-    user_kg = _get_user_kg(user)
+    user_kg = get_user_kg(user)
 
-    def _calc_volume(training_ids):
+    def _calc_vol(training_ids):
         saetze = Satz.objects.filter(
             einheit_id__in=training_ids, ist_aufwaermsatz=False
         ).select_related("uebung")
-        return sum(_effective_weight(s, user_kg) * s.wiederholungen for s in saetze)
+        return calc_volume(saetze, user_kg)
 
-    recent_vol = _calc_volume(recent_training_ids)
-    prev_vol = _calc_volume(previous_ids)
+    recent_vol = _calc_vol(recent_training_ids)
+    prev_vol = _calc_vol(previous_ids)
     if not prev_vol:
         return None
 
@@ -1101,10 +1082,10 @@ def _get_volume_comparison(training) -> dict | None:
     if not prev_training:
         return None
 
-    user_kg = _get_user_kg(training.user)
+    user_kg = get_user_kg(training.user)
     prev_saetze = prev_training.saetze.select_related("uebung").filter(ist_aufwaermsatz=False)
     prev_volume = sum(
-        _effective_weight(s, user_kg) * s.wiederholungen
+        effective_weight(s, user_kg) * s.wiederholungen
         for s in prev_saetze
         if s.gewicht is not None and s.wiederholungen
     )
@@ -1113,7 +1094,7 @@ def _get_volume_comparison(training) -> dict | None:
 
     current_saetze = training.saetze.select_related("uebung").filter(ist_aufwaermsatz=False)
     current_volume = sum(
-        _effective_weight(s, user_kg) * s.wiederholungen
+        effective_weight(s, user_kg) * s.wiederholungen
         for s in current_saetze
         if s.gewicht is not None and s.wiederholungen
     )
@@ -1205,8 +1186,8 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
     warmup_saetze = training.saetze.filter(ist_aufwaermsatz=True)
 
     # Volumen berechnen (mit effektivem Gewicht für KG-Übungen)
-    user_kg = _get_user_kg(request.user)
-    total_volume = sum(_effective_weight(s, user_kg) * s.wiederholungen for s in arbeitssaetze)
+    user_kg = get_user_kg(request.user)
+    total_volume = sum(effective_weight(s, user_kg) * s.wiederholungen for s in arbeitssaetze)
 
     # Anzahl Übungen
     uebungen_count = training.saetze.values("uebung").distinct().count()
