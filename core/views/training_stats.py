@@ -23,11 +23,12 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.db.models import Avg, Count, DecimalField, F, Max, Prefetch, Q, Sum
+from django.db.models import Avg, Count, Max, Prefetch, Q, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from ..helpers.volume import calc_volume, get_user_kg
 from ..models import (
     MUSKELGRUPPEN,
     CardioEinheit,
@@ -178,19 +179,21 @@ def _get_rpe_score(user, heute) -> tuple[int, float | None]:
 
 def _get_volume_trend_score(user, heute) -> int:
     """Compute volume-trend form score (0-20) based on last 4 weeks."""
+    user_kg = get_user_kg(user)
     last_4_weeks = []
     for i in range(4):
         week_start = heute - timedelta(days=heute.isoweekday() - 1 + (i * 7))
         week_end = week_start + timedelta(days=7)
-        result = Satz.objects.filter(
+        saetze = Satz.objects.filter(
             einheit__datum__gte=week_start,
             einheit__datum__lt=week_end,
             ist_aufwaermsatz=False,
             einheit__user=user,
             einheit__ist_deload=False,
-        ).aggregate(total=Sum(F("gewicht") * F("wiederholungen"), output_field=DecimalField()))
-        if result["total"]:
-            last_4_weeks.append(float(result["total"]))
+        ).select_related("uebung")
+        vol = calc_volume(saetze, user_kg)
+        if vol:
+            last_4_weeks.append(vol)
     if len(last_4_weeks) < 2:
         return 0
     if last_4_weeks[0] >= last_4_weeks[1]:
@@ -1306,17 +1309,18 @@ def training_list(request: HttpRequest) -> HttpResponse:
         .prefetch_related(
             Prefetch(
                 "saetze",
-                queryset=Satz.objects.filter(ist_aufwaermsatz=False),
+                queryset=Satz.objects.filter(ist_aufwaermsatz=False).select_related("uebung"),
                 to_attr="arbeitssaetze_list",
             )
         )
         .order_by("-datum")
     )
 
+    user_kg = get_user_kg(request.user)
     trainings_mit_volumen = []
     for training in trainings:
         arbeitssaetze = training.arbeitssaetze_list
-        volumen = sum(float(s.gewicht) * s.wiederholungen for s in arbeitssaetze)
+        volumen = calc_volume(arbeitssaetze, user_kg)
         trainings_mit_volumen.append(
             {
                 "training": training,
@@ -1632,25 +1636,20 @@ _MUSCLE_MAPPING: dict[str, list[str]] = {
 }
 
 
-def _calc_per_training_volume(trainings) -> tuple[list, list, list]:
+def _calc_per_training_volume(trainings, user_kg: float = 0.0) -> tuple[list, list, list]:
     """Return (date_labels, volumes, deload_flags) for every training session."""
     labels: list[str] = []
     data: list[float] = []
     deload_flags: list[bool] = []
     for training in trainings:
-        arbeitssaetze = training.arbeitssaetze_list
-        vol = sum(
-            float(s.gewicht) * s.wiederholungen
-            for s in arbeitssaetze
-            if s.gewicht and s.wiederholungen
-        )
+        vol = calc_volume(training.arbeitssaetze_list, user_kg)
         labels.append(training.datum.strftime("%d.%m"))
         data.append(round(vol, 1))
         deload_flags.append(bool(training.ist_deload))
     return labels, data, deload_flags
 
 
-def _calc_weekly_volume(trainings) -> tuple[list, list]:
+def _calc_weekly_volume(trainings, user_kg: float = 0.0) -> tuple[list, list]:
     """Return (iso_week_labels, volumes) for the last 12 ISO calendar weeks.
 
     Deload trainings are excluded so they don't distort volume trends.
@@ -1661,13 +1660,7 @@ def _calc_weekly_volume(trainings) -> tuple[list, list]:
             continue
         iso_year, iso_week, _ = training.datum.isocalendar()
         key = f"{iso_year}-W{iso_week:02d}"
-        arbeitssaetze = training.arbeitssaetze_list
-        vol = sum(
-            float(s.gewicht) * s.wiederholungen
-            for s in arbeitssaetze
-            if s.gewicht and s.wiederholungen
-        )
-        weekly[key] += vol
+        weekly[key] += calc_volume(training.arbeitssaetze_list, user_kg)
     labels = sorted(weekly.keys())[-12:]
     return labels, [round(weekly[k], 1) for k in labels]
 
@@ -2112,8 +2105,9 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     if not trainings.exists():
         return render(request, "core/training_stats.html", {"no_data": True})
 
-    volumen_labels, volumen_data, deload_flags = _calc_per_training_volume(trainings)
-    weekly_labels, weekly_data = _calc_weekly_volume(trainings)
+    user_kg = get_user_kg(request.user)
+    volumen_labels, volumen_data, deload_flags = _calc_per_training_volume(trainings, user_kg)
+    weekly_labels, weekly_data = _calc_weekly_volume(trainings, user_kg)
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(
         trainings, request.user
     )

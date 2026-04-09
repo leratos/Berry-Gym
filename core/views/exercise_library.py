@@ -21,6 +21,7 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
+from ..helpers.volume import calc_volume, get_user_kg
 from ..models import BEWEGUNGS_TYP, GEWICHTS_TYP, MUSKELGRUPPEN, Satz, Uebung
 
 logger = logging.getLogger(__name__)
@@ -289,9 +290,9 @@ def uebung_detail(request: HttpRequest, uebung_id: int) -> HttpResponse:
     # Statistiken zur Übung
     alle_saetze = Satz.objects.filter(
         einheit__user=request.user, uebung=uebung, ist_aufwaermsatz=False
-    )
+    ).select_related("uebung")
     max_gewicht = alle_saetze.aggregate(Max("gewicht"))["gewicht__max"] or 0
-    total_volumen = sum(float(s.gewicht) * s.wiederholungen for s in alle_saetze)
+    total_volumen = calc_volume(alle_saetze, get_user_kg(request.user))
 
     context = {
         "uebung": uebung,

@@ -7,9 +7,13 @@ This package contains utility functions that are used across multiple view modul
 from .email import send_welcome_email
 from .exercises import find_substitute_exercise
 from .notifications import send_push_notification
+from .volume import calc_volume, effective_weight, get_user_kg
 
 __all__ = [
     "send_welcome_email",
     "find_substitute_exercise",
     "send_push_notification",
+    "calc_volume",
+    "effective_weight",
+    "get_user_kg",
 ]
