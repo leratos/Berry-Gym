@@ -983,13 +983,17 @@ def _build_intensity_suggestion(avg_rpe: float | None) -> dict | None:
     return None
 
 
-def _build_volume_suggestion(user, recent_training_ids: list, recent_sets) -> dict | None:
-    """Gibt Volumen-Vorschlag basierend auf Vergleich letzte 3 vs. vorherige 3 Trainings zurück."""
-    previous_ids = list(
-        Trainingseinheit.objects.filter(user=user, ist_deload=False)
-        .order_by("-datum")
-        .values_list("id", flat=True)[3:6]
-    )
+def _build_volume_suggestion(
+    user, recent_training_ids: list, recent_sets, plan=None
+) -> dict | None:
+    """Gibt Volumen-Vorschlag basierend auf Vergleich letzte 3 vs. vorherige 3 Trainings zurück.
+
+    Wenn ein Plan angegeben ist, werden nur Trainings desselben Plans verglichen.
+    """
+    qs = Trainingseinheit.objects.filter(user=user, ist_deload=False)
+    if plan:
+        qs = qs.filter(plan=plan)
+    previous_ids = list(qs.order_by("-datum").values_list("id", flat=True)[3:6])
 
     user_kg = get_user_kg(user)
 
@@ -1026,18 +1030,19 @@ def _build_volume_suggestion(user, recent_training_ids: list, recent_sets) -> di
     return None
 
 
-def _build_ai_suggestions(user, recent_training_ids: list, recent_sets, avg_rpe: float) -> list:
+def _build_ai_suggestions(
+    user, recent_training_ids: list, recent_sets, avg_rpe: float, plan=None
+) -> list:
     """Erstellt Trainingsoptimierungsvorschläge basierend auf RPE, Volumen und Vielfalt."""
     suggestions = []
 
-    # Vorschlag 1: Intensität anpassen
     # Vorschlag 1: Intensität
     intensity = _build_intensity_suggestion(avg_rpe)
     if intensity:
         suggestions.append(intensity)
 
-    # Vorschlag 2: Volumen
-    volume = _build_volume_suggestion(user, recent_training_ids, recent_sets)
+    # Vorschlag 2: Volumen (plan-isoliert wenn vorhanden)
+    volume = _build_volume_suggestion(user, recent_training_ids, recent_sets, plan)
     if volume:
         suggestions.append(volume)
 
@@ -1132,10 +1137,11 @@ def _get_next_plan_suggestion(user, current_plan) -> "Plan | None":
         return None
 
 
-def _get_ai_training_suggestion(user) -> tuple:
+def _get_ai_training_suggestion(user, plan=None) -> tuple:
     """
     Gibt (ai_suggestion, training_count) zurück.
     ai_suggestion ist None wenn kein Vorschlag oder nicht jedes 3. Training.
+    Wenn plan angegeben, werden Volumen-Vergleiche nur innerhalb desselben Plans gemacht.
     """
     training_count = Trainingseinheit.objects.filter(user=user).count()
     if training_count == 0 or training_count % 3 != 0:
@@ -1156,7 +1162,7 @@ def _get_ai_training_suggestion(user) -> tuple:
 
     # avg_rpe nur aus Sätzen mit RPE-Wert – kann None sein wenn kein RPE erfasst wurde
     avg_rpe = recent_sets.filter(rpe__isnull=False).aggregate(Avg("rpe"))["rpe__avg"]
-    suggestions = _build_ai_suggestions(user, recent_training_ids, recent_sets, avg_rpe)
+    suggestions = _build_ai_suggestions(user, recent_training_ids, recent_sets, avg_rpe, plan)
 
     priority_order = {"danger": 0, "warning": 1, "info": 2}
     ai_suggestion = (
@@ -1203,7 +1209,7 @@ def finish_training(request: HttpRequest, training_id: int) -> HttpResponse:
         # Historisches Training ohne gespeicherte Dauer → kein Schätzwert
         dauer_geschaetzt = None
 
-    ai_suggestion, training_count = _get_ai_training_suggestion(request.user)
+    ai_suggestion, training_count = _get_ai_training_suggestion(request.user, training.plan)
 
     # PRs dieser Session
     session_prs = (
