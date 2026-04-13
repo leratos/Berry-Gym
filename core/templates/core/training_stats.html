@@ -146,6 +146,14 @@
                             <i class="bi bi-info-circle me-1"></i>
                             <em>{% trans "Starker Volumen-Rückgang erkannt. Achte auf Motivation und Regeneration." %}</em>
                         </div>
+                        {% elif warning.type == 'plan_wechsel' %}
+                        <div class="small mb-2">
+                            <strong>{{ warning.week }}:</strong>
+                            <span class="text-secondary">{% trans "Planwechsel" %}</span>
+                            ({{ warning.volume }} kg)<br>
+                            <i class="bi bi-arrow-repeat me-1"></i>
+                            <em>{% trans "Volumen-Änderung durch Trainingsplan-Wechsel – kein Warnsignal." %}</em>
+                        </div>
                         {% endif %}
                     {% endfor %}
                 </div>
