@@ -23,7 +23,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.db.models import Avg, Count, Max, Prefetch, Q, Sum
+from django.db.models import Avg, Count, Prefetch, Q, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -552,13 +552,27 @@ def _get_training_heatmap(user, heute) -> str:
 def _check_plateau_warnings(user, heute, favoriten) -> list[dict]:
     """Check for plateaus (no progress in top exercises over 4 weeks).
 
-    Berücksichtigt RPE-Trend: sinkender RPE bei gleichem Gewicht ist
+    Vergleicht das geschätzte 1RM (Epley-Formel) der letzten 2 Wochen mit
+    dem der vorherigen 2 Wochen, damit Rep-Progression bei gleichem Gewicht
+    korrekt als Fortschritt zählt.
+
+    Berücksichtigt RPE-Trend: sinkender RPE bei gleichem 1RM ist
     Konsolidierung (kein Plateau). Nur bei stagnierendem/steigendem RPE
     wird ein echtes Plateau gemeldet.
     """
     warnings = []
     four_weeks_ago = heute - timedelta(days=28)
     two_weeks_ago = heute - timedelta(days=14)
+
+    def _epley_max(qs):
+        best = 0.0
+        for gewicht, wdh in qs.values_list("gewicht", "wiederholungen"):
+            reps = wdh or 1
+            est = float(gewicht) * (1 + reps / 30.0)
+            if est > best:
+                best = est
+        return best
+
     for fav in favoriten[:3]:
         uebung_id = fav["uebung__id"]
         uebung_name = fav["uebung__bezeichnung"]
@@ -567,20 +581,19 @@ def _check_plateau_warnings(user, heute, favoriten) -> list[dict]:
             uebung_id=uebung_id,
             ist_aufwaermsatz=False,
             einheit__ist_deload=False,
+            gewicht__isnull=False,
         )
-        recent_max = float(
-            Satz.objects.filter(**base_filter, einheit__datum__gte=two_weeks_ago).aggregate(
-                max_gewicht=Max("gewicht")
-            )["max_gewicht"]
-            or 0
+        recent_1rm = _epley_max(
+            Satz.objects.filter(**base_filter, einheit__datum__gte=two_weeks_ago)
         )
-        older_max = float(
+        older_1rm = _epley_max(
             Satz.objects.filter(
-                **base_filter, einheit__datum__gte=four_weeks_ago, einheit__datum__lt=two_weeks_ago
-            ).aggregate(max_gewicht=Max("gewicht"))["max_gewicht"]
-            or 0
+                **base_filter,
+                einheit__datum__gte=four_weeks_ago,
+                einheit__datum__lt=two_weeks_ago,
+            )
         )
-        if older_max > 0 and recent_max > 0 and recent_max <= older_max:
+        if older_1rm > 0 and recent_1rm > 0 and recent_1rm <= older_1rm:
             # RPE-Trend prüfen: sinkender RPE = Konsolidierung, kein Plateau
             older_rpes = list(
                 Satz.objects.filter(
