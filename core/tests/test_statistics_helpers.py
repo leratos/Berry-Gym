@@ -43,12 +43,13 @@ def make_mock_satz(
     return satz
 
 
-def make_mock_training(datum, saetze=None, ist_deload=False):
+def make_mock_training(datum, saetze=None, ist_deload=False, plan_id=None):
     """Erstellt eine Mock-Trainingseinheit."""
     training = MagicMock()
     training.datum = datum
     training.ist_deload = ist_deload
     training.arbeitssaetze_list = saetze or []
+    training.plan_id = plan_id
     return training
 
 
@@ -166,9 +167,10 @@ class TestCalcWeeklyVolume:
     def test_leere_trainings(self):
         from core.views.training_stats import _calc_weekly_volume
 
-        labels, data = _calc_weekly_volume([])
+        labels, data, plans = _calc_weekly_volume([])
         assert labels == []
         assert data == []
+        assert plans == {}
 
     def test_aggregiert_trainings_der_gleichen_woche(self):
         from core.views.training_stats import _calc_weekly_volume
@@ -182,7 +184,7 @@ class TestCalcWeeklyVolume:
             datum=datetime(2026, 2, 18),  # Mi KW08
             saetze=[make_mock_satz(80, 5)],  # 400 kg
         )
-        labels, data = _calc_weekly_volume([t1, t2])
+        labels, data, plans = _calc_weekly_volume([t1, t2])
         assert len(labels) == 1
         assert data[0] == pytest.approx(1400.0, abs=0.1)
 
@@ -195,7 +197,7 @@ class TestCalcWeeklyVolume:
         for i in range(15):
             datum = datetime(2026, 2, 18) - timedelta(weeks=i)
             trainings.append(make_mock_training(datum=datum, saetze=[make_mock_satz(100, 5)]))
-        labels, data = _calc_weekly_volume(trainings)
+        labels, data, plans = _calc_weekly_volume(trainings)
         assert len(labels) <= 12
 
     def test_label_format_iso_woche(self):
@@ -203,8 +205,21 @@ class TestCalcWeeklyVolume:
         from core.views.training_stats import _calc_weekly_volume
 
         t = make_mock_training(datum=datetime(2026, 2, 18), saetze=[make_mock_satz()])  # KW08
-        labels, _ = _calc_weekly_volume([t])
+        labels, _, _ = _calc_weekly_volume([t])
         assert "2026-W08" in labels
+
+    def test_plans_per_week_tracked(self):
+        """Plan-IDs werden pro Woche korrekt gesammelt."""
+        from core.views.training_stats import _calc_weekly_volume
+
+        t1 = make_mock_training(
+            datum=datetime(2026, 2, 16), saetze=[make_mock_satz(100, 10)], plan_id=1
+        )
+        t2 = make_mock_training(
+            datum=datetime(2026, 2, 18), saetze=[make_mock_satz(80, 5)], plan_id=2
+        )
+        labels, _, plans = _calc_weekly_volume([t1, t2])
+        assert plans["2026-W08"] == {1, 2}
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +302,49 @@ class TestDetectVolumeWarnings:
         data = [4000.0, 5200.0]  # +30% → Spike
         result = _detect_volume_warnings(labels, data)
         assert result[0]["volume"] == pytest.approx(5200.0, abs=0.1)
+
+    def test_planwechsel_unterdrueckt_spike(self):
+        """Spike bei Planwechsel → 'plan_wechsel' statt 'spike'."""
+        from core.views.training_stats import _detect_volume_warnings
+
+        labels = ["2026-W01", "2026-W02"]
+        data = [4000.0, 5200.0]  # +30% → würde normalerweise Spike sein
+        plans = {"2026-W01": {1}, "2026-W02": {2}}  # Plan gewechselt
+        result = _detect_volume_warnings(labels, data, plans_per_week=plans)
+        assert len(result) == 1
+        assert result[0]["type"] == "plan_wechsel"
+
+    def test_planwechsel_unterdrueckt_drop(self):
+        """Drop bei Planwechsel → 'plan_wechsel' statt 'drop'."""
+        from core.views.training_stats import _detect_volume_warnings
+
+        labels = ["2026-W01", "2026-W02"]
+        data = [5000.0, 3000.0]  # -40% → würde normalerweise Drop sein
+        plans = {"2026-W01": {1}, "2026-W02": {2}}
+        result = _detect_volume_warnings(labels, data, plans_per_week=plans)
+        assert len(result) == 1
+        assert result[0]["type"] == "plan_wechsel"
+
+    def test_gleicher_plan_weiterhin_spike(self):
+        """Spike mit gleichem Plan → bleibt 'spike'."""
+        from core.views.training_stats import _detect_volume_warnings
+
+        labels = ["2026-W01", "2026-W02"]
+        data = [4000.0, 5200.0]
+        plans = {"2026-W01": {1}, "2026-W02": {1}}  # Gleicher Plan
+        result = _detect_volume_warnings(labels, data, plans_per_week=plans)
+        assert len(result) == 1
+        assert result[0]["type"] == "spike"
+
+    def test_planwechsel_keine_warnung_bei_kleiner_aenderung(self):
+        """Planwechsel mit <20% Änderung → gar keine Warnung."""
+        from core.views.training_stats import _detect_volume_warnings
+
+        labels = ["2026-W01", "2026-W02"]
+        data = [4000.0, 4200.0]  # +5%, klein
+        plans = {"2026-W01": {1}, "2026-W02": {2}}
+        result = _detect_volume_warnings(labels, data, plans_per_week=plans)
+        assert result == []
 
 
 # ---------------------------------------------------------------------------

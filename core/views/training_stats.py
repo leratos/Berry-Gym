@@ -1649,20 +1649,24 @@ def _calc_per_training_volume(trainings, user_kg: float = 0.0) -> tuple[list, li
     return labels, data, deload_flags
 
 
-def _calc_weekly_volume(trainings, user_kg: float = 0.0) -> tuple[list, list]:
-    """Return (iso_week_labels, volumes) for the last 12 ISO calendar weeks.
+def _calc_weekly_volume(trainings, user_kg: float = 0.0) -> tuple[list, list, dict]:
+    """Return (iso_week_labels, volumes, plans_per_week) for the last 12 ISO calendar weeks.
 
     Deload trainings are excluded so they don't distort volume trends.
+    ``plans_per_week`` maps each week label to the set of plan-IDs used that
+    week, allowing callers to detect training-plan switches.
     """
     weekly: defaultdict[str, float] = defaultdict(float)
+    weekly_plans: defaultdict[str, set] = defaultdict(set)
     for training in trainings:
         if training.ist_deload:
             continue
         iso_year, iso_week, _ = training.datum.isocalendar()
         key = f"{iso_year}-W{iso_week:02d}"
         weekly[key] += calc_volume(training.arbeitssaetze_list, user_kg)
+        weekly_plans[key].add(training.plan_id)
     labels = sorted(weekly.keys())[-12:]
-    return labels, [round(weekly[k], 1) for k in labels]
+    return labels, [round(weekly[k], 1) for k in labels], {k: weekly_plans[k] for k in labels}
 
 
 _DEFAULT_RPE = 7.0  # Fallback für Sätze ohne RPE-Bewertung (moderate Anstrengung)
@@ -1726,17 +1730,26 @@ def _build_svg_muscle_data(stats_code: dict) -> dict:
 
 
 def _detect_volume_warnings(
-    weekly_labels: list, weekly_data: list, aktuelle_kw: str | None = None
+    weekly_labels: list,
+    weekly_data: list,
+    aktuelle_kw: str | None = None,
+    plans_per_week: dict | None = None,
 ) -> list[dict]:
     """Flag weeks with >20 % volume spike or >30 % volume drop vs. prior week.
 
     Die laufende (noch nicht abgeschlossene) Woche wird grundsätzlich nicht
     bewertet – ein Vergleich von z.B. 2 Trainingstagen gegen eine volle Woche
     liefert irreführende Ergebnisse. Stattdessen wird sie als 'laufend' markiert.
+
+    Wenn sich der Trainingsplan zwischen zwei Wochen geändert hat, wird die
+    Volumen-Änderung als 'plan_wechsel' markiert statt als Warnung – ein
+    Planwechsel verändert das Volumen natürlicherweise.
     """
     warnings: list[dict] = []
+    plans = plans_per_week or {}
     for i in range(1, len(weekly_data)):
         label = weekly_labels[i]
+        prev_label = weekly_labels[i - 1]
         # Laufende Woche: neutralen Hinweis statt Warnung
         if aktuelle_kw and label == aktuelle_kw:
             warnings.append(
@@ -1751,6 +1764,23 @@ def _detect_volume_warnings(
         if prev <= 0:
             continue
         change = ((weekly_data[i] - prev) / prev) * 100
+
+        # Planwechsel erkennen: Wenn sich die Plan-IDs zwischen den Wochen
+        # geändert haben, ist eine Volumen-Änderung erwartet und kein Warnsignal.
+        cur_plans = plans.get(label, set())
+        prev_plans = plans.get(prev_label, set())
+        if cur_plans and prev_plans and cur_plans != prev_plans:
+            if change > 20 or change < -30:
+                warnings.append(
+                    {
+                        "week": label,
+                        "change": round(change, 1),
+                        "volume": round(weekly_data[i], 1),
+                        "type": "plan_wechsel",
+                    }
+                )
+            continue
+
         if change > 20:
             warnings.append(
                 {
@@ -2107,7 +2137,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
 
     user_kg = get_user_kg(request.user)
     volumen_labels, volumen_data, deload_flags = _calc_per_training_volume(trainings, user_kg)
-    weekly_labels, weekly_data = _calc_weekly_volume(trainings, user_kg)
+    weekly_labels, weekly_data, plans_per_week = _calc_weekly_volume(trainings, user_kg)
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(
         trainings, request.user
     )
@@ -2117,6 +2147,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         weekly_labels,
         weekly_data,
         aktuelle_kw=f"{heute.isocalendar()[0]}-W{heute.isocalendar()[1]:02d}",
+        plans_per_week=plans_per_week,
     )
     heatmap_data = _build_90day_heatmap(trainings, heute)
 
