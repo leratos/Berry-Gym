@@ -409,11 +409,16 @@ def _determine_empfehlung_hint(
     ziel_wdh_max: int,
     is_kg_uebung: bool = False,
     rpe_ziel: float | None = None,
+    is_gegen: bool = False,
 ) -> tuple[float, int, str]:
     """Bestimmt Empfehlung basierend auf letztem Satz (RPE/Wdh-Progression).
 
     Bei Körpergewichts-Übungen ohne Zusatzgewicht wird Wdh-Progression
     empfohlen statt kg-Steigerung (da Gewicht = 0 → +2.5 wäre sinnlos).
+
+    Bei GEGEN-Übungen (assistierte Klimmzüge/Dips mit Gegengewicht) wird die
+    Progression invertiert: Weniger Gegengewicht = mehr Arbeit. Das Gegengewicht
+    kann nicht unter 0 fallen; bei 0 wird stattdessen Wdh-Progression empfohlen.
 
     Gewichtssteigerung wird nur empfohlen wenn der tatsächliche RPE
     innerhalb des Ziel-RPE liegt (Default 8.5). Sonst: Gewicht halten
@@ -427,13 +432,38 @@ def _determine_empfehlung_hint(
     rpe_target = rpe_ziel if rpe_ziel is not None else 8.5
     actual_rpe = float(letzter_satz.rpe) if letzter_satz.rpe else None
 
-    # Körpergewichts-Übung ohne Zusatzgewicht: nur Wdh-Progression
-    if is_kg_uebung and gewicht == 0:
+    # Körpergewichts-Übung ohne Zusatzgewicht (und nicht GEGEN): nur Wdh-Progression
+    if is_kg_uebung and gewicht == 0 and not is_gegen:
         if letzter_satz.wiederholungen >= ziel_wdh_max:
             return 0.0, ziel_wdh_min, f"{ziel_wdh_max}+ Wdh → nächste Stufe (Zusatzgewicht?)"
         if actual_rpe is not None and actual_rpe < 7:
             return 0.0, min(wdh + 2, ziel_wdh_max), f"RPE {letzter_satz.rpe} → +2 Wdh"
         return 0.0, min(wdh + 1, ziel_wdh_max), f"Ziel: +1 Wdh (aktuell {wdh})"
+
+    # GEGEN-Logik: Progression = Gegengewicht senken (bis 0), dann Wdh-Progression
+    if is_gegen:
+        if actual_rpe is not None and actual_rpe < 7:
+            new_w = max(0.0, gewicht - 2.5)
+            return new_w, wdh, f"RPE {letzter_satz.rpe} → −2.5kg Gegengewicht"
+        if letzter_satz.wiederholungen >= ziel_wdh_max:
+            if actual_rpe is not None and actual_rpe > rpe_target:
+                return (
+                    gewicht,
+                    wdh,
+                    f"{ziel_wdh_max} Wdh aber RPE {letzter_satz.rpe} > Ziel {rpe_target} → halten",
+                )
+            if gewicht <= 0:
+                # Kein Gegengewicht mehr → Wdh-Progression (bald unassistiert)
+                return (
+                    0.0,
+                    min(wdh + 1, ziel_wdh_max + 2),
+                    f"{ziel_wdh_max}+ Wdh unassistiert → +1 Wdh",
+                )
+            new_w = max(0.0, gewicht - 2.5)
+            return new_w, ziel_wdh_min, f"{ziel_wdh_max}+ Wdh → −2.5kg Gegengewicht"
+        if actual_rpe is not None and actual_rpe >= 9:
+            return gewicht, min(wdh + 1, ziel_wdh_max), f"RPE {letzter_satz.rpe} → mehr Wdh"
+        return gewicht, wdh, "Niveau halten"
 
     if actual_rpe is not None and actual_rpe < 7:
         return gewicht + 2.5, wdh, f"RPE {letzter_satz.rpe} → +2.5kg"
@@ -493,11 +523,18 @@ def _calculate_single_empfehlung(user, uebung_id: int, training):
     try:
         uebung_obj = UebungModel.objects.get(id=uebung_id)
         is_kg = uebung_obj.gewichts_typ == "KOERPERGEWICHT"
+        is_gegen = is_kg and getattr(uebung_obj, "gewichts_richtung", "ZUSATZ") == "GEGEN"
     except UebungModel.DoesNotExist:
         is_kg = False
+        is_gegen = False
 
     empfohlenes_gewicht, empfohlene_wdh, hint = _determine_empfehlung_hint(
-        letzter_satz, ziel_wdh_min, ziel_wdh_max, is_kg_uebung=is_kg, rpe_ziel=rpe_ziel
+        letzter_satz,
+        ziel_wdh_min,
+        ziel_wdh_max,
+        is_kg_uebung=is_kg,
+        rpe_ziel=rpe_ziel,
+        is_gegen=is_gegen,
     )
 
     return {
@@ -525,13 +562,17 @@ def _build_empfehlung_from_satz(letzter_satz: Any, plan_pu: Any) -> dict:
             rpe_ziel = plan_pu.rpe_ziel
 
     ziel_wdh_min, ziel_wdh_max = _parse_ziel_wdh(ziel_wdh_str)
-    is_kg = (
-        plan_pu
-        and hasattr(plan_pu, "uebung")
-        and getattr(plan_pu.uebung, "gewichts_typ", "") == "KOERPERGEWICHT"
-    )
+    # Übungsinfo bevorzugt aus letztem Satz lesen (funktioniert auch ohne Plan)
+    uebung_obj = getattr(letzter_satz, "uebung", None)
+    is_kg = uebung_obj is not None and getattr(uebung_obj, "gewichts_typ", "") == "KOERPERGEWICHT"
+    is_gegen = is_kg and getattr(uebung_obj, "gewichts_richtung", "ZUSATZ") == "GEGEN"
     empfohlenes_gewicht, empfohlene_wdh, hint = _determine_empfehlung_hint(
-        letzter_satz, ziel_wdh_min, ziel_wdh_max, is_kg_uebung=bool(is_kg), rpe_ziel=rpe_ziel
+        letzter_satz,
+        ziel_wdh_min,
+        ziel_wdh_max,
+        is_kg_uebung=bool(is_kg),
+        rpe_ziel=rpe_ziel,
+        is_gegen=bool(is_gegen),
     )
     return {
         "gewicht": empfohlenes_gewicht,
@@ -565,6 +606,7 @@ def _get_gewichts_empfehlungen(user, training) -> dict:
             einheit__ist_deload=False,
         )
         .exclude(einheit=training)
+        .select_related("uebung")
         .order_by("-einheit__datum", "-satz_nr")
     )
     letzte_saetze_map: dict[int, Any] = {}
