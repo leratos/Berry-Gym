@@ -148,6 +148,7 @@ def plan_details(request: HttpRequest, plan_id: int) -> HttpResponse:
                 "letztes_gewicht": letzter_satz.gewicht if letzter_satz else None,
                 "letzte_wdh": letzter_satz.wiederholungen if letzter_satz else None,
                 "rpe_empfehlung": adj,
+                "hat_historie": letzter_satz is not None,
             }
         )
 
