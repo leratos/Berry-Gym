@@ -5450,3 +5450,133 @@ cardio Views, onboarding Views, get_last_set API, sources_list, push notificatio
 **Geänderte Dateien:**
 - `config/settings.py` – SECURE_SSL_REDIRECT nur wenn nicht TESTING
 - `core/tests/test_missing_coverage.py` – 74 neue Tests (alle grün)
+
+
+## In Arbeit: Phase 22 – Aktiver-Plan-Filter für Statistiken (28.04.2026)
+
+Branch: feature/phase-22-active-plan-filter
+Ziel: Statistik-Sektionen, die übungsbezogen sind (Plateau, Kraftstandards, Top-5, Übungsdetails), auf Übungen des aktiven Plans filtern. Behebt Phantom-Plateaus von Übungen, die nicht mehr trainiert werden.
+
+### Hintergrund/Problem
+PDF-Report flaggt Übungen aus alten Plänen als "Plateau" (z.B. LH-Rudern: "48 Tage ohne PR" – steht aber gar nicht mehr im aktiven 3er-Split). Gleicher Bug in Live-Stats. Ursache: `top_uebungen` wird aus allen historischen Sätzen ohne Plan-Bezug aggregiert.
+
+### Lösung
+Neuer Helper `get_active_plan_exercise_ids(user)`:
+- Findet die letzte `Trainingseinheit` mit verknüpftem `Plan`
+- Holt die `gruppe_id` dieses Plans
+- Sammelt alle `PlanUebung.uebung_id` aus dieser Plangruppe
+- Gibt `set[int]` zurück (oder `None` falls kein Plan verknüpft → Fallback auf altes Verhalten)
+
+### Aufgaben
+- 22.1: `core/utils/plan_helpers.py` neu – `get_active_plan_exercise_ids()`
+- 22.2: `_calc_plateau_live()` und `_calc_kraftstandards_live()` in `training_stats.py` – Filter anwenden
+- 22.3: `build_top_uebungen()` in `stats_collector.py` – Filter anwenden (wirkt automatisch auf Plateau, Kraftentwicklung, Kraftstandards, Übungsdetails)
+- 22.4: Kraftentwicklung-Fenster verbessern: primär seit erster Session im aktiven Plan, Fallback auf letzte 5 Sessions wenn Plan zu neu (<3 Sessions oder <10 Tage)
+- 22.5: Tests in `test_training_stats.py` und `test_helpers_and_utils.py`
+
+### Abgrenzung
+- KEINE Änderung an Muskelgruppen-Volumen (zeigt tatsächlich trainierte Sätze – korrekt so)
+- KEINE Änderung an RPE-Analyse, Konsistenz, Fatigue (planunabhängig sinnvoll)
+- KEINE "Lifetime Hall of Fame"-Sektion in dieser Phase – ggf. Phase 22.x später, falls gewünscht
+- Fallback bei fehlendem Plan-Link: altes Verhalten (alle Übungen)
+
+### Affected Files
+- `core/utils/plan_helpers.py` (neu)
+- `core/views/training_stats.py`
+- `core/export/stats_collector.py`
+- `core/tests/test_training_stats.py`
+- `core/tests/test_helpers_and_utils.py`
+- `docs/journal.txt`
+
+
+### 22.1 + 22.2 + 22.3 abgeschlossen (28.04.2026)
+
+- `core/utils/plan_helpers.py` neu erstellt mit:
+  - `get_active_plan_exercise_ids(user)` → `set[int] | None`
+  - `get_active_plan_start_date(user)` → `datetime | None` (walks backwards bis zu Plan-Wechsel)
+  - `is_active_plan_too_new(user, min_sessions=3, min_age_days=10)` → bool
+- `core/views/training_stats.py`: `_calc_plateau_live()` und `_calc_kraftstandards_live()` filtern auf `uebung_id__in=active_uebung_ids` mit Fallback auf altes Verhalten
+- `core/export/stats_collector.py`:
+  - `build_top_uebungen()` akzeptiert optionalen `active_uebung_ids`-Filter
+  - `collect_strength_progression()` neue keyword-only Parameter `plan_start_date` und `fallback_session_count`, dazu `mode_label` im Result
+  - `collect_pdf_stats()` ruft alle drei Plan-Helper auf und routet kraft_progression nach `plan_too_new`-Flag
+
+Nächster Schritt: Tests schreiben + Test-Run.
+
+
+### 22.5 abgeschlossen + plan_helpers.py rekonstruiert (28.04.2026)
+
+**WICHTIGER HINWEIS:** Beim Wiederaufnehmen der Phase im Folge-Chat war
+`core/utils/plan_helpers.py` nicht im Filesystem vorhanden, obwohl der
+Journal-Eintrag von 22.1-22.3 die Erstellung als abgeschlossen meldete.
+Die Importe in `training_stats.py` und `stats_collector.py` schlugen
+fehl ("ModuleNotFoundError: No module named 'core.utils.plan_helpers'").
+
+Wahrscheinliche Ursache: Der vorherige Chat hat den Code generiert, der
+`create_file`-Call ging aber im Übergang verloren. Die Folgeschritte
+(Imports + Test-Anpassungen) wurden trotzdem geschrieben und waren im
+Code drin – ohne dass die Datei jemals existiert hätte.
+
+**Rekonstruktion:** Datei wurde aus Journal-Beschreibung + den realen
+Aufruf-Stellen heraus rekonstruiert. Funktional identisch zur
+ursprünglichen Beschreibung. Eine neue Designentscheidung wurde
+explizit getroffen: `MAX_PLAN_AGE_DAYS = 60` – wenn die letzte Plan-
+Session älter als 60 Tage ist, gilt kein aktiver Plan als ermittelbar
+(robuster bei "User hat irgendwann mal kurz einen Plan probiert").
+
+**22.5 (Tests in test_helpers_and_utils.py): 14 neue Tests, alle grün**
+
+- TestGetActivePlanExerciseIds (6): no_sessions, sessions_without_plan,
+  active_plan, old_plan_session, plan_group_aggregates_all_exercises,
+  empty_plan_returns_none
+- TestGetActivePlanStartDate (4): no_plan, returns_first_session,
+  plan_change_stops_walk, no_plan_session_breaks_walk
+- TestIsActivePlanTooNew (4): no_plan, too_young, too_few_sessions,
+  mature_plan
+
+**Test-Run-Ergebnis:**
+- `core/tests/test_training_stats.py`: 106 passed
+- `core/tests/test_helpers_and_utils.py`: alle inkl. 14 neue passed
+- `core/tests/test_algorithm_audit.py`: passed
+- Gesamt: 197 passed, 1 skipped (TestFindBodyweightFallback war
+  schon vorher skipped) in 54s
+
+**Geänderte/neue Dateien:**
+- `core/utils/plan_helpers.py` (neu, 161 Zeilen) – rekonstruiert
+- `core/tests/test_helpers_and_utils.py` – 14 neue Tests + Imports
+- `core/views/training_stats.py` – bereits in 22.2 angepasst
+- `core/export/stats_collector.py` – bereits in 22.3 angepasst
+- `core/tests/test_training_stats.py` – bereits in 22.x angepasst
+- `docs/journal.txt` – dieser Eintrag
+
+**Offene Punkte (nicht in Phase 22 enthalten, ggf. spätere Phasen):**
+- "Lifetime Hall of Fame"-Sektion (alltime PRs als separate Anzeige) –
+  wurde bewusst aus 22 herausgehalten, ggf. Phase 22.x
+- Frontend-Anzeige von `mode_label` ("im aktuellen Plan" vs. "letzte
+  N Sessions") in PDF-Template – Daten sind im Result-Dict, aber das
+  Template-Rendering wurde noch nicht geprüft
+
+## Abgeschlossen: Phase 22 – Aktiver-Plan-Filter für Statistiken (28.04.2026)
+
+
+### Nachtrag 22.6: Frontend-Polish PDF-Template (28.04.2026)
+
+Beim Frontend-Check zeigte sich, dass `core/templates/core/training_pdf_simple.html`
+das `mode_label` aus `kraft_progression` nicht rendert. Damit wäre im PDF nicht
+sichtbar gewesen, ob die "+400% Kniebeuge" sich auf den aktuellen Plan oder die
+letzten 5 Sessions oder die gesamte Trainingshistorie beziehen.
+
+**Änderung:** Neue Spalte "Vergleich" in der Kraftentwicklung Top 5-Tabelle. Zeigt
+das `mode_label` pro Übung an ("im aktuellen Plan", "letzte N Sessions" oder
+"Gesamt"). Robust gegen den Edge Case, dass im Fallback-Modus N pro Übung variieren
+kann (deshalb pro Zeile, nicht im Header).
+
+**Live-Stats-Page (`training_stats.html`):** Hat keine Kraftentwicklung-Tabelle,
+nur Kraftstandards. Plan-Filter wirkt dort schon transparent durch
+`_calc_kraftstandards_live`/`_calc_plateau_live`. Kein Polish nötig.
+
+**Tests:** TestPDFExportRobustness (2 Tests) weiterhin grün.
+
+**Geänderte Dateien:**
+- `core/templates/core/training_pdf_simple.html` – neue Spalte "Vergleich"
+- `docs/journal.txt` – dieser Nachtrag

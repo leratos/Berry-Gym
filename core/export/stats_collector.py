@@ -22,6 +22,11 @@ from core.utils.advanced_stats import (
     calculate_plateau_analysis,
     calculate_rpe_quality_analysis,
 )
+from core.utils.plan_helpers import (
+    get_active_plan_exercise_ids,
+    get_active_plan_start_date,
+    is_active_plan_too_new,
+)
 
 
 def muscle_status(anzahl: int, min_s: int, max_s: int, wenig_daten: bool) -> tuple[str, str, str]:
@@ -143,19 +148,53 @@ def collect_push_pull(muskelgruppen_stats: list[dict]) -> dict:
 
 
 def collect_strength_progression(
-    alle_saetze, top_uebungen: list, muskelgruppen_dict: dict
+    alle_saetze,
+    top_uebungen: list,
+    muskelgruppen_dict: dict,
+    *,
+    plan_start_date=None,
+    fallback_session_count: int | None = None,
 ) -> list[dict]:
-    """Extract top-5 exercises with measurable strength progression (first vs last 3 sets)."""
+    """Extract top-5 exercises with measurable strength progression.
+
+    Phase 22: Vergleichsfenster richtet sich nach aktivem Plan:
+    - `plan_start_date` gesetzt + `fallback_session_count=None`:
+      Vergleich seit Plan-Start (Steigerung im aktuellen Plan).
+    - `plan_start_date=None` + `fallback_session_count=N`:
+      Vergleich über die letzten N absolvierten Sessions pro Übung
+      (Fallback bei zu neuem Plan).
+    - Beide None (Backwards-compat): erste 3 Sätze ever vs. letzte 3 Sätze ever.
+
+    Im Ergebnis-Dict wird `mode_label` mitgegeben, damit das Template
+    transparent kennzeichnen kann, welches Fenster die Steigerung beschreibt.
+    """
     result = []
     for uebung in top_uebungen[:5]:
         uebung_name = uebung["uebung__bezeichnung"]
-        uebung_saetze = alle_saetze.filter(uebung__bezeichnung=uebung_name).order_by(
+        uebung_saetze_qs = alle_saetze.filter(uebung__bezeichnung=uebung_name).order_by(
             "einheit__datum"
         )
-        if uebung_saetze.count() < 3:
+
+        if plan_start_date is not None:
+            relevante_saetze = uebung_saetze_qs.filter(einheit__datum__gte=plan_start_date)
+            mode_label = "im aktuellen Plan"
+        elif fallback_session_count is not None:
+            session_dates = sorted(set(uebung_saetze_qs.values_list("einheit__datum", flat=True)))[
+                -fallback_session_count:
+            ]
+            if not session_dates:
+                continue
+            relevante_saetze = uebung_saetze_qs.filter(einheit__datum__in=session_dates)
+            mode_label = f"letzte {len(session_dates)} Sessions"
+        else:
+            # Backwards-compat: alle Sätze
+            relevante_saetze = uebung_saetze_qs
+            mode_label = "Gesamt"
+
+        if relevante_saetze.count() < 3:
             continue
-        erste_saetze = uebung_saetze[:3]
-        letzte_saetze = list(uebung_saetze)[-3:]
+        erste_saetze = list(relevante_saetze[:3])
+        letzte_saetze = list(relevante_saetze)[-3:]
         erstes_max = max((s.gewicht or 0) for s in erste_saetze)
         letztes_max = max((s.gewicht or 0) for s in letzte_saetze)
         if erstes_max > 0:
@@ -171,6 +210,7 @@ def collect_strength_progression(
                     "muskelgruppe": muskelgruppen_dict.get(
                         uebung["uebung__muskelgruppe"], uebung["uebung__muskelgruppe"]
                     ),
+                    "mode_label": mode_label,
                 }
             )
     return sorted(result, key=lambda x: x["progression"], reverse=True)[:5]
@@ -272,10 +312,22 @@ def calc_trainings_per_week(alle_trainings, heute) -> float:
     return round((gesamt / tage_aktiv) * 7, 1)
 
 
-def build_top_uebungen(alle_saetze, muskelgruppen_dict: dict) -> list[dict]:
-    """Query top 10 exercises by set count, annotated with display name."""
+def build_top_uebungen(
+    alle_saetze,
+    muskelgruppen_dict: dict,
+    active_uebung_ids: set[int] | None = None,
+) -> list[dict]:
+    """Query top 10 exercises by set count, annotated with display name.
+
+    Phase 22: Optional auf Übungen des aktiven Plans filtern. Bei
+    `active_uebung_ids=None` bleibt das alte Verhalten (alle Übungen).
+    """
+    qs = alle_saetze
+    if active_uebung_ids is not None:
+        qs = qs.filter(uebung_id__in=active_uebung_ids)
+
     raw = (
-        alle_saetze.values("uebung__bezeichnung", "uebung__muskelgruppe")
+        qs.values("uebung__bezeichnung", "uebung__muskelgruppe")
         .annotate(
             anzahl=Count("id"),
             max_gewicht=Max("gewicht"),
@@ -449,9 +501,35 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
 
     trainings_pro_woche = calc_trainings_per_week(alle_trainings, heute)
     consistency_metrics = calculate_consistency_metrics(alle_trainings)
-    top_uebungen = build_top_uebungen(alle_saetze, muskelgruppen_dict)
+
+    # Phase 22: Aktiver-Plan-Filter für übungsbezogene Statistiken
+    active_uebung_ids = get_active_plan_exercise_ids(user)
+    plan_start_date = get_active_plan_start_date(user)
+    plan_too_new = is_active_plan_too_new(user)
+
+    top_uebungen = build_top_uebungen(alle_saetze, muskelgruppen_dict, active_uebung_ids)
     plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
-    kraft_progression = collect_strength_progression(alle_saetze, top_uebungen, muskelgruppen_dict)
+
+    # Kraftentwicklung: seit Plan-Start (Default), oder letzte 5 Sessions (Fallback)
+    if active_uebung_ids is not None and not plan_too_new:
+        kraft_progression = collect_strength_progression(
+            alle_saetze,
+            top_uebungen,
+            muskelgruppen_dict,
+            plan_start_date=plan_start_date,
+        )
+    elif active_uebung_ids is not None and plan_too_new:
+        kraft_progression = collect_strength_progression(
+            alle_saetze,
+            top_uebungen,
+            muskelgruppen_dict,
+            fallback_session_count=5,
+        )
+    else:
+        # Kein Plan verknüpft → altes Verhalten
+        kraft_progression = collect_strength_progression(
+            alle_saetze, top_uebungen, muskelgruppen_dict
+        )
     muskelgruppen_stats = collect_muscle_balance(
         alle_saetze, letzte_30_tage, trainings_30_tage, user_kg
     )

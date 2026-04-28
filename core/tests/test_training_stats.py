@@ -14,7 +14,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import Equipment, Plan, Satz, Trainingsblock, Trainingseinheit, Uebung
+from core.models import Equipment, Plan, PlanUebung, Satz, Trainingsblock, Trainingseinheit, Uebung
 from core.views.training_stats import (
     _calc_rpe_trend,
     _check_rpe10_warning,
@@ -46,6 +46,16 @@ class StatsBase(TestCase):
         )
         self.uebung.equipment.add(eq)
         self.plan = Plan.objects.create(name="TestPlan", user=self.user)
+        # Phase 22: PlanUebung-Eintrag, damit aktiver-Plan-Filter die Übung kennt.
+        # Ohne PlanUebung würde get_active_plan_exercise_ids() ein leeres Set
+        # zurückgeben und alle übungsbezogenen Stats wären leer.
+        PlanUebung.objects.create(
+            plan=self.plan,
+            uebung=self.uebung,
+            reihenfolge=1,
+            saetze_ziel=3,
+            wiederholungen_ziel="8-12",
+        )
 
     def _session(self, days_ago=0, abgeschlossen=True):
         t = Trainingseinheit.objects.create(
@@ -1060,6 +1070,8 @@ class TestPlateauLive(StatsBase):
             ueb = Uebung.objects.create(
                 bezeichnung=f"Übung_{i}", muskelgruppe="BRUST", bewegungstyp="COMPOUND"
             )
+            # Phase 22: Übung in den Plan aufnehmen, sonst greift Filter
+            PlanUebung.objects.create(plan=self.plan, uebung=ueb, reihenfolge=i + 2, saetze_ziel=3)
             session = self._session(days_ago=i + 1)
             Satz.objects.create(
                 einheit=session,
@@ -1145,6 +1157,8 @@ class TestKraftstandardsLive(StatsBase):
                 standard_advanced=100,
                 standard_elite=130,
             )
+            # Phase 22: Übung in den Plan aufnehmen, sonst greift Filter
+            PlanUebung.objects.create(plan=self.plan, uebung=ueb, reihenfolge=i + 2, saetze_ziel=3)
             session = self._session(days_ago=i + 1)
             Satz.objects.create(
                 einheit=session,
