@@ -809,6 +809,7 @@
         <thead>
             <tr>
                 <th>Übung</th>
+                <th>Vergleich</th>
                 <th>Start-Gewicht</th>
                 <th>Aktuell</th>
                 <th>Steigerung</th>
@@ -818,6 +819,7 @@
             {% for prog in kraftentwicklung|slice:":5" %}
             <tr>
                 <td><strong>{{ prog.uebung }}</strong></td>
+                <td><small>{{ prog.mode_label|default:"–" }}</small></td>
                 <td>{{ prog.start_gewicht|floatformat:1 }} kg</td>
                 <td>{{ prog.aktuell_gewicht|floatformat:1 }} kg</td>
                 <td style="font-weight: bold; color: {% if prog.progression > 100 %}#DAA520{% elif prog.progression > 50 %}#28a745{% elif prog.progression > 20 %}#0d6efd{% elif prog.progression > 0 %}#6c757d{% else %}#dc3545{% endif %};">

@@ -24,7 +24,14 @@ from django.utils import timezone
 
 import pytest
 
-from .factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
+from .factories import (
+    PlanFactory,
+    PlanUebungFactory,
+    SatzFactory,
+    TrainingseinheitFactory,
+    UebungFactory,
+    UserFactory,
+)
 
 # ===========================================================================
 # helpers/email.py – send_welcome_email
@@ -897,3 +904,237 @@ class TestCalculate1rmStandards:
         standard_leicht = result_leicht[0]["standard_info"]["alle_levels"]["Anfänger"]
         standard_schwer = result_schwer[0]["standard_info"]["alle_levels"]["Anfänger"]
         assert standard_schwer > standard_leicht
+
+
+# ===========================================================================
+# core/utils/plan_helpers.py – Phase 22
+# ===========================================================================
+
+
+def _make_session(*, user, plan, days_ago):
+    """Helper: Trainingseinheit mit definiertem Datum (umgeht auto_now_add)."""
+    from core.models import Trainingseinheit
+
+    t = Trainingseinheit.objects.create(user=user, plan=plan, abgeschlossen=True)
+    t.datum = timezone.now() - timedelta(days=days_ago)
+    t.save()
+    return t
+
+
+@pytest.mark.django_db
+class TestGetActivePlanExerciseIds:
+    """plan_helpers.get_active_plan_exercise_ids()"""
+
+    def test_no_sessions_returns_none(self):
+        from core.utils.plan_helpers import get_active_plan_exercise_ids
+
+        user = UserFactory()
+        assert get_active_plan_exercise_ids(user) is None
+
+    def test_sessions_without_plan_returns_none(self):
+        """Trainings ohne Plan-Verknüpfung → kein aktiver Plan ermittelbar."""
+        from core.utils.plan_helpers import get_active_plan_exercise_ids
+
+        user = UserFactory()
+        # Session ohne plan
+        _make_session(user=user, plan=None, days_ago=2)
+        assert get_active_plan_exercise_ids(user) is None
+
+    def test_active_plan_returns_exercise_ids(self):
+        """Plan mit zugewiesenen Übungen → Set der Übungs-IDs."""
+        from core.utils.plan_helpers import get_active_plan_exercise_ids
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        u1 = UebungFactory(bezeichnung="Bankdrücken")
+        u2 = UebungFactory(bezeichnung="Kniebeuge")
+        PlanUebungFactory(plan=plan, uebung=u1)
+        PlanUebungFactory(plan=plan, uebung=u2)
+        _make_session(user=user, plan=plan, days_ago=1)
+
+        result = get_active_plan_exercise_ids(user)
+        assert result == {u1.id, u2.id}
+
+    def test_old_plan_session_returns_none(self):
+        """Letzte Plan-Session > 60 Tage zurück → kein aktiver Plan."""
+        from core.utils.plan_helpers import get_active_plan_exercise_ids
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        u1 = UebungFactory(bezeichnung="Alt_Bankdrücken")
+        PlanUebungFactory(plan=plan, uebung=u1)
+        _make_session(user=user, plan=plan, days_ago=90)
+
+        assert get_active_plan_exercise_ids(user) is None
+
+    def test_plan_group_aggregates_all_exercises(self):
+        """Plan-Gruppe (PPL): Übungen aus allen Plänen der Gruppe werden gesammelt."""
+        from uuid import uuid4
+
+        from core.utils.plan_helpers import get_active_plan_exercise_ids
+
+        user = UserFactory()
+        gruppe = uuid4()
+        plan_push = PlanFactory(user=user, gruppe_id=gruppe, gruppe_name="PPL", name="PPL - Push")
+        plan_pull = PlanFactory(user=user, gruppe_id=gruppe, gruppe_name="PPL", name="PPL - Pull")
+        plan_legs = PlanFactory(user=user, gruppe_id=gruppe, gruppe_name="PPL", name="PPL - Legs")
+
+        u_push = UebungFactory(bezeichnung="Bench")
+        u_pull = UebungFactory(bezeichnung="Row")
+        u_legs = UebungFactory(bezeichnung="Squat")
+
+        PlanUebungFactory(plan=plan_push, uebung=u_push)
+        PlanUebungFactory(plan=plan_pull, uebung=u_pull)
+        PlanUebungFactory(plan=plan_legs, uebung=u_legs)
+
+        # User hat zuletzt Push gemacht
+        _make_session(user=user, plan=plan_push, days_ago=1)
+
+        result = get_active_plan_exercise_ids(user)
+        # Alle drei Übungen werden über gruppe_id gesammelt
+        assert result == {u_push.id, u_pull.id, u_legs.id}
+
+    def test_empty_plan_returns_none(self):
+        """Plan ohne PlanUebung-Einträge → None (statt leerem Set)."""
+        from core.utils.plan_helpers import get_active_plan_exercise_ids
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        _make_session(user=user, plan=plan, days_ago=1)
+
+        # Keine PlanUebung-Einträge angelegt
+        assert get_active_plan_exercise_ids(user) is None
+
+
+@pytest.mark.django_db
+class TestGetActivePlanStartDate:
+    """plan_helpers.get_active_plan_start_date()"""
+
+    def test_no_plan_returns_none(self):
+        from core.utils.plan_helpers import get_active_plan_start_date
+
+        user = UserFactory()
+        assert get_active_plan_start_date(user) is None
+
+    def test_returns_first_session_of_consecutive_run(self):
+        """Walk backwards: erste Session der zusammenhängenden Plan-Sequenz."""
+        from core.utils.plan_helpers import get_active_plan_start_date
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        u1 = UebungFactory(bezeichnung="Test")
+        PlanUebungFactory(plan=plan, uebung=u1)
+
+        # 4 Sessions in Folge unter dem aktiven Plan
+        _make_session(user=user, plan=plan, days_ago=15)
+        _make_session(user=user, plan=plan, days_ago=12)
+        _make_session(user=user, plan=plan, days_ago=8)
+        _make_session(user=user, plan=plan, days_ago=2)
+
+        result = get_active_plan_start_date(user)
+        assert result is not None
+        # Erstes Session-Datum (vor 15 Tagen)
+        expected = timezone.now() - timedelta(days=15)
+        assert abs((result - expected).total_seconds()) < 60
+
+    def test_plan_change_stops_walk(self):
+        """Wechsel auf anderen Plan beendet die Sequenz."""
+        from core.utils.plan_helpers import get_active_plan_start_date
+
+        user = UserFactory()
+        alter_plan = PlanFactory(user=user, name="Alt")
+        neuer_plan = PlanFactory(user=user, name="Neu")
+        u1 = UebungFactory(bezeichnung="Test_PlanChange")
+        PlanUebungFactory(plan=neuer_plan, uebung=u1)
+
+        # Alter Plan: vor 30 und 25 Tagen
+        _make_session(user=user, plan=alter_plan, days_ago=30)
+        _make_session(user=user, plan=alter_plan, days_ago=25)
+        # Neuer Plan: vor 12 und 4 Tagen (aktive Sequenz)
+        _make_session(user=user, plan=neuer_plan, days_ago=12)
+        _make_session(user=user, plan=neuer_plan, days_ago=4)
+
+        result = get_active_plan_start_date(user)
+        assert result is not None
+        # Walk endet beim Plan-Wechsel → erste Session unter Neu (vor 12 Tagen)
+        expected = timezone.now() - timedelta(days=12)
+        assert abs((result - expected).total_seconds()) < 60
+
+    def test_no_plan_session_breaks_walk(self):
+        """Eine Session ohne Plan zwischendrin stoppt das Backwards-Walking."""
+        from core.utils.plan_helpers import get_active_plan_start_date
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        u1 = UebungFactory(bezeichnung="Test_NoBreak")
+        PlanUebungFactory(plan=plan, uebung=u1)
+
+        _make_session(user=user, plan=plan, days_ago=20)
+        _make_session(user=user, plan=None, days_ago=15)  # Lücke!
+        _make_session(user=user, plan=plan, days_ago=10)
+        _make_session(user=user, plan=plan, days_ago=3)
+
+        result = get_active_plan_start_date(user)
+        assert result is not None
+        # Walk endet bei No-Plan-Session → erste Session des aktuellen Blocks (vor 10 Tagen)
+        expected = timezone.now() - timedelta(days=10)
+        assert abs((result - expected).total_seconds()) < 60
+
+
+@pytest.mark.django_db
+class TestIsActivePlanTooNew:
+    """plan_helpers.is_active_plan_too_new()"""
+
+    def test_no_plan_returns_false(self):
+        """Ohne aktiven Plan wird False zurückgegeben (Caller checkt None separat)."""
+        from core.utils.plan_helpers import is_active_plan_too_new
+
+        user = UserFactory()
+        assert is_active_plan_too_new(user) is False
+
+    def test_too_young_returns_true(self):
+        """Plan-Block jünger als min_age_days → True."""
+        from core.utils.plan_helpers import is_active_plan_too_new
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        u1 = UebungFactory(bezeichnung="Test_TooYoung")
+        PlanUebungFactory(plan=plan, uebung=u1)
+
+        _make_session(user=user, plan=plan, days_ago=2)
+        _make_session(user=user, plan=plan, days_ago=4)
+        _make_session(user=user, plan=plan, days_ago=5)
+
+        # 5 Tage ist < 10 (default min_age_days)
+        assert is_active_plan_too_new(user) is True
+
+    def test_too_few_sessions_returns_true(self):
+        """Genug Tage alt, aber zu wenig Sessions → True."""
+        from core.utils.plan_helpers import is_active_plan_too_new
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        u1 = UebungFactory(bezeichnung="Test_FewSessions")
+        PlanUebungFactory(plan=plan, uebung=u1)
+
+        # Nur 2 Sessions, aber Plan ist 14 Tage alt
+        _make_session(user=user, plan=plan, days_ago=14)
+        _make_session(user=user, plan=plan, days_ago=2)
+
+        assert is_active_plan_too_new(user) is True  # < 3 sessions
+
+    def test_mature_plan_returns_false(self):
+        """Plan alt genug + genug Sessions → False."""
+        from core.utils.plan_helpers import is_active_plan_too_new
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        u1 = UebungFactory(bezeichnung="Test_Mature")
+        PlanUebungFactory(plan=plan, uebung=u1)
+
+        _make_session(user=user, plan=plan, days_ago=21)
+        _make_session(user=user, plan=plan, days_ago=14)
+        _make_session(user=user, plan=plan, days_ago=8)
+        _make_session(user=user, plan=plan, days_ago=2)
+
+        assert is_active_plan_too_new(user) is False

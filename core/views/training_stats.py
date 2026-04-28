@@ -41,6 +41,7 @@ from ..models import (
     UserProfile,
 )
 from ..utils.periodization import get_block_age_warning
+from ..utils.plan_helpers import get_active_plan_exercise_ids
 from .body_tracking import _prepare_body_chart_data
 
 logger = logging.getLogger(__name__)
@@ -1936,16 +1937,27 @@ def _calc_plateau_live(user) -> list[dict]:
 
     Returns list of dicts with: uebung, tage_seit_pr, status, farbe, letzter_pr_datum.
     Uses Satz.is_pr field for PR detection.
+
+    Phase 22: Filtert auf Übungen des aktiven Trainingsplans, damit Übungen aus
+    alten/inaktiven Plänen nicht als Phantom-Plateaus erscheinen. Fallback auf
+    altes Verhalten (alle Übungen) wenn kein aktiver Plan ermittelbar ist.
     """
     heute = timezone.now()
 
+    # Phase 22: Filter auf aktive Planübungen
+    active_uebung_ids = get_active_plan_exercise_ids(user)
+
+    base_filter = dict(
+        einheit__user=user,
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
+    )
+    if active_uebung_ids is not None:
+        base_filter["uebung_id__in"] = active_uebung_ids
+
     # Top 5 exercises by set count
     top_uebungen = (
-        Satz.objects.filter(
-            einheit__user=user,
-            ist_aufwaermsatz=False,
-            einheit__ist_deload=False,
-        )
+        Satz.objects.filter(**base_filter)
         .values("uebung__bezeichnung", "uebung__id")
         .annotate(anzahl=Count("id"))
         .order_by("-anzahl")[:5]
@@ -2020,16 +2032,26 @@ def _calc_kraftstandards_live(user) -> list[dict]:
 
     Returns list of dicts with: uebung, geschaetzter_1rm, level, level_label,
     naechstes_level, prozent, farbe, diff_kg.
+
+    Phase 22: Filtert auf Übungen des aktiven Trainingsplans. Standards für
+    Übungen aus alten Plänen sind irrelevant für den aktuellen Trainingsstand.
     """
     user_gewicht = _get_user_koerpergewicht(user)
 
+    # Phase 22: Filter auf aktive Planübungen
+    active_uebung_ids = get_active_plan_exercise_ids(user)
+
+    base_filter = dict(
+        einheit__user=user,
+        ist_aufwaermsatz=False,
+        einheit__ist_deload=False,
+        gewicht__isnull=False,
+    )
+    if active_uebung_ids is not None:
+        base_filter["uebung_id__in"] = active_uebung_ids
+
     top_uebungen = (
-        Satz.objects.filter(
-            einheit__user=user,
-            ist_aufwaermsatz=False,
-            einheit__ist_deload=False,
-            gewicht__isnull=False,
-        )
+        Satz.objects.filter(**base_filter)
         .values("uebung__bezeichnung", "uebung__id")
         .annotate(anzahl=Count("id"))
         .order_by("-anzahl")[:10]
