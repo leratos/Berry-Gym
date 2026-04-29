@@ -216,8 +216,7 @@ class TestExerciseDetail:
 
     def test_ohne_daten(self):
         uebung = UebungFactory()
-        url = f"/en/exercise/{uebung.id}/"
-        response = self.client.get(url)
+        response = self.client.get(reverse("exercise_detail", kwargs={"uebung_id": uebung.id}))
         if response.status_code == 200:
             assert response.context["has_data"] is False
 
@@ -228,15 +227,13 @@ class TestExerciseDetail:
             SatzFactory(
                 einheit=einheit, uebung=uebung, gewicht=Decimal("80.0"), wiederholungen=8
             )
-        url = f"/en/exercise/{uebung.id}/"
-        response = self.client.get(url)
+        response = self.client.get(reverse("exercise_detail", kwargs={"uebung_id": uebung.id}))
         if response.status_code == 200:
             assert response.context["has_data"] is True
             assert "personal_record" in response.context
 
     def test_nicht_existente_uebung_gibt_404(self):
-        url = "/en/exercise/999999/"
-        response = self.client.get(url)
+        response = self.client.get(reverse("exercise_detail", kwargs={"uebung_id": 999999}))
         assert response.status_code == 404
 
 
