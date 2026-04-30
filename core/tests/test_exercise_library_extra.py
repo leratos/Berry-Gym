@@ -12,7 +12,6 @@ Abdeckung:
 - _calc_rpe_trend: improving, declining, stable, nicht genug Daten
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 from django.test import Client
@@ -114,7 +113,7 @@ class TestUebungenAuswahl:
         self.client.force_login(self.user)
 
     def test_ohne_equipment_nur_uebungen_ohne_equipment(self):
-        uebung_ohne = UebungFactory(bezeichnung="Übung Ohne Eq")
+        UebungFactory(bezeichnung="Übung Ohne Eq")
         from core.models import Equipment
 
         eq = Equipment.objects.create(name="HANTEL_TEST")
@@ -144,7 +143,7 @@ class TestUebungenAuswahl:
     def test_custom_uebungen_sichtbar(self):
         from core.models import Uebung
 
-        custom = Uebung.objects.create(
+        Uebung.objects.create(
             bezeichnung="Meine Custom Übung",
             muskelgruppe="BRUST",
             bewegungstyp="DRUECKEN",
