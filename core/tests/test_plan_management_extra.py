@@ -25,7 +25,6 @@ from django.urls import reverse
 from core.models import Plan, PlanUebung, Trainingsblock, Uebung, UserProfile
 from core.tests.factories import PlanFactory, PlanUebungFactory, UebungFactory, UserFactory
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Hilfsfunktionen
 # ─────────────────────────────────────────────────────────────────────────────
@@ -66,9 +65,7 @@ class TestDuplicatePlan:
         PlanUebungFactory(plan=self.plan, uebung=self.uebung)
 
     def test_dupliziert_eigenen_plan(self):
-        response = self.client.post(
-            reverse("duplicate_plan", kwargs={"plan_id": self.plan.id})
-        )
+        response = self.client.post(reverse("duplicate_plan", kwargs={"plan_id": self.plan.id}))
         assert response.status_code == 302
         assert Plan.objects.filter(user=self.user, name__contains="Kopie").exists()
 
@@ -81,9 +78,7 @@ class TestDuplicatePlan:
     def test_fremden_plan_gibt_404(self):
         anderer = UserFactory()
         fremder_plan = PlanFactory(user=anderer)
-        response = self.client.post(
-            reverse("duplicate_plan", kwargs={"plan_id": fremder_plan.id})
-        )
+        response = self.client.post(reverse("duplicate_plan", kwargs={"plan_id": fremder_plan.id}))
         assert response.status_code == 404
 
     def test_login_required(self):
@@ -119,7 +114,9 @@ class TestDuplicateGroup:
         gruppe_id, gruppe_name, _ = _create_gruppe(self.user)
         self.client.post(reverse("duplicate_group", kwargs={"gruppe_id": str(gruppe_id)}))
         # Zwei unterschiedliche gruppe_ids
-        ids = list(Plan.objects.filter(user=self.user).values_list("gruppe_id", flat=True).distinct())
+        ids = list(
+            Plan.objects.filter(user=self.user).values_list("gruppe_id", flat=True).distinct()
+        )
         assert len(ids) == 2
 
     def test_nicht_gefundene_gruppe_redirect(self):
@@ -177,23 +174,17 @@ class TestShareGroup:
 
     def test_share_gruppe_owner(self):
         gruppe_id, _, _ = _create_gruppe(self.owner, is_public=True)
-        response = self.client.get(
-            reverse("share_group", kwargs={"gruppe_id": str(gruppe_id)})
-        )
+        response = self.client.get(reverse("share_group", kwargs={"gruppe_id": str(gruppe_id)}))
         assert response.status_code == 200
         assert response.context["is_owner"] is True
 
     def test_nicht_gefundene_gruppe_redirect(self):
-        response = self.client.get(
-            reverse("share_group", kwargs={"gruppe_id": str(uuid.uuid4())})
-        )
+        response = self.client.get(reverse("share_group", kwargs={"gruppe_id": str(uuid.uuid4())}))
         assert response.status_code == 302
 
     def test_eigene_private_gruppe_sichtbar(self):
         gruppe_id, _, _ = _create_gruppe(self.owner, is_public=False)
-        response = self.client.get(
-            reverse("share_group", kwargs={"gruppe_id": str(gruppe_id)})
-        )
+        response = self.client.get(reverse("share_group", kwargs={"gruppe_id": str(gruppe_id)}))
         assert response.status_code == 200
 
 
@@ -299,16 +290,12 @@ class TestCopyGroup:
         Plan.objects.filter(gruppe_id=gruppe_id).update(is_public=True)
 
         plan_count_before = Plan.objects.filter(user=self.user).count()
-        response = self.client.post(
-            reverse("copy_group", kwargs={"gruppe_id": str(gruppe_id)})
-        )
+        response = self.client.post(reverse("copy_group", kwargs={"gruppe_id": str(gruppe_id)}))
         assert response.status_code == 302
         assert Plan.objects.filter(user=self.user).count() == plan_count_before + len(plaene)
 
     def test_nicht_gefundene_gruppe_redirect(self):
-        response = self.client.post(
-            reverse("copy_group", kwargs={"gruppe_id": str(uuid.uuid4())})
-        )
+        response = self.client.post(reverse("copy_group", kwargs={"gruppe_id": str(uuid.uuid4())}))
         assert response.status_code == 302
 
     def test_login_required(self):
@@ -334,16 +321,12 @@ class TestToggleGroupPublic:
 
     def test_toggle_macht_gruppe_oeffentlich(self):
         gruppe_id, _, plaene = _create_gruppe(self.user, is_public=False)
-        self.client.post(
-            reverse("toggle_group_public", kwargs={"gruppe_id": str(gruppe_id)})
-        )
+        self.client.post(reverse("toggle_group_public", kwargs={"gruppe_id": str(gruppe_id)}))
         assert Plan.objects.filter(gruppe_id=gruppe_id, is_public=True).count() == len(plaene)
 
     def test_toggle_macht_gruppe_privat(self):
         gruppe_id, _, plaene = _create_gruppe(self.user, is_public=True)
-        self.client.post(
-            reverse("toggle_group_public", kwargs={"gruppe_id": str(gruppe_id)})
-        )
+        self.client.post(reverse("toggle_group_public", kwargs={"gruppe_id": str(gruppe_id)}))
         assert Plan.objects.filter(gruppe_id=gruppe_id, is_public=False).count() == len(plaene)
 
     def test_nicht_gefundene_gruppe_redirect(self):

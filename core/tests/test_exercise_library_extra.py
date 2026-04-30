@@ -26,7 +26,6 @@ from core.views.exercise_library import (
     _resolve_hilfsmuskeln_labels,
 )
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # _resolve_hilfsmuskeln_labels
 # ─────────────────────────────────────────────────────────────────────────────
@@ -65,7 +64,9 @@ class TestCompute1rmForSatz:
     def test_gesamt_typ(self):
         uebung = UebungFactory(gewichts_typ="GESAMT")
         einheit = TrainingseinheitFactory(user=UserFactory())
-        satz = SatzFactory(einheit=einheit, uebung=uebung, gewicht=Decimal("100.0"), wiederholungen=5)
+        satz = SatzFactory(
+            einheit=einheit, uebung=uebung, gewicht=Decimal("100.0"), wiederholungen=5
+        )
         eff, one_rm, vol = _compute_1rm_for_satz(satz, "GESAMT")
         assert eff == pytest.approx(100.0)
         assert one_rm > 100.0  # Epley gibt mehr als rohes Gewicht
@@ -74,7 +75,9 @@ class TestCompute1rmForSatz:
     def test_pro_seite_verdoppelt_gewicht(self):
         uebung = UebungFactory(gewichts_typ="PRO_SEITE")
         einheit = TrainingseinheitFactory(user=UserFactory())
-        satz = SatzFactory(einheit=einheit, uebung=uebung, gewicht=Decimal("30.0"), wiederholungen=8)
+        satz = SatzFactory(
+            einheit=einheit, uebung=uebung, gewicht=Decimal("30.0"), wiederholungen=8
+        )
         eff, one_rm, vol = _compute_1rm_for_satz(satz, "PRO_SEITE")
         assert eff == pytest.approx(60.0)
 
@@ -90,7 +93,9 @@ class TestCompute1rmForSatz:
     def test_gewicht_null_ergibt_null_one_rm(self):
         uebung = UebungFactory(gewichts_typ="GESAMT")
         einheit = TrainingseinheitFactory(user=UserFactory())
-        satz = SatzFactory(einheit=einheit, uebung=uebung, gewicht=Decimal("0.0"), wiederholungen=10)
+        satz = SatzFactory(
+            einheit=einheit, uebung=uebung, gewicht=Decimal("0.0"), wiederholungen=10
+        )
         eff, one_rm, vol = _compute_1rm_for_satz(satz, "GESAMT")
         assert one_rm == 0.0
 
@@ -224,9 +229,7 @@ class TestExerciseDetail:
         uebung = UebungFactory(gewichts_typ="GESAMT")
         einheit = TrainingseinheitFactory(user=self.user, datum=timezone.now())
         for _ in range(3):
-            SatzFactory(
-                einheit=einheit, uebung=uebung, gewicht=Decimal("80.0"), wiederholungen=8
-            )
+            SatzFactory(einheit=einheit, uebung=uebung, gewicht=Decimal("80.0"), wiederholungen=8)
         response = self.client.get(reverse("exercise_detail", kwargs={"uebung_id": uebung.id}))
         if response.status_code == 200:
             assert response.context["has_data"] is True
