@@ -21,10 +21,7 @@ from django.utils import timezone
 import pytest
 
 from core.tests.factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
-from core.views.exercise_library import (
-    _compute_1rm_for_satz,
-    _resolve_hilfsmuskeln_labels,
-)
+from core.views.exercise_library import _compute_1rm_for_satz, _resolve_hilfsmuskeln_labels
 
 # ─────────────────────────────────────────────────────────────────────────────
 # _resolve_hilfsmuskeln_labels
