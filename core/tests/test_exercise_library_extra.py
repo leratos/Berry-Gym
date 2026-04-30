@@ -15,10 +15,11 @@ Abdeckung:
 from datetime import timedelta
 from decimal import Decimal
 
-import pytest
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
+
+import pytest
 
 from core.tests.factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
 from core.views.exercise_library import (

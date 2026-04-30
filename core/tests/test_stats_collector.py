@@ -21,8 +21,9 @@ Abdeckung:
 from datetime import date, timedelta
 from decimal import Decimal
 
-import pytest
 from django.utils import timezone
+
+import pytest
 
 from core.export.stats_collector import (
     build_top_uebungen,
@@ -35,8 +36,8 @@ from core.export.stats_collector import (
     collect_push_pull,
     collect_strength_progression,
     collect_training_heatmap_data,
-    collect_weight_trend,
     collect_weekly_volume_pdf,
+    collect_weight_trend,
     muscle_status,
     sum_volume,
 )
@@ -47,7 +48,6 @@ from core.tests.factories import (
     UebungFactory,
     UserFactory,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # muscle_status

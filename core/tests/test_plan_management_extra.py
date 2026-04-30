@@ -17,10 +17,11 @@ Abdeckung:
 
 import uuid
 
-import pytest
 from django.contrib.auth.models import User
 from django.test import Client
 from django.urls import reverse
+
+import pytest
 
 from core.models import Plan, PlanUebung, Trainingsblock, Uebung, UserProfile
 from core.tests.factories import PlanFactory, PlanUebungFactory, UebungFactory, UserFactory
