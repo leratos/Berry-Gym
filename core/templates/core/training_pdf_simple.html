@@ -1062,7 +1062,89 @@
         während zu viel RPE 10 das Verletzungsrisiko erhöht und die Erholung verlängert.</p>
     </div>
 
-    {% if rpe_quality %}
+    {% if rpe_quality_windowed %}
+    {# Phase 23.1: Drei Zeitfenster (2w / 4w / all). 4w ist primär für die Bewertung. #}
+    {% with rqw=rpe_quality_windowed %}
+    <table style="width: 100%; border-collapse: separate; border-spacing: 6px 0; margin-bottom: 8px;">
+        <tr>
+            {% for card in rqw.cards %}
+            <td style="text-align: center; vertical-align: top; width: 33%; padding: 8px; border: 1px solid {% if card.is_primary %}#0d6efd{% else %}#dee2e6{% endif %}; background: {% if card.is_primary %}#e7f1ff{% else %}#f8f9fa{% endif %}; border-radius: 4px;">
+                <div style="font-size: 8px; text-transform: uppercase; color: #6c757d; letter-spacing: 0.5px;">
+                    {% if card.is_primary %}<strong>★ {{ card.label }}</strong>{% else %}{{ card.label }}{% endif %}
+                </div>
+                {% if card.result %}
+                <div style="font-size: 18px; font-weight: bold; margin: 4px 0;">{{ card.result.failure_rate }}%</div>
+                <div style="font-size: 8px; color: #6c757d;">RPE-10 · n={{ card.n_sets }}</div>
+                {% else %}
+                <div style="font-size: 14px; color: #adb5bd; margin: 4px 0;">n.a.</div>
+                <div style="font-size: 8px; color: #6c757d;">n={{ card.n_sets }} (zu wenig)</div>
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+    </table>
+
+    {% with primary=rqw.primary_result %}
+    {% if primary %}
+    <div class="quality-metrics">
+        <div class="metric">
+            <span>Optimale Intensität (RPE 7-9):</span>
+            <span class="metric-value">{{ primary.optimal_intensity_rate }}%</span>
+        </div>
+        <div class="metric">
+            <span>"Junk Volume" (RPE &lt;7):</span>
+            <span class="metric-value">{{ primary.junk_volume_rate }}%</span>
+        </div>
+        <div class="metric">
+            <span>Bis zum Versagen (RPE 10):</span>
+            <span class="metric-value">{{ primary.failure_rate }}%</span>
+        </div>
+    </div>
+
+    <div class="bewertung-box {{ primary.bewertung_farbe }}">
+        <strong>Bewertung:</strong> {{ primary.bewertung }}
+        {% if rqw.recommendation %}<br><span style="font-size: 9px;">{{ rqw.recommendation }}</span>{% endif %}
+    </div>
+
+    {% if rqw.divergence_hint %}
+    <div class="info-box" style="margin-top: 6px;">
+        <p style="font-size: 9px; margin: 0;"><strong>Hinweis:</strong> {{ rqw.divergence_hint }}</p>
+    </div>
+    {% endif %}
+
+    {% if primary.empfehlungen %}
+    <div class="recommendation-box">
+        <h3 style="margin-top: 0;">Empfehlungen:</h3>
+        <ul style="margin: 5px 0; padding-left: 20px; font-size: 9px;">
+        {% for emp in primary.empfehlungen %}
+            <li>{{ emp }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- RPE-Verteilung (primäres Fenster) -->
+    {% if rpe_donut_chart %}
+    <div style="text-align: center; margin: 10px 0;">
+        <img src="data:image/png;base64,{{ rpe_donut_chart }}" alt="RPE-Verteilung" style="width: 280px; max-width: 100%;">
+    </div>
+    {% endif %}
+    <div class="rpe-distribution">
+        <h3 style="margin-top: 0;">RPE-Verteilung (Detail · {% if rqw.primary_window == "4w" %}letzte 4 Wochen{% else %}gesamt{% endif %}):</h3>
+        <ul>
+            <li>Sehr leicht (RPE &lt;5): {{ primary.rpe_verteilung_prozent.sehr_leicht }}%</li>
+            <li>Leicht (RPE 5-6): {{ primary.rpe_verteilung_prozent.leicht }}%</li>
+            <li>Moderat (RPE 7-8): {{ primary.rpe_verteilung_prozent.moderat }}%</li>
+            <li>Schwer (RPE 8-9): {{ primary.rpe_verteilung_prozent.schwer }}%</li>
+            <li>Sehr schwer (RPE 9+): {{ primary.rpe_verteilung_prozent.sehr_schwer }}%</li>
+            <li>Versagen (RPE 10): {{ primary.rpe_verteilung_prozent.versagen }}%</li>
+        </ul>
+    </div>
+    {% endif %}
+    {% endwith %}
+    {% endwith %}
+    {% elif rpe_quality %}
+    {# Backwards-Compat: ältere Datensammlungen ohne Phase-23-Felder. #}
     <div class="quality-metrics">
         <div class="metric">
             <span>Optimale Intensität (RPE 7-9):</span>
@@ -1077,11 +1159,9 @@
             <span class="metric-value">{{ rpe_quality.failure_rate }}%</span>
         </div>
     </div>
-
     <div class="bewertung-box {{ rpe_quality.bewertung_farbe }}">
         <strong>Bewertung:</strong> {{ rpe_quality.bewertung }}
     </div>
-
     {% if rpe_quality.empfehlungen %}
     <div class="recommendation-box">
         <h3 style="margin-top: 0;">Empfehlungen:</h3>
@@ -1092,24 +1172,6 @@
         </ul>
     </div>
     {% endif %}
-
-    <!-- RPE-Verteilung -->
-    {% if rpe_donut_chart %}
-    <div style="text-align: center; margin: 10px 0;">
-        <img src="data:image/png;base64,{{ rpe_donut_chart }}" alt="RPE-Verteilung" style="width: 280px; max-width: 100%;">
-    </div>
-    {% endif %}
-    <div class="rpe-distribution">
-        <h3 style="margin-top: 0;">RPE-Verteilung (Detail):</h3>
-        <ul>
-            <li>Sehr leicht (RPE &lt;5): {{ rpe_quality.rpe_verteilung_prozent.sehr_leicht }}%</li>
-            <li>Leicht (RPE 5-6): {{ rpe_quality.rpe_verteilung_prozent.leicht }}%</li>
-            <li>Moderat (RPE 7-8): {{ rpe_quality.rpe_verteilung_prozent.moderat }}%</li>
-            <li>Schwer (RPE 8-9): {{ rpe_quality.rpe_verteilung_prozent.schwer }}%</li>
-            <li>Sehr schwer (RPE 9+): {{ rpe_quality.rpe_verteilung_prozent.sehr_schwer }}%</li>
-            <li>Versagen (RPE 10): {{ rpe_quality.rpe_verteilung_prozent.versagen }}%</li>
-        </ul>
-    </div>
     {% else %}
     <div class="info-box warning">
         Noch nicht genügend RPE-Daten für Qualitäts-Analyse verfügbar.

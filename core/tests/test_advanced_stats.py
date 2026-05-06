@@ -17,11 +17,14 @@ from django.utils import timezone
 
 from core.models import Equipment, Plan, Satz, Trainingseinheit, Uebung
 from core.utils.advanced_stats import (
+    MIN_SETS_FOR_WINDOW,
     calculate_1rm_standards,
     calculate_consistency_metrics,
     calculate_fatigue_index,
     calculate_plateau_analysis,
     calculate_rpe_quality_analysis,
+    calculate_rpe_quality_analysis_windowed,
+    get_time_windows,
 )
 
 
@@ -473,3 +476,171 @@ class TestOneRmStandards(StatsTestBase):
         result = calculate_1rm_standards(self._alle_saetze(), self._top_uebungen(), user_gewicht=80)
         level = result[0]["standard_info"]["level"]
         self.assertIn(level, ("intermediate", "advanced", "elite"))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23: get_time_windows
+# ──────────────────────────────────────────────────────────────────────────────
+class TestGetTimeWindows(TestCase):
+    def test_default_windows_have_correct_durations(self):
+        ref = timezone.now()
+        windows = get_time_windows(ref)
+        self.assertEqual((ref - windows["2w"][0]).days, 14)
+        self.assertEqual((ref - windows["4w"][0]).days, 28)
+        self.assertIsNone(windows["all"][0])
+        for key in ("2w", "4w", "all"):
+            self.assertEqual(windows[key][1], ref)
+
+    def test_plan_start_clamps_short_windows(self):
+        ref = timezone.now()
+        plan_start = ref - timedelta(days=10)  # jünger als 2w und 4w
+        windows = get_time_windows(ref, plan_start=plan_start)
+        self.assertEqual(windows["2w"][0], plan_start)
+        self.assertEqual(windows["4w"][0], plan_start)
+        # all-time bleibt ungeclamped
+        self.assertIsNone(windows["all"][0])
+
+    def test_plan_start_does_not_extend_windows(self):
+        ref = timezone.now()
+        plan_start = ref - timedelta(days=60)  # älter als beide Fenster
+        windows = get_time_windows(ref, plan_start=plan_start)
+        # 2w/4w bleiben bei ihren Standard-Längen
+        self.assertEqual((ref - windows["2w"][0]).days, 14)
+        self.assertEqual((ref - windows["4w"][0]).days, 28)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23: calculate_rpe_quality_analysis_windowed
+# ──────────────────────────────────────────────────────────────────────────────
+class TestRpeDistributionWindowed(StatsTestBase):
+    """Tests gemäß Phase-23-Konzept Abschnitt 3.5."""
+
+    def _alle_saetze(self):
+        return Satz.objects.filter(einheit__user=self.user)
+
+    def _add_n(self, days_ago, count, rpe):
+        """Helper: füge `count` Sätze mit gegebener RPE in einer Session vor `days_ago` Tagen hinzu."""
+        session = self._make_session(days_ago=days_ago)
+        for _ in range(count):
+            self._add_satz(session, rpe=rpe)
+        return session
+
+    def test_returns_none_when_no_rpe_data(self):
+        # Komplett ohne Sätze
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNone(result)
+
+    def test_4w_window_excludes_old_high_rpe(self):
+        """Historisch viel RPE-10, jetzt sauber → 4w zeigt sauber, all zeigt rot."""
+        # Alt (vor 8 Wochen): 50× RPE 10
+        self._add_n(days_ago=56, count=50, rpe=10.0)
+        # Aktuell (vor 1 Woche): 50× RPE 8 (sauber)
+        self._add_n(days_ago=7, count=50, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNotNone(result)
+        self.assertEqual(result["primary_window"], "4w")
+        # 4w sieht nur die sauberen Sätze
+        self.assertEqual(result["windows"]["4w"]["failure_rate"], 0.0)
+        # all-time enthält die alten RPE-10
+        self.assertGreater(result["windows"]["all"]["failure_rate"], 40)
+        # Bewertung basiert auf 4w → optimal
+        self.assertEqual(result["evaluation"], "optimal")
+
+    def test_2w_window_reflects_recent_only(self):
+        """Letzte 2 Wochen sauber, 4 Wochen noch belastet."""
+        # vor 3 Wochen: 40× RPE 10 (zählt für 4w aber nicht für 2w)
+        self._add_n(days_ago=21, count=40, rpe=10.0)
+        # letzte 2 Wochen: 40× RPE 8
+        self._add_n(days_ago=5, count=40, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNotNone(result)
+        # 2w-Fenster: nur saubere Sätze
+        self.assertEqual(result["windows"]["2w"]["failure_rate"], 0.0)
+        # 4w-Fenster: enthält die alten RPE-10
+        self.assertGreater(result["windows"]["4w"]["failure_rate"], 30)
+
+    def test_fallback_when_insufficient_4w_data(self):
+        """Neuer User mit <30 Sätzen in 4 Wochen → primary fällt auf 'all'."""
+        # Nur 5 Sätze in den letzten 4 Wochen
+        self._add_n(days_ago=10, count=5, rpe=8.0)
+        # Aber genug all-time
+        self._add_n(days_ago=200, count=50, rpe=10.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNotNone(result)
+        self.assertTrue(result["insufficient_4w"])
+        self.assertEqual(result["primary_window"], "all")
+        # Empfehlung erwähnt den Fallback
+        self.assertIn("Zu wenig Daten", result["recommendation"])
+
+    def test_plan_filter_combination(self):
+        """Plan-Wechsel vor 10 Tagen → 4w-Fenster verkürzt sich auf 'seit Plan-Start'."""
+        plan_start = timezone.now() - timedelta(days=10)
+        # Vor Plan-Start: viele RPE-10 (sollten ignoriert werden)
+        self._add_n(days_ago=20, count=50, rpe=10.0)
+        # Im aktuellen Plan: saubere Sätze
+        self._add_n(days_ago=5, count=40, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze(), plan_start=plan_start)
+        self.assertIsNotNone(result)
+        self.assertTrue(result["plan_clamped"])
+        # 4w-Fenster respektiert Plan-Start → sieht nur saubere Sätze
+        self.assertEqual(result["windows"]["4w"]["failure_rate"], 0.0)
+        # all-time enthält weiterhin die alten RPE-10
+        self.assertGreater(result["windows"]["all"]["failure_rate"], 40)
+
+    def test_evaluation_uses_4w_only_not_all(self):
+        """4w grün, all rot → Bewertung 'optimal' (nicht 'risiko')."""
+        # Alt: viele RPE-10
+        self._add_n(days_ago=80, count=60, rpe=10.0)
+        # Aktuell (4w): 40× RPE 8
+        self._add_n(days_ago=10, count=40, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertEqual(result["evaluation"], "optimal")
+        self.assertEqual(result["primary_window"], "4w")
+        # all-time wäre rot, aber Bewertung ignoriert das bewusst
+        self.assertGreater(result["windows"]["all"]["failure_rate"], 30)
+
+    def test_divergence_hint_on_trend_change(self):
+        """2w 0%, 4w ~30% → Hinweis 'Trend verbessert sich'."""
+        # Vor 3 Wochen: 30× RPE 10 (im 4w aber nicht 2w)
+        self._add_n(days_ago=20, count=30, rpe=10.0)
+        # Letzte 10 Tage: 30× RPE 8 (in beiden Fenstern)
+        self._add_n(days_ago=5, count=30, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNotNone(result["divergence_hint"])
+        self.assertIn("verbessert", result["divergence_hint"])
+
+    def test_no_divergence_hint_when_2w_insufficient(self):
+        """2w hat <10 Sätze → kein Trend-Hinweis (zu unsicher)."""
+        # 4w hat 50 Sätze (>=30), 2w hat nur 5 Sätze
+        self._add_n(days_ago=20, count=45, rpe=10.0)
+        self._add_n(days_ago=5, count=5, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNone(result["divergence_hint"])
+
+    def test_window_meta_contains_n_sets_per_window(self):
+        self._add_n(days_ago=5, count=40, rpe=8.0)
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        meta = result["window_meta"]
+        self.assertEqual(meta["2w"]["n_sets"], 40)
+        self.assertEqual(meta["4w"]["n_sets"], 40)
+        self.assertEqual(meta["all"]["n_sets"], 40)
+        self.assertFalse(meta["4w"]["insufficient_data"])
+
+    def test_min_sets_threshold_is_configurable(self):
+        """Aufrufer kann min_sets explizit setzen (z.B. niedriger für kleine User)."""
+        self._add_n(days_ago=10, count=10, rpe=8.0)
+        result_strict = calculate_rpe_quality_analysis_windowed(
+            self._alle_saetze(), min_sets=MIN_SETS_FOR_WINDOW
+        )
+        result_lenient = calculate_rpe_quality_analysis_windowed(self._alle_saetze(), min_sets=5)
+        # 30er Default → 4w insufficient, fallback auf all
+        self.assertEqual(result_strict["primary_window"], "all")
+        # 5er Schwelle → 4w ausreichend
+        self.assertEqual(result_lenient["primary_window"], "4w")

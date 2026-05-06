@@ -21,6 +21,7 @@ from core.utils.advanced_stats import (
     calculate_fatigue_index,
     calculate_plateau_analysis,
     calculate_rpe_quality_analysis,
+    calculate_rpe_quality_analysis_windowed,
 )
 from core.utils.plan_helpers import (
     get_active_plan_exercise_ids,
@@ -545,6 +546,14 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     avg_rpe, rpe_verteilung = collect_intensity_data(alle_saetze, letzte_30_tage)
     rpe_saetze = alle_saetze.filter(rpe__isnull=False, einheit__datum__gte=letzte_30_tage)
     rpe_quality = calculate_rpe_quality_analysis(alle_saetze)
+    # Phase 23.1: Zeitfenster-basierte RPE-Verteilung (2w / 4w / all).
+    # Plan-Clamping nur, wenn Plan nicht zu jung – konsistent mit Phase 22.
+    rpe_window_plan_start = (
+        plan_start_date if (active_uebung_ids is not None and not plan_too_new) else None
+    )
+    rpe_quality_windowed = calculate_rpe_quality_analysis_windowed(
+        alle_saetze, reference_date=heute, plan_start=rpe_window_plan_start
+    )
     # Volume chart uses ALL sets (incl. deload) so deload weeks show real volume
     alle_saetze_inkl_deload = Satz.objects.filter(
         einheit__user=user,
@@ -622,6 +631,7 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         "fatigue_analysis": fatigue_analysis,
         "rm_standards": rm_standards,
         "rpe_quality": rpe_quality,
+        "rpe_quality_windowed": rpe_quality_windowed,
         "training_heatmap_data": training_heatmap_data,
         "exercise_detail_data": exercise_detail_data,
     }
