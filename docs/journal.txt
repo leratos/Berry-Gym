@@ -5715,3 +5715,120 @@ zu `TypeError: can't compare datetime.datetime to datetime.date`. Lösung:
 **Nächster Schritt (Reihenfolge laut Konzept Abschnitt 9):** 23.3 (Plateau-Logik
 vereinheitlicht) – nutzt Zeitfenster-Helper aus 23.1 wieder. Vor Implementierung:
 Frage 8.2 (Schwellenwert "RPE sinkt") empirisch prüfen.
+
+
+## Empirische Klärung Frage 8.2 – Konsolidierungs-Schwellenwert (06.05.2026)
+
+SSH-Read-only-Abfrage gegen Production-DB (lera@last-strawberry.com).
+Aktiver User: 53 Sessions. Top 10 Übungen abgefragt mit Vergleich
+**current 4w avg RPE vs. 4w-vor-PR avg RPE** (Konzept-5.3-Vorschlag):
+
+| Übung | days_seit_PR | cur_RPE | pre_RPE | Δ | cur_n |
+|---|---|---|---|---|---|
+| Rumänisches Kreuzheben | 20 | 8.11 | 8.16 | +0.05 | 9 |
+| Bankdrücken | 2 | 7.73 | 7.73 | +0.00 | 15 |
+| Kniebeuge | 12 | 7.75 | 7.69 | -0.06 | 12 |
+| Trizeps OH Extension | 2 | 7.50 | 7.50 | +0.00 | 8 |
+| Hammer Curls | 0 | 8.62 | 8.70 | +0.07 | 8 |
+| Langhantel-Rudern | 42 | n.a. | 8.36 | — | **0** |
+| Schulterdrücken | 44 | n.a. | 9.00 | — | **0** |
+| Bizeps Curls | 42 | n.a. | 8.21 | — | **0** |
+
+**Erkenntnisse:**
+
+1. **Konzept-Algorithmus (4w current vs. 4w-vor-PR) liefert Δ-Werte ≤ 0.07** –
+   die vom Konzept vorgeschlagene Schwelle 0.5 würde nie greifen.
+2. **Die alte First-Half-vs-Second-Half-Logik in den letzten 4w ist sensitiver**
+   und hat im Mai-2026-Report Hammer Curls korrekt als Konsolidierung erkannt –
+   die Schwelle 0.5 funktioniert dort empirisch.
+3. **Die im Mai-Report sichtbare Inkonsistenz hat eine andere Ursache:** 4 Übungen
+   haben `cur_n=0` (seit 42-44 Tagen nicht trainiert). Die alte Logik labelt sie
+   "Plateau", aber das ist sachlich falsch – es ist eine **Pause** (nicht trainiert),
+   keine Stagnation.
+
+**Konsequenz für 23.3 (revidiert ggü. Konzept 5.3):**
+
+- First-Half-vs-Second-Half-Logik **beibehalten** (empirisch validiert)
+- Schwelle **0.5 RPE-Punkte beibehalten**
+- **Neuer Status "Pause"** für `cur_4w_n < 2` ergänzt – löst die echte Inkonsistenz
+- Regression-Schwelle **von 10% auf 5%** Drop verschärft (konzeptkonform)
+
+
+## Abgeschlossen: Phase 23.3 – Plateau-Logik vereinheitlicht (06.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Refactor:** Extrahierung der inline Plateau-Logik aus `calculate_plateau_analysis`
+in einen neuen Helfer `classify_progression_status(uebung_saetze, pr_satz, ref)`.
+Beide Aufrufer (PDF: `calculate_plateau_analysis`, Live: `_calc_plateau_live`)
+nutzen ihn als Single Source of Truth.
+
+**Neue Status-Hierarchie (priorisiert):**
+
+1. `regression` – >5 % 1RM-Drop im current 4w vs. PR (vorher 10 %)
+2. `active_progression` – PR ≤ 7 Tage alt
+3. `observe` – PR 8–14 Tage alt
+4. **`pause` (NEU)** – < 2 Sätze in den letzten 4w (Übung pausiert)
+5. `consolidation` – RPE-Δ ≥ 0.5 zwischen first/second half der letzten 4w
+6. `plateau_light` – 15–42 Tage seit PR
+7. `plateau` – 43–84 Tage
+8. `plateau_long` – > 84 Tage
+9. `no_data` – kein PR-Satz
+
+**Konstanten in `advanced_stats.py`:**
+
+- `CONSOLIDATION_RPE_DELTA = 0.5` (empirisch validiert via SSH-Production-Query)
+- `REGRESSION_WEIGHT_DROP_PCT = 5.0` (vorher 10 % – konzeptkonform verschärft)
+- `PAUSE_MIN_CUR_SETS = 2` (löst Inkonsistenz aus Mai-Report)
+- `PROGRESSION_RPE_MIN_SETS = 4` (Min. RPE-Sätze für Konsolidierungs-Check)
+
+**Backwards-Compat-Punkte:**
+
+- Status-Keys auf englisch standardisiert (vorher gemischt deutsch/englisch:
+  `"konsolidierung"` → `"consolidation"`, `"plateau_leicht"` → `"plateau_light"`,
+  `"plateau_lang"` → `"plateau_long"`, `"zu_frueh"` und `"beobachten"` zu
+  `"active_progression"`/`"observe"` umbenannt). Status-Labels (sichtbarer Text
+  im Template) bleiben deutsch.
+- Live-View-Result hat `farbe`-Alias für Backward-Compat mit Phase-21.3-Templates.
+- Bestehender Tooltip-Text "RPE sinkt" im Status-Label bleibt; PDF und Live-Stats
+  zeigen jetzt zusätzlich die konkrete Begründung (z. B. "RPE sank von 9.25 auf
+  8.25 in den letzten 4 W").
+
+**UI-Anpassungen:**
+
+- `core/templates/core/training_stats.html` – Plateau-Tabelle nutzt
+  `status_farbe` + `status_label`, mit HTML-`title`-Tooltip pro Status-Typ
+  (Konsolidierung zeigt RPE-Delta, Regression zeigt %-Drop, Pause erklärt
+  "nicht trainiert").
+- `core/templates/core/training_pdf_simple.html` – Status-Spalte zeigt unter
+  dem Badge eine Begründungs-Zeile (Konzept 5.6). Legende um neue Status erweitert
+  (Beobachten, Konsolidierung, Pause, Langzeit-Plateau).
+
+**Tests:**
+
+- Neue Test-Class `TestProgressionClassification` mit 14 Test-Cases (alle 8 aus
+  Konzept 5.5 + 6 zusätzliche für Diagnose-Felder, Backwards-Compat-Aliase,
+  Pause-Edge-Cases).
+- `test_konsolidierung_bei_sinkendem_rpe` Status-Key auf `"consolidation"` geupdated.
+- `TestPlateauLive` 3 alte Tests umgeschrieben (alte Status-Strings entfernt) +
+  1 neuer Test (`test_plateau_when_pr_old_but_currently_training`) ergänzt, um
+  echtes Plateau (nicht Pause) zu prüfen.
+- 178 Tests in den betroffenen Modulen weiterhin grün.
+
+**Empirisch validiert via Production-Daten:** Hammer Curls als Konsolidierung
+korrekt erkannt (Δ +0.07 in 4w-Avg-Vergleich, aber höher in First-Half-vs-
+Second-Half innerhalb der letzten 4w). Die 4 Übungen mit `cur_n=0` werden jetzt
+korrekt als "Pause" gelabelt statt als "Plateau".
+
+**Geänderte Dateien:**
+- `core/utils/advanced_stats.py` – Helfer `classify_progression_status` +
+  `_find_best_1rm_satz`, neue Konstanten, Refactor von `calculate_plateau_analysis`
+- `core/views/training_stats.py` – `_calc_plateau_live` nutzt Helfer
+- `core/templates/core/training_stats.html` – neue Status-Felder + Tooltip
+- `core/templates/core/training_pdf_simple.html` – Begründungs-Zeile + Legende
+- `core/tests/test_advanced_stats.py` – `TestProgressionClassification` neu
+- `core/tests/test_training_stats.py` – `TestPlateauLive` aktualisiert
+
+**Nächster Schritt (Reihenfolge laut Konzept Abschnitt 9):** 23.2
+(Effektives Volumen) – baut auf RPE-Filterlogik aus 23.1 auf. Vor 23.2:
+Frage 8.5 (Block-Typ-Awareness für Diagnose-Tabelle) entscheiden.

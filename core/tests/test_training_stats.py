@@ -1033,36 +1033,43 @@ class TestPlateauLive(StatsBase):
         self.assertEqual(result, [])
 
     def test_recent_pr_green(self):
-        """PR within 14 days → green badge."""
+        """PR within 7 days → active_progression / success."""
         session = self._session(days_ago=3)
         satz = self._satz(session, gewicht=100, wdh=5)
         satz.is_pr = True
         satz.save()
         result = _calc_plateau_live(self.user)
         self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status_farbe"], "success")
+        self.assertEqual(result[0]["status"], "active_progression")
+        # Backwards-compat alias
         self.assertEqual(result[0]["farbe"], "success")
-        self.assertEqual(result[0]["status"], "Kürzlich")
 
-    def test_old_pr_red(self):
-        """PR > 42 days ago → red badge."""
+    def test_old_pr_with_no_recent_training_is_pause(self):
+        """PR vor 60 Tagen, keine aktuelle Trainings-Aktivität → pause (Phase 23.3)."""
         session = self._session(days_ago=60)
         satz = self._satz(session, gewicht=100, wdh=5)
         satz.is_pr = True
         satz.save()
         result = _calc_plateau_live(self.user)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["farbe"], "danger")
+        self.assertEqual(result[0]["status"], "pause")
+        self.assertEqual(result[0]["status_farbe"], "secondary")
 
-    def test_stagnating_pr_yellow(self):
-        """PR 15-42 days ago → yellow badge."""
-        session = self._session(days_ago=25)
-        satz = self._satz(session, gewicht=100, wdh=5)
+    def test_plateau_when_pr_old_but_currently_training(self):
+        """PR vor 50 Tagen, aktuell aktiv ohne Verbesserung → plateau (Phase 23.3)."""
+        # Alter PR
+        satz = self._satz(self._session(days_ago=50), gewicht=100, wdh=5)
         satz.is_pr = True
         satz.save()
+        # Aktuelle Sätze (gleiches Gewicht, kein Drop, kein RPE-Trend)
+        for d in [25, 18, 10, 3]:
+            self._satz(self._session(days_ago=d), gewicht=100, wdh=5)
         result = _calc_plateau_live(self.user)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["farbe"], "warning")
-        self.assertEqual(result[0]["status"], "Stagnierend")
+        # 50 Tage seit PR + aktuell trainiert → plateau (43-84 days range)
+        self.assertEqual(result[0]["status"], "plateau")
+        self.assertEqual(result[0]["status_farbe"], "danger")
 
     def test_max_5_exercises(self):
         """Should return at most 5 exercises."""

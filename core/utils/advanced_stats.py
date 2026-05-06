@@ -20,6 +20,168 @@ MIN_SETS_FOR_DIVERGENCE = 10
 # zwischen 2-Wochen- und 4-Wochen-RPE-10-Anteil ausgelöst wird (Konzept 3.3).
 DIVERGENCE_THRESHOLD_PCT = 5.0
 
+# Phase 23.3: Plateau-Logik vereinheitlicht
+# RPE-Differenz first-half vs. second-half der letzten 4w → "Konsolidierung".
+# Empirisch validiert (Mai-2026-Daten): die alte First/Second-Half-Logik mit
+# 0.5-Schwelle hat Hammer Curls korrekt als Konsolidierung erkannt; höhere
+# Schwellen würden zu wenig fangen, niedrigere wären Noise.
+CONSOLIDATION_RPE_DELTA = 0.5
+# >5% 1RM-Drop im current 4w gegenüber PR → Regression (vorher 10%).
+REGRESSION_WEIGHT_DROP_PCT = 5.0
+# < 2 Sätze in den letzten 4w → "Pause" statt "Plateau". Adressiert die im
+# Mai-2026-Report sichtbare Inkonsistenz: Übungen, die seit Wochen nicht
+# trainiert wurden, sollen nicht als "Plateau" gelten.
+PAUSE_MIN_CUR_SETS = 2
+# Min. RPE-erfasste Sätze in letzten 4w für Konsolidierungs-Check.
+PROGRESSION_RPE_MIN_SETS = 4
+
+
+def _find_best_1rm_satz(uebung_saetze):
+    """Liefert (best_1rm, best_satz) via Epley-Formel über alle gewichteten Sätze.
+
+    Bei Gleichstand gewinnt der **chronologisch erste** Satz (strict >), damit
+    `tage_seit_pr` plausibel ist (= Datum, an dem der PR erstmals erreicht wurde).
+    """
+    bester_1rm = 0.0
+    bester_satz = None
+    for satz in uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum"):
+        wdh = satz.wiederholungen or 1
+        einzel_1rm = float(satz.gewicht) * (1 + wdh / 30.0)
+        if einzel_1rm > bester_1rm:
+            bester_1rm = einzel_1rm
+            bester_satz = satz
+    return bester_1rm, bester_satz
+
+
+def classify_progression_status(uebung_saetze, pr_satz, reference_date=None):
+    """
+    Klassifiziert den Progressions-Status einer einzelnen Übung (Phase 23.3).
+
+    Status-Hierarchie (höchste Priorität zuerst):
+        1. ``regression``         – >5 % 1RM-Drop im aktuellen 4w-Fenster vs. PR
+        2. ``active_progression`` – PR ≤ 7 Tage alt
+        3. ``observe``            – PR 8–14 Tage alt
+        4. ``pause``              – < 2 Sätze in den letzten 4w (nicht aktiv trainiert)
+        5. ``consolidation``      – RPE sinkt (≥ 0.5) im first-half vs. second-half
+                                    der letzten 4w → User wird stärker bei stabilem Gewicht
+        6. ``plateau_light``      – 15–42 Tage seit PR, sonst kein Auslöser
+        7. ``plateau``            – 43–84 Tage seit PR
+        8. ``plateau_long``       – > 84 Tage seit PR
+        9. ``no_data``            – kein PR-Satz vorhanden
+
+    Args:
+        uebung_saetze: Satz-Queryset für genau eine Übung. Sollte bereits
+            user-, warmup- und deload-gefiltert sein.
+        pr_satz: Satz mit dem höchsten geschätzten 1RM (oder ``is_pr=True``-Satz).
+            Muss ``gewicht`` und ``einheit.datum`` haben.
+        reference_date: Stichtag (default ``timezone.now()``).
+
+    Returns:
+        dict mit:
+            - ``status``: einer der oben gelisteten Schlüssel
+            - ``status_label``: Lesbarer Label-String (mit Emoji)
+            - ``status_farbe``: Bootstrap-Color-Class
+            - ``days_since_pr``: int oder None
+            - ``rpe_first_half``, ``rpe_second_half``, ``rpe_delta``: float oder None
+            - ``weight_drop_pct``: float oder None (positiv = Drop gegenüber PR)
+            - ``cur_4w_n``: Anzahl Sätze in letzten 4w (für Pause-Erkennung)
+    """
+    if reference_date is None:
+        reference_date = timezone.now()
+
+    result = {
+        "status": "no_data",
+        "status_label": "📊 Keine Daten",
+        "status_farbe": "secondary",
+        "days_since_pr": None,
+        "rpe_first_half": None,
+        "rpe_second_half": None,
+        "rpe_delta": None,
+        "weight_drop_pct": None,
+        "cur_4w_n": 0,
+    }
+
+    if not pr_satz or not pr_satz.gewicht or not getattr(pr_satz, "einheit", None):
+        return result
+
+    pr_date = pr_satz.einheit.datum
+    days_since_pr = (reference_date.date() - pr_date.date()).days
+    result["days_since_pr"] = days_since_pr
+    pr_1rm = float(pr_satz.gewicht) * (1 + (pr_satz.wiederholungen or 1) / 30.0)
+
+    vier_wochen_start = reference_date - timedelta(days=28)
+    cur_saetze = list(
+        uebung_saetze.filter(einheit__datum__gte=vier_wochen_start).order_by("einheit__datum")
+    )
+    result["cur_4w_n"] = len(cur_saetze)
+
+    # Weight-Drop berechnen, sofern mindestens 1 Working Set in den letzten 4w
+    cur_weighted = [s for s in cur_saetze if s.gewicht]
+    if cur_weighted and pr_1rm > 0:
+        cur_best_1rm = max(
+            float(s.gewicht) * (1 + (s.wiederholungen or 1) / 30.0) for s in cur_weighted
+        )
+        result["weight_drop_pct"] = round((pr_1rm - cur_best_1rm) / pr_1rm * 100, 2)
+
+    # 1) Regression schlägt alles
+    if (
+        result["weight_drop_pct"] is not None
+        and result["weight_drop_pct"] > REGRESSION_WEIGHT_DROP_PCT
+    ):
+        result.update(status="regression", status_label="⚠️ Rückschritt", status_farbe="danger")
+        return result
+
+    # 2) Frischer PR
+    if days_since_pr <= 7:
+        result.update(
+            status="active_progression",
+            status_label="✅ Aktive Progression",
+            status_farbe="success",
+        )
+        return result
+    if days_since_pr <= 14:
+        result.update(status="observe", status_label="👀 Beobachten", status_farbe="info")
+        return result
+
+    # 3) Pause: zu wenig aktuelle Sätze, kein Regressions-Signal
+    if result["cur_4w_n"] < PAUSE_MIN_CUR_SETS:
+        result.update(status="pause", status_label="⏸️ Pause", status_farbe="secondary")
+        return result
+
+    # 4) Konsolidierung: RPE-Trend in den letzten 4w vergleichen.
+    rpe_saetze = [s for s in cur_saetze if s.rpe is not None and s.gewicht]
+    if len(rpe_saetze) >= PROGRESSION_RPE_MIN_SETS:
+        rpe_values = [float(s.rpe) for s in rpe_saetze]
+        mid = len(rpe_values) // 2
+        first_half = sum(rpe_values[:mid]) / mid
+        second_half = sum(rpe_values[mid:]) / len(rpe_values[mid:])
+        delta = first_half - second_half
+        result["rpe_first_half"] = round(first_half, 2)
+        result["rpe_second_half"] = round(second_half, 2)
+        result["rpe_delta"] = round(delta, 2)
+        if delta >= CONSOLIDATION_RPE_DELTA:
+            result.update(
+                status="consolidation",
+                status_label="💪 Konsolidierung (RPE sinkt)",
+                status_farbe="info",
+            )
+            return result
+
+    # 5) Plateau nach Tagen seit PR
+    if days_since_pr <= 42:
+        result.update(
+            status="plateau_light",
+            status_label="⚠️ Leichtes Plateau",
+            status_farbe="warning",
+        )
+    elif days_since_pr <= 84:
+        result.update(status="plateau", status_label="🔴 Plateau", status_farbe="danger")
+    else:
+        result.update(
+            status="plateau_long", status_label="❌ Langzeit-Plateau", status_farbe="danger"
+        )
+    return result
+
 
 def calculate_plateau_analysis(alle_saetze, top_uebungen):
     """
@@ -27,23 +189,22 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
 
     Returns list with:
     - uebung: Exercise name
-    - letzter_pr: Last personal record weight
+    - letzter_pr: Last personal record weight (estimated 1RM)
     - pr_datum: Date of last PR
     - tage_seit_pr: Days since last PR
     - progression_pro_monat: Average weight increase per month
-    - status: 'progression' / 'plateau' / 'regression'
+    - status: status key (siehe :func:`classify_progression_status`)
+    - status_label, status_farbe: Anzeige-Felder
+    - rpe_first_half, rpe_second_half, rpe_delta, weight_drop_pct, cur_4w_n: Diagnose-Daten
     - muskelgruppe: Muscle group
     """
     heute = timezone.now()
-    vier_wochen = heute - timedelta(days=28)
-
     plateau_analysis = []
 
     for uebung in top_uebungen[:5]:
         uebung_name = uebung["uebung__bezeichnung"]
         muskelgruppe = uebung.get("muskelgruppe_display", "")
 
-        # Alle Sätze dieser Übung chronologisch
         uebung_saetze = alle_saetze.filter(uebung__bezeichnung=uebung_name).order_by(
             "einheit__datum"
         )
@@ -51,108 +212,23 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
         if uebung_saetze.count() < 2:
             continue
 
-        # PR auf Basis des geschätzten 1RM (Epley-Formel: Gewicht × (1 + Wdh/30))
-        # Korrekte Methode: Roh-Gewicht allein ignoriert Rep-Steigerungen als Fortschritt.
-        # Wer 80kg × 8 → 80kg × 12 steigert (1RM: 101 → 112 kg) hat echten Fortschritt.
-        bester_1rm = 0.0
-        bester_1rm_satz = None
-
-        for satz in uebung_saetze.filter(gewicht__isnull=False):
-            wdh = satz.wiederholungen or 1
-            einzel_1rm = float(satz.gewicht) * (1 + wdh / 30.0)
-            if einzel_1rm > bester_1rm:
-                bester_1rm = einzel_1rm
-                bester_1rm_satz = satz
-
-        if not bester_1rm_satz:
+        bester_1rm, pr_satz = _find_best_1rm_satz(uebung_saetze)
+        if not pr_satz:
             continue
 
         letzter_pr = round(bester_1rm, 1)
-        pr_datum = bester_1rm_satz.einheit.datum
-        tage_seit_pr = (heute.date() - pr_datum.date()).days
+        pr_datum = pr_satz.einheit.datum
 
-        # Berechne durchschnittliche Progression pro Monat (auf 1RM-Basis)
+        # Durchschnittliche Progression pro Monat (auf 1RM-Basis)
         erster_satz = uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum").first()
+        progression_pro_monat = 0
         if erster_satz and erster_satz.gewicht:
             erstes_1rm = float(erster_satz.gewicht) * (1 + (erster_satz.wiederholungen or 1) / 30.0)
             tage_gesamt = (pr_datum.date() - erster_satz.einheit.datum.date()).days
-
             if tage_gesamt > 0:
-                gewichtsdiff = letzter_pr - erstes_1rm
-                progression_pro_monat = round((gewichtsdiff / tage_gesamt) * 30, 2)
-            else:
-                progression_pro_monat = 0
-        else:
-            progression_pro_monat = 0
+                progression_pro_monat = round((letzter_pr - erstes_1rm) / tage_gesamt * 30, 2)
 
-        # RPE-Trend prüfen: sinkender RPE bei gleichem Gewicht = Konsolidierung (kein Plateau)
-        # Vergleiche Durchschnitts-RPE der ersten vs. letzten Hälfte der letzten 4 Wochen
-        rpe_trend_sinkend = False
-        letzte_4w_saetze = uebung_saetze.filter(
-            einheit__datum__gte=vier_wochen, gewicht__isnull=False, rpe__isnull=False
-        ).order_by("einheit__datum")
-
-        if letzte_4w_saetze.count() >= 4:
-            rpe_werte = [float(s.rpe) for s in letzte_4w_saetze]
-            mitte = len(rpe_werte) // 2
-            avg_rpe_frueh = sum(rpe_werte[:mitte]) / mitte
-            avg_rpe_spaet = sum(rpe_werte[mitte:]) / len(rpe_werte[mitte:])
-            # RPE sinkt um mindestens 0.5 → Konsolidierung
-            if avg_rpe_frueh - avg_rpe_spaet >= 0.5:
-                rpe_trend_sinkend = True
-
-        # Status bestimmen
-        if tage_seit_pr <= 7:
-            # Weniger als 1 Woche - noch zu früh für Bewertung
-            if progression_pro_monat > 0:
-                status = "progression"
-                status_label = "✅ Aktive Progression"
-                status_farbe = "success"
-            else:
-                status = "zu_frueh"
-                status_label = "⏳ Zu früh zu bewerten"
-                status_farbe = "info"
-        elif tage_seit_pr <= 14:
-            # 1-2 Wochen
-            if progression_pro_monat > 0:
-                status = "progression"
-                status_label = "✅ Aktive Progression"
-                status_farbe = "success"
-            else:
-                status = "beobachten"
-                status_label = "👀 Beobachten"
-                status_farbe = "info"
-        elif rpe_trend_sinkend:
-            # Gewicht stagniert, aber RPE sinkt → User wird stärker
-            status = "konsolidierung"
-            status_label = "💪 Konsolidierung (RPE sinkt)"
-            status_farbe = "info"
-        elif tage_seit_pr <= 42:  # 2-6 Wochen
-            status = "plateau_leicht"
-            status_label = "⚠️ Leichtes Plateau"
-            status_farbe = "warning"
-        elif tage_seit_pr <= 84:  # 6-12 Wochen
-            status = "plateau"
-            status_label = "🔴 Plateau"
-            status_farbe = "danger"
-        else:
-            status = "plateau_lang"
-            status_label = "❌ Langzeit-Plateau"
-            status_farbe = "danger"
-
-        # Prüfe auf Regression: aktueller 1RM (letzte 4 Wochen) vs. bester je 1RM
-        letzte_4_wochen = uebung_saetze.filter(
-            einheit__datum__gte=vier_wochen, gewicht__isnull=False
-        )
-
-        if letzte_4_wochen.exists():
-            aktueller_1rm = max(
-                float(s.gewicht) * (1 + (s.wiederholungen or 1) / 30.0) for s in letzte_4_wochen
-            )
-            if aktueller_1rm < letzter_pr * 0.9:  # >10% Rückgang im 1RM
-                status = "regression"
-                status_label = "⚠️ Rückschritt"
-                status_farbe = "danger"
+        classification = classify_progression_status(uebung_saetze, pr_satz, reference_date=heute)
 
         plateau_analysis.append(
             {
@@ -160,11 +236,16 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
                 "muskelgruppe": muskelgruppe,
                 "letzter_pr": letzter_pr,
                 "pr_datum": pr_datum.strftime("%d.%m.%Y"),
-                "tage_seit_pr": tage_seit_pr,
+                "tage_seit_pr": classification["days_since_pr"],
                 "progression_pro_monat": progression_pro_monat,
-                "status": status,
-                "status_label": status_label,
-                "status_farbe": status_farbe,
+                "status": classification["status"],
+                "status_label": classification["status_label"],
+                "status_farbe": classification["status_farbe"],
+                "rpe_first_half": classification["rpe_first_half"],
+                "rpe_second_half": classification["rpe_second_half"],
+                "rpe_delta": classification["rpe_delta"],
+                "weight_drop_pct": classification["weight_drop_pct"],
+                "cur_4w_n": classification["cur_4w_n"],
             }
         )
 

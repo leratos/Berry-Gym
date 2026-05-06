@@ -872,8 +872,20 @@
                     <span class="badge badge-success">{{ item.status_label }}</span>
                     {% elif item.status_farbe == 'warning' %}
                     <span class="badge badge-warning">{{ item.status_label }}</span>
+                    {% elif item.status_farbe == 'info' %}
+                    <span class="badge badge-info">{{ item.status_label }}</span>
+                    {% elif item.status_farbe == 'secondary' %}
+                    <span class="badge badge-secondary">{{ item.status_label }}</span>
                     {% else %}
                     <span class="badge badge-danger">{{ item.status_label }}</span>
+                    {% endif %}
+                    {# Phase 23.3: Begründung hinter dem Status-Label, sofern Daten vorliegen. #}
+                    {% if item.status == 'consolidation' and item.rpe_first_half %}
+                    <br><span style="font-size: 7px; color: #6c757d;">RPE sank von {{ item.rpe_first_half }} auf {{ item.rpe_second_half }} in den letzten 4 W</span>
+                    {% elif item.status == 'regression' and item.weight_drop_pct %}
+                    <br><span style="font-size: 7px; color: #6c757d;">1RM-Drop {{ item.weight_drop_pct }}% vs. PR</span>
+                    {% elif item.status == 'pause' %}
+                    <br><span style="font-size: 7px; color: #6c757d;">Letzte 4 W nicht trainiert</span>
                     {% endif %}
                 </td>
             </tr>
@@ -884,10 +896,14 @@
     <div class="info-box">
         <p><strong>Legende:</strong></p>
         <ul style="margin: 5px 0; padding-left: 20px; font-size: 8px;">
-            <li>✅ Aktive Progression: PR innerhalb der letzten 2 Wochen</li>
-            <li>⚠️ Leichtes Plateau: 2-6 Wochen ohne PR</li>
-            <li>🔴 Plateau: >6 Wochen ohne Fortschritt</li>
-            <li>⚠️ Rückschritt: Leistung &lt;90% des letzten PR</li>
+            <li>✅ Aktive Progression: PR innerhalb der letzten Woche</li>
+            <li>👀 Beobachten: PR 1–2 Wochen alt</li>
+            <li>💪 Konsolidierung: Gewicht stabil, RPE sinkt → User wird stärker</li>
+            <li>⏸️ Pause: Übung in den letzten 4 Wochen nicht trainiert</li>
+            <li>⚠️ Leichtes Plateau: 2–6 Wochen ohne PR</li>
+            <li>🔴 Plateau: 6–12 Wochen ohne Fortschritt</li>
+            <li>❌ Langzeit-Plateau: >12 Wochen ohne PR</li>
+            <li>⚠️ Rückschritt: aktueller 1RM &gt;5% unter dem letzten PR</li>
         </ul>
     </div>
     {% else %}

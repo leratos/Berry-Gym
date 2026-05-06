@@ -40,7 +40,10 @@ from ..models import (
     Uebung,
     UserProfile,
 )
-from ..utils.advanced_stats import calculate_rpe_quality_analysis_windowed
+from ..utils.advanced_stats import (
+    calculate_rpe_quality_analysis_windowed,
+    classify_progression_status,
+)
 from ..utils.periodization import get_block_age_warning
 from ..utils.plan_helpers import (
     get_active_plan_exercise_ids,
@@ -2007,25 +2010,32 @@ def _calc_plateau_live(user) -> list[dict]:
             continue
 
         pr_datum = letzter_pr_satz.einheit.datum
-        tage_seit_pr = (heute.date() - pr_datum.date()).days
 
-        if tage_seit_pr <= 14:
-            status = "Kürzlich"
-            farbe = "success"
-        elif tage_seit_pr <= 42:
-            status = "Stagnierend"
-            farbe = "warning"
-        else:
-            status = "Lange kein PR"
-            farbe = "danger"
+        # Phase 23.3: einheitliche Klassifikation via classify_progression_status
+        # (gleiche Logik wie PDF-Plateau-Analyse, inkl. Pause/Konsolidierung/Regression).
+        uebung_saetze = Satz.objects.filter(
+            einheit__user=user,
+            uebung_id=uebung_id,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        ).select_related("einheit")
+        classification = classify_progression_status(
+            uebung_saetze, letzter_pr_satz, reference_date=heute
+        )
 
         result.append(
             {
                 "uebung": uebung_name,
-                "tage_seit_pr": tage_seit_pr,
-                "status": status,
-                "farbe": farbe,
+                "tage_seit_pr": classification["days_since_pr"],
+                "status": classification["status"],
+                "status_label": classification["status_label"],
+                "status_farbe": classification["status_farbe"],
+                # Backwards-Compat-Alias für ältere Templates (Phase 21.3):
+                "farbe": classification["status_farbe"],
                 "letzter_pr_datum": pr_datum.strftime("%d.%m.%Y"),
+                "rpe_first_half": classification["rpe_first_half"],
+                "rpe_second_half": classification["rpe_second_half"],
+                "weight_drop_pct": classification["weight_drop_pct"],
             }
         )
 

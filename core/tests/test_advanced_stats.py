@@ -18,12 +18,14 @@ from django.utils import timezone
 from core.models import Equipment, Plan, Satz, Trainingseinheit, Uebung
 from core.utils.advanced_stats import (
     MIN_SETS_FOR_WINDOW,
+    _find_best_1rm_satz,
     calculate_1rm_standards,
     calculate_consistency_metrics,
     calculate_fatigue_index,
     calculate_plateau_analysis,
     calculate_rpe_quality_analysis,
     calculate_rpe_quality_analysis_windowed,
+    classify_progression_status,
     get_time_windows,
 )
 
@@ -360,7 +362,7 @@ class TestPlateauAnalysis(StatsTestBase):
             self._add_satz(session, gewicht=80, wiederholungen=8, rpe=rpe)
         result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["status"], "konsolidierung")
+        self.assertEqual(result[0]["status"], "consolidation")
         self.assertIn("RPE sinkt", result[0]["status_label"])
 
     def test_echtes_plateau_bei_gleichbleibendem_rpe(self):
@@ -476,6 +478,144 @@ class TestOneRmStandards(StatsTestBase):
         result = calculate_1rm_standards(self._alle_saetze(), self._top_uebungen(), user_gewicht=80)
         level = result[0]["standard_info"]["level"]
         self.assertIn(level, ("intermediate", "advanced", "elite"))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.3: classify_progression_status
+# ──────────────────────────────────────────────────────────────────────────────
+class TestProgressionClassification(StatsTestBase):
+    """Tests gemäß Phase-23-Konzept Abschnitt 5.5 (Plateau-Logik vereinheitlicht).
+
+    Empirisch validierter Schwellenwert: 0.5 RPE-Differenz für Konsolidierung
+    (siehe journal.txt Eintrag zur Frage 8.2).
+    """
+
+    def _alle_saetze(self):
+        return Satz.objects.filter(einheit__user=self.user, ist_aufwaermsatz=False)
+
+    def _add_session(self, days_ago, gewicht=80, wdh=8, rpe=None):
+        session = self._make_session(days_ago=days_ago)
+        self._add_satz(session, gewicht=gewicht, wiederholungen=wdh, rpe=rpe)
+        return session
+
+    def _classify(self):
+        _, pr = _find_best_1rm_satz(self._alle_saetze())
+        return classify_progression_status(self._alle_saetze(), pr)
+
+    def test_no_data_when_pr_satz_missing(self):
+        result = classify_progression_status(self._alle_saetze(), None)
+        self.assertEqual(result["status"], "no_data")
+
+    def test_active_progression_when_recent_pr(self):
+        """PR ≤ 7 Tage alt → active_progression."""
+        self._add_session(days_ago=20, gewicht=70)  # älter, niedriger
+        self._add_session(days_ago=2, gewicht=80)  # frischer PR
+        result = self._classify()
+        self.assertEqual(result["status"], "active_progression")
+
+    def test_observe_status_for_pr_8_to_14_days_old(self):
+        """PR 8–14 Tage alt → observe."""
+        self._add_session(days_ago=30, gewicht=70)
+        self._add_session(days_ago=10, gewicht=80)
+        result = self._classify()
+        self.assertEqual(result["status"], "observe")
+
+    def test_consolidation_when_weight_stable_rpe_falling(self):
+        """Gleiches Gewicht, RPE sinkt um ≥ 0.5 zwischen first/second half."""
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, rpe=rpe)
+        result = self._classify()
+        self.assertEqual(result["status"], "consolidation")
+        self.assertGreaterEqual(result["rpe_delta"], 0.5)
+
+    def test_consolidation_when_weight_rising_rpe_falling(self):
+        """Gewicht steigt leicht, RPE sinkt → trotzdem consolidation (nicht regression)."""
+        # PR bei alter Session, aktuell etwas niedriger aber RPE deutlich besser
+        for days_ago, rpe, gewicht in [(25, 9.5, 80), (18, 9.0, 78), (10, 8.5, 79), (3, 8.0, 80)]:
+            self._add_session(days_ago=days_ago, gewicht=gewicht, rpe=rpe)
+        result = self._classify()
+        # Konsolidierung schlägt zu, kein Regression-Trigger (Drop < 5%)
+        self.assertEqual(result["status"], "consolidation")
+
+    def test_plateau_light_when_weight_stable_rpe_stable(self):
+        """15-42 Tage seit PR, RPE stabil → plateau_light."""
+        for days_ago, rpe in [(25, 9.0), (18, 9.0), (10, 9.0), (3, 9.0)]:
+            self._add_session(days_ago=days_ago, rpe=rpe)
+        result = self._classify()
+        self.assertEqual(result["status"], "plateau_light")
+
+    def test_plateau_when_pr_old_43_to_84_days(self):
+        """43-84 Tage seit PR → plateau (full)."""
+        # PR bei day 50, aktuelle Sätze gleiches Gewicht (PR-Tie-Break: ältester wins)
+        self._add_session(days_ago=50, gewicht=80, rpe=9.0)
+        for days_ago in [25, 18, 10, 3]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=9.0)
+        result = self._classify()
+        self.assertEqual(result["status"], "plateau")
+
+    def test_plateau_long_when_pr_more_than_84_days(self):
+        """> 84 Tage seit PR → plateau_long."""
+        self._add_session(days_ago=120, gewicht=80, rpe=9.0)
+        for days_ago in [25, 18, 10, 3]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=9.0)
+        result = self._classify()
+        self.assertEqual(result["status"], "plateau_long")
+
+    def test_regression_when_weight_falling_more_than_5pct(self):
+        """1RM-Drop > 5% → regression (überlagert alles andere)."""
+        # PR bei 100kg vor 60d, jetzt nur 80kg = 20% Drop
+        self._add_session(days_ago=60, gewicht=100, wdh=5)
+        self._add_session(days_ago=5, gewicht=80, wdh=5)
+        result = self._classify()
+        self.assertEqual(result["status"], "regression")
+        self.assertGreater(result["weight_drop_pct"], 5)
+
+    def test_regression_not_masked_by_falling_rpe(self):
+        """Konsolidierung darf Regression nicht maskieren."""
+        # PR bei 100kg, jetzt 80kg (>5% Drop) UND RPE sinkt
+        self._add_session(days_ago=60, gewicht=100, wdh=5, rpe=9.0)
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=rpe)
+        result = self._classify()
+        # Trotz sinkendem RPE: Regression schlägt vor, weil Gewicht massiv abgefallen ist
+        self.assertEqual(result["status"], "regression")
+
+    def test_pause_when_no_current_data(self):
+        """Übung seit > 4 Wochen nicht trainiert → pause."""
+        # PR vor 50 Tagen, danach nichts mehr (keine Sätze in last 4w)
+        self._add_session(days_ago=50, gewicht=80, rpe=8.0)
+        self._add_session(days_ago=45, gewicht=80, rpe=8.0)
+        result = self._classify()
+        self.assertEqual(result["status"], "pause")
+        self.assertEqual(result["cur_4w_n"], 0)
+
+    def test_pause_with_one_recent_set_but_no_drop(self):
+        """1 Satz in letzten 4w, gleiches Gewicht → pause (Schwelle: < 2)."""
+        self._add_session(days_ago=50, gewicht=80, rpe=8.0)
+        self._add_session(days_ago=10, gewicht=80, rpe=8.0)  # nur 1 Satz in letzten 4w
+        result = self._classify()
+        self.assertEqual(result["status"], "pause")
+
+    def test_no_consolidation_without_enough_rpe_data(self):
+        """< 4 RPE-Sätze in letzten 4w → kein Konsolidierungs-Check, fallback auf plateau."""
+        self._add_session(days_ago=40, gewicht=80, rpe=9.5)  # PR
+        # Nur 3 Sätze mit RPE in letzten 4w (< PROGRESSION_RPE_MIN_SETS=4)
+        for days_ago, rpe in [(20, 9.5), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=rpe)
+        result = self._classify()
+        # Keine Konsolidierung, fällt auf plateau_light (40 days seit PR)
+        self.assertEqual(result["status"], "plateau_light")
+
+    def test_classification_fields_populated(self):
+        """Diagnose-Felder im Result vorhanden für Tooltip-Begründungen."""
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, rpe=rpe)
+        result = self._classify()
+        self.assertIsNotNone(result["rpe_first_half"])
+        self.assertIsNotNone(result["rpe_second_half"])
+        self.assertIsNotNone(result["rpe_delta"])
+        self.assertIsNotNone(result["weight_drop_pct"])
+        self.assertGreaterEqual(result["cur_4w_n"], 4)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

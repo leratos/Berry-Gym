@@ -303,7 +303,16 @@
                             <td class="text-center">{{ item.tage_seit_pr }}</td>
                             <td class="text-center text-muted">{{ item.letzter_pr_datum }}</td>
                             <td class="text-end">
-                                <span class="badge bg-{{ item.farbe }}">{{ item.status }}</span>
+                                <span class="badge bg-{{ item.status_farbe }}"
+                                    {% if item.status == 'consolidation' and item.rpe_first_half %}
+                                    title="{% blocktrans with first=item.rpe_first_half second=item.rpe_second_half %}RPE sank von {{ first }} auf {{ second }} (letzte 4 Wochen){% endblocktrans %}"
+                                    {% elif item.status == 'regression' and item.weight_drop_pct %}
+                                    title="{% blocktrans with pct=item.weight_drop_pct %}1RM-Drop {{ pct }}% gegenüber PR{% endblocktrans %}"
+                                    {% elif item.status == 'pause' %}
+                                    title="{% trans 'Diese Übung wurde in den letzten 4 Wochen nicht trainiert' %}"
+                                    {% endif %}>
+                                    {{ item.status_label }}
+                                </span>
                             </td>
                         </tr>
                         {% endfor %}
