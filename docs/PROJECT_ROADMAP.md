@@ -491,6 +491,53 @@ keine neue Route – alles in `training_stats.py` + `training_stats.html` ergän
 
 ---
 
+## Phase 23 – Zeitfenster-basierte Trainingsanalysen *(mittel, Statistik-Hygiene)*
+**Branch:** `feature/phase23-time-windowed-stats`
+**Status:** 📋 Konzept (06.05.2026)
+**Quelle:** Auswertung 30-Tage-PDF-Export (Mai 2026), User-Feedback zur RPE-Analyse
+
+📄 **Detailkonzept:** [`docs/phase23_concept.md`](phase23_concept.md)
+
+### Hintergrund / Problem
+Mehrere Kennzahlen im Training Report nutzen einen All-Time-Schnitt über alle erfassten Sessions. Das verzerrt das Bild systematisch, wenn der User sein Trainingsverhalten bewusst ändert – die korrigierte Praxis wird durch das alte Verhalten überschrieben.
+
+Konkret im Mai-2026-Report: RPE-10-Anteil 19,0 % (All-Time) löst Übertrainings-Warnung aus, obwohl die letzten 4 Wochen bei <7 % liegen. Die 19 % stammen aus den ersten 11+ Wochen Trainingshistorie und repräsentieren nicht den aktuellen Zustand.
+
+Folgeprobleme: Volumen-Trend ohne RPE-Kontext irreführend (bewusste Intensitäts-Reduktion sieht aus wie Regression), Plateau-Logik wendet Konsolidierungs-Erkennung inkonsistent an, Ermüdungs-Index nutzt vermutlich anderen Zeitraum als RPE-Verteilung im selben Report (Inkonsistenz innerhalb desselben Dokuments).
+
+### Geplante Lösung
+Drei zusammenhängende Korrekturen mit gemeinsamer Grundidee: **Zeitfenster explizit machen statt implizit All-Time.** Andere Analysen (Muskelgruppen-Balance, Push/Pull) nutzen bereits 30-Tage-Fenster – RPE- und Volumen-Auswertung sind hier inkonsistent.
+
+| # | Aufgabe | Details |
+|---|---|---|
+| 23.1 | RPE-Verteilung mit gestaffelten Zeitfenstern | RPE-Analyse zeigt Werte für letzte 2 Wochen / letzte 4 Wochen / Gesamt. Bewertung basiert auf 4-Wochen-Wert. Empfehlungen zitieren Zeitraum. |
+| 23.2 | Effektives Volumen als zusätzliche Metrik | Neben Tonnage zweite Linie "Effektives Volumen" (nur RPE 7–9-Sätze). Trennt Junk Volume und Failure Volume ab. Zweite Linie im Wochen-Chart. |
+| 23.3 | Plateau-Logik vereinheitlicht | Konsolidierungs-Erkennung (RPE sinkt bei stabilem/steigendem Gewicht) konsistent auf alle Plateau-Kandidaten anwenden. Aktuell inkonsistent angewendet. |
+| 23.4 | Ermüdungs-Index Zeitfenster-Konsistenz | Vereinheitlichen auf festes 14-Tage-Fenster für alle Komponenten (Volumen/RPE/Frequenz). Vorab: Dead-Code-Status von `calculate_fatigue_index` klären (Tech-Debt aus Phase 9.4). |
+| 23.5 | PDF-Report-Konsistenz *(optional)* | PDF-Export muss dieselbe Zeitfenster-Logik wie Live-Stats nutzen. Bestehende Tech-Debt aus Phase 9.4 (alte Heuristik im PDF) angleichen. Kann als 23.x ausgelagert werden. |
+
+### Betroffene Dateien
+- `core/utils/advanced_stats.py` – RPE-Verteilung, Plateau-Logik, evtl. Fatigue-Index
+- `core/views/training_stats.py` – Effektives Volumen, Zeitfenster-Helfer
+- `core/templates/core/training_stats.html` – RPE-Karte mit drei Zeiträumen, zweite Volumen-Linie
+- `core/templates/core/training_pdf_simple.html` – PDF-Versionen analoger Sektionen
+- `core/export/stats_collector.py` – Datenstruktur für drei Zeitfenster
+- `core/tests/test_training_stats.py`, `test_advanced_stats.py` – neue Testfälle
+
+### Abhängigkeiten
+- Phase 9.3 (RPE-10-Warnung) – bestehende Logik wird zeitfenster-aware umgebaut
+- Phase 9.4 (Ermüdungs-Index Refactoring) – Dead-Code-Status von `calculate_fatigue_index` muss vor 23.4 geklärt werden
+- Phase 22 (Aktiver-Plan-Filter) – Reihenfolge: erst Plan-Filter, dann Zeitfenster innerhalb des Plans
+
+### Abgrenzung
+- KEINE Änderung am Plan-Generator (kein RPE-Profil als Generator-Input)
+- KEINE neuen Trainingsblock-Features
+- KEINE Änderung der Schwellenwerte (12–20 Sätze, RPE 7–9 etc.) – nur Berechnungs-Zeitraum
+- All-Time-Werte bleiben sichtbar, nicht ersatzlos gestrichen
+- 23.5 (PDF-Konsistenz) optional – falls Scope zu groß, in 23.x ausgliedern
+
+---
+
 ## Bewusst NICHT in dieser Roadmap
 
 - **Ernährungstracking:** Scope bleibt Trainings-Tool. Ein Basismodul (kcal + Protein) bringt zu wenig Nutzen bei zu wenig konsequenter Eingabe. Wer Ernährung trackt, nutzt ein dediziertes Tool dafür
