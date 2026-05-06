@@ -3,9 +3,22 @@ Advanced Training Statistics - Helper Functions
 Provides comprehensive analysis for training progression, consistency, and performance.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.utils import timezone
+
+# Phase 23: Zeitfenster-Konstanten für gestaffelte Trainingsanalysen
+WINDOW_2W_DAYS = 14
+WINDOW_4W_DAYS = 28
+# Minimum Sätze, damit ein Zeitfenster valide auswertbar ist (Konzept 3.4 / 8.3).
+# Empirisch justierbar – aktuell konservativer Default.
+MIN_SETS_FOR_WINDOW = 30
+# Minimum Sätze für 2w-Hinweis-Logik (kleiner als MIN_SETS_FOR_WINDOW, da 2w
+# inhaltlich weniger Aussagekraft braucht – nur "Trend ändert sich"-Signal).
+MIN_SETS_FOR_DIVERGENCE = 10
+# Schwelle in Prozentpunkten, ab der ein Trend-Hinweis "Verhalten weicht ab"
+# zwischen 2-Wochen- und 4-Wochen-RPE-10-Anteil ausgelöst wird (Konzept 3.3).
+DIVERGENCE_THRESHOLD_PCT = 5.0
 
 
 def calculate_plateau_analysis(alle_saetze, top_uebungen):
@@ -622,4 +635,247 @@ def calculate_rpe_quality_analysis(alle_saetze):
         "bewertung_farbe": bewertung_farbe,
         "empfehlungen": empfehlungen,
         "gesamt_saetze": gesamt,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23: Zeitfenster-basierte Trainingsanalysen
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _normalize_date_pair(reference_date, plan_start):
+    """Bring reference_date and plan_start to the same date/datetime kind.
+
+    Caller-side ``reference_date`` may be ``datetime`` (PDF path) or ``date``
+    (live-stats view). ``plan_start`` from :func:`get_active_plan_start_date`
+    is a ``datetime``. We coerce ``plan_start`` to match ``reference_date``'s
+    kind so comparisons in :func:`get_time_windows` work without TypeError.
+    """
+    if plan_start is None:
+        return reference_date, plan_start
+    ref_is_dt = isinstance(reference_date, datetime)
+    ps_is_dt = isinstance(plan_start, datetime)
+    if ref_is_dt and not ps_is_dt:
+        # plan_start is date → expand to start-of-day datetime in current tz
+        plan_start = datetime.combine(plan_start, datetime.min.time(), tzinfo=reference_date.tzinfo)
+    elif not ref_is_dt and ps_is_dt:
+        # plan_start is datetime → drop time component
+        plan_start = plan_start.date()
+    return reference_date, plan_start
+
+
+def get_time_windows(reference_date=None, plan_start=None):
+    """
+    Liefert Standard-Zeitfenster für Phase-23-Analysen.
+
+    Drei Fenster:
+      - "2w": kurzfristig (14 Tage), aktueller Zustand
+      - "4w": mittelfristig (28 Tage), primäre Steuerungsgröße
+      - "all": all-time (Start = None), historischer Kontext
+
+    Optional ``plan_start``: clamped Window-Starts auf ``max(start, plan_start)`` –
+    so respektieren Auswertungen den aktiven Plan-Block (Phase-22-Konsistenz).
+    "all" wird **nicht** geclamped – All-Time soll All-Time bleiben.
+
+    ``reference_date`` und ``plan_start`` dürfen je ``date`` oder ``datetime``
+    sein – beide werden intern auf denselben Typ normalisiert.
+
+    Returns:
+        dict[str, tuple[date|datetime|None, date|datetime]]:
+            {"2w": (start, end), "4w": (start, end), "all": (None, end)}
+    """
+    if reference_date is None:
+        reference_date = timezone.now()
+
+    reference_date, plan_start = _normalize_date_pair(reference_date, plan_start)
+
+    two_w_start = reference_date - timedelta(days=WINDOW_2W_DAYS)
+    four_w_start = reference_date - timedelta(days=WINDOW_4W_DAYS)
+
+    if plan_start is not None:
+        if plan_start > two_w_start:
+            two_w_start = plan_start
+        if plan_start > four_w_start:
+            four_w_start = plan_start
+
+    return {
+        "2w": (two_w_start, reference_date),
+        "4w": (four_w_start, reference_date),
+        "all": (None, reference_date),
+    }
+
+
+def _filter_saetze_by_window(alle_saetze, start, end):
+    """Apply einheit__datum window filter to a Satz queryset."""
+    qs = alle_saetze.filter(einheit__datum__lte=end)
+    if start is not None:
+        qs = qs.filter(einheit__datum__gte=start)
+    return qs
+
+
+def _evaluate_rpe_failure_rate(failure_rate, primary_label):
+    """
+    Map failure_rate (RPE-10 percent) to (evaluation, recommendation).
+
+    Schwellenwerte aus Phase 9.3 (unverändert in Phase 23):
+        <5%   → "optimal"
+        5-15% → "akzeptabel"
+        >15%  → "risiko"
+    """
+    if failure_rate < 5:
+        return (
+            "optimal",
+            f"{primary_label}: {failure_rate}% RPE-10 – innerhalb Ziel (<5 %).",
+        )
+    if failure_rate <= 15:
+        return (
+            "akzeptabel",
+            f"{primary_label}: {failure_rate}% RPE-10 – im akzeptablen Bereich (<15 %).",
+        )
+    return (
+        "risiko",
+        f"{primary_label}: {failure_rate}% RPE-10 – Übertrainings-Risiko.",
+    )
+
+
+def calculate_rpe_quality_analysis_windowed(
+    alle_saetze,
+    reference_date=None,
+    plan_start=None,
+    min_sets=MIN_SETS_FOR_WINDOW,
+):
+    """
+    RPE-Qualitätsanalyse für drei gestaffelte Zeitfenster (2w / 4w / all).
+
+    Wrapper um :func:`calculate_rpe_quality_analysis` – pro Fenster ein Aufruf.
+    Bewertung und Empfehlung leiten sich vom **4-Wochen-Wert** ab. Bei zu wenig
+    Daten im 4-Wochen-Fenster fällt der primäre Window auf "all" zurück, der
+    4w-Wert bleibt aber zur Anzeige erhalten (mit ``insufficient_data``-Flag).
+    Das 2-Wochen-Fenster wird auf ``None`` gesetzt, wenn unter ``min_sets``
+    Sätze – Konzept 3.4: "n.a. anzeigen".
+
+    Args:
+        alle_saetze: Satz-Queryset (User-vorgefiltert, sonst beliebig).
+        reference_date: Stichtag (default: ``timezone.now()``).
+        plan_start: Optionaler Plan-Startzeitpunkt (Phase 22) zum Clamping.
+        min_sets: Schwelle, ab der ein Fenster valide auswertbar ist.
+
+    Returns:
+        dict mit:
+            - ``windows``: {"2w": result|None, "4w": result|None, "all": result|None}
+            - ``primary_window``: "4w" oder "all"
+            - ``evaluation``: "optimal" | "akzeptabel" | "risiko" | None
+            - ``recommendation``: Empfehlungstext mit Zeitraum-Zitat oder None
+            - ``divergence_hint``: Hinweis bei Trend-Wechsel zwischen 2w/4w oder None
+            - ``window_meta``: pro Fenster {"start", "end", "n_sets", "insufficient_data"}
+            - ``insufficient_4w``: True wenn 4w unter min_sets
+            - ``plan_clamped``: True wenn plan_start das 4w-Fenster verkürzt hat
+        Returns ``None`` wenn in keinem Fenster RPE-Daten vorliegen.
+    """
+    if reference_date is None:
+        reference_date = timezone.now()
+
+    windows = get_time_windows(reference_date, plan_start=plan_start)
+    raw_results = {}
+    meta = {}
+
+    for key, (start, end) in windows.items():
+        qs = _filter_saetze_by_window(alle_saetze, start, end)
+        result = calculate_rpe_quality_analysis(qs)
+        n_sets = result["gesamt_saetze"] if result else 0
+        raw_results[key] = result
+        meta[key] = {
+            "start": start,
+            "end": end,
+            "n_sets": n_sets,
+            "insufficient_data": False,
+        }
+
+    # Wenn überhaupt keine RPE-Daten existieren: None zurückgeben.
+    if all(r is None for r in raw_results.values()):
+        return None
+
+    # 2w mit zu wenig Daten → ausblenden ("n.a." anzeigen, Konzept 3.4)
+    if raw_results["2w"] is not None and meta["2w"]["n_sets"] < min_sets:
+        meta["2w"]["insufficient_data"] = True
+        raw_results["2w"] = None
+
+    # 4w mit zu wenig Daten → 4w-Werte bleiben zur Anzeige erhalten,
+    # aber primary fällt auf "all" zurück (Konzept 3.4).
+    insufficient_4w = raw_results["4w"] is None or meta["4w"]["n_sets"] < min_sets
+    if insufficient_4w and raw_results["4w"] is not None:
+        meta["4w"]["insufficient_data"] = True
+
+    primary = "all" if insufficient_4w else "4w"
+    primary_result = raw_results[primary]
+    if primary_result is None:
+        # Kann passieren, wenn 4w insufficient und all leer (theoretisch).
+        primary_result = raw_results["4w"] or raw_results["2w"] or raw_results["all"]
+
+    evaluation = None
+    recommendation = None
+    if primary_result is not None:
+        primary_label = "Letzte 4 Wochen" if primary == "4w" else "Gesamt"
+        evaluation, recommendation = _evaluate_rpe_failure_rate(
+            primary_result["failure_rate"], primary_label
+        )
+        if insufficient_4w and primary == "all":
+            recommendation = (
+                f"Zu wenig Daten für 4-Wochen-Auswertung "
+                f"(n={meta['4w']['n_sets']}/{min_sets}) – Bewertung basiert "
+                f"auf Gesamtzeitraum: {primary_result['failure_rate']}% RPE-10."
+            )
+
+    # Trend-Hinweis: 2w-Wert weicht spürbar vom 4w-Wert ab.
+    divergence_hint = None
+    res_2w = raw_results["2w"]
+    res_4w = raw_results["4w"]
+    if (
+        res_2w is not None
+        and res_4w is not None
+        and meta["2w"]["n_sets"] >= MIN_SETS_FOR_DIVERGENCE
+        and abs(res_2w["failure_rate"] - res_4w["failure_rate"]) > DIVERGENCE_THRESHOLD_PCT
+    ):
+        if res_2w["failure_rate"] < res_4w["failure_rate"]:
+            divergence_hint = (
+                f"Trend verbessert sich (2 Wochen: {res_2w['failure_rate']}%, "
+                f"4 Wochen: {res_4w['failure_rate']}%)."
+            )
+        else:
+            divergence_hint = (
+                f"Trend verschlechtert sich (2 Wochen: {res_2w['failure_rate']}%, "
+                f"4 Wochen: {res_4w['failure_rate']}%)."
+            )
+
+    # plan_start clamped das 4w-Fenster, wenn es jünger ist als der Standard-Start.
+    plan_clamped = False
+    if plan_start is not None:
+        _ref, _ps = _normalize_date_pair(reference_date, plan_start)
+        plan_clamped = _ps > _ref - timedelta(days=WINDOW_4W_DAYS)
+
+    # Vorberechnete Karten-Daten für Templates – vermeidet dict-key-access-Filter.
+    window_label_map = {"2w": "2 Wochen", "4w": "4 Wochen", "all": "Gesamt"}
+    cards = [
+        {
+            "key": key,
+            "label": window_label_map[key],
+            "is_primary": key == primary,
+            "result": raw_results[key],
+            "n_sets": meta[key]["n_sets"],
+            "insufficient_data": meta[key]["insufficient_data"],
+        }
+        for key in ("2w", "4w", "all")
+    ]
+
+    return {
+        "windows": raw_results,
+        "primary_window": primary,
+        "primary_result": raw_results[primary],
+        "evaluation": evaluation,
+        "recommendation": recommendation,
+        "divergence_hint": divergence_hint,
+        "window_meta": meta,
+        "insufficient_4w": insufficient_4w,
+        "plan_clamped": plan_clamped,
+        "cards": cards,
     }

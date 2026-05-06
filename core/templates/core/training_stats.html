@@ -76,7 +76,47 @@
             </div>
         </div>
 
-        {% if rpe10_anteil is not None %}
+        {% if rpe_quality_windowed %}
+        {# Phase 23.1: RPE-10-Anteil mit gestaffelten Zeitfenstern (2w / 4w / all). 4w ist primär. #}
+        {% with rqw=rpe_quality_windowed %}
+        <div class="card mb-4 shadow-sm {% if rqw.evaluation == 'risiko' %}border-danger{% elif rqw.evaluation == 'akzeptabel' %}border-warning{% else %}border-success{% endif %}">
+            <div class="card-body">
+                <h6 class="mb-3">
+                    <i class="bi {% if rqw.evaluation == 'risiko' %}bi-exclamation-triangle-fill text-danger{% elif rqw.evaluation == 'akzeptabel' %}bi-exclamation-circle text-warning{% else %}bi-check-circle-fill text-success{% endif %} me-2"></i>
+                    {% trans "RPE-10-Anteil" %}
+                    {% if rqw.plan_clamped %}<small class="text-muted">({% trans "seit Plan-Start" %})</small>{% endif %}
+                </h6>
+                <div class="row g-2 text-center">
+                    {% for card in rqw.cards %}
+                    <div class="col-4">
+                        <div class="p-2 rounded {% if card.is_primary %}bg-primary-subtle border border-primary{% else %}bg-light{% endif %}">
+                            <div class="small text-uppercase text-muted" style="letter-spacing: 0.5px;">
+                                {% if card.is_primary %}<strong>★ {{ card.label }}</strong>{% else %}{{ card.label }}{% endif %}
+                            </div>
+                            {% if card.result %}
+                            <div class="fw-bold" style="font-size: 1.5rem;">{{ card.result.failure_rate }}%</div>
+                            <div class="small text-muted">n={{ card.n_sets }}</div>
+                            {% else %}
+                            <div class="text-muted" style="font-size: 1.25rem;">n.a.</div>
+                            <div class="small text-muted">n={{ card.n_sets }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if rqw.recommendation %}
+                <p class="mb-0 mt-3 small {% if rqw.evaluation == 'risiko' %}text-danger{% elif rqw.evaluation == 'akzeptabel' %}text-warning{% else %}text-success{% endif %}">
+                    {{ rqw.recommendation }}
+                </p>
+                {% endif %}
+                {% if rqw.divergence_hint %}
+                <p class="mb-0 mt-2 small text-muted"><i class="bi bi-info-circle me-1"></i>{{ rqw.divergence_hint }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endwith %}
+        {% elif rpe10_anteil is not None %}
+        {# Backwards-Compat: kein windowed-Result (z.B. keine Sätze) → altes Single-Value-Widget #}
         <div class="card mb-4 shadow-sm {% if rpe10_anteil > 15 %}border-danger{% elif rpe10_anteil > 5 %}border-warning{% else %}border-success{% endif %}">
             <div class="card-body d-flex align-items-center justify-content-between">
                 <div>

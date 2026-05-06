@@ -5629,3 +5629,89 @@ PROJECT_ROADMAP.md. Wird in dieser Session bewusst NICHT mit-gefixt
 - `docs/PROJECT_ROADMAP.md` – Phase 23 Block eingefügt
 - `docs/phase23_concept.md` – neu
 - `docs/journal.txt` – diese Einträge
+
+
+## Abgeschlossen: Phase 23.1 – RPE-Verteilung mit gestaffelten Zeitfenstern (06.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Vorab-Klärung der offenen Fragen aus Konzept Abschnitt 8:**
+
+- **8.1 Fatigue-Index Dead-Code-Status:** GEKLÄRT – `calculate_fatigue_index`
+  in `core/utils/advanced_stats.py:270` ist KEIN Dead Code mehr. Seit Phase 14
+  delegiert sie an dieselben Dashboard-Helfer (`_get_volume_spike_fatigue`,
+  `_get_rpe_fatigue`, `_get_frequency_fatigue`, `_get_cardio_fatigue`) wie
+  `core/views/training_stats.py:_calculate_fatigue_index`. PDF und Live nutzen
+  bereits dieselbe Fatigue-Logik. Konsequenz für Phase 23.4: Es gibt keine
+  PDF/Live-Divergenz mehr zu beheben – die Tech-Debt aus Phase 9.4 ist
+  aufgelöst. Phase 23.4 reduziert sich auf "konsistentes 14-Tage-Fenster für
+  RPE-Komponente verifizieren".
+- **8.4 Plan-Filter & Zeitfenster Reihenfolge:** Option (a) bestätigt – Plan
+  filtert das 4w-Fenster. Phase 22 liefert bereits passende Helfer in
+  `plan_helpers.py`: `get_active_plan_start_date` und `is_active_plan_too_new`.
+  Phase 23.1 nutzt beide.
+
+**Implementierung Task 23.1:**
+
+Drei kompakte RPE-10-Karten (2 Wochen / 4 Wochen / Gesamt) statt nur einem
+All-Time- oder 14-Tage-Wert. Bewertung und Empfehlung leiten sich vom
+4-Wochen-Wert ab. Bei zu wenig Daten in 4 Wochen fällt der primäre Window
+auf "all" zurück, mit erklärender Empfehlung. Trend-Hinweis erscheint, wenn
+2-Wochen-Wert >5 Prozentpunkte vom 4-Wochen-Wert abweicht.
+
+**Neue Funktionen in `core/utils/advanced_stats.py`:**
+
+- `get_time_windows(reference_date, plan_start)` – liefert dict mit 2w/4w/all-Tupeln,
+  unterstützt date+datetime gemischt (auto-Normalisierung), clamped 2w/4w
+  auf Plan-Start wenn dieser jünger ist
+- `calculate_rpe_quality_analysis_windowed(...)` – wrappt bestehende
+  `calculate_rpe_quality_analysis` für drei Zeitfenster, baut präsentationsfertige
+  `cards`-Liste, Bewertungs-Mapping aus Phase 9.3 unverändert übernommen
+
+**Neue Konstanten:** `WINDOW_2W_DAYS=14`, `WINDOW_4W_DAYS=28`,
+`MIN_SETS_FOR_WINDOW=30`, `MIN_SETS_FOR_DIVERGENCE=10`,
+`DIVERGENCE_THRESHOLD_PCT=5.0`.
+
+**UI-Anpassungen:**
+
+- `core/templates/core/training_pdf_simple.html` – RPE-Sektion zeigt drei
+  Karten oben, Bewertung/Detail/Empfehlungen referenzieren das **primäre
+  Fenster** (4w bei genug Daten, sonst all). Backwards-Compat via `{% elif rpe_quality %}`
+  für ältere Datensammlungen.
+- `core/templates/core/training_stats.html` – Live-Stats-Seite ersetzt das
+  einzelne `rpe10_anteil`-Widget durch eine Drei-Karten-Variante mit
+  hervorgehobenem 4-Wochen-Wert. Plan-Clamping wird im Karten-Header
+  ("seit Plan-Start") signalisiert.
+
+**Caller-Anpassungen:**
+
+- `core/export/stats_collector.py` – ruft windowed-Variante auf, übergibt
+  `plan_start` nur wenn aktiver Plan nicht zu jung (Konsistenz mit Phase 22).
+  Liefert `rpe_quality_windowed` zusätzlich zum bestehenden `rpe_quality`
+  (Backwards-Compat).
+- `core/views/training_stats.py` – analoge Logik für Live-Stats. Importiert
+  `get_active_plan_start_date` und `is_active_plan_too_new` aus
+  `plan_helpers`.
+
+**Tests:** `core/tests/test_advanced_stats.py` um zwei neue TestCases erweitert
+(`TestGetTimeWindows`, `TestRpeDistributionWindowed`) – 13 neue Testfälle
+(alle 6 aus Konzept 3.5 + 7 zusätzliche für `get_time_windows`-Edge-Cases,
+Window-Meta, Min-Sets-Konfiguration, Trend-Hinweis-Untergrenze). 164 Tests
+in den betroffenen Modulen weiterhin grün, 24 Export-Tests grün.
+
+**Bug während Implementierung gefixt:** `get_active_plan_start_date` liefert
+`datetime`, der Live-View nutzt `heute = timezone.now().date()`. Das führte
+zu `TypeError: can't compare datetime.datetime to datetime.date`. Lösung:
+`_normalize_date_pair`-Helfer normalisiert beide auf denselben Typ.
+
+**Geänderte Dateien:**
+- `core/utils/advanced_stats.py` – neue Funktionen + Konstanten
+- `core/export/stats_collector.py` – windowed-Aufruf + neues Result-Feld
+- `core/views/training_stats.py` – windowed-Aufruf + Context
+- `core/templates/core/training_pdf_simple.html` – Drei-Karten-Layout
+- `core/templates/core/training_stats.html` – Drei-Karten-Layout
+- `core/tests/test_advanced_stats.py` – 13 neue Testfälle
+
+**Nächster Schritt (Reihenfolge laut Konzept Abschnitt 9):** 23.3 (Plateau-Logik
+vereinheitlicht) – nutzt Zeitfenster-Helper aus 23.1 wieder. Vor Implementierung:
+Frage 8.2 (Schwellenwert "RPE sinkt") empirisch prüfen.

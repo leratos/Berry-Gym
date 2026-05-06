@@ -40,8 +40,13 @@ from ..models import (
     Uebung,
     UserProfile,
 )
+from ..utils.advanced_stats import calculate_rpe_quality_analysis_windowed
 from ..utils.periodization import get_block_age_warning
-from ..utils.plan_helpers import get_active_plan_exercise_ids
+from ..utils.plan_helpers import (
+    get_active_plan_exercise_ids,
+    get_active_plan_start_date,
+    is_active_plan_too_new,
+)
 from .body_tracking import _prepare_body_chart_data
 
 logger = logging.getLogger(__name__)
@@ -2193,6 +2198,19 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     # RPE-10 metric (Phase 9.3)
     rpe10_anteil = _get_rpe10_anteil(request.user, heute)
 
+    # Phase 23.1: Zeitfenster-basierte RPE-Verteilung (2w / 4w / all)
+    rpe_active_uebung_ids = get_active_plan_exercise_ids(request.user)
+    rpe_plan_start = (
+        get_active_plan_start_date(request.user)
+        if rpe_active_uebung_ids is not None and not is_active_plan_too_new(request.user)
+        else None
+    )
+    rpe_quality_windowed = calculate_rpe_quality_analysis_windowed(
+        Satz.objects.filter(einheit__user=request.user),
+        reference_date=heute,
+        plan_start=rpe_plan_start,
+    )
+
     # Phase 21.1: Muskelgruppen-Balance Soll-Bereich
     muscle_soll = _calc_muscle_soll_bereiche(stats_code, request.user)
 
@@ -2232,6 +2250,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "deload_warnings": deload_warnings,
         "svg_muscle_data_json": json.dumps(svg_muscle_data),
         "rpe10_anteil": rpe10_anteil,
+        "rpe_quality_windowed": rpe_quality_windowed,
         # Phase 21
         "muscle_soll_json": json.dumps(muscle_soll),
         "push_pull": push_pull,
