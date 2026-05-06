@@ -5580,3 +5580,52 @@ nur Kraftstandards. Plan-Filter wirkt dort schon transparent durch
 **Geänderte Dateien:**
 - `core/templates/core/training_pdf_simple.html` – neue Spalte "Vergleich"
 - `docs/journal.txt` – dieser Nachtrag
+
+
+## In Arbeit: Phase 23 Konzept – Zeitfenster-basierte Trainingsanalysen (06.05.2026)
+
+Reines Konzept-Erstellen, kein Code. Auslöser: Mai-2026-PDF-Report
+zeigt RPE-10-Anteil 19 % (All-Time), obwohl letzte 4 Wochen <7 %.
+Strukturelles Problem in mehreren Analysen: All-Time-Schnitt verzerrt
+Bild bei bewussten Verhaltensänderungen.
+
+**Nächste Schritte:**
+1. PROJECT_ROADMAP.md – Phase 23 einfügen (Kurzfassung)
+2. docs/phase23_concept.md – Detail-Fahrplan (neu, mehrteilig)
+3. Journal-Abschluss
+
+Kein Feature-Branch (Doku-Phase). Kein Code-Touch. Kein Test-Run.
+
+
+## Abgeschlossen: Phase 23 Konzept – Zeitfenster-basierte Trainingsanalysen (06.05.2026)
+
+**Erstellt:**
+- `docs/PROJECT_ROADMAP.md` – Phase 23 als Kurzfassung eingefügt vor "Bewusst NICHT in dieser Roadmap"
+- `docs/phase23_concept.md` – neu, 564 Zeilen Detail-Fahrplan
+
+**Inhalt Phase 23 (Kurz):**
+Zeitfenster-basierte Korrektur von RPE-Verteilung (23.1), Effektivem Volumen
+(23.2), Plateau-Logik (23.3), Ermüdungs-Index (23.4) und PDF-Konsistenz
+(23.5, optional). Auslöser: Mai-2026-Report zeigt 19 % RPE-10 (All-Time)
+trotz <7 % in den letzten 4 Wochen.
+
+**Kein Code-Touch in dieser Session.** Nur Doku.
+
+**Hinweis (Inkonsistenz festgestellt):** Phase 22 (Aktiver-Plan-Filter) ist
+im Journal als abgeschlossen dokumentiert (28.04.2026), fehlt aber in
+PROJECT_ROADMAP.md. Wird in dieser Session bewusst NICHT mit-gefixt
+(Scope-Disziplin). Sollte in einem separaten Schritt nachgetragen werden.
+
+**Offene Fragen vor Phase-23-Implementierung** (siehe Konzept Abschnitt 8):
+1. Fatigue-Index Dead-Code-Status (Repo-Search erforderlich)
+2. Schwellenwerte für Konsolidierungs-Erkennung empirisch prüfen
+3. Mindest-Datenmenge pro Zeitfenster festlegen
+4. Plan-Filter und Zeitfenster Reihenfolge bestätigen
+5. Block-Typ-Awareness für 23.2 entscheiden
+
+**Empfohlene Reihenfolge bei Implementierung:** 23.1 → 23.3 → 23.2 → 23.4 → 23.5
+
+**Geänderte/neue Dateien:**
+- `docs/PROJECT_ROADMAP.md` – Phase 23 Block eingefügt
+- `docs/phase23_concept.md` – neu
+- `docs/journal.txt` – diese Einträge
