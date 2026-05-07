@@ -808,8 +808,20 @@ def get_time_windows(reference_date=None, plan_start=None):
 
 
 def _filter_saetze_by_window(alle_saetze, start, end):
-    """Apply einheit__datum window filter to a Satz queryset."""
-    qs = alle_saetze.filter(einheit__datum__lte=end)
+    """Apply einheit__datum window filter to a Satz queryset.
+
+    Bug-Fix nach Code-Review: ``Satz.einheit.datum`` ist DateTimeField. Wenn der
+    Aufrufer ``end`` als ``date`` übergibt (Live-Stats-View nutzt
+    ``timezone.now().date()``), interpretiert Django ``__lte=date`` als
+    Mitternacht des Tages → heutige Sätze nach Mitternacht werden ausgeschlossen,
+    User sieht sein gerade geloggtes Training nicht in den Karten.
+    Lösung: bei date-Werten exklusiver Vergleich gegen den Folgetag.
+    """
+    if end is not None and not isinstance(end, datetime):
+        # `end` ist ein date – inklusive bis Ende des Tages
+        qs = alle_saetze.filter(einheit__datum__lt=end + timedelta(days=1))
+    else:
+        qs = alle_saetze.filter(einheit__datum__lte=end)
     if start is not None:
         qs = qs.filter(einheit__datum__gte=start)
     return qs
@@ -853,8 +865,11 @@ def calculate_rpe_quality_analysis_windowed(
     Bewertung und Empfehlung leiten sich vom **4-Wochen-Wert** ab. Bei zu wenig
     Daten im 4-Wochen-Fenster fällt der primäre Window auf "all" zurück, der
     4w-Wert bleibt aber zur Anzeige erhalten (mit ``insufficient_data``-Flag).
-    Das 2-Wochen-Fenster wird auf ``None`` gesetzt, wenn unter ``min_sets``
-    Sätze – Konzept 3.4: "n.a. anzeigen".
+
+    Das 2-Wochen-Fenster zeigt in der Karte "n.a." wenn unter ``min_sets``
+    Sätze (Konzept 3.4), die rohen Werte in ``raw_results["2w"]`` bleiben aber
+    erhalten – Divergenz-Check (``MIN_SETS_FOR_DIVERGENCE=10``) kann sie für
+    den Trend-Hinweis weiter nutzen (Konzept 3.3).
 
     Args:
         alle_saetze: Satz-Queryset (User-vorgefiltert, sonst beliebig).
@@ -897,10 +912,14 @@ def calculate_rpe_quality_analysis_windowed(
     if all(r is None for r in raw_results.values()):
         return None
 
-    # 2w mit zu wenig Daten → ausblenden ("n.a." anzeigen, Konzept 3.4)
+    # 2w mit zu wenig Daten → Card zeigt "n.a." (Konzept 3.4), Wert bleibt aber
+    # in raw_results, damit der Divergenz-Check (MIN_SETS_FOR_DIVERGENCE=10)
+    # ihn weiter nutzen kann (Konzept 3.3 fordert Trend-Hinweis ab 10 Sätzen).
+    # Vorher wurde raw_results["2w"] zu früh auf None gesetzt → Trend-Hinweis
+    # blieb für 10–29 Sätze stumm. Bug-Fix nach Code-Review.
     if raw_results["2w"] is not None and meta["2w"]["n_sets"] < min_sets:
         meta["2w"]["insufficient_data"] = True
-        raw_results["2w"] = None
+        # raw_results["2w"] bleibt für Divergenz-Logik erhalten.
 
     # 4w mit zu wenig Daten → 4w-Werte bleiben zur Anzeige erhalten,
     # aber primary fällt auf "all" zurück (Konzept 3.4).
@@ -956,13 +975,18 @@ def calculate_rpe_quality_analysis_windowed(
         plan_clamped = _ps > _ref - timedelta(days=WINDOW_4W_DAYS)
 
     # Vorberechnete Karten-Daten für Templates – vermeidet dict-key-access-Filter.
+    # Bei 2w-insufficient_data wird das Result für die Anzeige unterdrückt
+    # (Konzept 3.4: "n.a." anzeigen) – die rohen Werte in raw_results bleiben
+    # für den Divergenz-Check intakt.
     window_label_map = {"2w": "2 Wochen", "4w": "4 Wochen", "all": "Gesamt"}
     cards = [
         {
             "key": key,
             "label": window_label_map[key],
             "is_primary": key == primary,
-            "result": raw_results[key],
+            "result": (
+                None if (key == "2w" and meta[key]["insufficient_data"]) else raw_results[key]
+            ),
             "n_sets": meta[key]["n_sets"],
             "insufficient_data": meta[key]["insufficient_data"],
         }
