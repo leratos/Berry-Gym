@@ -199,6 +199,28 @@
                 </div>
                 {% endif %}
                 <canvas id="weeklyChart" style="max-height: 300px;"></canvas>
+
+                {# Phase 23.2: Diagnose-Karte zur Volumen-Bewegung der letzten Woche #}
+                {% if volume_diagnosis %}
+                <div class="alert alert-{{ volume_diagnosis.severity }} mt-3 mb-0 small">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong><i class="bi bi-clipboard-data me-1"></i>{{ volume_diagnosis.label }}</strong>
+                            <span class="text-muted ms-2">
+                                Tonnage {{ volume_diagnosis.tonnage_trend }} · Effektives Volumen {{ volume_diagnosis.effective_trend }}
+                            </span>
+                        </div>
+                        {% if volume_diagnosis.suppressed_due_to_deload %}
+                        <span class="badge bg-secondary" title="{% trans 'Hybrid-Block-Typ-Awareness: ≥50 % der Sessions dieser Woche sind Deload' %}">
+                            Deload-Woche
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% if volume_diagnosis.message %}
+                    <div class="mt-1">{{ volume_diagnosis.message }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -479,6 +501,7 @@
 
     const weeklyLabels = {{ weekly_labels_json|safe }};
     const weeklyData = {{ weekly_data_json|safe }};
+    const weeklyEffectiveData = {{ weekly_effective_data_json|safe }};
     const aktuelleKw = "{{ aktuelle_kw }}";
     const weeklyColors = weeklyLabels.map(label =>
         label === aktuelleKw ? 'rgba(13, 202, 240, 0.35)' : '#0dcaf0'
@@ -491,16 +514,52 @@
         type: 'bar',
         data: {
             labels: weeklyLabels,
-            datasets: [{
-                label: '{% trans "Wochenvolumen (kg)" %}',
-                data: weeklyData,
-                backgroundColor: weeklyColors,
-                borderColor: weeklyBorderColors,
-                borderWidth: 1,
-                borderDash: weeklyLabels.map(label => label === aktuelleKw ? [4, 4] : [])
-            }]
+            datasets: [
+                {
+                    label: '{% trans "Tonnage (kg)" %}',
+                    data: weeklyData,
+                    backgroundColor: weeklyColors,
+                    borderColor: weeklyBorderColors,
+                    borderWidth: 1,
+                    borderDash: weeklyLabels.map(label => label === aktuelleKw ? [4, 4] : []),
+                    order: 2
+                },
+                {
+                    // Phase 23.2: zweite Linie für Effektives Volumen (RPE 7-9)
+                    type: 'line',
+                    label: '{% trans "Effektives Volumen (RPE 7-9)" %}',
+                    data: weeklyEffectiveData,
+                    borderColor: '#fd7e14',
+                    backgroundColor: 'rgba(253, 126, 20, 0.15)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#fd7e14',
+                    tension: 0.25,
+                    fill: false,
+                    order: 1
+                }
+            ]
         },
-        options: { ...chartDefaults, plugins: { legend: { display: false } } }
+        options: {
+            ...chartDefaults,
+            plugins: {
+                legend: { display: true, labels: { color: '#adb5bd', font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(items) {
+                            const idx = items[0].dataIndex;
+                            const tonnage = weeklyData[idx] || 0;
+                            const eff = weeklyEffectiveData[idx] || 0;
+                            if (tonnage > 0) {
+                                const pct = Math.round((eff / tonnage) * 100);
+                                return `Effektiv-Anteil: ${pct}%`;
+                            }
+                            return '';
+                        }
+                    }
+                }
+            }
+        }
     });
 
     new Chart(document.getElementById('muskelgruppenChart'), {

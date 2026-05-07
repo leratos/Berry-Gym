@@ -636,17 +636,38 @@ def generate_volume_chart(volumen_wochen):
 
     wochen = [w["woche"] for w in volumen_wochen]
     volumen = [w["volumen"] for w in volumen_wochen]
+    # Phase 23.2: Effektives Volumen (RPE 7-9), optional pro Woche
+    effektiv = [w.get("effektives_volumen", 0) for w in volumen_wochen]
     deload_flags = [w.get("ist_deload", False) for w in volumen_wochen]
 
     fig, ax = plt.subplots(figsize=(10, 4))
 
     x = list(range(len(wochen)))
 
-    # Line chart mit Area fill
+    # Tonnage als Hintergrund-Linie (gedämpft)
     ax.plot(
-        x, volumen, marker="o", linewidth=2, color="#0d6efd", markersize=8, label="Wochenvolumen"
+        x,
+        volumen,
+        marker="o",
+        linewidth=2,
+        color="#6c757d",
+        markersize=6,
+        label="Tonnage gesamt",
+        alpha=0.7,
     )
-    ax.fill_between(x, volumen, alpha=0.3, color="#0d6efd")
+    ax.fill_between(x, volumen, alpha=0.15, color="#6c757d")
+
+    # Phase 23.2: Effektives Volumen als Hauptlinie (kräftig blau)
+    if any(effektiv):
+        ax.plot(
+            x,
+            effektiv,
+            marker="s",
+            linewidth=2.5,
+            color="#0d6efd",
+            markersize=7,
+            label="Effektives Volumen (RPE 7-9)",
+        )
 
     # Deload-Wochen hervorheben
     deload_x = [i for i, d in enumerate(deload_flags) if d]

@@ -35,6 +35,19 @@ PAUSE_MIN_CUR_SETS = 2
 # Min. RPE-erfasste Sätze in letzten 4w für Konsolidierungs-Check.
 PROGRESSION_RPE_MIN_SETS = 4
 
+# Phase 23.2: Effektives Volumen
+# RPE-Range, der als "produktives" Volumen gilt – außerhalb davon liegt
+# Junk Volume (RPE <7, zu leicht) bzw. Failure Volume (RPE 10, recovery-teuer).
+EFFECTIVE_VOLUME_RPE_MIN = 7.0
+EFFECTIVE_VOLUME_RPE_MAX = 9.0
+# Schwelle für "Volumen sinkt/steigt"-Klassifikation (Diagnose-Tabelle 4.3).
+# 5 % Differenz Woche-zu-Woche zählt als "stabil", darüber als Trend.
+VOLUME_TREND_STABLE_PCT = 5.0
+# Hybrid-Block-Typ-Awareness (Phase 23.2 / Frage 8.5):
+# Wenn ≥50 % der Sessions einer Woche `ist_deload=True` haben, gilt die
+# Woche als Deload-Woche und der "Regression"-Hinweis wird unterdrückt.
+DELOAD_WEEK_MAJORITY_PCT = 50.0
+
 
 def _find_best_1rm_satz(uebung_saetze):
     """Liefert (best_1rm, best_satz) via Epley-Formel über alle gewichteten Sätze.
@@ -959,4 +972,143 @@ def calculate_rpe_quality_analysis_windowed(
         "insufficient_4w": insufficient_4w,
         "plan_clamped": plan_clamped,
         "cards": cards,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.2: Effektives Volumen + Diagnose-Tabelle
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def is_effective_volume_set(satz):
+    """True wenn der Satz zum produktiven Volumen zählt (RPE 7–9, gewichtet)."""
+    if satz.gewicht is None or not satz.wiederholungen or satz.rpe is None:
+        return False
+    rpe = float(satz.rpe)
+    return EFFECTIVE_VOLUME_RPE_MIN <= rpe <= EFFECTIVE_VOLUME_RPE_MAX
+
+
+def classify_volume_trend(prev_value, curr_value, stable_pct=VOLUME_TREND_STABLE_PCT):
+    """Klassifiziert eine Wert-Veränderung als ``"sinkt" | "stabil" | "steigt"``.
+
+    Default-Schwelle: 5 % Δ. Bei prev_value=0 oder None wird ``"unklar"`` zurückgegeben
+    (kein Vergleich möglich).
+    """
+    if not prev_value or prev_value <= 0 or curr_value is None:
+        return "unklar"
+    delta_pct = (curr_value - prev_value) / prev_value * 100
+    if abs(delta_pct) < stable_pct:
+        return "stabil"
+    return "steigt" if delta_pct > 0 else "sinkt"
+
+
+# Diagnose-Tabelle aus Konzept 4.3 – als (tonnage_trend, eff_trend) → diag-key.
+_VOLUME_DIAGNOSIS_MAP = {
+    ("sinkt", "sinkt"): {
+        "key": "regression",
+        "label": "Echte Regression",
+        "severity": "warning",
+        "message": (
+            "Tonnage und effektives Volumen sinken beide – echte Leistungs-Regression. "
+            "Recovery, Schlaf und Ernährung prüfen."
+        ),
+    },
+    ("sinkt", "stabil"): {
+        "key": "intensity_correction",
+        "label": "Intensitäts-Korrektur",
+        "severity": "info",
+        "message": (
+            "Tonnage sinkt, effektives Volumen bleibt stabil – bewusste Intensitäts-Reduktion "
+            "ohne Qualitätsverlust. Kein Anlass zur Sorge."
+        ),
+    },
+    ("sinkt", "steigt"): {
+        "key": "quality_improvement",
+        "label": "Qualitäts-Verbesserung",
+        "severity": "success",
+        "message": (
+            "Tonnage sinkt, effektives Volumen steigt – Junk-/Failure-Volumen wird "
+            "abgebaut, produktives Volumen wächst. Sehr gute Entwicklung."
+        ),
+    },
+    ("steigt", "sinkt"): {
+        "key": "junk_increase",
+        "label": "Mehr Junk-/Failure-Volumen",
+        "severity": "warning",
+        "message": (
+            "Tonnage steigt, effektives Volumen sinkt – mehr unproduktive Sätze "
+            "(zu leicht oder bis zum Versagen). Effizienz prüfen."
+        ),
+    },
+    ("steigt", "steigt"): {
+        "key": "growth",
+        "label": "Volumen-Wachstum",
+        "severity": "success",
+        "message": "Tonnage und effektives Volumen steigen – produktive Aufbauphase.",
+    },
+    ("stabil", "stabil"): {
+        "key": "stable",
+        "label": "Stabile Phase",
+        "severity": "info",
+        "message": "Tonnage und effektives Volumen stabil – Phase der Konsolidierung.",
+    },
+}
+
+
+def diagnose_volume_trend(
+    prev_tonnage,
+    curr_tonnage,
+    prev_effective,
+    curr_effective,
+    is_deload_week=False,
+):
+    """Diagnostiziert die Wochenvolumen-Veränderung gemäß Konzept 4.3.
+
+    Args:
+        prev_tonnage, curr_tonnage: Tonnage-Werte zwei aufeinanderfolgender Wochen
+        prev_effective, curr_effective: Effektives Volumen analog
+        is_deload_week: Hybrid-Block-Typ-Awareness (Phase 23.2 / Frage 8.5).
+            Wenn True und beide Trends "sinkt", wird die Regression-Diagnose
+            durch eine "deload"-Diagnose ersetzt – kein Falsch-Positiv.
+
+    Returns:
+        dict mit ``key``, ``label``, ``severity``, ``message``,
+        ``tonnage_trend``, ``effective_trend``, ``suppressed_due_to_deload``
+        oder None wenn Vergleich nicht möglich.
+    """
+    tonnage_trend = classify_volume_trend(prev_tonnage, curr_tonnage)
+    effective_trend = classify_volume_trend(prev_effective, curr_effective)
+
+    if tonnage_trend == "unklar" or effective_trend == "unklar":
+        return None
+
+    suppressed = False
+    if is_deload_week and tonnage_trend == "sinkt" and effective_trend == "sinkt":
+        # Deload-Woche: bewusste Volumen-Reduktion, kein Regressions-Signal.
+        suppressed = True
+        diag = {
+            "key": "deload_expected",
+            "label": "Deload-Woche",
+            "severity": "info",
+            "message": (
+                "Tonnage und effektives Volumen sinken – erwartetes Verhalten "
+                "in einer Deload-Woche. Keine Regression."
+            ),
+        }
+    else:
+        diag = _VOLUME_DIAGNOSIS_MAP.get((tonnage_trend, effective_trend))
+        if diag is None:
+            # Kombinationen ohne expliziten Eintrag → neutral
+            diag = {
+                "key": "neutral",
+                "label": "Keine eindeutige Diagnose",
+                "severity": "secondary",
+                "message": "",
+            }
+
+    return {
+        **diag,
+        "tonnage_trend": tonnage_trend,
+        "effective_trend": effective_trend,
+        "suppressed_due_to_deload": suppressed,
     }

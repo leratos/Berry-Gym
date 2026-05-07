@@ -797,6 +797,27 @@
         <div style="text-align: center; margin: 0;">
             <img src="data:image/png;base64,{{ volume_chart }}" style="max-width: 100%; height: auto;" alt="Volumen Entwicklung">
         </div>
+
+        {# Phase 23.2: Diagnose-Zeile zur Volumen-Bewegung der letzten Woche #}
+        {% with last_week=volumen_wochen|last %}
+        {% if last_week.diagnose %}
+        <div class="info-box {% if last_week.diagnose.severity == 'warning' %}warning{% endif %}" style="margin-top: 8px;">
+            <p style="margin: 0; font-size: 9px;">
+                <strong>{{ last_week.diagnose.label }}</strong>
+                <span style="color: #6c757d;">
+                    · Tonnage {{ last_week.diagnose.tonnage_trend }}
+                    · Effektives Volumen {{ last_week.diagnose.effective_trend }}
+                </span>
+                {% if last_week.diagnose.suppressed_due_to_deload %}
+                <span style="background: #6c757d; color: white; padding: 1px 5px; border-radius: 3px; font-size: 7px; margin-left: 4px;">Deload-Woche</span>
+                {% endif %}
+                {% if last_week.diagnose.message %}
+                <br><span style="color: #495057;">{{ last_week.diagnose.message }}</span>
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+        {% endwith %}
     </div>
     {% endif %}
 
