@@ -458,7 +458,9 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     else:
         bewertung = "✅ Sehr niedrig"
         bewertung_farbe = "success"
-        empfehlung = "Du kannst noch mehr trainieren!"
+        # Phase 23.x: vorher "Du kannst noch mehr trainieren!" – missverständlich,
+        # klang nach Aufforderung zu mehr Volumen statt nach Belastbarkeits-Status.
+        empfehlung = "Geringe Ermüdung – Belastung wird gut verkraftet."
 
     return {
         "fatigue_index": fatigue_index,
