@@ -89,7 +89,11 @@
                 <div class="row g-2 text-center">
                     {% for card in rqw.cards %}
                     <div class="col-4">
+<<<<<<< feature/phase23-time-windowed-stats
                         <div class="p-2 rounded {% if card.is_primary %}bg-primary-subtle border border-primary{% else %}bg-body-tertiary border{% endif %}">
+=======
+                        <div class="p-2 rounded {% if card.is_primary %}bg-primary-subtle border border-primary{% else %}bg-light{% endif %}">
+>>>>>>> main
                             <div class="small text-uppercase text-muted" style="letter-spacing: 0.5px;">
                                 {% if card.is_primary %}<strong>★ {{ card.label }}</strong>{% else %}{{ card.label }}{% endif %}
                             </div>
