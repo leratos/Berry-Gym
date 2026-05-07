@@ -767,6 +767,52 @@ class TestRpeDistributionWindowed(StatsTestBase):
         result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
         self.assertIsNone(result["divergence_hint"])
 
+    def test_divergence_hint_works_when_2w_below_min_sets(self):
+        """Bug-Fix: 2w mit 10-29 Sätzen darf Karte ausblenden, aber Divergenz-Hinweis muss trotzdem feuern.
+
+        Konzept 3.3 fordert Trend-Hinweis ab MIN_SETS_FOR_DIVERGENCE=10.
+        Konzept 3.4 fordert Karten-Display "n.a." erst ab MIN_SETS_FOR_WINDOW=30.
+        Vor dem Fix wurde raw_results["2w"]=None gesetzt → Hinweis stumm im Bereich 10-29.
+        """
+        # 4w hat 60 Sätze (≥30), davon 45 vor dem 2w-Fenster mit RPE 10
+        self._add_n(days_ago=20, count=45, rpe=10.0)
+        # 2w hat 15 Sätze (≥10 für Divergenz, <30 für Karte) mit RPE 8
+        self._add_n(days_ago=5, count=15, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        # Karte zeigt "n.a." (insufficient_data flag), Result ist None
+        cards_2w = next(c for c in result["cards"] if c["key"] == "2w")
+        self.assertTrue(cards_2w["insufficient_data"])
+        self.assertIsNone(cards_2w["result"])
+        # Aber Divergenz-Hinweis muss feuern: 2w 0% RPE-10 vs. 4w hoch
+        self.assertIsNotNone(result["divergence_hint"])
+        self.assertIn("verbessert", result["divergence_hint"])
+        # Roh-Daten in windows bleiben erhalten (für Tests/Konsumenten verfügbar)
+        self.assertIsNotNone(result["windows"]["2w"])
+
+    def test_includes_same_day_sets_when_reference_is_date(self):
+        """Bug-Fix: Live-View passt timezone.now().date() (date) als reference_date.
+
+        DateTimeField __lte=date wird von Django als Mitternacht interpretiert →
+        heute geloggte Sätze würden ausgeschlossen. Filter muss date-Werte als
+        "bis Ende des Tages" behandeln.
+        """
+        from datetime import date
+
+        # 30 Sätze in einer Session, die heute (datum=now()) ist
+        today_session = self._make_session(days_ago=0)
+        for _ in range(30):
+            self._add_satz(today_session, gewicht=80, wiederholungen=8, rpe=8.0)
+
+        # reference_date als date (wie Live-View)
+        today_date = date.today()
+        result = calculate_rpe_quality_analysis_windowed(
+            self._alle_saetze(), reference_date=today_date
+        )
+        # Alle 30 heutigen Sätze müssen im 2w-Fenster sein
+        self.assertEqual(result["window_meta"]["2w"]["n_sets"], 30)
+        self.assertEqual(result["window_meta"]["4w"]["n_sets"], 30)
+
     def test_window_meta_contains_n_sets_per_window(self):
         self._add_n(days_ago=5, count=40, rpe=8.0)
         result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
