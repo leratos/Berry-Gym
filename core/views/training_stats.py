@@ -456,7 +456,14 @@ def _get_fatigue_rating(fatigue_index: int) -> tuple[str, str, str]:
         return "Moderat", "warning", "Achte auf ausreichend Regeneration."
     if fatigue_index >= 20:
         return "Niedrig", "info", "Gute Balance zwischen Training und Erholung."
-    return "Sehr niedrig", "success", "Du kannst noch mehr trainieren!"
+    # Phase 23.x: vorherige Formulierung "Du kannst noch mehr trainieren!" war
+    # missverständlich – sie bezog sich auf Belastbarkeitskapazität, klang aber
+    # wie eine Aufforderung zu mehr Volumen. Neuformulierung beschreibt den Zustand.
+    return (
+        "Sehr niedrig",
+        "success",
+        "Geringe Ermüdung – Belastung wird gut verkraftet.",
+    )
 
 
 def _calculate_fatigue_index(
