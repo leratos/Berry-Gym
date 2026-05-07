@@ -62,6 +62,18 @@ logger = logging.getLogger(__name__)
 # Wird invalidiert wenn der User ein neues Training speichert (signals.py)
 DASHBOARD_CACHE_TTL = 300  # 5 Minuten
 
+# Phase 23.4: Zeitfenster-Konstanten für Fatigue-Index-Komponenten.
+# Ziel: explizit machen, welches Fenster jede Komponente nutzt – und warum es
+# nicht uniform 14d ist (Konzept 6.2 hatte das gefordert, war aber zu pauschal).
+# RPE-Komponente: 14 Tage (matcht RPE-Verteilung in 23.1 → konsistente Anzeige).
+FATIGUE_RPE_WINDOW_DAYS = 14
+# Frequenz-Komponente: 7 Tage. Akute Last – 5 Trainings/7d sind "viel",
+# 5 Trainings/14d sind "normal". Schwellen-Semantik bricht bei 14d.
+FATIGUE_FREQUENCY_WINDOW_DAYS = 7
+# Cardio-Komponente: 7 Tage. Cardio wirkt akut (Recovery-Bedarf), nicht über Wochen.
+FATIGUE_CARDIO_WINDOW_DAYS = 7
+# Volumen-Spike: 2 aufeinanderfolgende Wochen-Werte (Vergleich) – impliziter 14d-Span.
+
 
 # ---------------------------------------------------------------------------
 # Private helpers for dashboard view
@@ -167,8 +179,12 @@ def _get_favoriten(user):
 
 
 def _get_rpe_score(user, heute) -> tuple[int, float | None]:
-    """Compute RPE form score (0-25) and raw avg_rpe for the last 2 weeks."""
-    two_weeks_ago = heute - timedelta(days=14)
+    """Compute RPE form score (0-25) and raw avg_rpe for the last 2 weeks.
+
+    Zeitfenster: ``FATIGUE_RPE_WINDOW_DAYS`` (14d) – konsistent mit
+    ``_get_rpe10_anteil`` und der RPE-Verteilung aus Phase 23.1.
+    """
+    two_weeks_ago = heute - timedelta(days=FATIGUE_RPE_WINDOW_DAYS)
     recent_saetze = Satz.objects.filter(
         einheit__datum__gte=two_weeks_ago,
         einheit__user=user,
@@ -387,8 +403,15 @@ def _get_rpe_fatigue(user, heute) -> tuple[int, list[str]]:
 
 
 def _get_frequency_fatigue(user, heute) -> tuple[int, list[str]]:
-    """Return (points, warnings) based on training frequency in the last 7 days."""
-    count = Trainingseinheit.objects.filter(user=user, datum__gte=heute - timedelta(days=7)).count()
+    """Return (points, warnings) based on training frequency in the last 7 days.
+
+    Zeitfenster: ``FATIGUE_FREQUENCY_WINDOW_DAYS`` (7d, akute Last).
+    Bewusst nicht 14d wie die RPE-Komponente – die Schwellen ("≥6 Trainings"
+    = "sehr viel") gelten pro Woche, nicht pro Zwei-Wochen-Block.
+    """
+    count = Trainingseinheit.objects.filter(
+        user=user, datum__gte=heute - timedelta(days=FATIGUE_FREQUENCY_WINDOW_DAYS)
+    ).count()
     if count >= 6:
         return 30, ["Sehr hohe Trainingsfrequenz"]
     if count >= 5:
@@ -397,8 +420,14 @@ def _get_frequency_fatigue(user, heute) -> tuple[int, list[str]]:
 
 
 def _get_cardio_fatigue(user, heute) -> tuple[int, list[str], int, int]:
-    """Return (points, warnings, session_count, total_minutes) from cardio last 7 days."""
-    sessions = CardioEinheit.objects.filter(user=user, datum__gte=heute - timedelta(days=7))
+    """Return (points, warnings, session_count, total_minutes) from cardio last 7 days.
+
+    Zeitfenster: ``FATIGUE_CARDIO_WINDOW_DAYS`` (7d). Cardio wirkt akut,
+    Recovery-Bedarf ist innerhalb der Woche relevant.
+    """
+    sessions = CardioEinheit.objects.filter(
+        user=user, datum__gte=heute - timedelta(days=FATIGUE_CARDIO_WINDOW_DAYS)
+    )
     total = sum(c.ermuedungs_punkte for c in sessions)
     if total >= 120:
         return (
@@ -437,7 +466,20 @@ def _calculate_fatigue_index(
     gesamt_trainings: int,
     block_age_weeks: int | None = None,
 ) -> dict:
-    """Compute fatigue index and related display data. Returns a dict."""
+    """Compute fatigue index and related display data. Returns a dict.
+
+    Phase 23.4 – Zeitfenster-Übersicht der Komponenten:
+        - Volumen-Spike: Vergleich aktuelle vs. vorherige Woche (= 14d-Span)
+        - RPE primary (RPE-10-Anteil): ``FATIGUE_RPE_WINDOW_DAYS`` (14d)
+        - RPE secondary (Avg-RPE):     ``FATIGUE_RPE_WINDOW_DAYS`` (14d)
+        - Frequenz:                    ``FATIGUE_FREQUENCY_WINDOW_DAYS`` (7d, akute Last)
+        - Cardio:                      ``FATIGUE_CARDIO_WINDOW_DAYS`` (7d, akute Last)
+
+    Die Konzept-Annahme "alle Komponenten 14d" wurde nicht umgesetzt – Frequenz/Cardio
+    sind akute Lasten, deren Schwellenwerte ("≥6 Trainings/Woche") an 7 Tage gebunden
+    sind. RPE-Komponente ist 14d, damit Index und RPE-Verteilungs-Anzeige (Phase 23.1,
+    4-Wochen-Karte primär) nicht widersprüchlich wirken.
+    """
     fatigue_index = 0
     fatigue_warnings: list[str] = []
 

@@ -493,7 +493,7 @@ keine neue Route – alles in `training_stats.py` + `training_stats.html` ergän
 
 ## Phase 23 – Zeitfenster-basierte Trainingsanalysen *(mittel, Statistik-Hygiene)*
 **Branch:** `feature/phase23-time-windowed-stats`
-**Status:** 📋 Konzept (06.05.2026)
+**Status:** ✅ Abgeschlossen (2026-05-07)
 **Quelle:** Auswertung 30-Tage-PDF-Export (Mai 2026), User-Feedback zur RPE-Analyse
 
 📄 **Detailkonzept:** [`docs/phase23_concept.md`](phase23_concept.md)

@@ -992,10 +992,13 @@
 
     <div class="info-box">
         <p style="font-size: 9px; margin: 0;"><strong>Was ist der Ermüdungs-Index?</strong>
-        Der Ermüdungs-Index (0-100) schätzt deine aktuelle Gesamtbelastung anhand von Trainingsvolumen, Intensität (RPE) und Frequenz.
+        Der Ermüdungs-Index (0-100) schätzt deine aktuelle Gesamtbelastung anhand von Trainingsvolumen, Intensität (RPE), Frequenz und Cardio-Last.
         Ein hoher Wert bedeutet, dass sich Ermüdung aufbaut und eine <strong>Deload-Woche</strong> sinnvoll sein könnte.
         Beim Deload trainierst du mit reduziertem Gewicht (~50-60%) und weniger Sätzen, damit sich Muskeln, Gelenke und Nervensystem vollständig erholen können.
-        <em>Hinweis: Dieser Wert basiert auf einer Heuristik (Volumen 40 %, RPE 30 %, Frequenz 30 %) und ist eine Annäherung – keine medizinische Diagnose.</em></p>
+        <em>Hinweis (Phase 23.4): Die Berechnung addiert Punkte aus vier Komponenten:
+        Volumen-Spike (Vergleich der letzten beiden Wochen), RPE-Belastung über die letzten 14 Tage
+        (RPE-10-Anteil als primärer Faktor, Avg-RPE als sekundärer), Trainingsfrequenz der letzten 7 Tage
+        und Cardio-Last der letzten 7 Tage. Sie ist eine Annäherung – keine medizinische Diagnose.</em></p>
     </div>
 
     {% if fatigue_analysis %}
