@@ -5580,3 +5580,465 @@ nur Kraftstandards. Plan-Filter wirkt dort schon transparent durch
 **Geänderte Dateien:**
 - `core/templates/core/training_pdf_simple.html` – neue Spalte "Vergleich"
 - `docs/journal.txt` – dieser Nachtrag
+
+
+## In Arbeit: Phase 23 Konzept – Zeitfenster-basierte Trainingsanalysen (06.05.2026)
+
+Reines Konzept-Erstellen, kein Code. Auslöser: Mai-2026-PDF-Report
+zeigt RPE-10-Anteil 19 % (All-Time), obwohl letzte 4 Wochen <7 %.
+Strukturelles Problem in mehreren Analysen: All-Time-Schnitt verzerrt
+Bild bei bewussten Verhaltensänderungen.
+
+**Nächste Schritte:**
+1. PROJECT_ROADMAP.md – Phase 23 einfügen (Kurzfassung)
+2. docs/phase23_concept.md – Detail-Fahrplan (neu, mehrteilig)
+3. Journal-Abschluss
+
+Kein Feature-Branch (Doku-Phase). Kein Code-Touch. Kein Test-Run.
+
+
+## Abgeschlossen: Phase 23 Konzept – Zeitfenster-basierte Trainingsanalysen (06.05.2026)
+
+**Erstellt:**
+- `docs/PROJECT_ROADMAP.md` – Phase 23 als Kurzfassung eingefügt vor "Bewusst NICHT in dieser Roadmap"
+- `docs/phase23_concept.md` – neu, 564 Zeilen Detail-Fahrplan
+
+**Inhalt Phase 23 (Kurz):**
+Zeitfenster-basierte Korrektur von RPE-Verteilung (23.1), Effektivem Volumen
+(23.2), Plateau-Logik (23.3), Ermüdungs-Index (23.4) und PDF-Konsistenz
+(23.5, optional). Auslöser: Mai-2026-Report zeigt 19 % RPE-10 (All-Time)
+trotz <7 % in den letzten 4 Wochen.
+
+**Kein Code-Touch in dieser Session.** Nur Doku.
+
+**Hinweis (Inkonsistenz festgestellt):** Phase 22 (Aktiver-Plan-Filter) ist
+im Journal als abgeschlossen dokumentiert (28.04.2026), fehlt aber in
+PROJECT_ROADMAP.md. Wird in dieser Session bewusst NICHT mit-gefixt
+(Scope-Disziplin). Sollte in einem separaten Schritt nachgetragen werden.
+
+**Offene Fragen vor Phase-23-Implementierung** (siehe Konzept Abschnitt 8):
+1. Fatigue-Index Dead-Code-Status (Repo-Search erforderlich)
+2. Schwellenwerte für Konsolidierungs-Erkennung empirisch prüfen
+3. Mindest-Datenmenge pro Zeitfenster festlegen
+4. Plan-Filter und Zeitfenster Reihenfolge bestätigen
+5. Block-Typ-Awareness für 23.2 entscheiden
+
+**Empfohlene Reihenfolge bei Implementierung:** 23.1 → 23.3 → 23.2 → 23.4 → 23.5
+
+**Geänderte/neue Dateien:**
+- `docs/PROJECT_ROADMAP.md` – Phase 23 Block eingefügt
+- `docs/phase23_concept.md` – neu
+- `docs/journal.txt` – diese Einträge
+
+
+## Abgeschlossen: Phase 23.1 – RPE-Verteilung mit gestaffelten Zeitfenstern (06.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Vorab-Klärung der offenen Fragen aus Konzept Abschnitt 8:**
+
+- **8.1 Fatigue-Index Dead-Code-Status:** GEKLÄRT – `calculate_fatigue_index`
+  in `core/utils/advanced_stats.py:270` ist KEIN Dead Code mehr. Seit Phase 14
+  delegiert sie an dieselben Dashboard-Helfer (`_get_volume_spike_fatigue`,
+  `_get_rpe_fatigue`, `_get_frequency_fatigue`, `_get_cardio_fatigue`) wie
+  `core/views/training_stats.py:_calculate_fatigue_index`. PDF und Live nutzen
+  bereits dieselbe Fatigue-Logik. Konsequenz für Phase 23.4: Es gibt keine
+  PDF/Live-Divergenz mehr zu beheben – die Tech-Debt aus Phase 9.4 ist
+  aufgelöst. Phase 23.4 reduziert sich auf "konsistentes 14-Tage-Fenster für
+  RPE-Komponente verifizieren".
+- **8.4 Plan-Filter & Zeitfenster Reihenfolge:** Option (a) bestätigt – Plan
+  filtert das 4w-Fenster. Phase 22 liefert bereits passende Helfer in
+  `plan_helpers.py`: `get_active_plan_start_date` und `is_active_plan_too_new`.
+  Phase 23.1 nutzt beide.
+
+**Implementierung Task 23.1:**
+
+Drei kompakte RPE-10-Karten (2 Wochen / 4 Wochen / Gesamt) statt nur einem
+All-Time- oder 14-Tage-Wert. Bewertung und Empfehlung leiten sich vom
+4-Wochen-Wert ab. Bei zu wenig Daten in 4 Wochen fällt der primäre Window
+auf "all" zurück, mit erklärender Empfehlung. Trend-Hinweis erscheint, wenn
+2-Wochen-Wert >5 Prozentpunkte vom 4-Wochen-Wert abweicht.
+
+**Neue Funktionen in `core/utils/advanced_stats.py`:**
+
+- `get_time_windows(reference_date, plan_start)` – liefert dict mit 2w/4w/all-Tupeln,
+  unterstützt date+datetime gemischt (auto-Normalisierung), clamped 2w/4w
+  auf Plan-Start wenn dieser jünger ist
+- `calculate_rpe_quality_analysis_windowed(...)` – wrappt bestehende
+  `calculate_rpe_quality_analysis` für drei Zeitfenster, baut präsentationsfertige
+  `cards`-Liste, Bewertungs-Mapping aus Phase 9.3 unverändert übernommen
+
+**Neue Konstanten:** `WINDOW_2W_DAYS=14`, `WINDOW_4W_DAYS=28`,
+`MIN_SETS_FOR_WINDOW=30`, `MIN_SETS_FOR_DIVERGENCE=10`,
+`DIVERGENCE_THRESHOLD_PCT=5.0`.
+
+**UI-Anpassungen:**
+
+- `core/templates/core/training_pdf_simple.html` – RPE-Sektion zeigt drei
+  Karten oben, Bewertung/Detail/Empfehlungen referenzieren das **primäre
+  Fenster** (4w bei genug Daten, sonst all). Backwards-Compat via `{% elif rpe_quality %}`
+  für ältere Datensammlungen.
+- `core/templates/core/training_stats.html` – Live-Stats-Seite ersetzt das
+  einzelne `rpe10_anteil`-Widget durch eine Drei-Karten-Variante mit
+  hervorgehobenem 4-Wochen-Wert. Plan-Clamping wird im Karten-Header
+  ("seit Plan-Start") signalisiert.
+
+**Caller-Anpassungen:**
+
+- `core/export/stats_collector.py` – ruft windowed-Variante auf, übergibt
+  `plan_start` nur wenn aktiver Plan nicht zu jung (Konsistenz mit Phase 22).
+  Liefert `rpe_quality_windowed` zusätzlich zum bestehenden `rpe_quality`
+  (Backwards-Compat).
+- `core/views/training_stats.py` – analoge Logik für Live-Stats. Importiert
+  `get_active_plan_start_date` und `is_active_plan_too_new` aus
+  `plan_helpers`.
+
+**Tests:** `core/tests/test_advanced_stats.py` um zwei neue TestCases erweitert
+(`TestGetTimeWindows`, `TestRpeDistributionWindowed`) – 13 neue Testfälle
+(alle 6 aus Konzept 3.5 + 7 zusätzliche für `get_time_windows`-Edge-Cases,
+Window-Meta, Min-Sets-Konfiguration, Trend-Hinweis-Untergrenze). 164 Tests
+in den betroffenen Modulen weiterhin grün, 24 Export-Tests grün.
+
+**Bug während Implementierung gefixt:** `get_active_plan_start_date` liefert
+`datetime`, der Live-View nutzt `heute = timezone.now().date()`. Das führte
+zu `TypeError: can't compare datetime.datetime to datetime.date`. Lösung:
+`_normalize_date_pair`-Helfer normalisiert beide auf denselben Typ.
+
+**Geänderte Dateien:**
+- `core/utils/advanced_stats.py` – neue Funktionen + Konstanten
+- `core/export/stats_collector.py` – windowed-Aufruf + neues Result-Feld
+- `core/views/training_stats.py` – windowed-Aufruf + Context
+- `core/templates/core/training_pdf_simple.html` – Drei-Karten-Layout
+- `core/templates/core/training_stats.html` – Drei-Karten-Layout
+- `core/tests/test_advanced_stats.py` – 13 neue Testfälle
+
+**Nächster Schritt (Reihenfolge laut Konzept Abschnitt 9):** 23.3 (Plateau-Logik
+vereinheitlicht) – nutzt Zeitfenster-Helper aus 23.1 wieder. Vor Implementierung:
+Frage 8.2 (Schwellenwert "RPE sinkt") empirisch prüfen.
+
+
+## Empirische Klärung Frage 8.2 – Konsolidierungs-Schwellenwert (06.05.2026)
+
+SSH-Read-only-Abfrage gegen Production-DB (lera@last-strawberry.com).
+Aktiver User: 53 Sessions. Top 10 Übungen abgefragt mit Vergleich
+**current 4w avg RPE vs. 4w-vor-PR avg RPE** (Konzept-5.3-Vorschlag):
+
+| Übung | days_seit_PR | cur_RPE | pre_RPE | Δ | cur_n |
+|---|---|---|---|---|---|
+| Rumänisches Kreuzheben | 20 | 8.11 | 8.16 | +0.05 | 9 |
+| Bankdrücken | 2 | 7.73 | 7.73 | +0.00 | 15 |
+| Kniebeuge | 12 | 7.75 | 7.69 | -0.06 | 12 |
+| Trizeps OH Extension | 2 | 7.50 | 7.50 | +0.00 | 8 |
+| Hammer Curls | 0 | 8.62 | 8.70 | +0.07 | 8 |
+| Langhantel-Rudern | 42 | n.a. | 8.36 | — | **0** |
+| Schulterdrücken | 44 | n.a. | 9.00 | — | **0** |
+| Bizeps Curls | 42 | n.a. | 8.21 | — | **0** |
+
+**Erkenntnisse:**
+
+1. **Konzept-Algorithmus (4w current vs. 4w-vor-PR) liefert Δ-Werte ≤ 0.07** –
+   die vom Konzept vorgeschlagene Schwelle 0.5 würde nie greifen.
+2. **Die alte First-Half-vs-Second-Half-Logik in den letzten 4w ist sensitiver**
+   und hat im Mai-2026-Report Hammer Curls korrekt als Konsolidierung erkannt –
+   die Schwelle 0.5 funktioniert dort empirisch.
+3. **Die im Mai-Report sichtbare Inkonsistenz hat eine andere Ursache:** 4 Übungen
+   haben `cur_n=0` (seit 42-44 Tagen nicht trainiert). Die alte Logik labelt sie
+   "Plateau", aber das ist sachlich falsch – es ist eine **Pause** (nicht trainiert),
+   keine Stagnation.
+
+**Konsequenz für 23.3 (revidiert ggü. Konzept 5.3):**
+
+- First-Half-vs-Second-Half-Logik **beibehalten** (empirisch validiert)
+- Schwelle **0.5 RPE-Punkte beibehalten**
+- **Neuer Status "Pause"** für `cur_4w_n < 2` ergänzt – löst die echte Inkonsistenz
+- Regression-Schwelle **von 10% auf 5%** Drop verschärft (konzeptkonform)
+
+
+## Abgeschlossen: Phase 23.3 – Plateau-Logik vereinheitlicht (06.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Refactor:** Extrahierung der inline Plateau-Logik aus `calculate_plateau_analysis`
+in einen neuen Helfer `classify_progression_status(uebung_saetze, pr_satz, ref)`.
+Beide Aufrufer (PDF: `calculate_plateau_analysis`, Live: `_calc_plateau_live`)
+nutzen ihn als Single Source of Truth.
+
+**Neue Status-Hierarchie (priorisiert):**
+
+1. `regression` – >5 % 1RM-Drop im current 4w vs. PR (vorher 10 %)
+2. `active_progression` – PR ≤ 7 Tage alt
+3. `observe` – PR 8–14 Tage alt
+4. **`pause` (NEU)** – < 2 Sätze in den letzten 4w (Übung pausiert)
+5. `consolidation` – RPE-Δ ≥ 0.5 zwischen first/second half der letzten 4w
+6. `plateau_light` – 15–42 Tage seit PR
+7. `plateau` – 43–84 Tage
+8. `plateau_long` – > 84 Tage
+9. `no_data` – kein PR-Satz
+
+**Konstanten in `advanced_stats.py`:**
+
+- `CONSOLIDATION_RPE_DELTA = 0.5` (empirisch validiert via SSH-Production-Query)
+- `REGRESSION_WEIGHT_DROP_PCT = 5.0` (vorher 10 % – konzeptkonform verschärft)
+- `PAUSE_MIN_CUR_SETS = 2` (löst Inkonsistenz aus Mai-Report)
+- `PROGRESSION_RPE_MIN_SETS = 4` (Min. RPE-Sätze für Konsolidierungs-Check)
+
+**Backwards-Compat-Punkte:**
+
+- Status-Keys auf englisch standardisiert (vorher gemischt deutsch/englisch:
+  `"konsolidierung"` → `"consolidation"`, `"plateau_leicht"` → `"plateau_light"`,
+  `"plateau_lang"` → `"plateau_long"`, `"zu_frueh"` und `"beobachten"` zu
+  `"active_progression"`/`"observe"` umbenannt). Status-Labels (sichtbarer Text
+  im Template) bleiben deutsch.
+- Live-View-Result hat `farbe`-Alias für Backward-Compat mit Phase-21.3-Templates.
+- Bestehender Tooltip-Text "RPE sinkt" im Status-Label bleibt; PDF und Live-Stats
+  zeigen jetzt zusätzlich die konkrete Begründung (z. B. "RPE sank von 9.25 auf
+  8.25 in den letzten 4 W").
+
+**UI-Anpassungen:**
+
+- `core/templates/core/training_stats.html` – Plateau-Tabelle nutzt
+  `status_farbe` + `status_label`, mit HTML-`title`-Tooltip pro Status-Typ
+  (Konsolidierung zeigt RPE-Delta, Regression zeigt %-Drop, Pause erklärt
+  "nicht trainiert").
+- `core/templates/core/training_pdf_simple.html` – Status-Spalte zeigt unter
+  dem Badge eine Begründungs-Zeile (Konzept 5.6). Legende um neue Status erweitert
+  (Beobachten, Konsolidierung, Pause, Langzeit-Plateau).
+
+**Tests:**
+
+- Neue Test-Class `TestProgressionClassification` mit 14 Test-Cases (alle 8 aus
+  Konzept 5.5 + 6 zusätzliche für Diagnose-Felder, Backwards-Compat-Aliase,
+  Pause-Edge-Cases).
+- `test_konsolidierung_bei_sinkendem_rpe` Status-Key auf `"consolidation"` geupdated.
+- `TestPlateauLive` 3 alte Tests umgeschrieben (alte Status-Strings entfernt) +
+  1 neuer Test (`test_plateau_when_pr_old_but_currently_training`) ergänzt, um
+  echtes Plateau (nicht Pause) zu prüfen.
+- 178 Tests in den betroffenen Modulen weiterhin grün.
+
+**Empirisch validiert via Production-Daten:** Hammer Curls als Konsolidierung
+korrekt erkannt (Δ +0.07 in 4w-Avg-Vergleich, aber höher in First-Half-vs-
+Second-Half innerhalb der letzten 4w). Die 4 Übungen mit `cur_n=0` werden jetzt
+korrekt als "Pause" gelabelt statt als "Plateau".
+
+**Geänderte Dateien:**
+- `core/utils/advanced_stats.py` – Helfer `classify_progression_status` +
+  `_find_best_1rm_satz`, neue Konstanten, Refactor von `calculate_plateau_analysis`
+- `core/views/training_stats.py` – `_calc_plateau_live` nutzt Helfer
+- `core/templates/core/training_stats.html` – neue Status-Felder + Tooltip
+- `core/templates/core/training_pdf_simple.html` – Begründungs-Zeile + Legende
+- `core/tests/test_advanced_stats.py` – `TestProgressionClassification` neu
+- `core/tests/test_training_stats.py` – `TestPlateauLive` aktualisiert
+
+**Nächster Schritt (Reihenfolge laut Konzept Abschnitt 9):** 23.2
+(Effektives Volumen) – baut auf RPE-Filterlogik aus 23.1 auf. Vor 23.2:
+Frage 8.5 (Block-Typ-Awareness für Diagnose-Tabelle) entscheiden.
+
+
+## Klärung Frage 8.5 – Block-Typ-Awareness für 23.2 (07.05.2026)
+
+**User-Entscheidung:** Option B (Hybrid) – existierender Per-Session-Flag
+`Trainingseinheit.ist_deload=True` wird genutzt; wenn ≥ 50 % der Sessions
+einer Woche `ist_deload=True` haben, gilt die Woche als Deload-Woche und
+die Diagnose "Tonnage sinkt + Eff-Volumen sinkt" wird als "Deload-Woche"
+statt "Regression" gelabelt. Adressiert ~90 % der Deload-Fälle ohne
+Trainingsblock-Schedule-Logik (= Option A vermieden).
+
+Konstante: `DELOAD_WEEK_MAJORITY_PCT = 50.0`.
+
+
+## Abgeschlossen: Phase 23.2 – Effektives Volumen + Diagnose-Tabelle (07.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Implementierung:**
+
+Neue Wochenvolumen-Metrik **"Effektives Volumen"** als zweite Linie im
+Wochen-Chart (PDF-Matplotlib + Live-Chart.js): Summe von Gewicht × Reps
+nur für Sätze mit RPE 7–9. Schließt Junk Volume (RPE <7, zu leicht) und
+Failure Volume (RPE 10, recovery-teuer) aus. Trennt damit "produktives
+Volumen" von Tonnage.
+
+Neue **Diagnose-Karte** unter dem Wochen-Chart (PDF + Live) klassifiziert
+die Veränderung der letzten Woche gemäß Konzept-4.3-Tabelle:
+
+| Tonnage | Eff. Volumen | Diagnose | Severity |
+|---|---|---|---|
+| sinkt | sinkt | Echte Regression | warning |
+| sinkt | stabil | Intensitäts-Korrektur | info |
+| sinkt | steigt | Qualitäts-Verbesserung | success |
+| steigt | sinkt | Mehr Junk-/Failure-Volumen | warning |
+| steigt | steigt | Volumen-Wachstum | success |
+| stabil | stabil | Stabile Phase | info |
+
+**Hybrid-Block-Typ-Awareness (Frage 8.5):** Wenn ≥ 50 % der Sessions
+einer Woche `ist_deload=True` haben und beide Trends "sinkt" sind, wird
+die Diagnose auf "Deload-Woche" geändert (statt fälschlich "Regression").
+Diagnose-Result trägt `suppressed_due_to_deload=True` zur Visualisierung.
+
+**Neue Funktionen in `core/utils/advanced_stats.py`:**
+
+- `is_effective_volume_set(satz)` – True wenn Satz zum Eff-Volumen zählt
+- `classify_volume_trend(prev, curr, stable_pct=5.0)` – "sinkt"/"stabil"/"steigt"/"unklar"
+- `diagnose_volume_trend(prev_t, curr_t, prev_e, curr_e, is_deload_week)` – Hauptlogik
+
+**Neue Konstanten:**
+
+- `EFFECTIVE_VOLUME_RPE_MIN = 7.0`, `EFFECTIVE_VOLUME_RPE_MAX = 9.0`
+- `VOLUME_TREND_STABLE_PCT = 5.0` (innerhalb ±5 % = stabil)
+- `DELOAD_WEEK_MAJORITY_PCT = 50.0`
+
+**Caller-Anpassungen:**
+
+- `core/export/stats_collector.py` – `collect_weekly_volume_pdf` liefert
+  jetzt `effektives_volumen`, `ist_deload_majority` pro Woche und
+  `diagnose` auf der letzten Woche (für PDF-Template).
+- `core/views/training_stats.py` – neuer Helfer
+  `_calc_weekly_effective_volume()` aggregiert Tonnage + Eff-Volumen +
+  Deload-Mehrheit pro Woche. Live-View übergibt
+  `weekly_effective_data_json`, `weekly_deload_majority_json`,
+  `volume_diagnosis` ans Template.
+- `core/chart_generator.py` – `generate_volume_chart` zeichnet die zweite
+  Linie (Tonnage gedämpft als Hintergrund, Effektives Volumen kräftig
+  blau als Hauptlinie).
+
+**UI-Anpassungen:**
+
+- `core/templates/core/training_stats.html` – Bar-Chart wird Combo-Chart
+  (Bars = Tonnage, Linie = Effektives Volumen mit Effektiv-Anteil-Tooltip).
+  Diagnose-Alert unter dem Chart mit Trend-Beschreibung und
+  optionalem "Deload-Woche"-Badge.
+- `core/templates/core/training_pdf_simple.html` – Diagnose-Box unter
+  dem Volumen-Chart.
+
+**Bewusst NICHT in 23.2:**
+
+- `_get_performance_warnings()` (existierender Warning-Ladder) bleibt
+  unangetastet. Die per-Übung-Regression-Warning (`_check_regression_warnings`,
+  15 % Gewichts-Drop) ist ein anderer Signal-Typ als der Wochen-Volumen-Trend.
+  Die neue Diagnose-Karte ist ein separater Widget direkt am Chart sichtbar
+  – kein Risiko für False-Positives in der Warning-Ladder. Falls Wiring
+  gewünscht, separater Schritt 23.x.
+
+**Tests:** `core/tests/test_advanced_stats.py` um drei neue TestCases
+erweitert: `TestIsEffectiveVolumeSet` (5 Cases), `TestClassifyVolumeTrend`
+(6 Cases), `TestDiagnoseVolumeTrend` (9 Cases). 198 Tests in betroffenen
+Modulen weiterhin grün.
+
+**Geänderte Dateien:**
+- `core/utils/advanced_stats.py` – 3 neue Helfer + 4 neue Konstanten + Diagnose-Map
+- `core/export/stats_collector.py` – `collect_weekly_volume_pdf` erweitert
+- `core/views/training_stats.py` – neuer Helfer + Context-Felder
+- `core/chart_generator.py` – Volume-Chart mit zweiter Linie
+- `core/templates/core/training_stats.html` – Combo-Chart + Diagnose-Alert
+- `core/templates/core/training_pdf_simple.html` – Diagnose-Box
+- `core/tests/test_advanced_stats.py` – 20 neue Tests
+
+**Nächster Schritt (Konzept-Reihenfolge):** 23.4 – Fatigue-Index
+14d-Konsistenz. Dank Klärung 8.1 (Fatigue-Index ist KEIN Dead Code,
+delegiert seit Phase 14 an Dashboard-Helfer) reduziert sich 23.4 auf:
+prüfen, ob die RPE-Komponente in `_get_rpe_fatigue` wirklich auf
+14-Tagen basiert und ggf. Volumen/Frequenz-Komponenten verifizieren.
+
+
+## Abgeschlossen: Phase 23.4 – Fatigue-Index Zeitfenster-Klarheit (07.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Code-Review-Befund vor Implementierung:**
+
+| Komponente | Aktuelles Fenster | Bewertung |
+|---|---|---|
+| `_get_volume_spike_fatigue` | 2 Wochen-Vergleich (= 14d-Span) | ✅ konsistent |
+| `_get_rpe_fatigue` primary (`_get_rpe10_anteil`) | 14d | ✅ konsistent mit 23.1 |
+| `_get_rpe_fatigue` secondary (`_get_rpe_score`) | 14d | ✅ konsistent |
+| `_get_frequency_fatigue` | 7d | ⚠️ inhaltlich gewollt |
+| `_get_cardio_fatigue` | 7d | ⚠️ inhaltlich gewollt |
+
+**Entscheidung (gegen Konzept 6.2):** Das Konzept hatte "festes 14-Tage-Fenster
+für alle drei Komponenten" gefordert. Diese pauschale Vorgabe wurde **nicht
+umgesetzt**, weil Frequenz und Cardio inhaltlich akute Lasten sind:
+- "≥6 Trainings/7 Tage" = sehr viel (Schwellenwert pro Woche).
+- "≥6 Trainings/14 Tage" = normal – die Schwellen-Semantik bricht.
+
+Eine Vereinheitlichung auf 14d würde die Fatigue-Bewertung verfälschen.
+Stattdessen: **Klarheit statt blinde Uniformität** – benannte Konstanten,
+explizite Doc-Kommentare, Verifikations-Tests.
+
+**Implementierung:**
+
+- Konstanten in `core/views/training_stats.py`:
+  - `FATIGUE_RPE_WINDOW_DAYS = 14`
+  - `FATIGUE_FREQUENCY_WINDOW_DAYS = 7`
+  - `FATIGUE_CARDIO_WINDOW_DAYS = 7`
+- Magische `7`/`14`-Zahlen in `_get_rpe_score`, `_get_frequency_fatigue`,
+  `_get_cardio_fatigue` durch die Konstanten ersetzt.
+- Doc-Kommentare in den Helfern + im delegierenden `calculate_fatigue_index`
+  in `advanced_stats.py` ergänzt: jede Komponente nennt ihr Fenster und die
+  Begründung.
+- 4 neue Tests in `TestFatigueWindowConsistency` (`test_training_stats.py`):
+  - 3 Konstanten-Verifikations-Tests
+  - 1 Funktional-Test, dass `_get_rpe_score` Sätze außerhalb 14d ignoriert.
+
+**Mai-Report-Inkonsistenz war:** RPE-Verteilung zeigte 19 % All-Time, Fatigue-
+Index war 14d → optisch widersprüchlich. **Bereits durch 23.1 gelöst** (RPE-
+Verteilung jetzt mit 4w-Karte primär). 23.4 verfestigt die Konsistenz nun
+auch im Code (statt nur in der Anzeige).
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – 3 Konstanten, 3 Helfer-Doc-Updates,
+  `_calculate_fatigue_index`-Docstring mit Fenster-Übersicht
+- `core/utils/advanced_stats.py` – Hinweis zu Phase 23.4 in
+  `calculate_fatigue_index`
+- `core/tests/test_training_stats.py` – `TestFatigueWindowConsistency` neu
+
+
+## Abgeschlossen: Phase 23.5 – PDF-Konsistenz (07.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Scope-Bilanz:** Die ursprünglich 4 Punkte aus Konzept 7.2 sind durch
+23.1–23.4 bereits implizit erledigt:
+
+1. RPE-Sektion drei Zeitfenster ✅ in 23.1
+2. Trainingsvolumen-Chart zweite Linie ✅ in 23.2
+3. Plateau-Tabelle einheitliche Status-Logik ✅ in 23.3
+4. Ermüdungs-Index 14d-Heuristik ✅ in 23.4
+
+**Verbleibende Aufgabe für 23.5:** Der erklärende Hinweis-Text im PDF zum
+Ermüdungs-Index nannte noch die alte Phase-9.4-Heuristik
+("Volumen 40 %, RPE 30 %, Frequenz 30 %"), die seit Phase 14 nicht mehr
+existiert. Aktualisiert zu einer akkuraten Beschreibung der vier
+additiven Komponenten mit ihren tatsächlichen Zeitfenstern.
+
+**Geänderte Dateien:**
+- `core/templates/core/training_pdf_simple.html` – Erklär-Hinweis zum
+  Ermüdungs-Index aktualisiert (Phase 23.4-konform)
+
+
+## ✅ Phase 23 abgeschlossen (07.05.2026)
+
+Alle 5 Sub-Tasks erledigt:
+
+- **23.1** RPE-Verteilung mit 2w/4w/all (commit ada1020)
+- **23.3** Plateau-Logik vereinheitlicht + Pause-Status (commit 0984777)
+- **23.2** Effektives Volumen + Diagnose-Tabelle (commit c3a65fe)
+- **23.4** Fatigue-Index Zeitfenster-Klarheit (dieser Commit)
+- **23.5** PDF-Konsistenz – Hinweistext aktualisiert (dieser Commit)
+
+**Reihenfolge wie im Konzept Abschnitt 9 empfohlen:** 23.1 → 23.3 → 23.2 → 23.4 → 23.5.
+
+**Mai-Report-Probleme alle adressiert:**
+
+| Problem im Mai-2026-Report | Lösung |
+|---|---|
+| RPE-10-Anteil 19 % (All-Time) löst Übertrainings-Warnung aus | 23.1: 4-Wochen-Karte primär für Bewertung |
+| KW18/KW19 Volumen-Einbruch sieht aus wie Regression | 23.2: Diagnose "Intensitäts-Korrektur" statt Warning |
+| Hammer Curls "Konsolidierung", Trizeps OH "Plateau" | 23.3: Pause-Status für nicht aktiv trainierte Übungen |
+| Ermüdungs-Index 0/100 trotz 19 % RPE-10 | 23.1+23.4: 14d-RPE-Fenster konsistent mit Index |
+| Verschiedene implizite Zeiträume in einem Report | 23.4: explizite benannte Konstanten |
+
+**Status PROJECT_ROADMAP.md aktualisieren:** Phase 23 von "📋 Konzept" auf
+"✅ Abgeschlossen (2026-05-07)".
+
+**202 Tests in betroffenen Modulen grün** (test_advanced_stats, test_training_stats,
+test_training_stats_extended, test_stats_collector, test_helpers_and_utils).

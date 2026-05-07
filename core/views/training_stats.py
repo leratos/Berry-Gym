@@ -40,8 +40,20 @@ from ..models import (
     Uebung,
     UserProfile,
 )
+from ..utils.advanced_stats import (
+    DELOAD_WEEK_MAJORITY_PCT,
+    EFFECTIVE_VOLUME_RPE_MAX,
+    EFFECTIVE_VOLUME_RPE_MIN,
+    calculate_rpe_quality_analysis_windowed,
+    classify_progression_status,
+    diagnose_volume_trend,
+)
 from ..utils.periodization import get_block_age_warning
-from ..utils.plan_helpers import get_active_plan_exercise_ids
+from ..utils.plan_helpers import (
+    get_active_plan_exercise_ids,
+    get_active_plan_start_date,
+    is_active_plan_too_new,
+)
 from .body_tracking import _prepare_body_chart_data
 
 logger = logging.getLogger(__name__)
@@ -49,6 +61,18 @@ logger = logging.getLogger(__name__)
 # TTL für gecachte Dashboard-Berechnungen (pro User)
 # Wird invalidiert wenn der User ein neues Training speichert (signals.py)
 DASHBOARD_CACHE_TTL = 300  # 5 Minuten
+
+# Phase 23.4: Zeitfenster-Konstanten für Fatigue-Index-Komponenten.
+# Ziel: explizit machen, welches Fenster jede Komponente nutzt – und warum es
+# nicht uniform 14d ist (Konzept 6.2 hatte das gefordert, war aber zu pauschal).
+# RPE-Komponente: 14 Tage (matcht RPE-Verteilung in 23.1 → konsistente Anzeige).
+FATIGUE_RPE_WINDOW_DAYS = 14
+# Frequenz-Komponente: 7 Tage. Akute Last – 5 Trainings/7d sind "viel",
+# 5 Trainings/14d sind "normal". Schwellen-Semantik bricht bei 14d.
+FATIGUE_FREQUENCY_WINDOW_DAYS = 7
+# Cardio-Komponente: 7 Tage. Cardio wirkt akut (Recovery-Bedarf), nicht über Wochen.
+FATIGUE_CARDIO_WINDOW_DAYS = 7
+# Volumen-Spike: 2 aufeinanderfolgende Wochen-Werte (Vergleich) – impliziter 14d-Span.
 
 
 # ---------------------------------------------------------------------------
@@ -155,8 +179,12 @@ def _get_favoriten(user):
 
 
 def _get_rpe_score(user, heute) -> tuple[int, float | None]:
-    """Compute RPE form score (0-25) and raw avg_rpe for the last 2 weeks."""
-    two_weeks_ago = heute - timedelta(days=14)
+    """Compute RPE form score (0-25) and raw avg_rpe for the last 2 weeks.
+
+    Zeitfenster: ``FATIGUE_RPE_WINDOW_DAYS`` (14d) – konsistent mit
+    ``_get_rpe10_anteil`` und der RPE-Verteilung aus Phase 23.1.
+    """
+    two_weeks_ago = heute - timedelta(days=FATIGUE_RPE_WINDOW_DAYS)
     recent_saetze = Satz.objects.filter(
         einheit__datum__gte=two_weeks_ago,
         einheit__user=user,
@@ -375,8 +403,15 @@ def _get_rpe_fatigue(user, heute) -> tuple[int, list[str]]:
 
 
 def _get_frequency_fatigue(user, heute) -> tuple[int, list[str]]:
-    """Return (points, warnings) based on training frequency in the last 7 days."""
-    count = Trainingseinheit.objects.filter(user=user, datum__gte=heute - timedelta(days=7)).count()
+    """Return (points, warnings) based on training frequency in the last 7 days.
+
+    Zeitfenster: ``FATIGUE_FREQUENCY_WINDOW_DAYS`` (7d, akute Last).
+    Bewusst nicht 14d wie die RPE-Komponente – die Schwellen ("≥6 Trainings"
+    = "sehr viel") gelten pro Woche, nicht pro Zwei-Wochen-Block.
+    """
+    count = Trainingseinheit.objects.filter(
+        user=user, datum__gte=heute - timedelta(days=FATIGUE_FREQUENCY_WINDOW_DAYS)
+    ).count()
     if count >= 6:
         return 30, ["Sehr hohe Trainingsfrequenz"]
     if count >= 5:
@@ -385,8 +420,14 @@ def _get_frequency_fatigue(user, heute) -> tuple[int, list[str]]:
 
 
 def _get_cardio_fatigue(user, heute) -> tuple[int, list[str], int, int]:
-    """Return (points, warnings, session_count, total_minutes) from cardio last 7 days."""
-    sessions = CardioEinheit.objects.filter(user=user, datum__gte=heute - timedelta(days=7))
+    """Return (points, warnings, session_count, total_minutes) from cardio last 7 days.
+
+    Zeitfenster: ``FATIGUE_CARDIO_WINDOW_DAYS`` (7d). Cardio wirkt akut,
+    Recovery-Bedarf ist innerhalb der Woche relevant.
+    """
+    sessions = CardioEinheit.objects.filter(
+        user=user, datum__gte=heute - timedelta(days=FATIGUE_CARDIO_WINDOW_DAYS)
+    )
     total = sum(c.ermuedungs_punkte for c in sessions)
     if total >= 120:
         return (
@@ -425,7 +466,20 @@ def _calculate_fatigue_index(
     gesamt_trainings: int,
     block_age_weeks: int | None = None,
 ) -> dict:
-    """Compute fatigue index and related display data. Returns a dict."""
+    """Compute fatigue index and related display data. Returns a dict.
+
+    Phase 23.4 – Zeitfenster-Übersicht der Komponenten:
+        - Volumen-Spike: Vergleich aktuelle vs. vorherige Woche (= 14d-Span)
+        - RPE primary (RPE-10-Anteil): ``FATIGUE_RPE_WINDOW_DAYS`` (14d)
+        - RPE secondary (Avg-RPE):     ``FATIGUE_RPE_WINDOW_DAYS`` (14d)
+        - Frequenz:                    ``FATIGUE_FREQUENCY_WINDOW_DAYS`` (7d, akute Last)
+        - Cardio:                      ``FATIGUE_CARDIO_WINDOW_DAYS`` (7d, akute Last)
+
+    Die Konzept-Annahme "alle Komponenten 14d" wurde nicht umgesetzt – Frequenz/Cardio
+    sind akute Lasten, deren Schwellenwerte ("≥6 Trainings/Woche") an 7 Tage gebunden
+    sind. RPE-Komponente ist 14d, damit Index und RPE-Verteilungs-Anzeige (Phase 23.1,
+    4-Wochen-Karte primär) nicht widersprüchlich wirken.
+    """
     fatigue_index = 0
     fatigue_warnings: list[str] = []
 
@@ -1683,6 +1737,43 @@ def _calc_weekly_volume(trainings, user_kg: float = 0.0) -> tuple[list, list, di
     return labels, [round(weekly[k], 1) for k in labels], {k: weekly_plans[k] for k in labels}
 
 
+def _calc_weekly_effective_volume(trainings, user_kg: float = 0.0) -> tuple[dict, dict, dict]:
+    """Phase 23.2: Tonnage und effektives Volumen pro Woche, plus Deload-Mehrheit.
+
+    Im Gegensatz zu ``_calc_weekly_volume`` werden hier Deload-Sessions
+    **mitgezählt**, damit Wochen mit überwiegend Deload-Sessions auch ihre
+    tatsächliche (reduzierte) Tonnage zeigen. Die Diagnose-Logik nutzt
+    ``is_deload_week`` als Hybrid-Block-Typ-Awareness (Frage 8.5).
+
+    Returns: (tonnage_by_week, effective_by_week, deload_majority_by_week)
+    """
+    tonnage: defaultdict[str, float] = defaultdict(float)
+    effective: defaultdict[str, float] = defaultdict(float)
+    sessions_count: defaultdict[str, dict] = defaultdict(lambda: {"total": 0, "deload": 0})
+    for training in trainings:
+        iso_year, iso_week, _ = training.datum.isocalendar()
+        key = f"{iso_year}-W{iso_week:02d}"
+        sessions_count[key]["total"] += 1
+        if training.ist_deload:
+            sessions_count[key]["deload"] += 1
+        for satz in training.arbeitssaetze_list:
+            if satz.gewicht is None or not satz.wiederholungen:
+                continue
+            # Tonnage: Phase-14-konsistent über calc_volume
+            tonn = calc_volume([satz], user_kg)
+            tonnage[key] += tonn
+            if (
+                satz.rpe is not None
+                and EFFECTIVE_VOLUME_RPE_MIN <= float(satz.rpe) <= EFFECTIVE_VOLUME_RPE_MAX
+            ):
+                effective[key] += tonn
+    deload_majority = {
+        k: bool(c["total"] and (c["deload"] / c["total"]) * 100 >= DELOAD_WEEK_MAJORITY_PCT)
+        for k, c in sessions_count.items()
+    }
+    return dict(tonnage), dict(effective), deload_majority
+
+
 _DEFAULT_RPE = 7.0  # Fallback für Sätze ohne RPE-Bewertung (moderate Anstrengung)
 
 
@@ -2002,25 +2093,32 @@ def _calc_plateau_live(user) -> list[dict]:
             continue
 
         pr_datum = letzter_pr_satz.einheit.datum
-        tage_seit_pr = (heute.date() - pr_datum.date()).days
 
-        if tage_seit_pr <= 14:
-            status = "Kürzlich"
-            farbe = "success"
-        elif tage_seit_pr <= 42:
-            status = "Stagnierend"
-            farbe = "warning"
-        else:
-            status = "Lange kein PR"
-            farbe = "danger"
+        # Phase 23.3: einheitliche Klassifikation via classify_progression_status
+        # (gleiche Logik wie PDF-Plateau-Analyse, inkl. Pause/Konsolidierung/Regression).
+        uebung_saetze = Satz.objects.filter(
+            einheit__user=user,
+            uebung_id=uebung_id,
+            ist_aufwaermsatz=False,
+            einheit__ist_deload=False,
+        ).select_related("einheit")
+        classification = classify_progression_status(
+            uebung_saetze, letzter_pr_satz, reference_date=heute
+        )
 
         result.append(
             {
                 "uebung": uebung_name,
-                "tage_seit_pr": tage_seit_pr,
-                "status": status,
-                "farbe": farbe,
+                "tage_seit_pr": classification["days_since_pr"],
+                "status": classification["status"],
+                "status_label": classification["status_label"],
+                "status_farbe": classification["status_farbe"],
+                # Backwards-Compat-Alias für ältere Templates (Phase 21.3):
+                "farbe": classification["status_farbe"],
                 "letzter_pr_datum": pr_datum.strftime("%d.%m.%Y"),
+                "rpe_first_half": classification["rpe_first_half"],
+                "rpe_second_half": classification["rpe_second_half"],
+                "weight_drop_pct": classification["weight_drop_pct"],
             }
         )
 
@@ -2173,6 +2271,25 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     user_kg = get_user_kg(request.user)
     volumen_labels, volumen_data, deload_flags = _calc_per_training_volume(trainings, user_kg)
     weekly_labels, weekly_data, plans_per_week = _calc_weekly_volume(trainings, user_kg)
+
+    # Phase 23.2: Effektives Volumen pro Woche + Diagnose-Tabelle
+    weekly_tonnage_map, weekly_effective_map, weekly_deload_majority = (
+        _calc_weekly_effective_volume(trainings, user_kg)
+    )
+    # Achsen synchron zum bestehenden weekly_data (gleiche Labels)
+    weekly_effective_data = [round(weekly_effective_map.get(k, 0), 1) for k in weekly_labels]
+    weekly_deload_majority_flags = [weekly_deload_majority.get(k, False) for k in weekly_labels]
+    # Diagnose der letzten Woche (Trend gegenüber Vorwoche)
+    volume_diagnosis = None
+    if len(weekly_labels) >= 2:
+        prev_label, curr_label = weekly_labels[-2], weekly_labels[-1]
+        volume_diagnosis = diagnose_volume_trend(
+            prev_tonnage=weekly_tonnage_map.get(prev_label, 0),
+            curr_tonnage=weekly_tonnage_map.get(curr_label, 0),
+            prev_effective=weekly_effective_map.get(prev_label, 0),
+            curr_effective=weekly_effective_map.get(curr_label, 0),
+            is_deload_week=weekly_deload_majority.get(curr_label, False),
+        )
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(
         trainings, request.user
     )
@@ -2192,6 +2309,19 @@ def training_stats(request: HttpRequest) -> HttpResponse:
 
     # RPE-10 metric (Phase 9.3)
     rpe10_anteil = _get_rpe10_anteil(request.user, heute)
+
+    # Phase 23.1: Zeitfenster-basierte RPE-Verteilung (2w / 4w / all)
+    rpe_active_uebung_ids = get_active_plan_exercise_ids(request.user)
+    rpe_plan_start = (
+        get_active_plan_start_date(request.user)
+        if rpe_active_uebung_ids is not None and not is_active_plan_too_new(request.user)
+        else None
+    )
+    rpe_quality_windowed = calculate_rpe_quality_analysis_windowed(
+        Satz.objects.filter(einheit__user=request.user),
+        reference_date=heute,
+        plan_start=rpe_plan_start,
+    )
 
     # Phase 21.1: Muskelgruppen-Balance Soll-Bereich
     muscle_soll = _calc_muscle_soll_bereiche(stats_code, request.user)
@@ -2224,6 +2354,10 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "deload_flags_json": json.dumps(deload_flags),
         "weekly_labels_json": json.dumps(weekly_labels),
         "weekly_data_json": json.dumps(weekly_data),
+        # Phase 23.2: zweite Linie + Diagnose-Karte
+        "weekly_effective_data_json": json.dumps(weekly_effective_data),
+        "weekly_deload_majority_json": json.dumps(weekly_deload_majority_flags),
+        "volume_diagnosis": volume_diagnosis,
         "aktuelle_kw": f"{heute.isocalendar()[0]}-W{heute.isocalendar()[1]:02d}",
         "mg_labels_json": json.dumps(mg_labels),
         "mg_data_json": json.dumps(mg_data),
@@ -2232,6 +2366,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "deload_warnings": deload_warnings,
         "svg_muscle_data_json": json.dumps(svg_muscle_data),
         "rpe10_anteil": rpe10_anteil,
+        "rpe_quality_windowed": rpe_quality_windowed,
         # Phase 21
         "muscle_soll_json": json.dumps(muscle_soll),
         "push_pull": push_pull,

@@ -3,9 +3,197 @@ Advanced Training Statistics - Helper Functions
 Provides comprehensive analysis for training progression, consistency, and performance.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.utils import timezone
+
+# Phase 23: Zeitfenster-Konstanten für gestaffelte Trainingsanalysen
+WINDOW_2W_DAYS = 14
+WINDOW_4W_DAYS = 28
+# Minimum Sätze, damit ein Zeitfenster valide auswertbar ist (Konzept 3.4 / 8.3).
+# Empirisch justierbar – aktuell konservativer Default.
+MIN_SETS_FOR_WINDOW = 30
+# Minimum Sätze für 2w-Hinweis-Logik (kleiner als MIN_SETS_FOR_WINDOW, da 2w
+# inhaltlich weniger Aussagekraft braucht – nur "Trend ändert sich"-Signal).
+MIN_SETS_FOR_DIVERGENCE = 10
+# Schwelle in Prozentpunkten, ab der ein Trend-Hinweis "Verhalten weicht ab"
+# zwischen 2-Wochen- und 4-Wochen-RPE-10-Anteil ausgelöst wird (Konzept 3.3).
+DIVERGENCE_THRESHOLD_PCT = 5.0
+
+# Phase 23.3: Plateau-Logik vereinheitlicht
+# RPE-Differenz first-half vs. second-half der letzten 4w → "Konsolidierung".
+# Empirisch validiert (Mai-2026-Daten): die alte First/Second-Half-Logik mit
+# 0.5-Schwelle hat Hammer Curls korrekt als Konsolidierung erkannt; höhere
+# Schwellen würden zu wenig fangen, niedrigere wären Noise.
+CONSOLIDATION_RPE_DELTA = 0.5
+# >5% 1RM-Drop im current 4w gegenüber PR → Regression (vorher 10%).
+REGRESSION_WEIGHT_DROP_PCT = 5.0
+# < 2 Sätze in den letzten 4w → "Pause" statt "Plateau". Adressiert die im
+# Mai-2026-Report sichtbare Inkonsistenz: Übungen, die seit Wochen nicht
+# trainiert wurden, sollen nicht als "Plateau" gelten.
+PAUSE_MIN_CUR_SETS = 2
+# Min. RPE-erfasste Sätze in letzten 4w für Konsolidierungs-Check.
+PROGRESSION_RPE_MIN_SETS = 4
+
+# Phase 23.2: Effektives Volumen
+# RPE-Range, der als "produktives" Volumen gilt – außerhalb davon liegt
+# Junk Volume (RPE <7, zu leicht) bzw. Failure Volume (RPE 10, recovery-teuer).
+EFFECTIVE_VOLUME_RPE_MIN = 7.0
+EFFECTIVE_VOLUME_RPE_MAX = 9.0
+# Schwelle für "Volumen sinkt/steigt"-Klassifikation (Diagnose-Tabelle 4.3).
+# 5 % Differenz Woche-zu-Woche zählt als "stabil", darüber als Trend.
+VOLUME_TREND_STABLE_PCT = 5.0
+# Hybrid-Block-Typ-Awareness (Phase 23.2 / Frage 8.5):
+# Wenn ≥50 % der Sessions einer Woche `ist_deload=True` haben, gilt die
+# Woche als Deload-Woche und der "Regression"-Hinweis wird unterdrückt.
+DELOAD_WEEK_MAJORITY_PCT = 50.0
+
+
+def _find_best_1rm_satz(uebung_saetze):
+    """Liefert (best_1rm, best_satz) via Epley-Formel über alle gewichteten Sätze.
+
+    Bei Gleichstand gewinnt der **chronologisch erste** Satz (strict >), damit
+    `tage_seit_pr` plausibel ist (= Datum, an dem der PR erstmals erreicht wurde).
+    """
+    bester_1rm = 0.0
+    bester_satz = None
+    for satz in uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum"):
+        wdh = satz.wiederholungen or 1
+        einzel_1rm = float(satz.gewicht) * (1 + wdh / 30.0)
+        if einzel_1rm > bester_1rm:
+            bester_1rm = einzel_1rm
+            bester_satz = satz
+    return bester_1rm, bester_satz
+
+
+def classify_progression_status(uebung_saetze, pr_satz, reference_date=None):
+    """
+    Klassifiziert den Progressions-Status einer einzelnen Übung (Phase 23.3).
+
+    Status-Hierarchie (höchste Priorität zuerst):
+        1. ``regression``         – >5 % 1RM-Drop im aktuellen 4w-Fenster vs. PR
+        2. ``active_progression`` – PR ≤ 7 Tage alt
+        3. ``observe``            – PR 8–14 Tage alt
+        4. ``pause``              – < 2 Sätze in den letzten 4w (nicht aktiv trainiert)
+        5. ``consolidation``      – RPE sinkt (≥ 0.5) im first-half vs. second-half
+                                    der letzten 4w → User wird stärker bei stabilem Gewicht
+        6. ``plateau_light``      – 15–42 Tage seit PR, sonst kein Auslöser
+        7. ``plateau``            – 43–84 Tage seit PR
+        8. ``plateau_long``       – > 84 Tage seit PR
+        9. ``no_data``            – kein PR-Satz vorhanden
+
+    Args:
+        uebung_saetze: Satz-Queryset für genau eine Übung. Sollte bereits
+            user-, warmup- und deload-gefiltert sein.
+        pr_satz: Satz mit dem höchsten geschätzten 1RM (oder ``is_pr=True``-Satz).
+            Muss ``gewicht`` und ``einheit.datum`` haben.
+        reference_date: Stichtag (default ``timezone.now()``).
+
+    Returns:
+        dict mit:
+            - ``status``: einer der oben gelisteten Schlüssel
+            - ``status_label``: Lesbarer Label-String (mit Emoji)
+            - ``status_farbe``: Bootstrap-Color-Class
+            - ``days_since_pr``: int oder None
+            - ``rpe_first_half``, ``rpe_second_half``, ``rpe_delta``: float oder None
+            - ``weight_drop_pct``: float oder None (positiv = Drop gegenüber PR)
+            - ``cur_4w_n``: Anzahl Sätze in letzten 4w (für Pause-Erkennung)
+    """
+    if reference_date is None:
+        reference_date = timezone.now()
+
+    result = {
+        "status": "no_data",
+        "status_label": "📊 Keine Daten",
+        "status_farbe": "secondary",
+        "days_since_pr": None,
+        "rpe_first_half": None,
+        "rpe_second_half": None,
+        "rpe_delta": None,
+        "weight_drop_pct": None,
+        "cur_4w_n": 0,
+    }
+
+    if not pr_satz or not pr_satz.gewicht or not getattr(pr_satz, "einheit", None):
+        return result
+
+    pr_date = pr_satz.einheit.datum
+    days_since_pr = (reference_date.date() - pr_date.date()).days
+    result["days_since_pr"] = days_since_pr
+    pr_1rm = float(pr_satz.gewicht) * (1 + (pr_satz.wiederholungen or 1) / 30.0)
+
+    vier_wochen_start = reference_date - timedelta(days=28)
+    cur_saetze = list(
+        uebung_saetze.filter(einheit__datum__gte=vier_wochen_start).order_by("einheit__datum")
+    )
+    result["cur_4w_n"] = len(cur_saetze)
+
+    # Weight-Drop berechnen, sofern mindestens 1 Working Set in den letzten 4w
+    cur_weighted = [s for s in cur_saetze if s.gewicht]
+    if cur_weighted and pr_1rm > 0:
+        cur_best_1rm = max(
+            float(s.gewicht) * (1 + (s.wiederholungen or 1) / 30.0) for s in cur_weighted
+        )
+        result["weight_drop_pct"] = round((pr_1rm - cur_best_1rm) / pr_1rm * 100, 2)
+
+    # 1) Regression schlägt alles
+    if (
+        result["weight_drop_pct"] is not None
+        and result["weight_drop_pct"] > REGRESSION_WEIGHT_DROP_PCT
+    ):
+        result.update(status="regression", status_label="⚠️ Rückschritt", status_farbe="danger")
+        return result
+
+    # 2) Frischer PR
+    if days_since_pr <= 7:
+        result.update(
+            status="active_progression",
+            status_label="✅ Aktive Progression",
+            status_farbe="success",
+        )
+        return result
+    if days_since_pr <= 14:
+        result.update(status="observe", status_label="👀 Beobachten", status_farbe="info")
+        return result
+
+    # 3) Pause: zu wenig aktuelle Sätze, kein Regressions-Signal
+    if result["cur_4w_n"] < PAUSE_MIN_CUR_SETS:
+        result.update(status="pause", status_label="⏸️ Pause", status_farbe="secondary")
+        return result
+
+    # 4) Konsolidierung: RPE-Trend in den letzten 4w vergleichen.
+    rpe_saetze = [s for s in cur_saetze if s.rpe is not None and s.gewicht]
+    if len(rpe_saetze) >= PROGRESSION_RPE_MIN_SETS:
+        rpe_values = [float(s.rpe) for s in rpe_saetze]
+        mid = len(rpe_values) // 2
+        first_half = sum(rpe_values[:mid]) / mid
+        second_half = sum(rpe_values[mid:]) / len(rpe_values[mid:])
+        delta = first_half - second_half
+        result["rpe_first_half"] = round(first_half, 2)
+        result["rpe_second_half"] = round(second_half, 2)
+        result["rpe_delta"] = round(delta, 2)
+        if delta >= CONSOLIDATION_RPE_DELTA:
+            result.update(
+                status="consolidation",
+                status_label="💪 Konsolidierung (RPE sinkt)",
+                status_farbe="info",
+            )
+            return result
+
+    # 5) Plateau nach Tagen seit PR
+    if days_since_pr <= 42:
+        result.update(
+            status="plateau_light",
+            status_label="⚠️ Leichtes Plateau",
+            status_farbe="warning",
+        )
+    elif days_since_pr <= 84:
+        result.update(status="plateau", status_label="🔴 Plateau", status_farbe="danger")
+    else:
+        result.update(
+            status="plateau_long", status_label="❌ Langzeit-Plateau", status_farbe="danger"
+        )
+    return result
 
 
 def calculate_plateau_analysis(alle_saetze, top_uebungen):
@@ -14,23 +202,22 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
 
     Returns list with:
     - uebung: Exercise name
-    - letzter_pr: Last personal record weight
+    - letzter_pr: Last personal record weight (estimated 1RM)
     - pr_datum: Date of last PR
     - tage_seit_pr: Days since last PR
     - progression_pro_monat: Average weight increase per month
-    - status: 'progression' / 'plateau' / 'regression'
+    - status: status key (siehe :func:`classify_progression_status`)
+    - status_label, status_farbe: Anzeige-Felder
+    - rpe_first_half, rpe_second_half, rpe_delta, weight_drop_pct, cur_4w_n: Diagnose-Daten
     - muskelgruppe: Muscle group
     """
     heute = timezone.now()
-    vier_wochen = heute - timedelta(days=28)
-
     plateau_analysis = []
 
     for uebung in top_uebungen[:5]:
         uebung_name = uebung["uebung__bezeichnung"]
         muskelgruppe = uebung.get("muskelgruppe_display", "")
 
-        # Alle Sätze dieser Übung chronologisch
         uebung_saetze = alle_saetze.filter(uebung__bezeichnung=uebung_name).order_by(
             "einheit__datum"
         )
@@ -38,108 +225,23 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
         if uebung_saetze.count() < 2:
             continue
 
-        # PR auf Basis des geschätzten 1RM (Epley-Formel: Gewicht × (1 + Wdh/30))
-        # Korrekte Methode: Roh-Gewicht allein ignoriert Rep-Steigerungen als Fortschritt.
-        # Wer 80kg × 8 → 80kg × 12 steigert (1RM: 101 → 112 kg) hat echten Fortschritt.
-        bester_1rm = 0.0
-        bester_1rm_satz = None
-
-        for satz in uebung_saetze.filter(gewicht__isnull=False):
-            wdh = satz.wiederholungen or 1
-            einzel_1rm = float(satz.gewicht) * (1 + wdh / 30.0)
-            if einzel_1rm > bester_1rm:
-                bester_1rm = einzel_1rm
-                bester_1rm_satz = satz
-
-        if not bester_1rm_satz:
+        bester_1rm, pr_satz = _find_best_1rm_satz(uebung_saetze)
+        if not pr_satz:
             continue
 
         letzter_pr = round(bester_1rm, 1)
-        pr_datum = bester_1rm_satz.einheit.datum
-        tage_seit_pr = (heute.date() - pr_datum.date()).days
+        pr_datum = pr_satz.einheit.datum
 
-        # Berechne durchschnittliche Progression pro Monat (auf 1RM-Basis)
+        # Durchschnittliche Progression pro Monat (auf 1RM-Basis)
         erster_satz = uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum").first()
+        progression_pro_monat = 0
         if erster_satz and erster_satz.gewicht:
             erstes_1rm = float(erster_satz.gewicht) * (1 + (erster_satz.wiederholungen or 1) / 30.0)
             tage_gesamt = (pr_datum.date() - erster_satz.einheit.datum.date()).days
-
             if tage_gesamt > 0:
-                gewichtsdiff = letzter_pr - erstes_1rm
-                progression_pro_monat = round((gewichtsdiff / tage_gesamt) * 30, 2)
-            else:
-                progression_pro_monat = 0
-        else:
-            progression_pro_monat = 0
+                progression_pro_monat = round((letzter_pr - erstes_1rm) / tage_gesamt * 30, 2)
 
-        # RPE-Trend prüfen: sinkender RPE bei gleichem Gewicht = Konsolidierung (kein Plateau)
-        # Vergleiche Durchschnitts-RPE der ersten vs. letzten Hälfte der letzten 4 Wochen
-        rpe_trend_sinkend = False
-        letzte_4w_saetze = uebung_saetze.filter(
-            einheit__datum__gte=vier_wochen, gewicht__isnull=False, rpe__isnull=False
-        ).order_by("einheit__datum")
-
-        if letzte_4w_saetze.count() >= 4:
-            rpe_werte = [float(s.rpe) for s in letzte_4w_saetze]
-            mitte = len(rpe_werte) // 2
-            avg_rpe_frueh = sum(rpe_werte[:mitte]) / mitte
-            avg_rpe_spaet = sum(rpe_werte[mitte:]) / len(rpe_werte[mitte:])
-            # RPE sinkt um mindestens 0.5 → Konsolidierung
-            if avg_rpe_frueh - avg_rpe_spaet >= 0.5:
-                rpe_trend_sinkend = True
-
-        # Status bestimmen
-        if tage_seit_pr <= 7:
-            # Weniger als 1 Woche - noch zu früh für Bewertung
-            if progression_pro_monat > 0:
-                status = "progression"
-                status_label = "✅ Aktive Progression"
-                status_farbe = "success"
-            else:
-                status = "zu_frueh"
-                status_label = "⏳ Zu früh zu bewerten"
-                status_farbe = "info"
-        elif tage_seit_pr <= 14:
-            # 1-2 Wochen
-            if progression_pro_monat > 0:
-                status = "progression"
-                status_label = "✅ Aktive Progression"
-                status_farbe = "success"
-            else:
-                status = "beobachten"
-                status_label = "👀 Beobachten"
-                status_farbe = "info"
-        elif rpe_trend_sinkend:
-            # Gewicht stagniert, aber RPE sinkt → User wird stärker
-            status = "konsolidierung"
-            status_label = "💪 Konsolidierung (RPE sinkt)"
-            status_farbe = "info"
-        elif tage_seit_pr <= 42:  # 2-6 Wochen
-            status = "plateau_leicht"
-            status_label = "⚠️ Leichtes Plateau"
-            status_farbe = "warning"
-        elif tage_seit_pr <= 84:  # 6-12 Wochen
-            status = "plateau"
-            status_label = "🔴 Plateau"
-            status_farbe = "danger"
-        else:
-            status = "plateau_lang"
-            status_label = "❌ Langzeit-Plateau"
-            status_farbe = "danger"
-
-        # Prüfe auf Regression: aktueller 1RM (letzte 4 Wochen) vs. bester je 1RM
-        letzte_4_wochen = uebung_saetze.filter(
-            einheit__datum__gte=vier_wochen, gewicht__isnull=False
-        )
-
-        if letzte_4_wochen.exists():
-            aktueller_1rm = max(
-                float(s.gewicht) * (1 + (s.wiederholungen or 1) / 30.0) for s in letzte_4_wochen
-            )
-            if aktueller_1rm < letzter_pr * 0.9:  # >10% Rückgang im 1RM
-                status = "regression"
-                status_label = "⚠️ Rückschritt"
-                status_farbe = "danger"
+        classification = classify_progression_status(uebung_saetze, pr_satz, reference_date=heute)
 
         plateau_analysis.append(
             {
@@ -147,11 +249,16 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
                 "muskelgruppe": muskelgruppe,
                 "letzter_pr": letzter_pr,
                 "pr_datum": pr_datum.strftime("%d.%m.%Y"),
-                "tage_seit_pr": tage_seit_pr,
+                "tage_seit_pr": classification["days_since_pr"],
                 "progression_pro_monat": progression_pro_monat,
-                "status": status,
-                "status_label": status_label,
-                "status_farbe": status_farbe,
+                "status": classification["status"],
+                "status_label": classification["status_label"],
+                "status_farbe": classification["status_farbe"],
+                "rpe_first_half": classification["rpe_first_half"],
+                "rpe_second_half": classification["rpe_second_half"],
+                "rpe_delta": classification["rpe_delta"],
+                "weight_drop_pct": classification["weight_drop_pct"],
+                "cur_4w_n": classification["cur_4w_n"],
             }
         )
 
@@ -276,6 +383,12 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
 
     Die Dashboard-Version (Phase 9.4+) nutzt RPE-10-Verteilung statt einfachem
     RPE-Durchschnitt, berücksichtigt Cardio, und hat Block-Age-Awareness.
+
+    Phase 23.4: Zeitfenster sind explizit dokumentiert in den Dashboard-Helfern
+    (``training_stats.py``: ``FATIGUE_RPE_WINDOW_DAYS=14``,
+    ``FATIGUE_FREQUENCY_WINDOW_DAYS=7``, ``FATIGUE_CARDIO_WINDOW_DAYS=7``).
+    RPE-Komponente ist konsistent mit der RPE-Verteilung aus 23.1 (4-Wochen-
+    Bewertung der Karten + 14-Tage-Fenster im Index = derselbe Trend-Bereich).
 
     Returns dict with:
     - fatigue_index, bewertung, bewertung_farbe, empfehlung
@@ -622,4 +735,386 @@ def calculate_rpe_quality_analysis(alle_saetze):
         "bewertung_farbe": bewertung_farbe,
         "empfehlungen": empfehlungen,
         "gesamt_saetze": gesamt,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23: Zeitfenster-basierte Trainingsanalysen
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _normalize_date_pair(reference_date, plan_start):
+    """Bring reference_date and plan_start to the same date/datetime kind.
+
+    Caller-side ``reference_date`` may be ``datetime`` (PDF path) or ``date``
+    (live-stats view). ``plan_start`` from :func:`get_active_plan_start_date`
+    is a ``datetime``. We coerce ``plan_start`` to match ``reference_date``'s
+    kind so comparisons in :func:`get_time_windows` work without TypeError.
+    """
+    if plan_start is None:
+        return reference_date, plan_start
+    ref_is_dt = isinstance(reference_date, datetime)
+    ps_is_dt = isinstance(plan_start, datetime)
+    if ref_is_dt and not ps_is_dt:
+        # plan_start is date → expand to start-of-day datetime in current tz
+        plan_start = datetime.combine(plan_start, datetime.min.time(), tzinfo=reference_date.tzinfo)
+    elif not ref_is_dt and ps_is_dt:
+        # plan_start is datetime → drop time component
+        plan_start = plan_start.date()
+    return reference_date, plan_start
+
+
+def get_time_windows(reference_date=None, plan_start=None):
+    """
+    Liefert Standard-Zeitfenster für Phase-23-Analysen.
+
+    Drei Fenster:
+      - "2w": kurzfristig (14 Tage), aktueller Zustand
+      - "4w": mittelfristig (28 Tage), primäre Steuerungsgröße
+      - "all": all-time (Start = None), historischer Kontext
+
+    Optional ``plan_start``: clamped Window-Starts auf ``max(start, plan_start)`` –
+    so respektieren Auswertungen den aktiven Plan-Block (Phase-22-Konsistenz).
+    "all" wird **nicht** geclamped – All-Time soll All-Time bleiben.
+
+    ``reference_date`` und ``plan_start`` dürfen je ``date`` oder ``datetime``
+    sein – beide werden intern auf denselben Typ normalisiert.
+
+    Returns:
+        dict[str, tuple[date|datetime|None, date|datetime]]:
+            {"2w": (start, end), "4w": (start, end), "all": (None, end)}
+    """
+    if reference_date is None:
+        reference_date = timezone.now()
+
+    reference_date, plan_start = _normalize_date_pair(reference_date, plan_start)
+
+    two_w_start = reference_date - timedelta(days=WINDOW_2W_DAYS)
+    four_w_start = reference_date - timedelta(days=WINDOW_4W_DAYS)
+
+    if plan_start is not None:
+        if plan_start > two_w_start:
+            two_w_start = plan_start
+        if plan_start > four_w_start:
+            four_w_start = plan_start
+
+    return {
+        "2w": (two_w_start, reference_date),
+        "4w": (four_w_start, reference_date),
+        "all": (None, reference_date),
+    }
+
+
+def _filter_saetze_by_window(alle_saetze, start, end):
+    """Apply einheit__datum window filter to a Satz queryset."""
+    qs = alle_saetze.filter(einheit__datum__lte=end)
+    if start is not None:
+        qs = qs.filter(einheit__datum__gte=start)
+    return qs
+
+
+def _evaluate_rpe_failure_rate(failure_rate, primary_label):
+    """
+    Map failure_rate (RPE-10 percent) to (evaluation, recommendation).
+
+    Schwellenwerte aus Phase 9.3 (unverändert in Phase 23):
+        <5%   → "optimal"
+        5-15% → "akzeptabel"
+        >15%  → "risiko"
+    """
+    if failure_rate < 5:
+        return (
+            "optimal",
+            f"{primary_label}: {failure_rate}% RPE-10 – innerhalb Ziel (<5 %).",
+        )
+    if failure_rate <= 15:
+        return (
+            "akzeptabel",
+            f"{primary_label}: {failure_rate}% RPE-10 – im akzeptablen Bereich (<15 %).",
+        )
+    return (
+        "risiko",
+        f"{primary_label}: {failure_rate}% RPE-10 – Übertrainings-Risiko.",
+    )
+
+
+def calculate_rpe_quality_analysis_windowed(
+    alle_saetze,
+    reference_date=None,
+    plan_start=None,
+    min_sets=MIN_SETS_FOR_WINDOW,
+):
+    """
+    RPE-Qualitätsanalyse für drei gestaffelte Zeitfenster (2w / 4w / all).
+
+    Wrapper um :func:`calculate_rpe_quality_analysis` – pro Fenster ein Aufruf.
+    Bewertung und Empfehlung leiten sich vom **4-Wochen-Wert** ab. Bei zu wenig
+    Daten im 4-Wochen-Fenster fällt der primäre Window auf "all" zurück, der
+    4w-Wert bleibt aber zur Anzeige erhalten (mit ``insufficient_data``-Flag).
+    Das 2-Wochen-Fenster wird auf ``None`` gesetzt, wenn unter ``min_sets``
+    Sätze – Konzept 3.4: "n.a. anzeigen".
+
+    Args:
+        alle_saetze: Satz-Queryset (User-vorgefiltert, sonst beliebig).
+        reference_date: Stichtag (default: ``timezone.now()``).
+        plan_start: Optionaler Plan-Startzeitpunkt (Phase 22) zum Clamping.
+        min_sets: Schwelle, ab der ein Fenster valide auswertbar ist.
+
+    Returns:
+        dict mit:
+            - ``windows``: {"2w": result|None, "4w": result|None, "all": result|None}
+            - ``primary_window``: "4w" oder "all"
+            - ``evaluation``: "optimal" | "akzeptabel" | "risiko" | None
+            - ``recommendation``: Empfehlungstext mit Zeitraum-Zitat oder None
+            - ``divergence_hint``: Hinweis bei Trend-Wechsel zwischen 2w/4w oder None
+            - ``window_meta``: pro Fenster {"start", "end", "n_sets", "insufficient_data"}
+            - ``insufficient_4w``: True wenn 4w unter min_sets
+            - ``plan_clamped``: True wenn plan_start das 4w-Fenster verkürzt hat
+        Returns ``None`` wenn in keinem Fenster RPE-Daten vorliegen.
+    """
+    if reference_date is None:
+        reference_date = timezone.now()
+
+    windows = get_time_windows(reference_date, plan_start=plan_start)
+    raw_results = {}
+    meta = {}
+
+    for key, (start, end) in windows.items():
+        qs = _filter_saetze_by_window(alle_saetze, start, end)
+        result = calculate_rpe_quality_analysis(qs)
+        n_sets = result["gesamt_saetze"] if result else 0
+        raw_results[key] = result
+        meta[key] = {
+            "start": start,
+            "end": end,
+            "n_sets": n_sets,
+            "insufficient_data": False,
+        }
+
+    # Wenn überhaupt keine RPE-Daten existieren: None zurückgeben.
+    if all(r is None for r in raw_results.values()):
+        return None
+
+    # 2w mit zu wenig Daten → ausblenden ("n.a." anzeigen, Konzept 3.4)
+    if raw_results["2w"] is not None and meta["2w"]["n_sets"] < min_sets:
+        meta["2w"]["insufficient_data"] = True
+        raw_results["2w"] = None
+
+    # 4w mit zu wenig Daten → 4w-Werte bleiben zur Anzeige erhalten,
+    # aber primary fällt auf "all" zurück (Konzept 3.4).
+    insufficient_4w = raw_results["4w"] is None or meta["4w"]["n_sets"] < min_sets
+    if insufficient_4w and raw_results["4w"] is not None:
+        meta["4w"]["insufficient_data"] = True
+
+    primary = "all" if insufficient_4w else "4w"
+    primary_result = raw_results[primary]
+    if primary_result is None:
+        # Kann passieren, wenn 4w insufficient und all leer (theoretisch).
+        primary_result = raw_results["4w"] or raw_results["2w"] or raw_results["all"]
+
+    evaluation = None
+    recommendation = None
+    if primary_result is not None:
+        primary_label = "Letzte 4 Wochen" if primary == "4w" else "Gesamt"
+        evaluation, recommendation = _evaluate_rpe_failure_rate(
+            primary_result["failure_rate"], primary_label
+        )
+        if insufficient_4w and primary == "all":
+            recommendation = (
+                f"Zu wenig Daten für 4-Wochen-Auswertung "
+                f"(n={meta['4w']['n_sets']}/{min_sets}) – Bewertung basiert "
+                f"auf Gesamtzeitraum: {primary_result['failure_rate']}% RPE-10."
+            )
+
+    # Trend-Hinweis: 2w-Wert weicht spürbar vom 4w-Wert ab.
+    divergence_hint = None
+    res_2w = raw_results["2w"]
+    res_4w = raw_results["4w"]
+    if (
+        res_2w is not None
+        and res_4w is not None
+        and meta["2w"]["n_sets"] >= MIN_SETS_FOR_DIVERGENCE
+        and abs(res_2w["failure_rate"] - res_4w["failure_rate"]) > DIVERGENCE_THRESHOLD_PCT
+    ):
+        if res_2w["failure_rate"] < res_4w["failure_rate"]:
+            divergence_hint = (
+                f"Trend verbessert sich (2 Wochen: {res_2w['failure_rate']}%, "
+                f"4 Wochen: {res_4w['failure_rate']}%)."
+            )
+        else:
+            divergence_hint = (
+                f"Trend verschlechtert sich (2 Wochen: {res_2w['failure_rate']}%, "
+                f"4 Wochen: {res_4w['failure_rate']}%)."
+            )
+
+    # plan_start clamped das 4w-Fenster, wenn es jünger ist als der Standard-Start.
+    plan_clamped = False
+    if plan_start is not None:
+        _ref, _ps = _normalize_date_pair(reference_date, plan_start)
+        plan_clamped = _ps > _ref - timedelta(days=WINDOW_4W_DAYS)
+
+    # Vorberechnete Karten-Daten für Templates – vermeidet dict-key-access-Filter.
+    window_label_map = {"2w": "2 Wochen", "4w": "4 Wochen", "all": "Gesamt"}
+    cards = [
+        {
+            "key": key,
+            "label": window_label_map[key],
+            "is_primary": key == primary,
+            "result": raw_results[key],
+            "n_sets": meta[key]["n_sets"],
+            "insufficient_data": meta[key]["insufficient_data"],
+        }
+        for key in ("2w", "4w", "all")
+    ]
+
+    return {
+        "windows": raw_results,
+        "primary_window": primary,
+        "primary_result": raw_results[primary],
+        "evaluation": evaluation,
+        "recommendation": recommendation,
+        "divergence_hint": divergence_hint,
+        "window_meta": meta,
+        "insufficient_4w": insufficient_4w,
+        "plan_clamped": plan_clamped,
+        "cards": cards,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.2: Effektives Volumen + Diagnose-Tabelle
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def is_effective_volume_set(satz):
+    """True wenn der Satz zum produktiven Volumen zählt (RPE 7–9, gewichtet)."""
+    if satz.gewicht is None or not satz.wiederholungen or satz.rpe is None:
+        return False
+    rpe = float(satz.rpe)
+    return EFFECTIVE_VOLUME_RPE_MIN <= rpe <= EFFECTIVE_VOLUME_RPE_MAX
+
+
+def classify_volume_trend(prev_value, curr_value, stable_pct=VOLUME_TREND_STABLE_PCT):
+    """Klassifiziert eine Wert-Veränderung als ``"sinkt" | "stabil" | "steigt"``.
+
+    Default-Schwelle: 5 % Δ. Bei prev_value=0 oder None wird ``"unklar"`` zurückgegeben
+    (kein Vergleich möglich).
+    """
+    if not prev_value or prev_value <= 0 or curr_value is None:
+        return "unklar"
+    delta_pct = (curr_value - prev_value) / prev_value * 100
+    if abs(delta_pct) < stable_pct:
+        return "stabil"
+    return "steigt" if delta_pct > 0 else "sinkt"
+
+
+# Diagnose-Tabelle aus Konzept 4.3 – als (tonnage_trend, eff_trend) → diag-key.
+_VOLUME_DIAGNOSIS_MAP = {
+    ("sinkt", "sinkt"): {
+        "key": "regression",
+        "label": "Echte Regression",
+        "severity": "warning",
+        "message": (
+            "Tonnage und effektives Volumen sinken beide – echte Leistungs-Regression. "
+            "Recovery, Schlaf und Ernährung prüfen."
+        ),
+    },
+    ("sinkt", "stabil"): {
+        "key": "intensity_correction",
+        "label": "Intensitäts-Korrektur",
+        "severity": "info",
+        "message": (
+            "Tonnage sinkt, effektives Volumen bleibt stabil – bewusste Intensitäts-Reduktion "
+            "ohne Qualitätsverlust. Kein Anlass zur Sorge."
+        ),
+    },
+    ("sinkt", "steigt"): {
+        "key": "quality_improvement",
+        "label": "Qualitäts-Verbesserung",
+        "severity": "success",
+        "message": (
+            "Tonnage sinkt, effektives Volumen steigt – Junk-/Failure-Volumen wird "
+            "abgebaut, produktives Volumen wächst. Sehr gute Entwicklung."
+        ),
+    },
+    ("steigt", "sinkt"): {
+        "key": "junk_increase",
+        "label": "Mehr Junk-/Failure-Volumen",
+        "severity": "warning",
+        "message": (
+            "Tonnage steigt, effektives Volumen sinkt – mehr unproduktive Sätze "
+            "(zu leicht oder bis zum Versagen). Effizienz prüfen."
+        ),
+    },
+    ("steigt", "steigt"): {
+        "key": "growth",
+        "label": "Volumen-Wachstum",
+        "severity": "success",
+        "message": "Tonnage und effektives Volumen steigen – produktive Aufbauphase.",
+    },
+    ("stabil", "stabil"): {
+        "key": "stable",
+        "label": "Stabile Phase",
+        "severity": "info",
+        "message": "Tonnage und effektives Volumen stabil – Phase der Konsolidierung.",
+    },
+}
+
+
+def diagnose_volume_trend(
+    prev_tonnage,
+    curr_tonnage,
+    prev_effective,
+    curr_effective,
+    is_deload_week=False,
+):
+    """Diagnostiziert die Wochenvolumen-Veränderung gemäß Konzept 4.3.
+
+    Args:
+        prev_tonnage, curr_tonnage: Tonnage-Werte zwei aufeinanderfolgender Wochen
+        prev_effective, curr_effective: Effektives Volumen analog
+        is_deload_week: Hybrid-Block-Typ-Awareness (Phase 23.2 / Frage 8.5).
+            Wenn True und beide Trends "sinkt", wird die Regression-Diagnose
+            durch eine "deload"-Diagnose ersetzt – kein Falsch-Positiv.
+
+    Returns:
+        dict mit ``key``, ``label``, ``severity``, ``message``,
+        ``tonnage_trend``, ``effective_trend``, ``suppressed_due_to_deload``
+        oder None wenn Vergleich nicht möglich.
+    """
+    tonnage_trend = classify_volume_trend(prev_tonnage, curr_tonnage)
+    effective_trend = classify_volume_trend(prev_effective, curr_effective)
+
+    if tonnage_trend == "unklar" or effective_trend == "unklar":
+        return None
+
+    suppressed = False
+    if is_deload_week and tonnage_trend == "sinkt" and effective_trend == "sinkt":
+        # Deload-Woche: bewusste Volumen-Reduktion, kein Regressions-Signal.
+        suppressed = True
+        diag = {
+            "key": "deload_expected",
+            "label": "Deload-Woche",
+            "severity": "info",
+            "message": (
+                "Tonnage und effektives Volumen sinken – erwartetes Verhalten "
+                "in einer Deload-Woche. Keine Regression."
+            ),
+        }
+    else:
+        diag = _VOLUME_DIAGNOSIS_MAP.get((tonnage_trend, effective_trend))
+        if diag is None:
+            # Kombinationen ohne expliziten Eintrag → neutral
+            diag = {
+                "key": "neutral",
+                "label": "Keine eindeutige Diagnose",
+                "severity": "secondary",
+                "message": "",
+            }
+
+    return {
+        **diag,
+        "tonnage_trend": tonnage_trend,
+        "effective_trend": effective_trend,
+        "suppressed_due_to_deload": suppressed,
     }

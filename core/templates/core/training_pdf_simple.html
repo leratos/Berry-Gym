@@ -797,6 +797,27 @@
         <div style="text-align: center; margin: 0;">
             <img src="data:image/png;base64,{{ volume_chart }}" style="max-width: 100%; height: auto;" alt="Volumen Entwicklung">
         </div>
+
+        {# Phase 23.2: Diagnose-Zeile zur Volumen-Bewegung der letzten Woche #}
+        {% with last_week=volumen_wochen|last %}
+        {% if last_week.diagnose %}
+        <div class="info-box {% if last_week.diagnose.severity == 'warning' %}warning{% endif %}" style="margin-top: 8px;">
+            <p style="margin: 0; font-size: 9px;">
+                <strong>{{ last_week.diagnose.label }}</strong>
+                <span style="color: #6c757d;">
+                    · Tonnage {{ last_week.diagnose.tonnage_trend }}
+                    · Effektives Volumen {{ last_week.diagnose.effective_trend }}
+                </span>
+                {% if last_week.diagnose.suppressed_due_to_deload %}
+                <span style="background: #6c757d; color: white; padding: 1px 5px; border-radius: 3px; font-size: 7px; margin-left: 4px;">Deload-Woche</span>
+                {% endif %}
+                {% if last_week.diagnose.message %}
+                <br><span style="color: #495057;">{{ last_week.diagnose.message }}</span>
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+        {% endwith %}
     </div>
     {% endif %}
 
@@ -872,8 +893,20 @@
                     <span class="badge badge-success">{{ item.status_label }}</span>
                     {% elif item.status_farbe == 'warning' %}
                     <span class="badge badge-warning">{{ item.status_label }}</span>
+                    {% elif item.status_farbe == 'info' %}
+                    <span class="badge badge-info">{{ item.status_label }}</span>
+                    {% elif item.status_farbe == 'secondary' %}
+                    <span class="badge badge-secondary">{{ item.status_label }}</span>
                     {% else %}
                     <span class="badge badge-danger">{{ item.status_label }}</span>
+                    {% endif %}
+                    {# Phase 23.3: Begründung hinter dem Status-Label, sofern Daten vorliegen. #}
+                    {% if item.status == 'consolidation' and item.rpe_first_half %}
+                    <br><span style="font-size: 7px; color: #6c757d;">RPE sank von {{ item.rpe_first_half }} auf {{ item.rpe_second_half }} in den letzten 4 W</span>
+                    {% elif item.status == 'regression' and item.weight_drop_pct %}
+                    <br><span style="font-size: 7px; color: #6c757d;">1RM-Drop {{ item.weight_drop_pct }}% vs. PR</span>
+                    {% elif item.status == 'pause' %}
+                    <br><span style="font-size: 7px; color: #6c757d;">Letzte 4 W nicht trainiert</span>
                     {% endif %}
                 </td>
             </tr>
@@ -884,10 +917,14 @@
     <div class="info-box">
         <p><strong>Legende:</strong></p>
         <ul style="margin: 5px 0; padding-left: 20px; font-size: 8px;">
-            <li>✅ Aktive Progression: PR innerhalb der letzten 2 Wochen</li>
-            <li>⚠️ Leichtes Plateau: 2-6 Wochen ohne PR</li>
-            <li>🔴 Plateau: >6 Wochen ohne Fortschritt</li>
-            <li>⚠️ Rückschritt: Leistung &lt;90% des letzten PR</li>
+            <li>✅ Aktive Progression: PR innerhalb der letzten Woche</li>
+            <li>👀 Beobachten: PR 1–2 Wochen alt</li>
+            <li>💪 Konsolidierung: Gewicht stabil, RPE sinkt → User wird stärker</li>
+            <li>⏸️ Pause: Übung in den letzten 4 Wochen nicht trainiert</li>
+            <li>⚠️ Leichtes Plateau: 2–6 Wochen ohne PR</li>
+            <li>🔴 Plateau: 6–12 Wochen ohne Fortschritt</li>
+            <li>❌ Langzeit-Plateau: >12 Wochen ohne PR</li>
+            <li>⚠️ Rückschritt: aktueller 1RM &gt;5% unter dem letzten PR</li>
         </ul>
     </div>
     {% else %}
@@ -955,10 +992,13 @@
 
     <div class="info-box">
         <p style="font-size: 9px; margin: 0;"><strong>Was ist der Ermüdungs-Index?</strong>
-        Der Ermüdungs-Index (0-100) schätzt deine aktuelle Gesamtbelastung anhand von Trainingsvolumen, Intensität (RPE) und Frequenz.
+        Der Ermüdungs-Index (0-100) schätzt deine aktuelle Gesamtbelastung anhand von Trainingsvolumen, Intensität (RPE), Frequenz und Cardio-Last.
         Ein hoher Wert bedeutet, dass sich Ermüdung aufbaut und eine <strong>Deload-Woche</strong> sinnvoll sein könnte.
         Beim Deload trainierst du mit reduziertem Gewicht (~50-60%) und weniger Sätzen, damit sich Muskeln, Gelenke und Nervensystem vollständig erholen können.
-        <em>Hinweis: Dieser Wert basiert auf einer Heuristik (Volumen 40 %, RPE 30 %, Frequenz 30 %) und ist eine Annäherung – keine medizinische Diagnose.</em></p>
+        <em>Hinweis (Phase 23.4): Die Berechnung addiert Punkte aus vier Komponenten:
+        Volumen-Spike (Vergleich der letzten beiden Wochen), RPE-Belastung über die letzten 14 Tage
+        (RPE-10-Anteil als primärer Faktor, Avg-RPE als sekundärer), Trainingsfrequenz der letzten 7 Tage
+        und Cardio-Last der letzten 7 Tage. Sie ist eine Annäherung – keine medizinische Diagnose.</em></p>
     </div>
 
     {% if fatigue_analysis %}
@@ -1062,7 +1102,89 @@
         während zu viel RPE 10 das Verletzungsrisiko erhöht und die Erholung verlängert.</p>
     </div>
 
-    {% if rpe_quality %}
+    {% if rpe_quality_windowed %}
+    {# Phase 23.1: Drei Zeitfenster (2w / 4w / all). 4w ist primär für die Bewertung. #}
+    {% with rqw=rpe_quality_windowed %}
+    <table style="width: 100%; border-collapse: separate; border-spacing: 6px 0; margin-bottom: 8px;">
+        <tr>
+            {% for card in rqw.cards %}
+            <td style="text-align: center; vertical-align: top; width: 33%; padding: 8px; border: 1px solid {% if card.is_primary %}#0d6efd{% else %}#dee2e6{% endif %}; background: {% if card.is_primary %}#e7f1ff{% else %}#f8f9fa{% endif %}; border-radius: 4px;">
+                <div style="font-size: 8px; text-transform: uppercase; color: #6c757d; letter-spacing: 0.5px;">
+                    {% if card.is_primary %}<strong>★ {{ card.label }}</strong>{% else %}{{ card.label }}{% endif %}
+                </div>
+                {% if card.result %}
+                <div style="font-size: 18px; font-weight: bold; margin: 4px 0;">{{ card.result.failure_rate }}%</div>
+                <div style="font-size: 8px; color: #6c757d;">RPE-10 · n={{ card.n_sets }}</div>
+                {% else %}
+                <div style="font-size: 14px; color: #adb5bd; margin: 4px 0;">n.a.</div>
+                <div style="font-size: 8px; color: #6c757d;">n={{ card.n_sets }} (zu wenig)</div>
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+    </table>
+
+    {% with primary=rqw.primary_result %}
+    {% if primary %}
+    <div class="quality-metrics">
+        <div class="metric">
+            <span>Optimale Intensität (RPE 7-9):</span>
+            <span class="metric-value">{{ primary.optimal_intensity_rate }}%</span>
+        </div>
+        <div class="metric">
+            <span>"Junk Volume" (RPE &lt;7):</span>
+            <span class="metric-value">{{ primary.junk_volume_rate }}%</span>
+        </div>
+        <div class="metric">
+            <span>Bis zum Versagen (RPE 10):</span>
+            <span class="metric-value">{{ primary.failure_rate }}%</span>
+        </div>
+    </div>
+
+    <div class="bewertung-box {{ primary.bewertung_farbe }}">
+        <strong>Bewertung:</strong> {{ primary.bewertung }}
+        {% if rqw.recommendation %}<br><span style="font-size: 9px;">{{ rqw.recommendation }}</span>{% endif %}
+    </div>
+
+    {% if rqw.divergence_hint %}
+    <div class="info-box" style="margin-top: 6px;">
+        <p style="font-size: 9px; margin: 0;"><strong>Hinweis:</strong> {{ rqw.divergence_hint }}</p>
+    </div>
+    {% endif %}
+
+    {% if primary.empfehlungen %}
+    <div class="recommendation-box">
+        <h3 style="margin-top: 0;">Empfehlungen:</h3>
+        <ul style="margin: 5px 0; padding-left: 20px; font-size: 9px;">
+        {% for emp in primary.empfehlungen %}
+            <li>{{ emp }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- RPE-Verteilung (primäres Fenster) -->
+    {% if rpe_donut_chart %}
+    <div style="text-align: center; margin: 10px 0;">
+        <img src="data:image/png;base64,{{ rpe_donut_chart }}" alt="RPE-Verteilung" style="width: 280px; max-width: 100%;">
+    </div>
+    {% endif %}
+    <div class="rpe-distribution">
+        <h3 style="margin-top: 0;">RPE-Verteilung (Detail · {% if rqw.primary_window == "4w" %}letzte 4 Wochen{% else %}gesamt{% endif %}):</h3>
+        <ul>
+            <li>Sehr leicht (RPE &lt;5): {{ primary.rpe_verteilung_prozent.sehr_leicht }}%</li>
+            <li>Leicht (RPE 5-6): {{ primary.rpe_verteilung_prozent.leicht }}%</li>
+            <li>Moderat (RPE 7-8): {{ primary.rpe_verteilung_prozent.moderat }}%</li>
+            <li>Schwer (RPE 8-9): {{ primary.rpe_verteilung_prozent.schwer }}%</li>
+            <li>Sehr schwer (RPE 9+): {{ primary.rpe_verteilung_prozent.sehr_schwer }}%</li>
+            <li>Versagen (RPE 10): {{ primary.rpe_verteilung_prozent.versagen }}%</li>
+        </ul>
+    </div>
+    {% endif %}
+    {% endwith %}
+    {% endwith %}
+    {% elif rpe_quality %}
+    {# Backwards-Compat: ältere Datensammlungen ohne Phase-23-Felder. #}
     <div class="quality-metrics">
         <div class="metric">
             <span>Optimale Intensität (RPE 7-9):</span>
@@ -1077,11 +1199,9 @@
             <span class="metric-value">{{ rpe_quality.failure_rate }}%</span>
         </div>
     </div>
-
     <div class="bewertung-box {{ rpe_quality.bewertung_farbe }}">
         <strong>Bewertung:</strong> {{ rpe_quality.bewertung }}
     </div>
-
     {% if rpe_quality.empfehlungen %}
     <div class="recommendation-box">
         <h3 style="margin-top: 0;">Empfehlungen:</h3>
@@ -1092,24 +1212,6 @@
         </ul>
     </div>
     {% endif %}
-
-    <!-- RPE-Verteilung -->
-    {% if rpe_donut_chart %}
-    <div style="text-align: center; margin: 10px 0;">
-        <img src="data:image/png;base64,{{ rpe_donut_chart }}" alt="RPE-Verteilung" style="width: 280px; max-width: 100%;">
-    </div>
-    {% endif %}
-    <div class="rpe-distribution">
-        <h3 style="margin-top: 0;">RPE-Verteilung (Detail):</h3>
-        <ul>
-            <li>Sehr leicht (RPE &lt;5): {{ rpe_quality.rpe_verteilung_prozent.sehr_leicht }}%</li>
-            <li>Leicht (RPE 5-6): {{ rpe_quality.rpe_verteilung_prozent.leicht }}%</li>
-            <li>Moderat (RPE 7-8): {{ rpe_quality.rpe_verteilung_prozent.moderat }}%</li>
-            <li>Schwer (RPE 8-9): {{ rpe_quality.rpe_verteilung_prozent.schwer }}%</li>
-            <li>Sehr schwer (RPE 9+): {{ rpe_quality.rpe_verteilung_prozent.sehr_schwer }}%</li>
-            <li>Versagen (RPE 10): {{ rpe_quality.rpe_verteilung_prozent.versagen }}%</li>
-        </ul>
-    </div>
     {% else %}
     <div class="info-box warning">
         Noch nicht genügend RPE-Daten für Qualitäts-Analyse verfügbar.

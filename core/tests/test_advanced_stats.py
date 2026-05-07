@@ -17,11 +17,19 @@ from django.utils import timezone
 
 from core.models import Equipment, Plan, Satz, Trainingseinheit, Uebung
 from core.utils.advanced_stats import (
+    MIN_SETS_FOR_WINDOW,
+    _find_best_1rm_satz,
     calculate_1rm_standards,
     calculate_consistency_metrics,
     calculate_fatigue_index,
     calculate_plateau_analysis,
     calculate_rpe_quality_analysis,
+    calculate_rpe_quality_analysis_windowed,
+    classify_progression_status,
+    classify_volume_trend,
+    diagnose_volume_trend,
+    get_time_windows,
+    is_effective_volume_set,
 )
 
 
@@ -357,7 +365,7 @@ class TestPlateauAnalysis(StatsTestBase):
             self._add_satz(session, gewicht=80, wiederholungen=8, rpe=rpe)
         result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["status"], "konsolidierung")
+        self.assertEqual(result[0]["status"], "consolidation")
         self.assertIn("RPE sinkt", result[0]["status_label"])
 
     def test_echtes_plateau_bei_gleichbleibendem_rpe(self):
@@ -473,3 +481,465 @@ class TestOneRmStandards(StatsTestBase):
         result = calculate_1rm_standards(self._alle_saetze(), self._top_uebungen(), user_gewicht=80)
         level = result[0]["standard_info"]["level"]
         self.assertIn(level, ("intermediate", "advanced", "elite"))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.3: classify_progression_status
+# ──────────────────────────────────────────────────────────────────────────────
+class TestProgressionClassification(StatsTestBase):
+    """Tests gemäß Phase-23-Konzept Abschnitt 5.5 (Plateau-Logik vereinheitlicht).
+
+    Empirisch validierter Schwellenwert: 0.5 RPE-Differenz für Konsolidierung
+    (siehe journal.txt Eintrag zur Frage 8.2).
+    """
+
+    def _alle_saetze(self):
+        return Satz.objects.filter(einheit__user=self.user, ist_aufwaermsatz=False)
+
+    def _add_session(self, days_ago, gewicht=80, wdh=8, rpe=None):
+        session = self._make_session(days_ago=days_ago)
+        self._add_satz(session, gewicht=gewicht, wiederholungen=wdh, rpe=rpe)
+        return session
+
+    def _classify(self):
+        _, pr = _find_best_1rm_satz(self._alle_saetze())
+        return classify_progression_status(self._alle_saetze(), pr)
+
+    def test_no_data_when_pr_satz_missing(self):
+        result = classify_progression_status(self._alle_saetze(), None)
+        self.assertEqual(result["status"], "no_data")
+
+    def test_active_progression_when_recent_pr(self):
+        """PR ≤ 7 Tage alt → active_progression."""
+        self._add_session(days_ago=20, gewicht=70)  # älter, niedriger
+        self._add_session(days_ago=2, gewicht=80)  # frischer PR
+        result = self._classify()
+        self.assertEqual(result["status"], "active_progression")
+
+    def test_observe_status_for_pr_8_to_14_days_old(self):
+        """PR 8–14 Tage alt → observe."""
+        self._add_session(days_ago=30, gewicht=70)
+        self._add_session(days_ago=10, gewicht=80)
+        result = self._classify()
+        self.assertEqual(result["status"], "observe")
+
+    def test_consolidation_when_weight_stable_rpe_falling(self):
+        """Gleiches Gewicht, RPE sinkt um ≥ 0.5 zwischen first/second half."""
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, rpe=rpe)
+        result = self._classify()
+        self.assertEqual(result["status"], "consolidation")
+        self.assertGreaterEqual(result["rpe_delta"], 0.5)
+
+    def test_consolidation_when_weight_rising_rpe_falling(self):
+        """Gewicht steigt leicht, RPE sinkt → trotzdem consolidation (nicht regression)."""
+        # PR bei alter Session, aktuell etwas niedriger aber RPE deutlich besser
+        for days_ago, rpe, gewicht in [(25, 9.5, 80), (18, 9.0, 78), (10, 8.5, 79), (3, 8.0, 80)]:
+            self._add_session(days_ago=days_ago, gewicht=gewicht, rpe=rpe)
+        result = self._classify()
+        # Konsolidierung schlägt zu, kein Regression-Trigger (Drop < 5%)
+        self.assertEqual(result["status"], "consolidation")
+
+    def test_plateau_light_when_weight_stable_rpe_stable(self):
+        """15-42 Tage seit PR, RPE stabil → plateau_light."""
+        for days_ago, rpe in [(25, 9.0), (18, 9.0), (10, 9.0), (3, 9.0)]:
+            self._add_session(days_ago=days_ago, rpe=rpe)
+        result = self._classify()
+        self.assertEqual(result["status"], "plateau_light")
+
+    def test_plateau_when_pr_old_43_to_84_days(self):
+        """43-84 Tage seit PR → plateau (full)."""
+        # PR bei day 50, aktuelle Sätze gleiches Gewicht (PR-Tie-Break: ältester wins)
+        self._add_session(days_ago=50, gewicht=80, rpe=9.0)
+        for days_ago in [25, 18, 10, 3]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=9.0)
+        result = self._classify()
+        self.assertEqual(result["status"], "plateau")
+
+    def test_plateau_long_when_pr_more_than_84_days(self):
+        """> 84 Tage seit PR → plateau_long."""
+        self._add_session(days_ago=120, gewicht=80, rpe=9.0)
+        for days_ago in [25, 18, 10, 3]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=9.0)
+        result = self._classify()
+        self.assertEqual(result["status"], "plateau_long")
+
+    def test_regression_when_weight_falling_more_than_5pct(self):
+        """1RM-Drop > 5% → regression (überlagert alles andere)."""
+        # PR bei 100kg vor 60d, jetzt nur 80kg = 20% Drop
+        self._add_session(days_ago=60, gewicht=100, wdh=5)
+        self._add_session(days_ago=5, gewicht=80, wdh=5)
+        result = self._classify()
+        self.assertEqual(result["status"], "regression")
+        self.assertGreater(result["weight_drop_pct"], 5)
+
+    def test_regression_not_masked_by_falling_rpe(self):
+        """Konsolidierung darf Regression nicht maskieren."""
+        # PR bei 100kg, jetzt 80kg (>5% Drop) UND RPE sinkt
+        self._add_session(days_ago=60, gewicht=100, wdh=5, rpe=9.0)
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=rpe)
+        result = self._classify()
+        # Trotz sinkendem RPE: Regression schlägt vor, weil Gewicht massiv abgefallen ist
+        self.assertEqual(result["status"], "regression")
+
+    def test_pause_when_no_current_data(self):
+        """Übung seit > 4 Wochen nicht trainiert → pause."""
+        # PR vor 50 Tagen, danach nichts mehr (keine Sätze in last 4w)
+        self._add_session(days_ago=50, gewicht=80, rpe=8.0)
+        self._add_session(days_ago=45, gewicht=80, rpe=8.0)
+        result = self._classify()
+        self.assertEqual(result["status"], "pause")
+        self.assertEqual(result["cur_4w_n"], 0)
+
+    def test_pause_with_one_recent_set_but_no_drop(self):
+        """1 Satz in letzten 4w, gleiches Gewicht → pause (Schwelle: < 2)."""
+        self._add_session(days_ago=50, gewicht=80, rpe=8.0)
+        self._add_session(days_ago=10, gewicht=80, rpe=8.0)  # nur 1 Satz in letzten 4w
+        result = self._classify()
+        self.assertEqual(result["status"], "pause")
+
+    def test_no_consolidation_without_enough_rpe_data(self):
+        """< 4 RPE-Sätze in letzten 4w → kein Konsolidierungs-Check, fallback auf plateau."""
+        self._add_session(days_ago=40, gewicht=80, rpe=9.5)  # PR
+        # Nur 3 Sätze mit RPE in letzten 4w (< PROGRESSION_RPE_MIN_SETS=4)
+        for days_ago, rpe in [(20, 9.5), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=rpe)
+        result = self._classify()
+        # Keine Konsolidierung, fällt auf plateau_light (40 days seit PR)
+        self.assertEqual(result["status"], "plateau_light")
+
+    def test_classification_fields_populated(self):
+        """Diagnose-Felder im Result vorhanden für Tooltip-Begründungen."""
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, rpe=rpe)
+        result = self._classify()
+        self.assertIsNotNone(result["rpe_first_half"])
+        self.assertIsNotNone(result["rpe_second_half"])
+        self.assertIsNotNone(result["rpe_delta"])
+        self.assertIsNotNone(result["weight_drop_pct"])
+        self.assertGreaterEqual(result["cur_4w_n"], 4)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23: get_time_windows
+# ──────────────────────────────────────────────────────────────────────────────
+class TestGetTimeWindows(TestCase):
+    def test_default_windows_have_correct_durations(self):
+        ref = timezone.now()
+        windows = get_time_windows(ref)
+        self.assertEqual((ref - windows["2w"][0]).days, 14)
+        self.assertEqual((ref - windows["4w"][0]).days, 28)
+        self.assertIsNone(windows["all"][0])
+        for key in ("2w", "4w", "all"):
+            self.assertEqual(windows[key][1], ref)
+
+    def test_plan_start_clamps_short_windows(self):
+        ref = timezone.now()
+        plan_start = ref - timedelta(days=10)  # jünger als 2w und 4w
+        windows = get_time_windows(ref, plan_start=plan_start)
+        self.assertEqual(windows["2w"][0], plan_start)
+        self.assertEqual(windows["4w"][0], plan_start)
+        # all-time bleibt ungeclamped
+        self.assertIsNone(windows["all"][0])
+
+    def test_plan_start_does_not_extend_windows(self):
+        ref = timezone.now()
+        plan_start = ref - timedelta(days=60)  # älter als beide Fenster
+        windows = get_time_windows(ref, plan_start=plan_start)
+        # 2w/4w bleiben bei ihren Standard-Längen
+        self.assertEqual((ref - windows["2w"][0]).days, 14)
+        self.assertEqual((ref - windows["4w"][0]).days, 28)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23: calculate_rpe_quality_analysis_windowed
+# ──────────────────────────────────────────────────────────────────────────────
+class TestRpeDistributionWindowed(StatsTestBase):
+    """Tests gemäß Phase-23-Konzept Abschnitt 3.5."""
+
+    def _alle_saetze(self):
+        return Satz.objects.filter(einheit__user=self.user)
+
+    def _add_n(self, days_ago, count, rpe):
+        """Helper: füge `count` Sätze mit gegebener RPE in einer Session vor `days_ago` Tagen hinzu."""
+        session = self._make_session(days_ago=days_ago)
+        for _ in range(count):
+            self._add_satz(session, rpe=rpe)
+        return session
+
+    def test_returns_none_when_no_rpe_data(self):
+        # Komplett ohne Sätze
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNone(result)
+
+    def test_4w_window_excludes_old_high_rpe(self):
+        """Historisch viel RPE-10, jetzt sauber → 4w zeigt sauber, all zeigt rot."""
+        # Alt (vor 8 Wochen): 50× RPE 10
+        self._add_n(days_ago=56, count=50, rpe=10.0)
+        # Aktuell (vor 1 Woche): 50× RPE 8 (sauber)
+        self._add_n(days_ago=7, count=50, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNotNone(result)
+        self.assertEqual(result["primary_window"], "4w")
+        # 4w sieht nur die sauberen Sätze
+        self.assertEqual(result["windows"]["4w"]["failure_rate"], 0.0)
+        # all-time enthält die alten RPE-10
+        self.assertGreater(result["windows"]["all"]["failure_rate"], 40)
+        # Bewertung basiert auf 4w → optimal
+        self.assertEqual(result["evaluation"], "optimal")
+
+    def test_2w_window_reflects_recent_only(self):
+        """Letzte 2 Wochen sauber, 4 Wochen noch belastet."""
+        # vor 3 Wochen: 40× RPE 10 (zählt für 4w aber nicht für 2w)
+        self._add_n(days_ago=21, count=40, rpe=10.0)
+        # letzte 2 Wochen: 40× RPE 8
+        self._add_n(days_ago=5, count=40, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNotNone(result)
+        # 2w-Fenster: nur saubere Sätze
+        self.assertEqual(result["windows"]["2w"]["failure_rate"], 0.0)
+        # 4w-Fenster: enthält die alten RPE-10
+        self.assertGreater(result["windows"]["4w"]["failure_rate"], 30)
+
+    def test_fallback_when_insufficient_4w_data(self):
+        """Neuer User mit <30 Sätzen in 4 Wochen → primary fällt auf 'all'."""
+        # Nur 5 Sätze in den letzten 4 Wochen
+        self._add_n(days_ago=10, count=5, rpe=8.0)
+        # Aber genug all-time
+        self._add_n(days_ago=200, count=50, rpe=10.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNotNone(result)
+        self.assertTrue(result["insufficient_4w"])
+        self.assertEqual(result["primary_window"], "all")
+        # Empfehlung erwähnt den Fallback
+        self.assertIn("Zu wenig Daten", result["recommendation"])
+
+    def test_plan_filter_combination(self):
+        """Plan-Wechsel vor 10 Tagen → 4w-Fenster verkürzt sich auf 'seit Plan-Start'."""
+        plan_start = timezone.now() - timedelta(days=10)
+        # Vor Plan-Start: viele RPE-10 (sollten ignoriert werden)
+        self._add_n(days_ago=20, count=50, rpe=10.0)
+        # Im aktuellen Plan: saubere Sätze
+        self._add_n(days_ago=5, count=40, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze(), plan_start=plan_start)
+        self.assertIsNotNone(result)
+        self.assertTrue(result["plan_clamped"])
+        # 4w-Fenster respektiert Plan-Start → sieht nur saubere Sätze
+        self.assertEqual(result["windows"]["4w"]["failure_rate"], 0.0)
+        # all-time enthält weiterhin die alten RPE-10
+        self.assertGreater(result["windows"]["all"]["failure_rate"], 40)
+
+    def test_evaluation_uses_4w_only_not_all(self):
+        """4w grün, all rot → Bewertung 'optimal' (nicht 'risiko')."""
+        # Alt: viele RPE-10
+        self._add_n(days_ago=80, count=60, rpe=10.0)
+        # Aktuell (4w): 40× RPE 8
+        self._add_n(days_ago=10, count=40, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertEqual(result["evaluation"], "optimal")
+        self.assertEqual(result["primary_window"], "4w")
+        # all-time wäre rot, aber Bewertung ignoriert das bewusst
+        self.assertGreater(result["windows"]["all"]["failure_rate"], 30)
+
+    def test_divergence_hint_on_trend_change(self):
+        """2w 0%, 4w ~30% → Hinweis 'Trend verbessert sich'."""
+        # Vor 3 Wochen: 30× RPE 10 (im 4w aber nicht 2w)
+        self._add_n(days_ago=20, count=30, rpe=10.0)
+        # Letzte 10 Tage: 30× RPE 8 (in beiden Fenstern)
+        self._add_n(days_ago=5, count=30, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNotNone(result["divergence_hint"])
+        self.assertIn("verbessert", result["divergence_hint"])
+
+    def test_no_divergence_hint_when_2w_insufficient(self):
+        """2w hat <10 Sätze → kein Trend-Hinweis (zu unsicher)."""
+        # 4w hat 50 Sätze (>=30), 2w hat nur 5 Sätze
+        self._add_n(days_ago=20, count=45, rpe=10.0)
+        self._add_n(days_ago=5, count=5, rpe=8.0)
+
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        self.assertIsNone(result["divergence_hint"])
+
+    def test_window_meta_contains_n_sets_per_window(self):
+        self._add_n(days_ago=5, count=40, rpe=8.0)
+        result = calculate_rpe_quality_analysis_windowed(self._alle_saetze())
+        meta = result["window_meta"]
+        self.assertEqual(meta["2w"]["n_sets"], 40)
+        self.assertEqual(meta["4w"]["n_sets"], 40)
+        self.assertEqual(meta["all"]["n_sets"], 40)
+        self.assertFalse(meta["4w"]["insufficient_data"])
+
+    def test_min_sets_threshold_is_configurable(self):
+        """Aufrufer kann min_sets explizit setzen (z.B. niedriger für kleine User)."""
+        self._add_n(days_ago=10, count=10, rpe=8.0)
+        result_strict = calculate_rpe_quality_analysis_windowed(
+            self._alle_saetze(), min_sets=MIN_SETS_FOR_WINDOW
+        )
+        result_lenient = calculate_rpe_quality_analysis_windowed(self._alle_saetze(), min_sets=5)
+        # 30er Default → 4w insufficient, fallback auf all
+        self.assertEqual(result_strict["primary_window"], "all")
+        # 5er Schwelle → 4w ausreichend
+        self.assertEqual(result_lenient["primary_window"], "4w")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.2: is_effective_volume_set
+# ──────────────────────────────────────────────────────────────────────────────
+class TestIsEffectiveVolumeSet(StatsTestBase):
+    """Sätze mit RPE 7-9 zählen als effektives Volumen, alles andere nicht."""
+
+    def test_includes_rpe_7_to_9(self):
+        for rpe in (7.0, 7.5, 8.0, 8.5, 9.0):
+            session = self._make_session()
+            satz = self._add_satz(session, gewicht=80, wiederholungen=8, rpe=rpe)
+            self.assertTrue(is_effective_volume_set(satz), f"RPE {rpe} sollte effektiv sein")
+
+    def test_excludes_rpe_below_7(self):
+        for rpe in (5.0, 6.0, 6.9):
+            session = self._make_session()
+            satz = self._add_satz(session, gewicht=80, wiederholungen=8, rpe=rpe)
+            self.assertFalse(is_effective_volume_set(satz), f"RPE {rpe} sollte Junk Volume sein")
+
+    def test_excludes_rpe_10(self):
+        session = self._make_session()
+        satz = self._add_satz(session, gewicht=80, wiederholungen=8, rpe=10.0)
+        self.assertFalse(is_effective_volume_set(satz))
+
+    def test_excludes_missing_rpe(self):
+        session = self._make_session()
+        satz = self._add_satz(session, gewicht=80, wiederholungen=8, rpe=None)
+        self.assertFalse(is_effective_volume_set(satz))
+
+    def test_excludes_missing_weight(self):
+        # Satz nur in-memory (NOT NULL constraint auf gewicht)
+        session = self._make_session()
+        satz = Satz(
+            einheit=session, uebung=self.uebung, satz_nr=1, gewicht=None, wiederholungen=8, rpe=8.0
+        )
+        self.assertFalse(is_effective_volume_set(satz))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.2: classify_volume_trend
+# ──────────────────────────────────────────────────────────────────────────────
+class TestClassifyVolumeTrend(TestCase):
+    def test_stable_within_5_pct(self):
+        self.assertEqual(classify_volume_trend(1000, 1040), "stabil")  # +4 %
+        self.assertEqual(classify_volume_trend(1000, 970), "stabil")  # -3 %
+
+    def test_falling_more_than_5_pct(self):
+        self.assertEqual(classify_volume_trend(1000, 940), "sinkt")  # -6 %
+
+    def test_rising_more_than_5_pct(self):
+        self.assertEqual(classify_volume_trend(1000, 1100), "steigt")  # +10 %
+
+    def test_unklar_when_prev_zero(self):
+        self.assertEqual(classify_volume_trend(0, 1000), "unklar")
+        self.assertEqual(classify_volume_trend(None, 1000), "unklar")
+
+    def test_unklar_when_curr_none(self):
+        self.assertEqual(classify_volume_trend(1000, None), "unklar")
+
+    def test_custom_threshold(self):
+        # 8 % bei 10er Schwelle = stabil
+        self.assertEqual(classify_volume_trend(1000, 1080, stable_pct=10.0), "stabil")
+        # 8 % bei 5er Schwelle = steigt
+        self.assertEqual(classify_volume_trend(1000, 1080, stable_pct=5.0), "steigt")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.2: diagnose_volume_trend
+# ──────────────────────────────────────────────────────────────────────────────
+class TestDiagnoseVolumeTrend(TestCase):
+    def test_real_regression_emits_warning(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=900,  # -10 %
+            prev_effective=600,
+            curr_effective=540,  # -10 %
+        )
+        self.assertEqual(result["key"], "regression")
+        self.assertEqual(result["severity"], "warning")
+
+    def test_intensity_correction_no_warning(self):
+        """Tonnage sinkt, eff. Volumen stabil → KEIN regression-warning (Mai-Report-Fix)."""
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=900,  # -10 %
+            prev_effective=600,
+            curr_effective=600,  # stabil
+        )
+        self.assertEqual(result["key"], "intensity_correction")
+        self.assertEqual(result["severity"], "info")
+
+    def test_quality_improvement_positive(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=900,  # -10 %
+            prev_effective=500,
+            curr_effective=600,  # +20 %
+        )
+        self.assertEqual(result["key"], "quality_improvement")
+        self.assertEqual(result["severity"], "success")
+
+    def test_junk_increase_warning(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=1100,  # +10 %
+            prev_effective=600,
+            curr_effective=540,  # -10 %
+        )
+        self.assertEqual(result["key"], "junk_increase")
+
+    def test_growth_phase(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=1100,
+            prev_effective=600,
+            curr_effective=660,
+        )
+        self.assertEqual(result["key"], "growth")
+
+    def test_stable_phase(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=1010,
+            prev_effective=600,
+            curr_effective=610,
+        )
+        self.assertEqual(result["key"], "stable")
+
+    def test_deload_week_suppresses_regression(self):
+        """Hybrid-Block-Typ-Awareness: Deload-Woche → Regression unterdrückt."""
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=600,  # -40 %
+            prev_effective=600,
+            curr_effective=350,  # -42 %
+            is_deload_week=True,
+        )
+        self.assertEqual(result["key"], "deload_expected")
+        self.assertTrue(result["suppressed_due_to_deload"])
+
+    def test_deload_week_does_not_suppress_other_diagnoses(self):
+        """Wenn Tonnage steigt, ist es trotz Deload-Marker keine Deload-Woche."""
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=1100,
+            prev_effective=600,
+            curr_effective=540,
+            is_deload_week=True,
+        )
+        self.assertEqual(result["key"], "junk_increase")
+        self.assertFalse(result["suppressed_due_to_deload"])
+
+    def test_returns_none_when_prev_zero(self):
+        result = diagnose_volume_trend(0, 100, 0, 50)
+        self.assertIsNone(result)
