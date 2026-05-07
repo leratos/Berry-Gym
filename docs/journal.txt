@@ -5938,3 +5938,107 @@ Modulen weiterhin grün.
 delegiert seit Phase 14 an Dashboard-Helfer) reduziert sich 23.4 auf:
 prüfen, ob die RPE-Komponente in `_get_rpe_fatigue` wirklich auf
 14-Tagen basiert und ggf. Volumen/Frequenz-Komponenten verifizieren.
+
+
+## Abgeschlossen: Phase 23.4 – Fatigue-Index Zeitfenster-Klarheit (07.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Code-Review-Befund vor Implementierung:**
+
+| Komponente | Aktuelles Fenster | Bewertung |
+|---|---|---|
+| `_get_volume_spike_fatigue` | 2 Wochen-Vergleich (= 14d-Span) | ✅ konsistent |
+| `_get_rpe_fatigue` primary (`_get_rpe10_anteil`) | 14d | ✅ konsistent mit 23.1 |
+| `_get_rpe_fatigue` secondary (`_get_rpe_score`) | 14d | ✅ konsistent |
+| `_get_frequency_fatigue` | 7d | ⚠️ inhaltlich gewollt |
+| `_get_cardio_fatigue` | 7d | ⚠️ inhaltlich gewollt |
+
+**Entscheidung (gegen Konzept 6.2):** Das Konzept hatte "festes 14-Tage-Fenster
+für alle drei Komponenten" gefordert. Diese pauschale Vorgabe wurde **nicht
+umgesetzt**, weil Frequenz und Cardio inhaltlich akute Lasten sind:
+- "≥6 Trainings/7 Tage" = sehr viel (Schwellenwert pro Woche).
+- "≥6 Trainings/14 Tage" = normal – die Schwellen-Semantik bricht.
+
+Eine Vereinheitlichung auf 14d würde die Fatigue-Bewertung verfälschen.
+Stattdessen: **Klarheit statt blinde Uniformität** – benannte Konstanten,
+explizite Doc-Kommentare, Verifikations-Tests.
+
+**Implementierung:**
+
+- Konstanten in `core/views/training_stats.py`:
+  - `FATIGUE_RPE_WINDOW_DAYS = 14`
+  - `FATIGUE_FREQUENCY_WINDOW_DAYS = 7`
+  - `FATIGUE_CARDIO_WINDOW_DAYS = 7`
+- Magische `7`/`14`-Zahlen in `_get_rpe_score`, `_get_frequency_fatigue`,
+  `_get_cardio_fatigue` durch die Konstanten ersetzt.
+- Doc-Kommentare in den Helfern + im delegierenden `calculate_fatigue_index`
+  in `advanced_stats.py` ergänzt: jede Komponente nennt ihr Fenster und die
+  Begründung.
+- 4 neue Tests in `TestFatigueWindowConsistency` (`test_training_stats.py`):
+  - 3 Konstanten-Verifikations-Tests
+  - 1 Funktional-Test, dass `_get_rpe_score` Sätze außerhalb 14d ignoriert.
+
+**Mai-Report-Inkonsistenz war:** RPE-Verteilung zeigte 19 % All-Time, Fatigue-
+Index war 14d → optisch widersprüchlich. **Bereits durch 23.1 gelöst** (RPE-
+Verteilung jetzt mit 4w-Karte primär). 23.4 verfestigt die Konsistenz nun
+auch im Code (statt nur in der Anzeige).
+
+**Geänderte Dateien:**
+- `core/views/training_stats.py` – 3 Konstanten, 3 Helfer-Doc-Updates,
+  `_calculate_fatigue_index`-Docstring mit Fenster-Übersicht
+- `core/utils/advanced_stats.py` – Hinweis zu Phase 23.4 in
+  `calculate_fatigue_index`
+- `core/tests/test_training_stats.py` – `TestFatigueWindowConsistency` neu
+
+
+## Abgeschlossen: Phase 23.5 – PDF-Konsistenz (07.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Scope-Bilanz:** Die ursprünglich 4 Punkte aus Konzept 7.2 sind durch
+23.1–23.4 bereits implizit erledigt:
+
+1. RPE-Sektion drei Zeitfenster ✅ in 23.1
+2. Trainingsvolumen-Chart zweite Linie ✅ in 23.2
+3. Plateau-Tabelle einheitliche Status-Logik ✅ in 23.3
+4. Ermüdungs-Index 14d-Heuristik ✅ in 23.4
+
+**Verbleibende Aufgabe für 23.5:** Der erklärende Hinweis-Text im PDF zum
+Ermüdungs-Index nannte noch die alte Phase-9.4-Heuristik
+("Volumen 40 %, RPE 30 %, Frequenz 30 %"), die seit Phase 14 nicht mehr
+existiert. Aktualisiert zu einer akkuraten Beschreibung der vier
+additiven Komponenten mit ihren tatsächlichen Zeitfenstern.
+
+**Geänderte Dateien:**
+- `core/templates/core/training_pdf_simple.html` – Erklär-Hinweis zum
+  Ermüdungs-Index aktualisiert (Phase 23.4-konform)
+
+
+## ✅ Phase 23 abgeschlossen (07.05.2026)
+
+Alle 5 Sub-Tasks erledigt:
+
+- **23.1** RPE-Verteilung mit 2w/4w/all (commit ada1020)
+- **23.3** Plateau-Logik vereinheitlicht + Pause-Status (commit 0984777)
+- **23.2** Effektives Volumen + Diagnose-Tabelle (commit c3a65fe)
+- **23.4** Fatigue-Index Zeitfenster-Klarheit (dieser Commit)
+- **23.5** PDF-Konsistenz – Hinweistext aktualisiert (dieser Commit)
+
+**Reihenfolge wie im Konzept Abschnitt 9 empfohlen:** 23.1 → 23.3 → 23.2 → 23.4 → 23.5.
+
+**Mai-Report-Probleme alle adressiert:**
+
+| Problem im Mai-2026-Report | Lösung |
+|---|---|
+| RPE-10-Anteil 19 % (All-Time) löst Übertrainings-Warnung aus | 23.1: 4-Wochen-Karte primär für Bewertung |
+| KW18/KW19 Volumen-Einbruch sieht aus wie Regression | 23.2: Diagnose "Intensitäts-Korrektur" statt Warning |
+| Hammer Curls "Konsolidierung", Trizeps OH "Plateau" | 23.3: Pause-Status für nicht aktiv trainierte Übungen |
+| Ermüdungs-Index 0/100 trotz 19 % RPE-10 | 23.1+23.4: 14d-RPE-Fenster konsistent mit Index |
+| Verschiedene implizite Zeiträume in einem Report | 23.4: explizite benannte Konstanten |
+
+**Status PROJECT_ROADMAP.md aktualisieren:** Phase 23 von "📋 Konzept" auf
+"✅ Abgeschlossen (2026-05-07)".
+
+**202 Tests in betroffenen Modulen grün** (test_advanced_stats, test_training_stats,
+test_training_stats_extended, test_stats_collector, test_helpers_and_utils).

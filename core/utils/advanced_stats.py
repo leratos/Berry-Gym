@@ -384,6 +384,12 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     Die Dashboard-Version (Phase 9.4+) nutzt RPE-10-Verteilung statt einfachem
     RPE-Durchschnitt, berücksichtigt Cardio, und hat Block-Age-Awareness.
 
+    Phase 23.4: Zeitfenster sind explizit dokumentiert in den Dashboard-Helfern
+    (``training_stats.py``: ``FATIGUE_RPE_WINDOW_DAYS=14``,
+    ``FATIGUE_FREQUENCY_WINDOW_DAYS=7``, ``FATIGUE_CARDIO_WINDOW_DAYS=7``).
+    RPE-Komponente ist konsistent mit der RPE-Verteilung aus 23.1 (4-Wochen-
+    Bewertung der Karten + 14-Tage-Fenster im Index = derselbe Trend-Bereich).
+
     Returns dict with:
     - fatigue_index, bewertung, bewertung_farbe, empfehlung
     - volumen_spike, rpe_steigend, deload_empfohlen
