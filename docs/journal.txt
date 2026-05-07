@@ -5832,3 +5832,109 @@ korrekt als "Pause" gelabelt statt als "Plateau".
 **Nächster Schritt (Reihenfolge laut Konzept Abschnitt 9):** 23.2
 (Effektives Volumen) – baut auf RPE-Filterlogik aus 23.1 auf. Vor 23.2:
 Frage 8.5 (Block-Typ-Awareness für Diagnose-Tabelle) entscheiden.
+
+
+## Klärung Frage 8.5 – Block-Typ-Awareness für 23.2 (07.05.2026)
+
+**User-Entscheidung:** Option B (Hybrid) – existierender Per-Session-Flag
+`Trainingseinheit.ist_deload=True` wird genutzt; wenn ≥ 50 % der Sessions
+einer Woche `ist_deload=True` haben, gilt die Woche als Deload-Woche und
+die Diagnose "Tonnage sinkt + Eff-Volumen sinkt" wird als "Deload-Woche"
+statt "Regression" gelabelt. Adressiert ~90 % der Deload-Fälle ohne
+Trainingsblock-Schedule-Logik (= Option A vermieden).
+
+Konstante: `DELOAD_WEEK_MAJORITY_PCT = 50.0`.
+
+
+## Abgeschlossen: Phase 23.2 – Effektives Volumen + Diagnose-Tabelle (07.05.2026)
+
+**Branch:** `feature/phase23-time-windowed-stats`
+
+**Implementierung:**
+
+Neue Wochenvolumen-Metrik **"Effektives Volumen"** als zweite Linie im
+Wochen-Chart (PDF-Matplotlib + Live-Chart.js): Summe von Gewicht × Reps
+nur für Sätze mit RPE 7–9. Schließt Junk Volume (RPE <7, zu leicht) und
+Failure Volume (RPE 10, recovery-teuer) aus. Trennt damit "produktives
+Volumen" von Tonnage.
+
+Neue **Diagnose-Karte** unter dem Wochen-Chart (PDF + Live) klassifiziert
+die Veränderung der letzten Woche gemäß Konzept-4.3-Tabelle:
+
+| Tonnage | Eff. Volumen | Diagnose | Severity |
+|---|---|---|---|
+| sinkt | sinkt | Echte Regression | warning |
+| sinkt | stabil | Intensitäts-Korrektur | info |
+| sinkt | steigt | Qualitäts-Verbesserung | success |
+| steigt | sinkt | Mehr Junk-/Failure-Volumen | warning |
+| steigt | steigt | Volumen-Wachstum | success |
+| stabil | stabil | Stabile Phase | info |
+
+**Hybrid-Block-Typ-Awareness (Frage 8.5):** Wenn ≥ 50 % der Sessions
+einer Woche `ist_deload=True` haben und beide Trends "sinkt" sind, wird
+die Diagnose auf "Deload-Woche" geändert (statt fälschlich "Regression").
+Diagnose-Result trägt `suppressed_due_to_deload=True` zur Visualisierung.
+
+**Neue Funktionen in `core/utils/advanced_stats.py`:**
+
+- `is_effective_volume_set(satz)` – True wenn Satz zum Eff-Volumen zählt
+- `classify_volume_trend(prev, curr, stable_pct=5.0)` – "sinkt"/"stabil"/"steigt"/"unklar"
+- `diagnose_volume_trend(prev_t, curr_t, prev_e, curr_e, is_deload_week)` – Hauptlogik
+
+**Neue Konstanten:**
+
+- `EFFECTIVE_VOLUME_RPE_MIN = 7.0`, `EFFECTIVE_VOLUME_RPE_MAX = 9.0`
+- `VOLUME_TREND_STABLE_PCT = 5.0` (innerhalb ±5 % = stabil)
+- `DELOAD_WEEK_MAJORITY_PCT = 50.0`
+
+**Caller-Anpassungen:**
+
+- `core/export/stats_collector.py` – `collect_weekly_volume_pdf` liefert
+  jetzt `effektives_volumen`, `ist_deload_majority` pro Woche und
+  `diagnose` auf der letzten Woche (für PDF-Template).
+- `core/views/training_stats.py` – neuer Helfer
+  `_calc_weekly_effective_volume()` aggregiert Tonnage + Eff-Volumen +
+  Deload-Mehrheit pro Woche. Live-View übergibt
+  `weekly_effective_data_json`, `weekly_deload_majority_json`,
+  `volume_diagnosis` ans Template.
+- `core/chart_generator.py` – `generate_volume_chart` zeichnet die zweite
+  Linie (Tonnage gedämpft als Hintergrund, Effektives Volumen kräftig
+  blau als Hauptlinie).
+
+**UI-Anpassungen:**
+
+- `core/templates/core/training_stats.html` – Bar-Chart wird Combo-Chart
+  (Bars = Tonnage, Linie = Effektives Volumen mit Effektiv-Anteil-Tooltip).
+  Diagnose-Alert unter dem Chart mit Trend-Beschreibung und
+  optionalem "Deload-Woche"-Badge.
+- `core/templates/core/training_pdf_simple.html` – Diagnose-Box unter
+  dem Volumen-Chart.
+
+**Bewusst NICHT in 23.2:**
+
+- `_get_performance_warnings()` (existierender Warning-Ladder) bleibt
+  unangetastet. Die per-Übung-Regression-Warning (`_check_regression_warnings`,
+  15 % Gewichts-Drop) ist ein anderer Signal-Typ als der Wochen-Volumen-Trend.
+  Die neue Diagnose-Karte ist ein separater Widget direkt am Chart sichtbar
+  – kein Risiko für False-Positives in der Warning-Ladder. Falls Wiring
+  gewünscht, separater Schritt 23.x.
+
+**Tests:** `core/tests/test_advanced_stats.py` um drei neue TestCases
+erweitert: `TestIsEffectiveVolumeSet` (5 Cases), `TestClassifyVolumeTrend`
+(6 Cases), `TestDiagnoseVolumeTrend` (9 Cases). 198 Tests in betroffenen
+Modulen weiterhin grün.
+
+**Geänderte Dateien:**
+- `core/utils/advanced_stats.py` – 3 neue Helfer + 4 neue Konstanten + Diagnose-Map
+- `core/export/stats_collector.py` – `collect_weekly_volume_pdf` erweitert
+- `core/views/training_stats.py` – neuer Helfer + Context-Felder
+- `core/chart_generator.py` – Volume-Chart mit zweiter Linie
+- `core/templates/core/training_stats.html` – Combo-Chart + Diagnose-Alert
+- `core/templates/core/training_pdf_simple.html` – Diagnose-Box
+- `core/tests/test_advanced_stats.py` – 20 neue Tests
+
+**Nächster Schritt (Konzept-Reihenfolge):** 23.4 – Fatigue-Index
+14d-Konsistenz. Dank Klärung 8.1 (Fatigue-Index ist KEIN Dead Code,
+delegiert seit Phase 14 an Dashboard-Helfer) reduziert sich 23.4 auf:
+prüfen, ob die RPE-Komponente in `_get_rpe_fatigue` wirklich auf
+14-Tagen basiert und ggf. Volumen/Frequenz-Komponenten verifizieren.

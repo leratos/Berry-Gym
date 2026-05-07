@@ -16,12 +16,16 @@ from core.export.constants import EMPFOHLENE_SAETZE, PULL_GROUPS, PUSH_GROUPS
 from core.helpers.volume import calc_volume, effective_weight, get_user_kg
 from core.models import MUSKELGRUPPEN, KoerperWerte, Satz, Trainingseinheit
 from core.utils.advanced_stats import (
+    DELOAD_WEEK_MAJORITY_PCT,
+    EFFECTIVE_VOLUME_RPE_MAX,
+    EFFECTIVE_VOLUME_RPE_MIN,
     calculate_1rm_standards,
     calculate_consistency_metrics,
     calculate_fatigue_index,
     calculate_plateau_analysis,
     calculate_rpe_quality_analysis,
     calculate_rpe_quality_analysis_windowed,
+    diagnose_volume_trend,
 )
 from core.utils.plan_helpers import (
     get_active_plan_exercise_ids,
@@ -237,26 +241,51 @@ def collect_weekly_volume_pdf(alle_saetze, alle_trainings=None, user_kg: float =
 
     Includes deload weeks with their actual (reduced) volume, marked via
     'ist_deload' flag.  Fills gaps between calendar weeks with 0.
+
+    Phase 23.2: Zusätzliche zweite Reihe ``effektives_volumen`` – nur Sätze
+    mit RPE 7–9 zählen (ohne Junk-Volume <7 und Failure-Volume =10). Pro
+    Woche wird zudem ``ist_deload_majority`` gesetzt (≥50 % der Sessions
+    in dieser Woche sind ``ist_deload=True``), als Hybrid-Block-Typ-Awareness
+    für die Diagnose-Tabelle.
     """
     # Use ALL sets (incl. deload) for volume so deload weeks aren't 0
     saetze_qs = alle_saetze.filter(ist_aufwaermsatz=False).select_related("uebung")
 
     weekly_volume: dict[str, float] = defaultdict(float)
+    weekly_effective: dict[str, float] = defaultdict(float)
     for satz in saetze_qs:
         if satz.gewicht is not None and satz.wiederholungen:
             iso_year, iso_week, _ = satz.einheit.datum.isocalendar()
             week_key = f"{iso_year}-W{iso_week:02d}"
-            weekly_volume[week_key] += effective_weight(satz, user_kg) * satz.wiederholungen
+            tonnage = effective_weight(satz, user_kg) * satz.wiederholungen
+            weekly_volume[week_key] += tonnage
+            if (
+                satz.rpe is not None
+                and EFFECTIVE_VOLUME_RPE_MIN <= float(satz.rpe) <= EFFECTIVE_VOLUME_RPE_MAX
+            ):
+                weekly_effective[week_key] += tonnage
 
     if not weekly_volume:
         return []
 
-    # Identify deload weeks
+    # Identify deload weeks – Hybrid-Awareness: ≥50 % der Sessions ist_deload=True
     deload_weeks: set[str] = set()
+    deload_majority_weeks: set[str] = set()
     if alle_trainings is not None:
-        for t in alle_trainings.filter(ist_deload=True):
+        sessions_per_week: dict[str, dict] = defaultdict(lambda: {"total": 0, "deload": 0})
+        for t in alle_trainings.all():
             iso_year, iso_week, _ = t.datum.isocalendar()
-            deload_weeks.add(f"{iso_year}-W{iso_week:02d}")
+            key = f"{iso_year}-W{iso_week:02d}"
+            sessions_per_week[key]["total"] += 1
+            if t.ist_deload:
+                sessions_per_week[key]["deload"] += 1
+                deload_weeks.add(key)
+        for key, counts in sessions_per_week.items():
+            if (
+                counts["total"]
+                and (counts["deload"] / counts["total"]) * 100 >= DELOAD_WEEK_MAJORITY_PCT
+            ):
+                deload_majority_weeks.add(key)
 
     # Fill gaps between first and last week
     all_keys = sorted(weekly_volume.keys())
@@ -280,14 +309,30 @@ def collect_weekly_volume_pdf(alle_saetze, alle_trainings=None, user_kg: float =
             y += 1
 
     labels = filled[-12:]
-    return [
+    weeks = [
         {
             "woche": f"KW{label.split('-W')[1]}",
             "volumen": round(weekly_volume.get(label, 0), 0),
+            "effektives_volumen": round(weekly_effective.get(label, 0), 0),
             "ist_deload": label in deload_weeks,
+            "ist_deload_majority": label in deload_majority_weeks,
         }
         for label in labels
     ]
+
+    # Phase 23.2: Diagnose der letzten Woche (Trend gegenüber Vorwoche)
+    if len(weeks) >= 2:
+        prev = weeks[-2]
+        curr = weeks[-1]
+        diag = diagnose_volume_trend(
+            prev_tonnage=prev["volumen"],
+            curr_tonnage=curr["volumen"],
+            prev_effective=prev["effektives_volumen"],
+            curr_effective=curr["effektives_volumen"],
+            is_deload_week=curr["ist_deload_majority"],
+        )
+        curr["diagnose"] = diag
+    return weeks
 
 
 def collect_weight_trend(koerperwerte: list) -> dict | None:

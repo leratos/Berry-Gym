@@ -26,7 +26,10 @@ from core.utils.advanced_stats import (
     calculate_rpe_quality_analysis,
     calculate_rpe_quality_analysis_windowed,
     classify_progression_status,
+    classify_volume_trend,
+    diagnose_volume_trend,
     get_time_windows,
+    is_effective_volume_set,
 )
 
 
@@ -784,3 +787,159 @@ class TestRpeDistributionWindowed(StatsTestBase):
         self.assertEqual(result_strict["primary_window"], "all")
         # 5er Schwelle → 4w ausreichend
         self.assertEqual(result_lenient["primary_window"], "4w")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.2: is_effective_volume_set
+# ──────────────────────────────────────────────────────────────────────────────
+class TestIsEffectiveVolumeSet(StatsTestBase):
+    """Sätze mit RPE 7-9 zählen als effektives Volumen, alles andere nicht."""
+
+    def test_includes_rpe_7_to_9(self):
+        for rpe in (7.0, 7.5, 8.0, 8.5, 9.0):
+            session = self._make_session()
+            satz = self._add_satz(session, gewicht=80, wiederholungen=8, rpe=rpe)
+            self.assertTrue(is_effective_volume_set(satz), f"RPE {rpe} sollte effektiv sein")
+
+    def test_excludes_rpe_below_7(self):
+        for rpe in (5.0, 6.0, 6.9):
+            session = self._make_session()
+            satz = self._add_satz(session, gewicht=80, wiederholungen=8, rpe=rpe)
+            self.assertFalse(is_effective_volume_set(satz), f"RPE {rpe} sollte Junk Volume sein")
+
+    def test_excludes_rpe_10(self):
+        session = self._make_session()
+        satz = self._add_satz(session, gewicht=80, wiederholungen=8, rpe=10.0)
+        self.assertFalse(is_effective_volume_set(satz))
+
+    def test_excludes_missing_rpe(self):
+        session = self._make_session()
+        satz = self._add_satz(session, gewicht=80, wiederholungen=8, rpe=None)
+        self.assertFalse(is_effective_volume_set(satz))
+
+    def test_excludes_missing_weight(self):
+        # Satz nur in-memory (NOT NULL constraint auf gewicht)
+        session = self._make_session()
+        satz = Satz(
+            einheit=session, uebung=self.uebung, satz_nr=1, gewicht=None, wiederholungen=8, rpe=8.0
+        )
+        self.assertFalse(is_effective_volume_set(satz))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.2: classify_volume_trend
+# ──────────────────────────────────────────────────────────────────────────────
+class TestClassifyVolumeTrend(TestCase):
+    def test_stable_within_5_pct(self):
+        self.assertEqual(classify_volume_trend(1000, 1040), "stabil")  # +4 %
+        self.assertEqual(classify_volume_trend(1000, 970), "stabil")  # -3 %
+
+    def test_falling_more_than_5_pct(self):
+        self.assertEqual(classify_volume_trend(1000, 940), "sinkt")  # -6 %
+
+    def test_rising_more_than_5_pct(self):
+        self.assertEqual(classify_volume_trend(1000, 1100), "steigt")  # +10 %
+
+    def test_unklar_when_prev_zero(self):
+        self.assertEqual(classify_volume_trend(0, 1000), "unklar")
+        self.assertEqual(classify_volume_trend(None, 1000), "unklar")
+
+    def test_unklar_when_curr_none(self):
+        self.assertEqual(classify_volume_trend(1000, None), "unklar")
+
+    def test_custom_threshold(self):
+        # 8 % bei 10er Schwelle = stabil
+        self.assertEqual(classify_volume_trend(1000, 1080, stable_pct=10.0), "stabil")
+        # 8 % bei 5er Schwelle = steigt
+        self.assertEqual(classify_volume_trend(1000, 1080, stable_pct=5.0), "steigt")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 23.2: diagnose_volume_trend
+# ──────────────────────────────────────────────────────────────────────────────
+class TestDiagnoseVolumeTrend(TestCase):
+    def test_real_regression_emits_warning(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=900,  # -10 %
+            prev_effective=600,
+            curr_effective=540,  # -10 %
+        )
+        self.assertEqual(result["key"], "regression")
+        self.assertEqual(result["severity"], "warning")
+
+    def test_intensity_correction_no_warning(self):
+        """Tonnage sinkt, eff. Volumen stabil → KEIN regression-warning (Mai-Report-Fix)."""
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=900,  # -10 %
+            prev_effective=600,
+            curr_effective=600,  # stabil
+        )
+        self.assertEqual(result["key"], "intensity_correction")
+        self.assertEqual(result["severity"], "info")
+
+    def test_quality_improvement_positive(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=900,  # -10 %
+            prev_effective=500,
+            curr_effective=600,  # +20 %
+        )
+        self.assertEqual(result["key"], "quality_improvement")
+        self.assertEqual(result["severity"], "success")
+
+    def test_junk_increase_warning(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=1100,  # +10 %
+            prev_effective=600,
+            curr_effective=540,  # -10 %
+        )
+        self.assertEqual(result["key"], "junk_increase")
+
+    def test_growth_phase(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=1100,
+            prev_effective=600,
+            curr_effective=660,
+        )
+        self.assertEqual(result["key"], "growth")
+
+    def test_stable_phase(self):
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=1010,
+            prev_effective=600,
+            curr_effective=610,
+        )
+        self.assertEqual(result["key"], "stable")
+
+    def test_deload_week_suppresses_regression(self):
+        """Hybrid-Block-Typ-Awareness: Deload-Woche → Regression unterdrückt."""
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=600,  # -40 %
+            prev_effective=600,
+            curr_effective=350,  # -42 %
+            is_deload_week=True,
+        )
+        self.assertEqual(result["key"], "deload_expected")
+        self.assertTrue(result["suppressed_due_to_deload"])
+
+    def test_deload_week_does_not_suppress_other_diagnoses(self):
+        """Wenn Tonnage steigt, ist es trotz Deload-Marker keine Deload-Woche."""
+        result = diagnose_volume_trend(
+            prev_tonnage=1000,
+            curr_tonnage=1100,
+            prev_effective=600,
+            curr_effective=540,
+            is_deload_week=True,
+        )
+        self.assertEqual(result["key"], "junk_increase")
+        self.assertFalse(result["suppressed_due_to_deload"])
+
+    def test_returns_none_when_prev_zero(self):
+        result = diagnose_volume_trend(0, 100, 0, 50)
+        self.assertIsNone(result)

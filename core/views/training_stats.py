@@ -41,8 +41,12 @@ from ..models import (
     UserProfile,
 )
 from ..utils.advanced_stats import (
+    DELOAD_WEEK_MAJORITY_PCT,
+    EFFECTIVE_VOLUME_RPE_MAX,
+    EFFECTIVE_VOLUME_RPE_MIN,
     calculate_rpe_quality_analysis_windowed,
     classify_progression_status,
+    diagnose_volume_trend,
 )
 from ..utils.periodization import get_block_age_warning
 from ..utils.plan_helpers import (
@@ -1691,6 +1695,43 @@ def _calc_weekly_volume(trainings, user_kg: float = 0.0) -> tuple[list, list, di
     return labels, [round(weekly[k], 1) for k in labels], {k: weekly_plans[k] for k in labels}
 
 
+def _calc_weekly_effective_volume(trainings, user_kg: float = 0.0) -> tuple[dict, dict, dict]:
+    """Phase 23.2: Tonnage und effektives Volumen pro Woche, plus Deload-Mehrheit.
+
+    Im Gegensatz zu ``_calc_weekly_volume`` werden hier Deload-Sessions
+    **mitgezählt**, damit Wochen mit überwiegend Deload-Sessions auch ihre
+    tatsächliche (reduzierte) Tonnage zeigen. Die Diagnose-Logik nutzt
+    ``is_deload_week`` als Hybrid-Block-Typ-Awareness (Frage 8.5).
+
+    Returns: (tonnage_by_week, effective_by_week, deload_majority_by_week)
+    """
+    tonnage: defaultdict[str, float] = defaultdict(float)
+    effective: defaultdict[str, float] = defaultdict(float)
+    sessions_count: defaultdict[str, dict] = defaultdict(lambda: {"total": 0, "deload": 0})
+    for training in trainings:
+        iso_year, iso_week, _ = training.datum.isocalendar()
+        key = f"{iso_year}-W{iso_week:02d}"
+        sessions_count[key]["total"] += 1
+        if training.ist_deload:
+            sessions_count[key]["deload"] += 1
+        for satz in training.arbeitssaetze_list:
+            if satz.gewicht is None or not satz.wiederholungen:
+                continue
+            # Tonnage: Phase-14-konsistent über calc_volume
+            tonn = calc_volume([satz], user_kg)
+            tonnage[key] += tonn
+            if (
+                satz.rpe is not None
+                and EFFECTIVE_VOLUME_RPE_MIN <= float(satz.rpe) <= EFFECTIVE_VOLUME_RPE_MAX
+            ):
+                effective[key] += tonn
+    deload_majority = {
+        k: bool(c["total"] and (c["deload"] / c["total"]) * 100 >= DELOAD_WEEK_MAJORITY_PCT)
+        for k, c in sessions_count.items()
+    }
+    return dict(tonnage), dict(effective), deload_majority
+
+
 _DEFAULT_RPE = 7.0  # Fallback für Sätze ohne RPE-Bewertung (moderate Anstrengung)
 
 
@@ -2188,6 +2229,25 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     user_kg = get_user_kg(request.user)
     volumen_labels, volumen_data, deload_flags = _calc_per_training_volume(trainings, user_kg)
     weekly_labels, weekly_data, plans_per_week = _calc_weekly_volume(trainings, user_kg)
+
+    # Phase 23.2: Effektives Volumen pro Woche + Diagnose-Tabelle
+    weekly_tonnage_map, weekly_effective_map, weekly_deload_majority = (
+        _calc_weekly_effective_volume(trainings, user_kg)
+    )
+    # Achsen synchron zum bestehenden weekly_data (gleiche Labels)
+    weekly_effective_data = [round(weekly_effective_map.get(k, 0), 1) for k in weekly_labels]
+    weekly_deload_majority_flags = [weekly_deload_majority.get(k, False) for k in weekly_labels]
+    # Diagnose der letzten Woche (Trend gegenüber Vorwoche)
+    volume_diagnosis = None
+    if len(weekly_labels) >= 2:
+        prev_label, curr_label = weekly_labels[-2], weekly_labels[-1]
+        volume_diagnosis = diagnose_volume_trend(
+            prev_tonnage=weekly_tonnage_map.get(prev_label, 0),
+            curr_tonnage=weekly_tonnage_map.get(curr_label, 0),
+            prev_effective=weekly_effective_map.get(prev_label, 0),
+            curr_effective=weekly_effective_map.get(curr_label, 0),
+            is_deload_week=weekly_deload_majority.get(curr_label, False),
+        )
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(
         trainings, request.user
     )
@@ -2252,6 +2312,10 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "deload_flags_json": json.dumps(deload_flags),
         "weekly_labels_json": json.dumps(weekly_labels),
         "weekly_data_json": json.dumps(weekly_data),
+        # Phase 23.2: zweite Linie + Diagnose-Karte
+        "weekly_effective_data_json": json.dumps(weekly_effective_data),
+        "weekly_deload_majority_json": json.dumps(weekly_deload_majority_flags),
+        "volume_diagnosis": volume_diagnosis,
         "aktuelle_kw": f"{heute.isocalendar()[0]}-W{heute.isocalendar()[1]:02d}",
         "mg_labels_json": json.dumps(mg_labels),
         "mg_data_json": json.dumps(mg_data),
