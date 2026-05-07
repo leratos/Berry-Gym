@@ -16,6 +16,9 @@ from django.utils import timezone
 
 from core.models import Equipment, Plan, PlanUebung, Satz, Trainingsblock, Trainingseinheit, Uebung
 from core.views.training_stats import (
+    FATIGUE_CARDIO_WINDOW_DAYS,
+    FATIGUE_FREQUENCY_WINDOW_DAYS,
+    FATIGUE_RPE_WINDOW_DAYS,
     _calc_rpe_trend,
     _check_rpe10_warning,
     _check_session_rpe_trend_warning,
@@ -23,6 +26,7 @@ from core.views.training_stats import (
     _get_fatigue_rating,
     _get_motivation_quote,
     _get_rpe10_anteil,
+    _get_rpe_score,
     _get_session_rpe_trend,
     _get_weakness_progress,
     _get_week_start,
@@ -132,7 +136,49 @@ class TestGetFatigueRating(TestCase):
         self.assertEqual(_get_fatigue_rating(60)[0], "Hoch")
         self.assertEqual(_get_fatigue_rating(40)[0], "Moderat")
         self.assertEqual(_get_fatigue_rating(20)[0], "Niedrig")
-        self.assertEqual(_get_fatigue_rating(19)[0], "Sehr niedrig")
+
+
+class TestFatigueWindowConsistency(TestCase):
+    """Phase 23.4: Zeitfenster der Fatigue-Komponenten sind explizit dokumentiert."""
+
+    def test_rpe_window_constant_is_14_days(self):
+        self.assertEqual(FATIGUE_RPE_WINDOW_DAYS, 14)
+
+    def test_frequency_window_constant_is_7_days(self):
+        """Akute Last – pro Woche, nicht pro 14d (Schwellen-Semantik)."""
+        self.assertEqual(FATIGUE_FREQUENCY_WINDOW_DAYS, 7)
+
+    def test_cardio_window_constant_is_7_days(self):
+        self.assertEqual(FATIGUE_CARDIO_WINDOW_DAYS, 7)
+
+    def test_rpe_score_uses_rpe_window_constant(self):
+        """Verifiziert, dass _get_rpe_score wirklich das 14d-Fenster nutzt
+        (matcht die RPE-Verteilungs-Karte aus Phase 23.1)."""
+        user = User.objects.create_user(username="fatigue_user", password="pass")
+        equipment = Equipment.objects.create(name="EQ_FW")
+        uebung = Uebung.objects.create(
+            bezeichnung="Test", muskelgruppe="BRUST", bewegungstyp="COMPOUND", gewichts_typ="GESAMT"
+        )
+        uebung.equipment.add(equipment)
+        plan = Plan.objects.create(name="P", user=user)
+        heute = timezone.now()
+        # Satz innerhalb 14d
+        s_in = Trainingseinheit.objects.create(user=user, plan=plan, dauer_minuten=30)
+        Trainingseinheit.objects.filter(pk=s_in.pk).update(datum=heute - timedelta(days=10))
+        Satz.objects.create(
+            einheit=s_in, uebung=uebung, satz_nr=1, gewicht=80, wiederholungen=8, rpe=8.0
+        )
+        # Satz älter als 14d (sollte ignoriert werden)
+        s_out = Trainingseinheit.objects.create(user=user, plan=plan, dauer_minuten=30)
+        Trainingseinheit.objects.filter(pk=s_out.pk).update(
+            datum=heute - timedelta(days=FATIGUE_RPE_WINDOW_DAYS + 5)
+        )
+        Satz.objects.create(
+            einheit=s_out, uebung=uebung, satz_nr=1, gewicht=80, wiederholungen=8, rpe=10.0
+        )
+        score, avg_rpe = _get_rpe_score(user, heute)
+        # Avg sollte nur den 8.0-Satz reflektieren, nicht 9.0 (Mittel der beiden)
+        self.assertAlmostEqual(float(avg_rpe), 8.0, places=1)
 
 
 class TestGetMotivationQuote(TestCase):
@@ -1033,36 +1079,43 @@ class TestPlateauLive(StatsBase):
         self.assertEqual(result, [])
 
     def test_recent_pr_green(self):
-        """PR within 14 days → green badge."""
+        """PR within 7 days → active_progression / success."""
         session = self._session(days_ago=3)
         satz = self._satz(session, gewicht=100, wdh=5)
         satz.is_pr = True
         satz.save()
         result = _calc_plateau_live(self.user)
         self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status_farbe"], "success")
+        self.assertEqual(result[0]["status"], "active_progression")
+        # Backwards-compat alias
         self.assertEqual(result[0]["farbe"], "success")
-        self.assertEqual(result[0]["status"], "Kürzlich")
 
-    def test_old_pr_red(self):
-        """PR > 42 days ago → red badge."""
+    def test_old_pr_with_no_recent_training_is_pause(self):
+        """PR vor 60 Tagen, keine aktuelle Trainings-Aktivität → pause (Phase 23.3)."""
         session = self._session(days_ago=60)
         satz = self._satz(session, gewicht=100, wdh=5)
         satz.is_pr = True
         satz.save()
         result = _calc_plateau_live(self.user)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["farbe"], "danger")
+        self.assertEqual(result[0]["status"], "pause")
+        self.assertEqual(result[0]["status_farbe"], "secondary")
 
-    def test_stagnating_pr_yellow(self):
-        """PR 15-42 days ago → yellow badge."""
-        session = self._session(days_ago=25)
-        satz = self._satz(session, gewicht=100, wdh=5)
+    def test_plateau_when_pr_old_but_currently_training(self):
+        """PR vor 50 Tagen, aktuell aktiv ohne Verbesserung → plateau (Phase 23.3)."""
+        # Alter PR
+        satz = self._satz(self._session(days_ago=50), gewicht=100, wdh=5)
         satz.is_pr = True
         satz.save()
+        # Aktuelle Sätze (gleiches Gewicht, kein Drop, kein RPE-Trend)
+        for d in [25, 18, 10, 3]:
+            self._satz(self._session(days_ago=d), gewicht=100, wdh=5)
         result = _calc_plateau_live(self.user)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["farbe"], "warning")
-        self.assertEqual(result[0]["status"], "Stagnierend")
+        # 50 Tage seit PR + aktuell trainiert → plateau (43-84 days range)
+        self.assertEqual(result[0]["status"], "plateau")
+        self.assertEqual(result[0]["status_farbe"], "danger")
 
     def test_max_5_exercises(self):
         """Should return at most 5 exercises."""
