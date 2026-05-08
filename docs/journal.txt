@@ -6042,3 +6042,69 @@ Alle 5 Sub-Tasks erledigt:
 
 **202 Tests in betroffenen Modulen grün** (test_advanced_stats, test_training_stats,
 test_training_stats_extended, test_stats_collector, test_helpers_and_utils).
+
+
+
+## In Arbeit: Phase 24 – Konzept-Dokument für Report-Daten-Konsistenz (07.05.2026)
+
+**Status:** Konzept-Schreibphase
+**Branch:** wird vom User beim Implementierungs-Start in VSCode angelegt
+**Nächster Schritt:** `docs/concepts/phase24_concept.md` neu anlegen
+
+Phase 24 adressiert die im Mai-2026-Report nach Phase-23-Abschluss noch
+verbliebenen Daten-Inkonsistenzen, bevor Phase 25 (Layout-Refactor) startet.
+Sechs Sub-Phasen (24.1-24.6, 24.7 gestrichen).
+
+Reihenfolge: 24.4 (Set-Attribution-Audit) zuerst, danach 24.1, 24.2, 24.5,
+24.3, 24.6.
+
+PROJECT_ROADMAP.md ist laut User veraltet, Aktualisierung nicht Teil dieser
+Phase. Phase-24-Tracking läuft komplett über das Konzept-Dokument.
+
+
+
+## Abgeschlossen: Phase 24 Konzept-Dokument (07.05.2026)
+
+`docs/concepts/phase24_concept.md` angelegt (454 Zeilen) mit Problemanalyse,
+Architektur-Skizze, sechs Sub-Phasen-Beschreibungen, Reihenfolge-Begründung,
+Cross-Cutting-Concerns und Schnittstelle zu Phase 25.
+
+**Geänderte/Neue Dateien:**
+
+- `docs/concepts/` (neuer Ordner)
+- `docs/concepts/phase24_concept.md` (neu, 454 Zeilen)
+- `docs/journal.txt` (Draft- und Abschluss-Eintrag angehängt)
+
+**Bewusst NICHT angefasst:**
+
+- `PROJECT_ROADMAP.md` – laut User veraltet, separate Aufgabe
+- `docs/phase23_concept.md` – User verschiebt selbst nach `docs/concepts/`
+- Code-Dateien – Implementierung beginnt erst in VSCode/Claude Code
+
+**Sub-Phasen-Liste (24.1–24.6, 24.7 gestrichen):**
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| 24.4 | Set-Attribution-Audit (audit-only, DB-Zugriff in VSCode) | M |
+| 24.1 | Deload/Plan-Wechsel/laufende Woche aus PDF-Trends ausnehmen | M |
+| 24.2 | Push/Pull-Empfehlung kontextabhängig vom Übertraining-Status | S |
+| 24.5 | Plateau-Status vs. Steigerungsrate entkoppeln | S |
+| 24.3 | Header-Zahlen / Zeitraum-Konsistenz | S |
+| 24.6 | Kraftstandards-Anzeige Schwellen-Übergänge | S |
+
+Reihenfolge: 24.4 → 24.1 → 24.2 → 24.5 → 24.3 → 24.6.
+
+**14 offene Fragen** im Konzept-Dokument festgehalten (F1–F14), die beim
+Start der jeweiligen Sub-Phase geklärt werden – die meisten brauchen Code-
+oder DB-Zugriff (DB-Schema, Logik-Lokation), daher in claude.ai nicht
+sinnvoll vorab beantwortbar.
+
+**Implementierung beginnt:** in VSCode/Claude Code mit Sub-Phase 24.4
+(Set-Attribution-Audit). Branch dort anlegen
+(`feature/phase-24-4-set-attribution-audit`), Commit dieser Konzept-Phase
+ebenfalls in VSCode.
+
+**Branch dieser Konzept-Erstellung:** keiner – Dateien wurden auf dem
+aktuellen Working-Tree direkt geschrieben. User-Aufgabe vor Sub-Phase 24.4:
+entscheiden, ob Konzept-Doc in eigenem Branch (`feature/phase-24-konzept`)
+oder im 24.4-Branch mit-committed wird.
