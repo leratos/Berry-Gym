@@ -144,7 +144,15 @@ Auf Basis des Berichts werden Folge-Sub-Phasen geplant (eigene Phase 24.4b mit F
 
 ### 3.2 Sub-Phase 24.1 – Deload, Plan-Wechsel & laufende Woche aus PDF-Trends ausnehmen
 
-**Status:** 📋 Konzept · **Aufwand:** M · **Reihenfolge:** nach 24.4
+**Status:** ✅ Abgeschlossen (09.05.2026) · **Aufwand:** S–M · **Reihenfolge:** nach 24.4
+
+**Ergebnis (09.05.2026):** PDF-Volumen-Diagnose vergleicht jetzt die letzten zwei vergleichbaren Wochen (nicht laufend, nicht Deload-Mehrheit, nicht Plan-Wechsel). Plan-Wechsel werden über die Plan-IDs-Sets aufeinanderfolgender Wochen erkannt. Bei zu wenigen vergleichbaren Wochen erscheint statt einer irreführenden Trend-Aussage *„Trend-Bewertung pausiert"*. Helper-Refactor (`_aggregate_weekly_volume`, `_classify_weeks_from_sessions`, `_fill_iso_week_range`, `_build_week_diagnose`) hält die Hauptfunktion unter der Komplexitäts-Schwelle. Verifiziert gegen Production-Daten von Lera (09.05.2026): vergleichbare Wochen `KW08/09/11/12/13/16/17`, neue Diagnose vergleicht `KW16→KW17` (+6,6 %), alte Logik hatte fälschlich `KW18 (Deload) → KW19 (laufend)` verglichen.
+
+**Antworten auf F4–F6:**
+
+- F4: Logik liegt jetzt in `core/export/stats_collector.py` (kein eigener Helper-Modul – die Filterung lebt lokal in vier kleinen Helpern derselben Datei).
+- F5: Trend-Fenster bleibt bei „letzte zwei vergleichbaren Wochen". Eine Erweiterung auf 6 Wochen wurde verworfen, weil die Diagnose konzeptionell „Vorwoche vs. aktuelle abgeschlossene Woche" misst; bei zu dünner Datenlage greift jetzt der Pause-Hinweis.
+- F6: Plan-Wechsel-Visualisierung im Chart wurde nicht angefasst – gehört zu Phase 25 (Layout). Aktuell nur als Diagnose-Label sichtbar.
 
 #### Problem
 
@@ -456,9 +464,8 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 
 ## 8. Status-Updates pro Sub-Phase
 
-### 24.4 – Set-Attribution-Audit
+### 24.1 – Deload, Plan-Wechsel & laufende Woche aus PDF-Trends ausnehmen
 
-- **Start:** 08.05.2026 (Branch `feature/phase-24-4-set-attribution-audit`)
-- **Abschluss:** 08.05.2026 (audit-only, kein Code-Change)
-- **Ergebnis:** Hypothese widerlegt – fünf 9er-Werte sind Plan-Struktur, kein Artefakt. Keine Folge-Sub-Phase. Push/Pull-Empfehlung (24.2) entkoppelt vom Audit. Bericht: [phase24-04-audit-bericht.md](phase24-04-audit-bericht.md).
-- **Sekundär-Befund:** Hilfsmuskeln werden in `collect_muscle_balance` gar nicht gezählt; Stammdaten-`hilfsmuskeln` mischen Keys und Labels. Beides bewusst zurückgestellt – Aufnahme in spätere Datenqualitäts-Phase.
+- **Start:** 09.05.2026 (Branch `feature/phase-24-1-deload-plan-current-week`)
+- **Abschluss:** 09.05.2026
+- **Ergebnis:** Diagnose vergleicht nur noch *vergleichbare* Wochen, mit explizitem Pause-Hinweis bei dünner Datenlage. Verifiziert gegen Lera-Production-Daten – Mai-Bug („Tonnage stabil" trotz Deload→laufend) ist nicht mehr reproduzierbar. Tests in `core/tests/test_stats_collector.py::TestCollectWeeklyVolumePdfDiagnose` decken die drei Klassifikationen + Kombinationen ab.
