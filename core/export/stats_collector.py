@@ -302,17 +302,29 @@ def _fill_iso_week_range(weekly_volume: dict) -> list[str]:
 
 
 def _build_week_diagnose(weeks: list[dict]) -> dict | None:
-    """Phase 24.1: produce trend diagnose over the last two *comparable* weeks
-    (not running, not deload-majority, not plan-change). Returns an explanatory
-    'inconclusive' diagnose if fewer than two comparable weeks are available."""
-    comparable = [
-        w
-        for w in weeks
-        if not w["ist_laufend"]
-        and not w["ist_deload_majority"]
-        and not w["ist_plan_wechsel"]
-        and w["volumen"] > 0
-    ]
+    """Phase 24.1: produce trend diagnose over the last two *comparable* weeks.
+
+    Comparable = not running, not deload-majority, not skip (zero volume),
+    AND inside the *current plan epoch*. The current plan epoch starts after
+    the most recent plan-change week: anything before that boundary belongs
+    to a different plan and must not be compared with weeks of the new plan.
+
+    Implementation: walk weeks from latest to earliest, collect candidates,
+    stop as soon as we hit a plan-change week (which itself is not collected,
+    and neither is anything before it).
+
+    Returns an explanatory 'inconclusive' diagnose if fewer than two
+    comparable weeks are available.
+    """
+    comparable: list[dict] = []
+    for w in reversed(weeks):
+        if w["ist_plan_wechsel"]:
+            # Plan-Epoch-Grenze – stop. Diese Woche und alles davor zählen nicht.
+            break
+        if w["ist_laufend"] or w["ist_deload_majority"] or w["volumen"] <= 0:
+            continue
+        comparable.append(w)
+    comparable.reverse()
     if len(comparable) >= 2:
         prev = comparable[-2]
         curr = comparable[-1]

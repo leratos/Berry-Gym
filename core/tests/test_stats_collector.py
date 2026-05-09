@@ -700,6 +700,43 @@ class TestCollectWeeklyVolumePdfDiagnose:
         if diag and diag["compared_weeks"]:
             assert "KW17" not in diag["compared_weeks"]
 
+    def test_plan_wechsel_grenze_nicht_ueber_alten_plan_vergleichen(self):
+        """Reviewer-Hinweis (PR #163): Wenn eine Plan-Wechsel-Woche zwischen
+        zwei sonst sauberen Wochen liegt, dürfen die umliegenden Wochen
+        NICHT verglichen werden – das wäre Plan A vs. Plan B trotz
+        Plan-Wechsel-Marker. Korrektes Verhalten: alles vor dem letzten
+        Plan-Wechsel ist eine andere Plan-Epoche und nicht vergleichbar.
+        """
+        user, plan_a, plan_b, Satz, Trainingseinheit = self._setup()
+        ref_year = 2026
+        # KW16 Plan A, KW17 Plan-Wechsel zu B, KW18 Plan B (nicht laufend),
+        # KW19 läuft (nur damit der Filter "ist_laufend" greift).
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 16), Decimal("100.00"))
+        _set_week_volume(user, plan_b, _iso_monday(ref_year, 17), Decimal("60.00"))
+        _set_week_volume(user, plan_b, _iso_monday(ref_year, 18), Decimal("70.00"))
+        _set_week_volume(user, plan_b, _iso_monday(ref_year, 19), Decimal("30.00"))
+
+        from django.utils import timezone as _tz
+
+        heute = _tz.make_aware(_iso_monday(ref_year, 19))
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = collect_weekly_volume_pdf(alle_saetze, alle_trainings, heute=heute)
+
+        diag = result[-1]["diagnose"]
+        # Niemals KW16 (Plan A) gegen KW18 (Plan B) vergleichen
+        if diag and diag["compared_weeks"]:
+            prev_kw, curr_kw = diag["compared_weeks"]
+            assert not (
+                prev_kw == "KW16" and curr_kw == "KW18"
+            ), f"Vergleich {prev_kw}->{curr_kw} überspringt die Plan-Wechsel-Woche KW17"
+            # Auch generell: KW16 (alter Plan) darf nicht im Vergleich auftauchen,
+            # wenn dazwischen ein Plan-Wechsel liegt
+            assert prev_kw != "KW16"
+        else:
+            # Akzeptabel: nur 1 vergleichbare Woche im neuen Plan → pausiert
+            assert diag["key"] == "inconclusive"
+
     def test_alle_trainings_none_keine_plan_wechsel_erkennung(self):
         """Backward-compat: ohne alle_trainings keine Deload-/Plan-Wechsel-Markierung,
         aber laufende Woche wird trotzdem ausgeschlossen."""
