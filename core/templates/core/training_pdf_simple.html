@@ -804,10 +804,15 @@
         <div class="info-box {% if last_week.diagnose.severity == 'warning' %}warning{% endif %}" style="margin-top: 8px;">
             <p style="margin: 0; font-size: 9px;">
                 <strong>{{ last_week.diagnose.label }}</strong>
+                {% if last_week.diagnose.tonnage_trend and last_week.diagnose.effective_trend %}
                 <span style="color: #6c757d;">
                     · Tonnage {{ last_week.diagnose.tonnage_trend }}
                     · Effektives Volumen {{ last_week.diagnose.effective_trend }}
                 </span>
+                {% endif %}
+                {% if last_week.diagnose.compared_weeks %}
+                <span style="color: #6c757d;"> · Vergleich {{ last_week.diagnose.compared_weeks.0 }}→{{ last_week.diagnose.compared_weeks.1 }}</span>
+                {% endif %}
                 {% if last_week.diagnose.suppressed_due_to_deload %}
                 <span style="background: #6c757d; color: white; padding: 1px 5px; border-radius: 3px; font-size: 7px; margin-left: 4px;">Deload-Woche</span>
                 {% endif %}

@@ -18,7 +18,7 @@ Abdeckung:
 - collect_exercise_detail_data: mit Verlauf, zu wenig Daten
 """
 
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.utils import timezone
@@ -43,6 +43,7 @@ from core.export.stats_collector import (
 )
 from core.tests.factories import (
     KoerperWerteFactory,
+    PlanFactory,
     SatzFactory,
     TrainingseinheitFactory,
     UebungFactory,
@@ -205,7 +206,6 @@ class TestCalcVolumeTrendWeekly:
 
     def test_vorwoche_null_gibt_none(self):
         heute = timezone.now()
-        kw_aktuell = f"KW{heute.isocalendar()[1]:02d}"
         # Baue zwei abgeschlossene Wochen, Vorwoche = 0
         wochen = [
             {"woche": "KW01", "volumen": 0},
@@ -544,6 +544,221 @@ class TestCollectWeeklyVolumePdf:
         result = collect_weekly_volume_pdf(alle_saetze, alle_trainings)
         # Aktuelle Woche sollte als Deload markiert sein
         assert any(w["ist_deload"] for w in result)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 24.1: collect_weekly_volume_pdf – Diagnose über vergleichbare Wochen
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _iso_monday(year: int, iso_week: int) -> datetime:
+    """Return naive datetime for the Monday of the given ISO week."""
+    return datetime.fromisocalendar(year, iso_week, 1)
+
+
+def _set_week_volume(user, plan, datum, gewicht: Decimal, ist_deload: bool = False) -> None:
+    """Create one Trainingseinheit + one working set on the given datetime.
+
+    Trainingseinheit.datum has auto_now_add=True, so the explicit datum has to
+    be force-applied via .update() after creation.
+    """
+    from django.utils import timezone as _tz
+
+    from core.models import Trainingseinheit
+
+    aware = _tz.make_aware(datum) if _tz.is_naive(datum) else datum
+    einheit = TrainingseinheitFactory(user=user, plan=plan, ist_deload=ist_deload)
+    Trainingseinheit.objects.filter(pk=einheit.pk).update(datum=aware)
+    einheit.refresh_from_db()
+    SatzFactory(
+        einheit=einheit,
+        uebung=UebungFactory(),
+        gewicht=gewicht,
+        wiederholungen=10,
+        rpe=Decimal("8.0"),
+        ist_aufwaermsatz=False,
+    )
+
+
+@pytest.mark.django_db
+class TestCollectWeeklyVolumePdfDiagnose:
+    """Phase 24.1: Diagnose-Auswahl der letzten zwei vergleichbaren Wochen."""
+
+    def _setup(self):
+        from core.models import Satz, Trainingseinheit
+
+        user = UserFactory()
+        plan_a = PlanFactory(user=user)
+        plan_b = PlanFactory(user=user)
+        return user, plan_a, plan_b, Satz, Trainingseinheit
+
+    def test_drei_normale_wochen_diagnose_zwischen_letzten_beiden_abgeschlossenen(self):
+        """Bei drei normalen Wochen plus laufender Woche wird die Diagnose
+        zwischen den letzten beiden abgeschlossenen Wochen berechnet, nicht
+        unter Einbeziehung der laufenden Woche."""
+        user, plan_a, _, Satz, Trainingseinheit = self._setup()
+        ref_year = 2026  # heute = KW18, laufend
+        # KW15 / KW16 / KW17 abgeschlossen, KW18 laufend
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 15), Decimal("100.00"))
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 16), Decimal("105.00"))
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 17), Decimal("110.00"))
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 18), Decimal("50.00"))
+
+        from django.utils import timezone as _tz
+
+        heute = _tz.make_aware(_iso_monday(ref_year, 18))
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = collect_weekly_volume_pdf(alle_saetze, alle_trainings, heute=heute)
+
+        last = result[-1]
+        assert last["ist_laufend"] is True
+        assert last["diagnose"] is not None
+        # Vergleich zwischen KW16 und KW17 (nicht KW17 → KW18)
+        assert last["diagnose"]["compared_weeks"] == ("KW16", "KW17")
+
+    def test_deload_woche_pausiert_diagnose(self):
+        """KW17 normal, KW18 Deload, KW19 laufend → keine zwei vergleichbaren
+        Wochen verfügbar (KW17 ist die einzige nicht-laufende, nicht-Deload-Woche).
+        Diagnose schaltet auf 'Trend-Bewertung pausiert'."""
+        user, plan_a, _, Satz, Trainingseinheit = self._setup()
+        ref_year = 2026
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 17), Decimal("100.00"))
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 18), Decimal("50.00"), ist_deload=True)
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 19), Decimal("80.00"))
+
+        from django.utils import timezone as _tz
+
+        heute = _tz.make_aware(_iso_monday(ref_year, 19))
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = collect_weekly_volume_pdf(alle_saetze, alle_trainings, heute=heute)
+
+        last = result[-1]
+        assert last["diagnose"]["key"] == "inconclusive"
+        assert last["diagnose"]["tonnage_trend"] == ""
+        assert last["diagnose"]["compared_weeks"] is None
+
+    def test_mai_2026_szenario_keine_stabile_diagnose_bei_deload_drop(self):
+        """Reproduktion des Mai-2026-Bugs: KW17 (23k) → KW18 (Deload, 12k) →
+        KW19 (laufend, klein). Vorher zeigte der Report 'Tonnage stabil';
+        nach 24.1 darf keine 'stabil'-Diagnose mehr entstehen."""
+        user, plan_a, _, Satz, Trainingseinheit = self._setup()
+        ref_year = 2026
+        # Drei normale Wochen davor, damit es genug vergleichbare gibt
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 15), Decimal("220.00"))
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 16), Decimal("230.00"))
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 17), Decimal("231.57"))
+        _set_week_volume(
+            user, plan_a, _iso_monday(ref_year, 18), Decimal("126.16"), ist_deload=True
+        )
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 19), Decimal("60.00"))
+
+        from django.utils import timezone as _tz
+
+        heute = _tz.make_aware(_iso_monday(ref_year, 19))
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = collect_weekly_volume_pdf(alle_saetze, alle_trainings, heute=heute)
+
+        last = result[-1]
+        diag = last["diagnose"]
+        # Vergleich muss zwischen zwei normalen Wochen sein, nicht KW18→KW19
+        assert diag["compared_weeks"] != ("KW18", "KW19")
+        # Bei drei normalen Vorwochen (220→230→231) → leichter Anstieg, nicht "stabil-stabil"
+        # Wichtigste Aussage: NICHT die Deload/laufend-Kombination als Vergleich
+        if diag["compared_weeks"] is not None:
+            prev_kw, curr_kw = diag["compared_weeks"]
+            assert prev_kw not in ("KW18", "KW19")
+            assert curr_kw not in ("KW18", "KW19")
+
+    def test_plan_wechsel_pausiert_diagnose(self):
+        """Plan-Wechsel zwischen letzter abgeschlossener Woche und Vorwoche
+        markiert die Woche als 'ist_plan_wechsel' und schließt sie aus dem
+        Diagnose-Vergleich aus."""
+        user, plan_a, plan_b, Satz, Trainingseinheit = self._setup()
+        ref_year = 2026
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 16), Decimal("100.00"))
+        _set_week_volume(user, plan_b, _iso_monday(ref_year, 17), Decimal("60.00"))
+        _set_week_volume(user, plan_b, _iso_monday(ref_year, 18), Decimal("40.00"))
+
+        from django.utils import timezone as _tz
+
+        heute = _tz.make_aware(_iso_monday(ref_year, 18))
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = collect_weekly_volume_pdf(alle_saetze, alle_trainings, heute=heute)
+
+        # KW17 ist die Plan-Wechsel-Woche
+        kw17 = next(w for w in result if w["woche"] == "KW17")
+        assert kw17["ist_plan_wechsel"] is True
+        # KW18 selbst nicht Wechsel (Plans gleich zur Vorwoche)
+        kw18 = next(w for w in result if w["woche"] == "KW18")
+        assert kw18["ist_plan_wechsel"] is False
+        # Diagnose darf KW17 nicht als Vergleichswoche heranziehen
+        diag = result[-1]["diagnose"]
+        if diag and diag["compared_weeks"]:
+            assert "KW17" not in diag["compared_weeks"]
+
+    def test_plan_wechsel_grenze_nicht_ueber_alten_plan_vergleichen(self):
+        """Reviewer-Hinweis (PR #163): Wenn eine Plan-Wechsel-Woche zwischen
+        zwei sonst sauberen Wochen liegt, dürfen die umliegenden Wochen
+        NICHT verglichen werden – das wäre Plan A vs. Plan B trotz
+        Plan-Wechsel-Marker. Korrektes Verhalten: alles vor dem letzten
+        Plan-Wechsel ist eine andere Plan-Epoche und nicht vergleichbar.
+        """
+        user, plan_a, plan_b, Satz, Trainingseinheit = self._setup()
+        ref_year = 2026
+        # KW16 Plan A, KW17 Plan-Wechsel zu B, KW18 Plan B (nicht laufend),
+        # KW19 läuft (nur damit der Filter "ist_laufend" greift).
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 16), Decimal("100.00"))
+        _set_week_volume(user, plan_b, _iso_monday(ref_year, 17), Decimal("60.00"))
+        _set_week_volume(user, plan_b, _iso_monday(ref_year, 18), Decimal("70.00"))
+        _set_week_volume(user, plan_b, _iso_monday(ref_year, 19), Decimal("30.00"))
+
+        from django.utils import timezone as _tz
+
+        heute = _tz.make_aware(_iso_monday(ref_year, 19))
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = collect_weekly_volume_pdf(alle_saetze, alle_trainings, heute=heute)
+
+        diag = result[-1]["diagnose"]
+        # Niemals KW16 (Plan A) gegen KW18 (Plan B) vergleichen
+        if diag and diag["compared_weeks"]:
+            prev_kw, curr_kw = diag["compared_weeks"]
+            assert not (
+                prev_kw == "KW16" and curr_kw == "KW18"
+            ), f"Vergleich {prev_kw}->{curr_kw} überspringt die Plan-Wechsel-Woche KW17"
+            # Auch generell: KW16 (alter Plan) darf nicht im Vergleich auftauchen,
+            # wenn dazwischen ein Plan-Wechsel liegt
+            assert prev_kw != "KW16"
+        else:
+            # Akzeptabel: nur 1 vergleichbare Woche im neuen Plan → pausiert
+            assert diag["key"] == "inconclusive"
+
+    def test_alle_trainings_none_keine_plan_wechsel_erkennung(self):
+        """Backward-compat: ohne alle_trainings keine Deload-/Plan-Wechsel-Markierung,
+        aber laufende Woche wird trotzdem ausgeschlossen."""
+        user, plan_a, _, Satz, _Trainingseinheit = self._setup()
+        ref_year = 2026
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 16), Decimal("100.00"))
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 17), Decimal("110.00"))
+        _set_week_volume(user, plan_a, _iso_monday(ref_year, 18), Decimal("50.00"))
+
+        from django.utils import timezone as _tz
+
+        heute = _tz.make_aware(_iso_monday(ref_year, 18))
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = collect_weekly_volume_pdf(alle_saetze, None, heute=heute)
+
+        last = result[-1]
+        assert last["ist_laufend"] is True
+        # Ohne alle_trainings keine Plan-Tracking, ist_plan_wechsel überall False
+        assert all(w["ist_plan_wechsel"] is False for w in result)
+        # Diagnose vergleicht KW16 und KW17 (laufende KW18 raus)
+        if last["diagnose"] and last["diagnose"]["compared_weeks"]:
+            assert last["diagnose"]["compared_weeks"] == ("KW16", "KW17")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
