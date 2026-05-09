@@ -100,19 +100,26 @@ class TestMuscleStatus:
 
 class TestCollectPushPull:
     def _mg_stats(self, **group_sets):
-        """Hilfsmethode: erstellt minimale muskelgruppen_stats-Liste."""
-        return [{"key": k, "saetze": v} for k, v in group_sets.items()]
+        """Hilfsmethode: erstellt muskelgruppen_stats-Liste mit status='optimal'."""
+        return [
+            {"key": k, "saetze": v, "status": "optimal", "name": k} for k, v in group_sets.items()
+        ]
+
+    def _with_status(self, key: str, saetze: int, status: str) -> dict:
+        return {"key": key, "saetze": saetze, "status": status, "name": key}
 
     def test_keine_daten(self):
         result = collect_push_pull([])
         assert result["bewertung"] == "Keine Daten"
         assert result["ratio"] == 0
+        assert result["context_override"] is False
 
     def test_ausgewogen(self):
         stats = self._mg_stats(BRUST=10, RUECKEN_LAT=10)
         result = collect_push_pull(stats)
         assert result["bewertung"] == "Ausgewogen"
         assert result["ratio"] == 1.0
+        assert result["context_override"] is False
 
     def test_push_betont_leicht(self):
         # Ratio 1.3:1 → leicht push-betont
@@ -137,6 +144,109 @@ class TestCollectPushPull:
         result = collect_push_pull(stats)
         assert result["bewertung"] == "Nur Push"
         assert result["ratio"] == 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 24.2: collect_push_pull – kontextabhängige Empfehlung
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestCollectPushPullContextAware:
+    def _stats(self, *entries):
+        """entries = (key, saetze, status) tuples."""
+        return [{"key": k, "saetze": s, "status": st, "name": k} for k, s, st in entries]
+
+    def test_pull_betont_ohne_uebertraining_unveraendert(self):
+        """Klassischer Fall: ratio<0.8, alle Pull-Muskeln optimal → bestehender
+        positiver Text bleibt (keine Inversion)."""
+        stats = self._stats(("BRUST", 12, "optimal"), ("RUECKEN_LAT", 16, "optimal"))
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Pull-betont (gut)"
+        assert result["context_override"] is False
+        assert "positiv" in result["empfehlung"]
+
+    def test_mai_2026_pull_betont_aber_pull_uebertraining_invertiert(self):
+        """Mai-Bug-Reproduktion: ratio 0.75, Rücken-Lat & Schulter-Hint im
+        Übertraining-Bereich. Empfehlung muss kippen, statt 'positiv für
+        Schultergesundheit' zu sagen."""
+        stats = self._stats(
+            ("BRUST", 12, "optimal"),
+            ("TRIZEPS", 6, "optimal"),
+            ("RUECKEN_LAT", 28, "uebertrainiert"),
+            ("SCHULTER_HINT", 24, "uebertrainiert"),
+            ("BIZEPS", 8, "optimal"),
+        )
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Pull-betont (gut)"
+        assert result["context_override"] is True
+        # Inhalt der invertierten Empfehlung
+        assert "bereits hoch" in result["empfehlung"]
+        assert "Push ergänzen" in result["empfehlung"]
+        assert "Rücken-Lat" in result["empfehlung"]
+        assert "Schulter-Hintere" in result["empfehlung"]
+        # Strukturierter Status für späteres UI
+        assert "Rücken-Lat" in result["pull_overtrained"]
+        assert "Schulter-Hintere" in result["pull_overtrained"]
+        assert result["push_overtrained"] == []
+
+    def test_leicht_push_betont_mit_push_uebertraining_invertiert(self):
+        """ratio 1.3, Brust übertrainiert → invertiert: Pull aufstocken."""
+        stats = self._stats(
+            ("BRUST", 26, "uebertrainiert"),
+            ("TRIZEPS", 6, "optimal"),
+            ("RUECKEN_LAT", 18, "optimal"),
+        )
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Leicht Push-betont"
+        assert result["context_override"] is True
+        assert "Pull aufstocken" in result["empfehlung"]
+        assert "Brust" in result["empfehlung"]
+
+    def test_leicht_push_betont_alles_optimal_unveraendert(self):
+        stats = self._stats(("BRUST", 13, "optimal"), ("RUECKEN_LAT", 10, "optimal"))
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Leicht Push-betont"
+        assert result["context_override"] is False
+        assert "tolerierbaren Bereich" in result["empfehlung"]
+
+    def test_zu_viel_push_pull_dennoch_uebertrainiert_invertiert(self):
+        """Edge-Case: ratio>2 (massiv mehr Push), aber gleichzeitig sind
+        die wenigen Pull-Sätze auf einer Muskelgruppe konzentriert, die ins
+        Übertraining gerät. Empfehlung muss differenzieren."""
+        stats = self._stats(
+            ("BRUST", 30, "optimal"),
+            ("RUECKEN_LAT", 14, "uebertrainiert"),
+        )
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Zu viel Push"
+        assert result["context_override"] is True
+        assert "Push-Volumen senken" in result["empfehlung"]
+
+    def test_ausgewogen_aber_push_uebertraining_warnt(self):
+        """Mathematisch ausgewogen, aber Push-Muskel im Übertraining → Warnung."""
+        stats = self._stats(
+            ("BRUST", 22, "uebertrainiert"),
+            ("RUECKEN_LAT", 22, "optimal"),
+        )
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Ausgewogen"
+        assert result["context_override"] is True
+        assert "Volumen pro Muskelgruppe" in result["empfehlung"]
+        assert "Push" in result["empfehlung"]
+
+    def test_ausgewogen_alle_optimal_unveraendert(self):
+        stats = self._stats(("BRUST", 15, "optimal"), ("RUECKEN_LAT", 15, "optimal"))
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Ausgewogen"
+        assert result["context_override"] is False
+        assert "Perfekt" in result["empfehlung"]
+
+    def test_nur_push_mit_push_uebertraining_invertiert(self):
+        stats = self._stats(("BRUST", 25, "uebertrainiert"))
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Nur Push"
+        assert result["context_override"] is True
+        assert "Pull-Training einführen" in result["empfehlung"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
