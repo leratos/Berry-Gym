@@ -66,7 +66,14 @@ Vermutete Berührungspunkte (zu verifizieren beim Start jeder Sub-Phase):
 
 ### 3.1 Sub-Phase 24.4 – Set-Attribution-Audit
 
-**Status:** 📋 Konzept · **Aufwand:** M (audit-only) · **Reihenfolge:** **zuerst**
+**Status:** ✅ Abgeschlossen (08.05.2026) · **Aufwand:** M (audit-only) · **Reihenfolge:** **zuerst**
+
+**Ergebnis (08.05.2026):** Audit-Hypothese widerlegt. Die 5×9 Sätze sind kein Daten-Artefakt, sondern strikte Konsequenz der Plan-Struktur (3 Sätze × 1 Übung × 3 Trainings-Wochen pro Muskelgruppe). **Keine Folge-Sub-Phase nötig.** Vollständiger Befund inkl. sekundärer Beobachtung zu Hilfsmuskeln-Aggregation und Stammdaten-Inkonsistenz: [phase24-04-audit-bericht.md](phase24-04-audit-bericht.md).
+
+**Konsequenzen für nachgelagerte Sub-Phasen:**
+
+- 24.2 (Push/Pull) wird unblockiert – Edge-Case-Anmerkung *„Befund aus 24.4 kann Push/Pull-Sätze verschieben"* entfällt.
+- 24.3 (Header) bestätigt: Header-Zahlen 53/757 ≈ Lifetime (Audit zeigte 54/773 zur Audit-Zeit), nicht 30-Tage.
 
 #### Problem
 
@@ -449,4 +456,9 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 
 ## 8. Status-Updates pro Sub-Phase
 
-*(Wird beim Start und Abschluss jeder Sub-Phase ergänzt.)*
+### 24.4 – Set-Attribution-Audit
+
+- **Start:** 08.05.2026 (Branch `feature/phase-24-4-set-attribution-audit`)
+- **Abschluss:** 08.05.2026 (audit-only, kein Code-Change)
+- **Ergebnis:** Hypothese widerlegt – fünf 9er-Werte sind Plan-Struktur, kein Artefakt. Keine Folge-Sub-Phase. Push/Pull-Empfehlung (24.2) entkoppelt vom Audit. Bericht: [phase24-04-audit-bericht.md](phase24-04-audit-bericht.md).
+- **Sekundär-Befund:** Hilfsmuskeln werden in `collect_muscle_balance` gar nicht gezählt; Stammdaten-`hilfsmuskeln` mischen Keys und Labels. Beides bewusst zurückgestellt – Aufnahme in spätere Datenqualitäts-Phase.
