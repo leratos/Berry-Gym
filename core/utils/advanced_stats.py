@@ -80,6 +80,33 @@ def _find_best_1rm_satz(uebung_saetze):
     return bester_1rm, bester_satz
 
 
+def compute_progression_rate(uebung_saetze, pr_satz) -> tuple[float, int]:
+    """Phase 24.5: Helper für ``classify_progression_status``-Override.
+
+    Berechnet die durchschnittliche 1RM-Steigerungsrate (kg/Monat) und die
+    Trainingshistorie der Übung (Tage zwischen erstem gewichteten Satz und
+    PR-Satz). Wird sowohl von ``calculate_plateau_analysis`` (PDF) als auch
+    von ``_calc_plateau_live`` (Dashboard) genutzt, damit beide Pfade
+    identisch klassifizieren.
+
+    Returns:
+        ``(progression_pro_monat, training_history_days)`` – beide Werte sind
+        ``0`` wenn Historie zu kurz oder kein erster Satz vorhanden.
+    """
+    if pr_satz is None or not pr_satz.gewicht:
+        return 0.0, 0
+    pr_1rm = float(pr_satz.gewicht) * (1 + (pr_satz.wiederholungen or 1) / 30.0)
+    erster = uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum").first()
+    if erster is None or not erster.gewicht:
+        return 0.0, 0
+    erstes_1rm = float(erster.gewicht) * (1 + (erster.wiederholungen or 1) / 30.0)
+    history_days = (pr_satz.einheit.datum.date() - erster.einheit.datum.date()).days
+    if history_days <= 0:
+        return 0.0, 0
+    rate = round((pr_1rm - erstes_1rm) / history_days * 30, 2)
+    return rate, history_days
+
+
 def classify_progression_status(
     uebung_saetze,
     pr_satz,
@@ -288,16 +315,9 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
         pr_datum = pr_satz.einheit.datum
 
         # Durchschnittliche Progression pro Monat (auf 1RM-Basis)
-        erster_satz = uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum").first()
-        progression_pro_monat = 0
-        training_history_days = 0
-        if erster_satz and erster_satz.gewicht:
-            erstes_1rm = float(erster_satz.gewicht) * (1 + (erster_satz.wiederholungen or 1) / 30.0)
-            training_history_days = (pr_datum.date() - erster_satz.einheit.datum.date()).days
-            if training_history_days > 0:
-                progression_pro_monat = round(
-                    (letzter_pr - erstes_1rm) / training_history_days * 30, 2
-                )
+        progression_pro_monat, training_history_days = compute_progression_rate(
+            uebung_saetze, pr_satz
+        )
 
         classification = classify_progression_status(
             uebung_saetze,

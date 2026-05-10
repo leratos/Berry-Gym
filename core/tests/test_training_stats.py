@@ -1138,6 +1138,34 @@ class TestPlateauLive(StatsBase):
         result = _calc_plateau_live(self.user)
         self.assertLessEqual(len(result), 5)
 
+    def test_phase24_5_progression_override_applies_to_live_path(self):
+        """Phase 24.5: der Steigerungsraten-Override greift auch im Live-Dashboard,
+        nicht nur in der PDF-Plateau-Analyse. Sicherstellen, dass beide Pfade
+        progression_pro_monat / training_history_days an classify_progression_status
+        durchreichen, sodass das Dashboard nicht fälschlich 'plateau_light' zeigt
+        während der PDF 'active_progression_paused' anzeigt."""
+        # 60 Tage Aufbau: 50 → 80 kg PR. PR vor 21 Tagen, danach gleichbleibendes
+        # Gewicht (kein neuer PR), damit der pause-Filter nicht greift.
+        for days_ago, gewicht in [(60, 50), (45, 60), (30, 70), (21, 80), (14, 80), (7, 80)]:
+            session = self._session(days_ago=days_ago)
+            self._satz(session, gewicht=gewicht, wdh=8)
+        # is_pr-Flag auf den ÄLTESTEN 80kg-Satz (vor 21 Tagen) setzen – das ist
+        # der "echte" PR. _calc_plateau_live nimmt den jüngsten is_pr=True-Satz,
+        # daher ist es wichtig, dass nur der 21-Tage-Satz das Flag trägt.
+        pr_kandidat = (
+            Satz.objects.filter(einheit__user=self.user, gewicht=80)
+            .order_by("einheit__datum")
+            .first()
+        )
+        pr_kandidat.is_pr = True
+        pr_kandidat.save()
+
+        result = _calc_plateau_live(self.user)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status"], "active_progression_paused")
+        self.assertIsNotNone(result[0]["progression_rate_pct"])
+        self.assertGreaterEqual(result[0]["progression_rate_pct"], 2.0)
+
 
 class TestKraftstandardsLive(StatsBase):
     """21.4: Kraftstandards-Übersicht."""

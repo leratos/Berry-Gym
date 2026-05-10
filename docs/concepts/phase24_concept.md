@@ -277,6 +277,8 @@ Eine kompakte Tabelle in der Push/Pull-Sektion, die zeigt, welche Push- und Pull
 
 **Plan-Wechsel-Edge-Case:** im Konzept als „ggf." formuliert und in 24.5 nicht implementiert. Wenn relevant, kann das in einer Folge-Sub-Phase analog zur 24.1-Plan-Epoch-Logik nachgereicht werden.
 
+**Reviewer-Nachzug (10.05.2026, PR #165):** Der Live-Plateau-Tracker `_calc_plateau_live` in `core/views/training_stats.py` rief `classify_progression_status` zunächst weiterhin ohne die neuen kwargs auf, sodass Dashboard und PDF auseinandergelaufen wären. Der gemeinsame Helper `compute_progression_rate` in `core/utils/advanced_stats.py` wird jetzt von beiden Pfaden verwendet; die Klassifikation ist wieder identisch.
+
 #### Problem
 
 RDL hat im Mai-Report den Status *„Leichtes Plateau (21 Tage ohne PR)"* UND gleichzeitig die Steigerungsrate *„Ø +26,5 kg/Monat"*. 26,5 kg/Monat als Plateau zu labeln ist kontraproduktiv und widersprüchlich. Phase 23.3 hat den Pause-Status korrekt eingeführt, aber der „Plateau"-Status hängt noch ausschließlich am Letzter-PR-Datum und ignoriert den langfristigen Steigerungstrend.
