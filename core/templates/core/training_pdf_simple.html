@@ -425,9 +425,11 @@
     </div>
     {% endif %}
 
-    {# Phase 24.3: Berichtszeitraum-Werte primär, Lifetime-Werte als Kontext-Suffix.
-       Wenn die Trainingshistorie kürzer als der Berichtszeitraum ist (z. B. neuer
-       User), fallen Lifetime und Fenster zusammen – dann nur das Fenster zeigen. #}
+    {% comment %}
+    Phase 24.3: Berichtszeitraum-Werte primär, Lifetime-Werte als Kontext-Suffix.
+    Wenn die Trainingshistorie kürzer als der Berichtszeitraum ist (z. B. neuer
+    User), fallen Lifetime und Fenster zusammen – dann nur das Fenster zeigen.
+    {% endcomment %}
     <div class="info-box success">
         <p style="margin: 0 0 6px 0; font-size: 9px; color: #6c757d;">
             Werte im Berichtszeitraum {{ start_datum|date:"d.m.Y" }} – {{ end_datum|date:"d.m.Y" }}:
@@ -1087,13 +1089,25 @@
                 {% endfor %}
                 </tr>
             </table>
+            {% comment %}
+            Phase 24.6: Status-Anzeige differenziert statt missverständlicher Prozent-
+            Anzeige bei knapp erreichten Schwellen.
+            {% endcomment %}
             <div style="font-size: 9px; margin-top: 4px;">
-                Noch <strong>{{ item.standard_info.naechstes_gewicht|floatformat:1 }} kg</strong> bis <strong>{{ item.standard_info.naechstes_level }}</strong>
-                <div class="progress-bar" style="height: 14px; margin-top: 2px;">
-                    <div class="progress-fill" style="width: {{ item.standard_info.prozent_bis_naechstes }}%; background: #198754; line-height: 14px; font-size: 7px;">
-                        {{ item.standard_info.prozent_bis_naechstes }}%
+                {% if item.standard_info.ist_endstufe %}
+                    <strong>✓ Endstufe {{ item.standard_info.level_label }} erreicht.</strong>
+                {% elif item.standard_info.gerade_erreicht %}
+                    <strong>✓ {{ item.standard_info.level_label }} gerade erreicht.</strong>
+                    Nächstes Ziel: <strong>{{ item.standard_info.naechstes_level }}</strong>
+                    – noch <strong>{{ item.standard_info.naechstes_gewicht|floatformat:1 }} kg</strong>.
+                {% else %}
+                    Noch <strong>{{ item.standard_info.naechstes_gewicht|floatformat:1 }} kg</strong> bis <strong>{{ item.standard_info.naechstes_level }}</strong>
+                    <div class="progress-bar" style="height: 14px; margin-top: 2px;">
+                        <div class="progress-fill" style="width: {{ item.standard_info.prozent_bis_naechstes }}%; background: #198754; line-height: 14px; font-size: 7px;">
+                            {{ item.standard_info.prozent_bis_naechstes }}%
+                        </div>
                     </div>
-                </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}
