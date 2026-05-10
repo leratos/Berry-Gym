@@ -266,7 +266,18 @@ Eine kompakte Tabelle in der Push/Pull-Sektion, die zeigt, welche Push- und Pull
 
 ### 3.4 Sub-Phase 24.5 – Plateau-Status vs. Steigerungsrate entkoppeln
 
-**Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** nach 24.2
+**Status:** ✅ Abgeschlossen (10.05.2026) · **Aufwand:** S · **Reihenfolge:** nach 24.2
+
+**Ergebnis (10.05.2026):** `classify_progression_status` bekommt einen neuen Override: bei langer Trainingshistorie (≥ 21 Tage) und einer relativen Steigerungsrate ≥ 2 % des PR-1RM pro Monat wird der Status auf `active_progression_paused` (Label *„📈 Aktive Progression (PR-Pause)"*) gesetzt – statt auf eine der drei Plateau-Stufen. Reihenfolge: nach `regression`/`active_progression`/`observe`/`pause`/`consolidation` und vor der reinen Tage-seit-PR-Logik. Konsolidierung (RPE sinkt) hat damit weiterhin Vorrang. Verifiziert gegen Lera-Production-Daten (10.05.2026): RDL kippt von `plateau_light` auf `active_progression_paused` (22.3 %/Monat); Trizeps Overhead Extension von `plateau` auf `active_progression_paused` (34.9 %/Monat); inaktive Übungen bleiben unverändert auf `pause`.
+
+**Antworten auf F9–F10:**
+
+- F9: Empirisch festgelegt mit relativem Schwellenwert `PROGRESSION_RATE_OVERRIDE_PCT = 2.0` (% des PR-1RM pro Monat). Gegen 1 %/Monat-Mikroprogression noch hinreichend strikt; gegen den RDL-Fall (22 %/Monat) eindeutig auf der Override-Seite. Median-basierter Vergleich verworfen, weil das einen zweiten Pass über alle Übungen erzwingen würde – die relative Schwelle ist ohne diesen Aufwand robust gegen Übungsstärke.
+- F10: Konsolidierungs-Status bleibt als eigene Stufe mit Vorrang vor dem Override – Phase 23.3-Setup unverändert.
+
+**Plan-Wechsel-Edge-Case:** im Konzept als „ggf." formuliert und in 24.5 nicht implementiert. Wenn relevant, kann das in einer Folge-Sub-Phase analog zur 24.1-Plan-Epoch-Logik nachgereicht werden.
+
+**Reviewer-Nachzug (10.05.2026, PR #165):** Der Live-Plateau-Tracker `_calc_plateau_live` in `core/views/training_stats.py` rief `classify_progression_status` zunächst weiterhin ohne die neuen kwargs auf, sodass Dashboard und PDF auseinandergelaufen wären. Der gemeinsame Helper `compute_progression_rate` in `core/utils/advanced_stats.py` wird jetzt von beiden Pfaden verwendet; die Klassifikation ist wieder identisch.
 
 #### Problem
 
@@ -482,3 +493,9 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 - **Start:** 09.05.2026 (Branch `feature/phase-24-2-push-pull-context-aware`)
 - **Abschluss:** 09.05.2026
 - **Ergebnis:** `collect_push_pull` konditioniert die Empfehlung jetzt auf den Übertraining-Status der Push-/Pull-Muskeln. Die mathematische Ratio-Bewertung bleibt; der Text kippt, sobald die zu lobende oder aufzustockende Seite Muskeln im Übertraining-Bereich enthält. Neue Felder `push_overtrained`, `pull_overtrained`, `context_override` für spätere Status-Tabelle (Phase 25). Verifiziert gegen Lera-Daten (09.05.2026): alte Logik sagte „Perfekt!" trotz BRUST + RUECKEN_LAT im Übertraining; neue Logik benennt beide Muskeln und empfiehlt Volumen-Prüfung pro Gruppe. Tests in `core/tests/test_stats_collector.py::TestCollectPushPullContextAware` decken alle Bewertungs-x-Status-Kombinationen ab.
+
+### 24.5 – Plateau-Status vs. Steigerungsrate entkoppeln
+
+- **Start:** 10.05.2026 (Branch `feature/phase-24-5-plateau-vs-progression`)
+- **Abschluss:** 10.05.2026
+- **Ergebnis:** `classify_progression_status` erkennt langfristig steigende Übungen jetzt als `active_progression_paused`, statt sie wegen ein paar Tagen ohne neuen PR fälschlich als Plateau zu labeln. Schwelle: ≥ 2 % des PR-1RM/Monat bei ≥ 21 Tagen Trainingshistorie. Konsolidierung (RPE sinkt) behält Vorrang. Verifiziert gegen Lera-Daten (10.05.2026): RDL → `active_progression_paused` (22.3 %/Monat statt `plateau_light`); Trizeps Overhead Extension → `active_progression_paused` (34.9 %/Monat statt `plateau`); inaktive Übungen bleiben korrekt auf `pause`. PDF-Template um Begründungs-Hinweis und Legende ergänzt. Tests in `core/tests/test_advanced_stats.py::TestPlateauAnalysis` decken RDL-Fall, echtes Plateau, Konsolidierungs-Vorrang, kurze Historie und Override-bei-mittlerem-Plateau ab.
