@@ -106,49 +106,154 @@ def collect_muscle_balance(
     return sorted(result, key=lambda x: x["saetze"], reverse=True)
 
 
+_PUSH_PULL_SHORT_LABEL = {
+    "BRUST": "Brust",
+    "SCHULTER_VORN": "Schulter-Vordere",
+    "SCHULTER_SEIT": "Schulter-Seitliche",
+    "SCHULTER_HINT": "Schulter-Hintere",
+    "TRIZEPS": "Trizeps",
+    "BIZEPS": "Bizeps",
+    "RUECKEN_LAT": "Rücken-Lat",
+    "RUECKEN_TRAPEZ": "Trapez",
+    "RUECKEN_OBERER": "oberer Rücken",
+    "RUECKEN_UNTEN": "unterer Rücken",
+}
+
+
+def _muscles_with_status(
+    muskelgruppen_stats: list[dict], group_keys: list[str], status: str
+) -> list[dict]:
+    """Filter muskelgruppen_stats to entries inside group_keys with the given status."""
+    return [mg for mg in muskelgruppen_stats if mg["key"] in group_keys and mg["status"] == status]
+
+
+def _format_short_labels(stats_list: list[dict]) -> str:
+    """Render a comma-separated list of short muscle labels for inline use."""
+    return ", ".join(_PUSH_PULL_SHORT_LABEL.get(mg["key"], mg["name"]) for mg in stats_list)
+
+
+def _build_context_recommendation(
+    bewertung: str, ratio: float, push_over: list[dict], pull_over: list[dict]
+) -> tuple[str, bool]:
+    """Phase 24.2: condition the push/pull recommendation on the overtraining
+    status of the participating muscles.
+
+    Returns ``(empfehlung_text, context_override)`` where ``context_override``
+    is True when the muscle-status context flipped the math-only recommendation.
+    """
+    if bewertung == "Pull-betont (gut)":
+        if pull_over:
+            return (
+                f"Ratio {ratio}:1 – Pull-Volumen bereits hoch "
+                f"({_format_short_labels(pull_over)} im Übertraining-Bereich). "
+                f"Push ergänzen statt Pull weiter aufbauen.",
+                True,
+            )
+        return (
+            f"Ratio {ratio}:1 – Pull überwiegt leicht. Das ist positiv für "
+            f"Schultergesundheit und Haltung.",
+            False,
+        )
+
+    if bewertung == "Leicht Push-betont":
+        if push_over:
+            return (
+                f"Ratio {ratio}:1 – Push-Volumen bereits hoch "
+                f"({_format_short_labels(push_over)} im Übertraining-Bereich). "
+                f"Pull aufstocken, um die Imbalance zu adressieren.",
+                True,
+            )
+        return (
+            f"Ratio {ratio}:1 – Leicht Push-betont, aber noch im tolerierbaren Bereich. "
+            f"Mittelfristig mehr Pull-Übungen einbauen.",
+            False,
+        )
+
+    if bewertung == "Zu viel Push":
+        if pull_over:
+            return (
+                f"Ratio {ratio}:1 – Push überwiegt deutlich, gleichzeitig sind Pull-Muskeln "
+                f"({_format_short_labels(pull_over)}) im Übertraining-Bereich. "
+                f"Push-Volumen senken und Belastung auf der Pull-Seite (Frequenz/Intensität) "
+                f"prüfen, statt mehr Pull aufzustocken.",
+                True,
+            )
+        return (
+            f"Ratio {ratio}:1 – Mehr Pull-Training (Rücken, Bizeps) für Schultergesundheit!",
+            False,
+        )
+
+    if bewertung == "Ausgewogen":
+        warnings = []
+        if push_over:
+            warnings.append(f"Push: {_format_short_labels(push_over)} im Übertraining-Bereich")
+        if pull_over:
+            warnings.append(f"Pull: {_format_short_labels(pull_over)} im Übertraining-Bereich")
+        if warnings:
+            return (
+                "Push/Pull mengenmäßig ausgeglichen, aber "
+                + " und ".join(warnings)
+                + ". Volumen pro Muskelgruppe einzeln prüfen.",
+                True,
+            )
+        return ("Perfekt! Push/Pull-Verhältnis ist ausgeglichen.", False)
+
+    return (f"Ratio {ratio}:1.", False)
+
+
 def collect_push_pull(muskelgruppen_stats: list[dict]) -> dict:
-    """Compute push/pull balance and return analysis dict."""
+    """Compute push/pull balance and return analysis dict.
+
+    Phase 24.2: the recommendation text now consults the per-muscle
+    overtraining status (from ``muskelgruppen_stats``) and inverts the
+    math-only verdict when the side that the math wants to praise or
+    reinforce is already overtrained. ``context_override`` flags this case.
+    """
     push = sum(mg["saetze"] for mg in muskelgruppen_stats if mg["key"] in PUSH_GROUPS)
     pull = sum(mg["saetze"] for mg in muskelgruppen_stats if mg["key"] in PULL_GROUPS)
+
+    push_over = _muscles_with_status(muskelgruppen_stats, PUSH_GROUPS, "uebertrainiert")
+    pull_over = _muscles_with_status(muskelgruppen_stats, PULL_GROUPS, "uebertrainiert")
+
     if push == 0 and pull == 0:
-        ratio, bewertung, empfehlung = (
+        ratio, bewertung, empfehlung, override = (
             0,
             "Keine Daten",
             "Beginne mit ausgewogenem Push- und Pull-Training für optimale Muskelentwicklung.",
+            False,
         )
     elif pull > 0:
         ratio = round(push / pull, 2)
         if 0.8 <= ratio <= 1.2:
-            bewertung, empfehlung = "Ausgewogen", "Perfekt! Push/Pull-Verhältnis ist ausgeglichen."
+            bewertung = "Ausgewogen"
         elif ratio > 2.0:
-            # Erst ab 2:1 ist das Ungleichgewicht klinisch relevant (Schulterimpingement-Risiko)
             bewertung = "Zu viel Push"
-            empfehlung = (
-                f"Ratio {ratio}:1 - Mehr Pull-Training (Rücken, Bizeps) für Schultergesundheit!"
-            )
         elif ratio > 1.2:
-            # 1.2–2.0: leichtes Push-Übergewicht, aber noch tolerabel
             bewertung = "Leicht Push-betont"
-            empfehlung = (
-                f"Ratio {ratio}:1 - Leicht Push-betont, aber noch im tolerierbaren Bereich. "
-                "Mittelfristig mehr Pull-Übungen einbauen."
-            )
         else:
-            # ratio < 0.8: mehr Pull als Push – kein Problem, im Gegenteil empfohlen
             bewertung = "Pull-betont (gut)"
-            empfehlung = f"Ratio {ratio}:1 - Pull überwiegt leicht. Das ist positiv für Schultergesundheit und Haltung."
+        empfehlung, override = _build_context_recommendation(bewertung, ratio, push_over, pull_over)
     else:
-        ratio, bewertung, empfehlung = (
-            0,
-            "Nur Push",
-            "Füge Pull-Training (Rücken, Bizeps) hinzu für ausgeglichene Entwicklung!",
-        )
+        ratio, bewertung, override = 0, "Nur Push", False
+        if push_over:
+            empfehlung = (
+                f"Push überwiegt komplett und Push-Muskeln "
+                f"({_format_short_labels(push_over)}) zeigen Übertraining-Status. "
+                f"Pull-Training einführen UND Push-Volumen prüfen."
+            )
+            override = True
+        else:
+            empfehlung = "Füge Pull-Training (Rücken, Bizeps) hinzu für ausgeglichene Entwicklung!"
+
     return {
         "push_saetze": push,
         "pull_saetze": pull,
         "ratio": ratio,
         "bewertung": bewertung,
         "empfehlung": empfehlung,
+        "push_overtrained": [_PUSH_PULL_SHORT_LABEL.get(mg["key"], mg["name"]) for mg in push_over],
+        "pull_overtrained": [_PUSH_PULL_SHORT_LABEL.get(mg["key"], mg["name"]) for mg in pull_over],
+        "context_override": override,
     }
 
 

@@ -207,8 +207,15 @@ Klärung mit User (07.05.2026):
 
 ### 3.3 Sub-Phase 24.2 – Push/Pull-Empfehlung kontextabhängig
 
-**Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** nach 24.1
-**Abhängigkeit:** Befund aus 24.4 kann Push/Pull-Sätze verschieben
+**Status:** ✅ Abgeschlossen (09.05.2026) · **Aufwand:** S · **Reihenfolge:** nach 24.1
+**Abhängigkeit:** Durch 24.4-Befund unblockiert (Set-Attribution kein Bug)
+
+**Ergebnis (09.05.2026):** `collect_push_pull` konsultiert jetzt den Übertraining-Status der Push-/Pull-Muskeln aus `muskelgruppen_stats` und konditioniert die Empfehlung darauf. Die mathematische Ratio-Bewertung bleibt unverändert; der Empfehlungstext kippt, sobald die Seite, die der Math-Verdict loben oder aufstocken will, bereits Muskeln im Übertraining-Bereich enthält. Neue Output-Felder `push_overtrained`, `pull_overtrained`, `context_override` (für eine spätere Status-Tabelle in Phase 25; in 24.2 noch nicht gerendert). Verifiziert gegen Lera-Production-Daten (09.05.2026, ratio 1.0): alte Logik sagte *„Perfekt!"* trotz BRUST und RUECKEN_LAT im Übertraining; neue Logik gibt *„Push/Pull mengenmäßig ausgeglichen, aber Push: Brust im Übertraining-Bereich und Pull: Rücken-Lat im Übertraining-Bereich. Volumen pro Muskelgruppe einzeln prüfen."*
+
+**Antworten auf F7–F8:**
+
+- F7: Push/Pull-Mapping liegt in `core/export/constants.py` (`PUSH_GROUPS`, `PULL_GROUPS`). Bestehende Konstanten unverändert übernommen.
+- F8: Status-Tabelle bewusst nicht in 24.2 – die strukturierten Felder (`push_overtrained`, `pull_overtrained`, `context_override`) sind aber schon im Result-Dict, damit Phase 25 ohne weitere Code-Änderung darauf zugreifen kann.
 
 #### Problem
 
@@ -469,3 +476,9 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 - **Start:** 09.05.2026 (Branch `feature/phase-24-1-deload-plan-current-week`)
 - **Abschluss:** 09.05.2026
 - **Ergebnis:** Diagnose vergleicht nur noch *vergleichbare* Wochen, mit explizitem Pause-Hinweis bei dünner Datenlage. Verifiziert gegen Lera-Production-Daten – Mai-Bug („Tonnage stabil" trotz Deload→laufend) ist nicht mehr reproduzierbar. Tests in `core/tests/test_stats_collector.py::TestCollectWeeklyVolumePdfDiagnose` decken die drei Klassifikationen + Kombinationen ab.
+
+### 24.2 – Push/Pull-Empfehlung kontextabhängig
+
+- **Start:** 09.05.2026 (Branch `feature/phase-24-2-push-pull-context-aware`)
+- **Abschluss:** 09.05.2026
+- **Ergebnis:** `collect_push_pull` konditioniert die Empfehlung jetzt auf den Übertraining-Status der Push-/Pull-Muskeln. Die mathematische Ratio-Bewertung bleibt; der Text kippt, sobald die zu lobende oder aufzustockende Seite Muskeln im Übertraining-Bereich enthält. Neue Felder `push_overtrained`, `pull_overtrained`, `context_override` für spätere Status-Tabelle (Phase 25). Verifiziert gegen Lera-Daten (09.05.2026): alte Logik sagte „Perfekt!" trotz BRUST + RUECKEN_LAT im Übertraining; neue Logik benennt beide Muskeln und empfiehlt Volumen-Prüfung pro Gruppe. Tests in `core/tests/test_stats_collector.py::TestCollectPushPullContextAware` decken alle Bewertungs-x-Status-Kombinationen ab.
