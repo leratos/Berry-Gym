@@ -46,6 +46,7 @@ from ..utils.advanced_stats import (
     EFFECTIVE_VOLUME_RPE_MIN,
     calculate_rpe_quality_analysis_windowed,
     classify_progression_status,
+    compute_progression_rate,
     diagnose_volume_trend,
 )
 from ..utils.periodization import get_block_age_warning
@@ -2103,14 +2104,23 @@ def _calc_plateau_live(user) -> list[dict]:
 
         # Phase 23.3: einheitliche Klassifikation via classify_progression_status
         # (gleiche Logik wie PDF-Plateau-Analyse, inkl. Pause/Konsolidierung/Regression).
+        # Phase 24.5: Steigerungsraten-Override via compute_progression_rate –
+        # Live-Dashboard und PDF-Pfad teilen sich denselben Override.
         uebung_saetze = Satz.objects.filter(
             einheit__user=user,
             uebung_id=uebung_id,
             ist_aufwaermsatz=False,
             einheit__ist_deload=False,
         ).select_related("einheit")
+        progression_pro_monat, training_history_days = compute_progression_rate(
+            uebung_saetze, letzter_pr_satz
+        )
         classification = classify_progression_status(
-            uebung_saetze, letzter_pr_satz, reference_date=heute
+            uebung_saetze,
+            letzter_pr_satz,
+            reference_date=heute,
+            progression_pro_monat=progression_pro_monat,
+            training_history_days=training_history_days,
         )
 
         result.append(
@@ -2126,6 +2136,8 @@ def _calc_plateau_live(user) -> list[dict]:
                 "rpe_first_half": classification["rpe_first_half"],
                 "rpe_second_half": classification["rpe_second_half"],
                 "weight_drop_pct": classification["weight_drop_pct"],
+                "progression_pro_monat": progression_pro_monat,
+                "progression_rate_pct": classification["progression_rate_pct"],
             }
         )
 
