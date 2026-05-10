@@ -393,6 +393,91 @@ class TestPlateauAnalysis(StatsTestBase):
         result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
         self.assertEqual(result, [])
 
+    # ──────────────────────────────────────────────────────────────────────
+    # Phase 24.5: Plateau-Status entkoppelt von langfristiger Steigerungsrate
+    # ──────────────────────────────────────────────────────────────────────
+
+    def test_phase24_5_rdl_szenario_active_progression_paused(self):
+        """Mai-Bug-Reproduktion: PR 21 Tage her, langfristiger Aufbau ≫ 2 %/Monat
+        → status muss 'active_progression_paused' sein, nicht 'plateau_light'."""
+        # 60 Tage Trainingshistorie, deutlicher Aufbau: 50 kg → 80 kg PR.
+        # Sätze nach PR mit gleichem Gewicht, damit cur_4w_n ≥ 2 (pause-Filter
+        # greift sonst) und kein neuer PR entsteht (chrono erster gewinnt).
+        for days_ago, gewicht in [(60, 50), (45, 60), (30, 70), (21, 80), (14, 80), (7, 80)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status"], "active_progression_paused")
+        self.assertIsNotNone(result[0]["progression_rate_pct"])
+        self.assertGreaterEqual(result[0]["progression_rate_pct"], 2.0)
+
+    def test_phase24_5_echtes_plateau_bleibt_plateau(self):
+        """Lange Historie aber sehr kleine Rate (<2 %/Monat) → bleibt plateau_light."""
+        # 90 Tage Historie, minimaler Anstieg: 100 kg → 101 kg PR
+        # plus 2 Sätze in den letzten 4 Wochen (ohne neuen PR), damit pause-Filter
+        # nicht greift.
+        for days_ago, gewicht in [
+            (90, 100),
+            (60, 100.5),
+            (30, 101),
+            (21, 101),
+            (14, 101),
+            (7, 101),
+        ]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status"], "plateau_light")
+        # Rate wurde dennoch berechnet und mitgeführt (für Anzeige)
+        self.assertIsNotNone(result[0]["progression_rate_pct"])
+        self.assertLess(result[0]["progression_rate_pct"], 2.0)
+
+    def test_phase24_5_konsolidierung_schlaegt_override(self):
+        """Hammer-Curls-Stil: hohe Rate aber RPE sinkt → consolidation hat Vorrang."""
+        # Aufbau über 60 Tage + sinkende RPE in den letzten 4 Wochen
+        for days_ago, gewicht, rpe in [
+            (60, 50, None),
+            (45, 60, None),
+            (25, 70, 9.5),
+            (18, 70, 9.0),
+            (10, 70, 8.5),
+            (3, 70, 8.0),
+        ]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8, rpe=rpe)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status"], "consolidation")
+
+    def test_phase24_5_kurze_historie_kein_override(self):
+        """Hohe Rate aber Historie < 21 Tage → kein Override, plateau_light bleibt."""
+        # Nur 14 Tage Historie zwischen erstem Satz (35d) und PR (21d).
+        # Plus 2 Sätze in den letzten 4w gegen das pause-Filter.
+        for days_ago, gewicht in [(35, 50), (21, 80), (14, 80), (7, 80)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        # Status fällt auf plateau_light zurück, weil Historie zu kurz für robusten Median
+        self.assertEqual(result[0]["status"], "plateau_light")
+
+    def test_phase24_5_override_greift_auch_bei_mittlerem_plateau(self):
+        """Override greift unabhängig von der Plateau-Stufe (15-42d, 43-84d, >84d).
+        Hier: PR 50 Tage her (würde sonst 'plateau' werden), Rate hoch."""
+        # 120 Tage Historie, deutlicher Aufbau, PR 50 Tage alt
+        for days_ago, gewicht in [(120, 50), (90, 60), (70, 70), (50, 80)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8)
+        # Mindestens 2 Sätze in den letzten 4 Wochen, damit pause-Filter nicht greift
+        for days_ago in [25, 10]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=78, wiederholungen=8)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status"], "active_progression_paused")
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # calculate_1rm_standards
