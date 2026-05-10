@@ -731,6 +731,12 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     gesamt_trainings = alle_trainings.count()
     trainings_30_tage = alle_trainings.filter(datum__gte=letzte_30_tage).count()
 
+    # Phase 24.3: ältestes Trainingsdatum, damit Lifetime-Zahlen im
+    # Executive Summary mit "seit Trainingsbeginn DD.MM.YYYY" gelabelt
+    # werden können (statt sie als Berichtszeitraum-Werte zu suggerieren).
+    erstes_training = alle_trainings.order_by("datum").first()
+    trainingsbeginn_datum = erstes_training.datum if erstes_training else None
+
     alle_saetze = Satz.objects.filter(
         einheit__user=user,
         ist_aufwaermsatz=False,
@@ -838,6 +844,7 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         "start_datum": letzte_30_tage,
         "end_datum": heute,
         "current_date": heute,
+        "trainingsbeginn_datum": trainingsbeginn_datum,
         "trainings": trainings,
         "gesamt_trainings": gesamt_trainings,
         "gesamt_saetze": gesamt_saetze,
