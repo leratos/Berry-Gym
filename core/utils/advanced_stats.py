@@ -703,6 +703,24 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
         else:
             diff_bis_naechstes = 0
 
+        # Phase 24.6: "gerade erreicht" - Flag, wenn der User die untere Schwelle
+        # des aktuellen Korridors gerade erst überschritten hat. Bei < 5 % Korridor-
+        # Fortschritt liest sich die Prozent-Anzeige wie Stillstand (Mai-Beispiel:
+        # Kniebeuge 73,3 kg knapp über Anfänger-Schwelle 73,2 kg → 0,4 %).
+        # Das Template zeigt in diesem Fall einen positiven "Schwelle gerade
+        # erreicht"-Text statt einer fast leeren Progress-Bar.
+        gerade_erreicht = False
+        if standard_level != "untrainiert" and naechstes_level and naechstes_level in standards:
+            aktuelles_gewicht = standards[standard_level]
+            naechstes_gewicht_val = standards[naechstes_level]
+            korridor_diff = naechstes_gewicht_val - aktuelles_gewicht
+            korridor_progress = beste_1rm - aktuelles_gewicht
+            if korridor_diff > 0 and 0 <= korridor_progress / korridor_diff < 0.05:
+                gerade_erreicht = True
+
+        # Elite ist Endstufe – kein "nächstes Level"
+        ist_endstufe = standard_level == "elite"
+
         standard_info = {
             "level": standard_level,
             "level_label": level_labels[standard_level],
@@ -711,6 +729,8 @@ def calculate_1rm_standards(alle_saetze, top_uebungen, user_gewicht=None):
             "prozent_bis_naechstes": prozent_bis_naechstes if naechstes_level else 100,
             "alle_levels": {level_labels[k]: v for k, v in standards.items()},
             "erreicht": erreicht,
+            "gerade_erreicht": gerade_erreicht,
+            "ist_endstufe": ist_endstufe,
         }
 
         # Muskelgruppe

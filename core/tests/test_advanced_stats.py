@@ -567,6 +567,57 @@ class TestOneRmStandards(StatsTestBase):
         level = result[0]["standard_info"]["level"]
         self.assertIn(level, ("intermediate", "advanced", "elite"))
 
+    # ──────────────────────────────────────────────────────────────────────
+    # Phase 24.6: Schwellen-Übergangs-Anzeige
+    # ──────────────────────────────────────────────────────────────────────
+
+    def test_phase24_6_gerade_erreicht_bei_knappem_schwellen_ueberschritt(self):
+        """Mai-Bug-Repro: 1RM ~60.97 kg knapp über Anfänger-Schwelle (60 kg).
+        Korridor-Progress ≈ 2.4 % – muss gerade_erreicht=True setzen, statt
+        eine missverständliche 0,4 %-Bar zu produzieren."""
+        # Setup Kniebeuge: beginner=60, intermediate=100. Schwelle = 60.
+        # 59 kg × 1 Wdh → 1RM = 59 × 31/30 = 60.97
+        session = self._make_session()
+        self._add_satz(session, gewicht=59, wiederholungen=1)
+        result = calculate_1rm_standards(self._alle_saetze(), self._top_uebungen(), user_gewicht=80)
+        info = result[0]["standard_info"]
+        self.assertEqual(info["level"], "beginner")
+        self.assertTrue(info["gerade_erreicht"])
+        self.assertFalse(info["ist_endstufe"])
+
+    def test_phase24_6_kein_gerade_erreicht_bei_deutlichem_korridor_fortschritt(self):
+        """1RM klar im Korridor (z. B. 80 kg, ~50 % zwischen 60 und 100)
+        → gerade_erreicht=False, normale Prozent-Anzeige bleibt."""
+        # 77 kg × 1 Wdh → 1RM ≈ 79.57 → im Korridor 60→100 ungefähr 49 %
+        session = self._make_session()
+        self._add_satz(session, gewicht=77, wiederholungen=1)
+        result = calculate_1rm_standards(self._alle_saetze(), self._top_uebungen(), user_gewicht=80)
+        info = result[0]["standard_info"]
+        self.assertEqual(info["level"], "beginner")
+        self.assertFalse(info["gerade_erreicht"])
+
+    def test_phase24_6_elite_ist_endstufe(self):
+        """1RM über Elite-Schwelle (180 kg) → level=elite + ist_endstufe=True."""
+        # 175 kg × 1 Wdh → 1RM ≈ 180.83 → elite
+        session = self._make_session()
+        self._add_satz(session, gewicht=175, wiederholungen=1)
+        result = calculate_1rm_standards(self._alle_saetze(), self._top_uebungen(), user_gewicht=80)
+        info = result[0]["standard_info"]
+        self.assertEqual(info["level"], "elite")
+        self.assertTrue(info["ist_endstufe"])
+        # Bei elite gibt es kein "gerade_erreicht" (kein naechstes Level)
+        self.assertFalse(info["gerade_erreicht"])
+
+    def test_phase24_6_untrainiert_nicht_als_gerade_erreicht_gemeldet(self):
+        """1RM unter Beginner-Schwelle → level=untrainiert, gerade_erreicht=False."""
+        session = self._make_session()
+        self._add_satz(session, gewicht=30, wiederholungen=5)  # ~35 kg 1RM < 60
+        result = calculate_1rm_standards(self._alle_saetze(), self._top_uebungen(), user_gewicht=80)
+        info = result[0]["standard_info"]
+        self.assertEqual(info["level"], "untrainiert")
+        self.assertFalse(info["gerade_erreicht"])
+        self.assertFalse(info["ist_endstufe"])
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Phase 23.3: classify_progression_status
