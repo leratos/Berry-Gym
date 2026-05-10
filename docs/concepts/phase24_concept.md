@@ -318,7 +318,14 @@ Konkrete Schwellenwerte (X) werden beim Implementierungs-Start empirisch festgel
 
 ### 3.5 Sub-Phase 24.3 – Header-Zahlen / Zeitraum-Konsistenz
 
-**Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** nach 24.5
+**Status:** ✅ Abgeschlossen (10.05.2026) · **Aufwand:** S · **Reihenfolge:** nach 24.5
+
+**Ergebnis (10.05.2026):** Umsetzung wie im Konzept (Option 2) empfohlen – pluralistische Zeiträume mit expliziter Beschriftung. `collect_pdf_stats` führt jetzt `trainingsbeginn_datum` mit (ältestes Trainingsdatum des Users) und die bereits existierenden `*_30_tage`-Felder werden im PDF-Template als Primärwerte angezeigt, die Lifetime-Werte als sekundäres Kontext-Suffix („insgesamt X seit DD.MM.YYYY"). Wenn Lifetime ≈ Berichtszeitraum (neuer User), wird nur das Fenster gezeigt. Verifiziert gegen Lera-Daten (10.05.2026): alte Anzeige zeigte 54 / 773, neue zeigt *„Trainingseinheiten: 12 (insgesamt 54 seit 03.01.2026), Sätze: 156 (insgesamt 773)"*.
+
+**Antworten auf F11–F12:**
+
+- F11: Berichtszeitraum-Werte: Header-Trainingseinheiten, Sätze, Volumen, RPE-Verteilung, Muskelgruppen-Verteilung, Push/Pull. Lifetime-Werte mit explizitem Suffix: Header-Lifetime-Spalte (NEU), Streak, Top-Fortschritte über mehrere Monate, Verlauf-Chart Körperentwicklung. Letztere sind bereits Lifetime und werden visuell als Verlauf erkannt – keine separate Anpassung in 24.3 nötig, ausser den Header-Block.
+- F12: Konfigurierbarer Berichtszeitraum bewusst nicht in 24.3 – Scope wäre größer. Wenn die Anforderung kommt, ist das eine Folge-Phase.
 
 #### Problem
 
@@ -499,3 +506,9 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 - **Start:** 10.05.2026 (Branch `feature/phase-24-5-plateau-vs-progression`)
 - **Abschluss:** 10.05.2026
 - **Ergebnis:** `classify_progression_status` erkennt langfristig steigende Übungen jetzt als `active_progression_paused`, statt sie wegen ein paar Tagen ohne neuen PR fälschlich als Plateau zu labeln. Schwelle: ≥ 2 % des PR-1RM/Monat bei ≥ 21 Tagen Trainingshistorie. Konsolidierung (RPE sinkt) behält Vorrang. Verifiziert gegen Lera-Daten (10.05.2026): RDL → `active_progression_paused` (22.3 %/Monat statt `plateau_light`); Trizeps Overhead Extension → `active_progression_paused` (34.9 %/Monat statt `plateau`); inaktive Übungen bleiben korrekt auf `pause`. PDF-Template um Begründungs-Hinweis und Legende ergänzt. Tests in `core/tests/test_advanced_stats.py::TestPlateauAnalysis` decken RDL-Fall, echtes Plateau, Konsolidierungs-Vorrang, kurze Historie und Override-bei-mittlerem-Plateau ab.
+
+### 24.3 – Header-Zahlen / Zeitraum-Konsistenz
+
+- **Start:** 10.05.2026 (Branch `feature/phase-24-3-period-labels`)
+- **Abschluss:** 10.05.2026
+- **Ergebnis:** Executive Summary zeigt jetzt die Berichtszeitraum-Werte als Primärzahlen mit Lifetime-Kontext als sekundäres Suffix („insgesamt X seit DD.MM.YYYY"). Neues Feld `trainingsbeginn_datum` aus dem ältesten Trainingsdatum. Wenn Lifetime ≈ 30-Tage-Fenster (neuer User), wird nur das Fenster ohne Suffix angezeigt. Verifiziert gegen Lera (10.05.2026): alte Anzeige 54 / 773 → neue Anzeige *„Trainingseinheiten: 12 (insgesamt 54 seit 03.01.2026), Sätze: 156 (insgesamt 773)"*. Datenqualitäts-Hinweis (`< 8 Trainings`) bleibt auf Lifetime und wurde mit „insgesamt" verdeutlicht.

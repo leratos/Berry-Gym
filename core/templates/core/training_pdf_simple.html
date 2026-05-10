@@ -421,14 +421,20 @@
     {% if total_einheiten < 8 %}
     <div class="info-box warning">
         <strong>⚠️ Hinweis zur Datenqualität:</strong><br>
-        Dieser Bericht basiert auf {{ total_einheiten }} Trainingseinheiten. Für aussagekräftige Analysen und Empfehlungen werden mindestens 8-10 Trainings empfohlen. Aktuelle Bewertungen sollten mit Vorsicht interpretiert werden.
+        Dieser Bericht basiert auf insgesamt {{ total_einheiten }} Trainingseinheiten. Für aussagekräftige Analysen und Empfehlungen werden mindestens 8-10 Trainings empfohlen. Aktuelle Bewertungen sollten mit Vorsicht interpretiert werden.
     </div>
     {% endif %}
 
+    {# Phase 24.3: Berichtszeitraum-Werte primär, Lifetime-Werte als Kontext-Suffix.
+       Wenn die Trainingshistorie kürzer als der Berichtszeitraum ist (z. B. neuer
+       User), fallen Lifetime und Fenster zusammen – dann nur das Fenster zeigen. #}
     <div class="info-box success">
-        <strong>Trainingseinheiten:</strong> {{ total_einheiten }}<br>
-        <strong>Gesamtsätze:</strong> {{ total_saetze }}<br>
-        <strong>Trainingsvolumen:</strong> {{ total_volumen|floatformat:0 }} kg
+        <p style="margin: 0 0 6px 0; font-size: 9px; color: #6c757d;">
+            Werte im Berichtszeitraum {{ start_datum|date:"d.m.Y" }} – {{ end_datum|date:"d.m.Y" }}:
+        </p>
+        <strong>Trainingseinheiten:</strong> {{ trainings_30_tage }}{% if gesamt_trainings != trainings_30_tage %} <span style="color: #6c757d;">(insgesamt {{ gesamt_trainings }}{% if trainingsbeginn_datum %} seit {{ trainingsbeginn_datum|date:"d.m.Y" }}{% endif %})</span>{% endif %}<br>
+        <strong>Sätze:</strong> {{ saetze_30_tage }}{% if gesamt_saetze != saetze_30_tage %} <span style="color: #6c757d;">(insgesamt {{ gesamt_saetze }})</span>{% endif %}<br>
+        <strong>Trainingsvolumen:</strong> {{ volumen_30_tage|floatformat:0 }} kg{% if gesamt_volumen != volumen_30_tage %} <span style="color: #6c757d;">(insgesamt {{ gesamt_volumen|floatformat:0 }} kg)</span>{% endif %}
     </div>
 
     <!-- KÖRPERWERTE -->
