@@ -912,6 +912,8 @@
                     <br><span style="font-size: 7px; color: #6c757d;">1RM-Drop {{ item.weight_drop_pct }}% vs. PR</span>
                     {% elif item.status == 'pause' %}
                     <br><span style="font-size: 7px; color: #6c757d;">Letzte 4 W nicht trainiert</span>
+                    {% elif item.status == 'active_progression_paused' and item.progression_rate_pct %}
+                    <br><span style="font-size: 7px; color: #6c757d;">Historischer Aufbau {{ item.progression_rate_pct }} %/Monat – starker Trend trotz PR-Pause</span>
                     {% endif %}
                 </td>
             </tr>
@@ -925,6 +927,7 @@
             <li>✅ Aktive Progression: PR innerhalb der letzten Woche</li>
             <li>👀 Beobachten: PR 1–2 Wochen alt</li>
             <li>💪 Konsolidierung: Gewicht stabil, RPE sinkt → User wird stärker</li>
+            <li>📈 Aktive Progression (PR-Pause): historische Steigerungsrate ≥ 2 %/Monat → kein echtes Plateau</li>
             <li>⏸️ Pause: Übung in den letzten 4 Wochen nicht trainiert</li>
             <li>⚠️ Leichtes Plateau: 2–6 Wochen ohne PR</li>
             <li>🔴 Plateau: 6–12 Wochen ohne Fortschritt</li>
