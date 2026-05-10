@@ -373,7 +373,14 @@ Drei Optionen:
 
 ### 3.6 Sub-Phase 24.6 – Kraftstandards-Anzeige bei Schwellen-Übergängen
 
-**Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** zuletzt
+**Status:** ✅ Abgeschlossen (10.05.2026) · **Aufwand:** S · **Reihenfolge:** zuletzt
+
+**Ergebnis (10.05.2026):** `calculate_1rm_standards` setzt jetzt zwei zusätzliche Flags pro Übung in `standard_info`: `gerade_erreicht` (True, wenn der Korridor-Fortschritt unter 5 % liegt – die Schwelle wurde gerade überschritten) und `ist_endstufe` (True bei Elite). Das PDF-Template rendert in beiden Fällen statt der missverständlichen ProgressBar einen positiven Text: *„✓ Anfänger gerade erreicht. Nächstes Ziel: Fortgeschritten – noch 36,5 kg."* bzw. *„✓ Endstufe Elite erreicht."* Verifiziert gegen Lera (10.05.2026): Mai-Bug-Konstellation (Kniebeuge 73,3 kg knapp über 73,2 kg) ist organisch gewichen (Kniebeuge inzwischen 80 kg), keine Übung hat heute `gerade_erreicht=True` – alle bestehenden Anzeigen bleiben unverändert. Code-Fix bleibt für künftige knappe Schwellen-Überschritte relevant; Unit-Tests reproduzieren genau diesen Fall.
+
+**Antworten auf F13–F14:**
+
+- F13: Schwellenwerte werden pro Übung in der DB gepflegt (`Uebung.standard_beginner/intermediate/advanced/elite`) – nicht im UI konfigurierbar, aber DB-änderbar. Aktuelles Verhalten bleibt.
+- F14: Zwischenstufen bewusst nicht eingeführt – Konzept-Vorgabe ist „klare Aussage > Granularität". Vier Hauptstufen (Anfänger / Fortgeschritten / Erfahren / Elite) bleiben.
 
 #### Problem
 
@@ -512,3 +519,9 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 - **Start:** 10.05.2026 (Branch `feature/phase-24-3-period-labels`)
 - **Abschluss:** 10.05.2026
 - **Ergebnis:** Executive Summary zeigt jetzt die Berichtszeitraum-Werte als Primärzahlen mit Lifetime-Kontext als sekundäres Suffix („insgesamt X seit DD.MM.YYYY"). Neues Feld `trainingsbeginn_datum` aus dem ältesten Trainingsdatum. Wenn Lifetime ≈ 30-Tage-Fenster (neuer User), wird nur das Fenster ohne Suffix angezeigt. Verifiziert gegen Lera (10.05.2026): alte Anzeige 54 / 773 → neue Anzeige *„Trainingseinheiten: 12 (insgesamt 54 seit 03.01.2026), Sätze: 156 (insgesamt 773)"*. Datenqualitäts-Hinweis (`< 8 Trainings`) bleibt auf Lifetime und wurde mit „insgesamt" verdeutlicht.
+
+### 24.6 – Kraftstandards-Anzeige bei Schwellen-Übergängen
+
+- **Start:** 10.05.2026 (Branch `feature/phase-24-6-kraftstandards-clear-display`)
+- **Abschluss:** 10.05.2026
+- **Ergebnis:** `calculate_1rm_standards` exponiert `gerade_erreicht` (Korridor-Progress < 5 %) und `ist_endstufe` (Elite). Das PDF-Template ersetzt die ProgressBar in beiden Fällen durch einen klaren Status-Text statt einer fast leeren Bar (z. B. *„✓ Anfänger gerade erreicht. Nächstes Ziel: Fortgeschritten – noch 36,5 kg."*). Verifiziert gegen Lera (10.05.2026): Mai-Bug-Konstellation organisch gewichen, keine Übung aktuell `gerade_erreicht=True`; Anzeigen für nicht-knappe Fälle bleiben unverändert. Tests in `core/tests/test_advanced_stats.py::TestOneRmStandards` reproduzieren den Mai-Bug + drei weitere Schwellen-Fälle.
