@@ -485,6 +485,7 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     - volumen_spike, rpe_steigend, deload_empfohlen
     - naechste_deload, warnungen
     """
+    from core.export.stats_collector import select_comparable_weeks
     from core.views.training_stats import (
         _get_cardio_fatigue,
         _get_frequency_fatigue,
@@ -503,9 +504,17 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     fatigue_index = 0
     warnungen = []
 
-    # Volumen-Spike: weekly_volume_data in Dashboard-Format konvertieren
-    if len(weekly_volume_data) >= 2:
-        dashboard_volumes = [{"volume": w.get("volumen", 0)} for w in reversed(weekly_volume_data)]
+    # Volumen-Spike: Vergleich nur über vergleichbare Wochen (Phase 24.1b).
+    # Deload-Mehrheits-, Plan-Wechsel- und laufende Wochen werden über
+    # ``select_comparable_weeks`` ausgefiltert – derselbe Klassifikator wie in
+    # der 24.1-Volumen-Diagnose. Damit fällt die fälschliche „Sehr starker
+    # Volumen-Anstieg"-Warnung bei Re-Aufbau nach Deload weg.
+    comparable_weeks = select_comparable_weeks(weekly_volume_data)
+    if len(comparable_weeks) >= 2:
+        dashboard_volumes = [
+            {"volume": comparable_weeks[-1].get("volumen", 0)},
+            {"volume": comparable_weeks[-2].get("volumen", 0)},
+        ]
         pts, warns = _get_volume_spike_fatigue(dashboard_volumes)
         fatigue_index += pts
         warnungen.extend(warns)

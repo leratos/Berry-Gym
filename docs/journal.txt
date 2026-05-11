@@ -6192,3 +6192,61 @@ Konstellationen (4 Vorwochen, gemischt mit Loch) ebenfalls abgedeckt.
 
 **Branch-Strategie:** Branch bleibt offen, kein PR-Push (User macht das
 selbst). Section 8 im Konzept-Doc ergänzt um Sub-Phase-24.1a-Eintrag.
+
+
+
+## Abgeschlossen: Phase 24.1b – Fatigue-Index Deload-Skip (11.05.2026)
+
+Zweiter Fix der drei Phase-24-Nachzügler. Branch
+`feature/phase-24-1b-fatigue-deload-skip` (Stack-Basis: 24.1a).
+
+**Symptom (aus Section 9.2 B2):** Fatigue-Index sprang von 0/100 auf
+40/100 mit Warnung *„Sehr starker Volumen-Anstieg"*. Auslöser: KW18 =
+12.616 kg (Deload), KW19 = 23.745 kg (Re-Aufbau). +88 % ist das
+erwartete Wiederaufnehmen nach Deload, kein gefährlicher Spike.
+
+**Befund:** Die Volumen-Spike-Komponente in `calculate_fatigue_index`
+baute ihre `dashboard_volumes`-Eingabe aus den letzten Wochen, verwarf
+aber die 24.1-Klassifikations-Flags (`ist_deload_majority`,
+`ist_plan_wechsel`, `ist_laufend`). Der Dashboard-Helper
+`_get_volume_spike_fatigue` verglich damit Deload-Woche vs. Re-Aufbau-
+Woche → fälschliche Spike-Warnung.
+
+**Fix in zwei Schritten:**
+
+1. **Refactor in `core/export/stats_collector.py`:** Die comparable-
+   Wochen-Selektion (`ist_laufend`/`ist_deload_majority`/
+   `ist_plan_wechsel`/Plan-Epoch-Grenze) wurde aus `_build_week_diagnose`
+   in einen public Helper `select_comparable_weeks(weeks)` extrahiert.
+   `_build_week_diagnose` ruft ihn weiter auf.
+2. **Patch in `core/utils/advanced_stats.py::calculate_fatigue_index`:**
+   Lazy-Import von `select_comparable_weeks`. Vor dem Spike-Aufruf werden
+   die comparable Wochen ermittelt; nur wenn ≥ 2 vorhanden, baut der
+   Code `dashboard_volumes` aus den letzten beiden comparable und ruft
+   den Dashboard-Helper. Sonst: 0 Punkte, keine Warnung.
+
+**Geänderte Dateien:**
+
+- `core/export/stats_collector.py` – `select_comparable_weeks` extrahiert,
+  `_build_week_diagnose` ruft ihn.
+- `core/utils/advanced_stats.py` – Spike-Komponente filtert via Helper.
+- `core/tests/test_stats_collector.py::TestSelectComparableWeeks` – fünf
+  Direct-Tests (laufende/Deload/Plan-Wechsel/Null-Volumen/fehlende Flags).
+- `core/tests/test_advanced_stats.py::TestFatigueIndex` – fünf neue Tests
+  (B2-Reproduktion, Plan-Wechsel-Stop, laufende-Woche-Skip, echter Spike
+  bleibt, insufficient comparable).
+
+**Layer-Bruch:** `advanced_stats → export` ist neu. Begründung: User-
+Anforderung „Helper wiederverwenden", und der bestehende Lazy-Import
+`advanced_stats → views` (Z. 488–493) zeigt, dass das Modul ohnehin
+Cross-Layer-Imports lazy macht. Eine vollständige Bereinigung
+(`select_comparable_weeks` in `core/utils/` verschieben) ist ein
+größerer Umbau und wird in Phase 25 erwogen.
+
+**Verifikation:** 443 Tests passed, 1 skipped, 0 failed über die
+relevanten Test-Module (`test_advanced_stats`, `test_stats_collector`,
+`test_training_stats`, `test_training_stats_extended`,
+`test_helpers_and_utils`, `test_algorithm_audit`, `test_caching`).
+
+**Branch-Strategie:** Stack auf 24.1a; kein PR-Push (User macht das
+selbst). Section 8 im Konzept-Doc ergänzt um Sub-Phase-24.1b-Eintrag.

@@ -535,6 +535,15 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 - **Tests:** `core/tests/test_advanced_stats.py::TestConsistencyMetrics` – vier neue Fälle (`test_streak_laufende_woche_leer_zaehlt_vorwoche`, `..._mehrere_vorwochen`, `..._trainiert_zaehlt_mit`, `test_streak_loch_zwei_wochen_zurueck_bricht`). `core/tests/test_training_stats.py::TestCalculateStreak` – neue Test-Klasse mit fünf Fällen (Null, laufende leer, mehrere Vorwochen, gemischt, Loch). 373 Tests bestanden, keine Regression.
 - **Cross-Cutting-Konsequenz:** Beide Pfade laufen wieder synchron – analog zur Lehre aus PR #165 (24.5-Reviewer-Nachzug). Kein gemeinsamer Helper extrahiert; die Logik ist <15 Zeilen pro Pfad und nutzt unterschiedliche Datenmodelle (Queryset vs. direkter DB-Zugriff).
 
+### 24.1b – Fatigue-Index Deload-Skip (Folge-Sub-Phase aus Section 9.2 B2)
+
+- **Start:** 11.05.2026 (Branch `feature/phase-24-1b-fatigue-deload-skip`, Stack-Basis 24.1a)
+- **Abschluss:** 11.05.2026
+- **Ergebnis:** Die Volumen-Spike-Komponente des Fatigue-Index nutzt jetzt denselben Klassifikator wie die 24.1-Volumen-Diagnose. Re-Aufbau-Wochen nach Deload triggern keine fälschliche „Sehr starker Volumen-Anstieg"-Warnung mehr. Die comparable-Wochen-Selektion (`ist_laufend`/`ist_deload_majority`/`ist_plan_wechsel`/Plan-Epoch-Grenze) wurde aus `_build_week_diagnose` in einen public Helper `select_comparable_weeks` in `core/export/stats_collector.py` extrahiert und wird von beiden Aufrufpfaden konsumiert.
+- **Helper-Reuse statt Parallel-Implementierung:** `calculate_fatigue_index` in `core/utils/advanced_stats.py` importiert `select_comparable_weeks` lazy (analog zum bereits bestehenden Lazy-Import auf `core.views.training_stats`-Helper). Wenn weniger als zwei comparable Wochen vorhanden sind, liefert die Spike-Komponente 0 Punkte und keine Warnung statt eines irreführenden Vergleichs.
+- **Layer-Bruch:** `advanced_stats → export` ist neu. Pragmatisch akzeptiert; vollständige Bereinigung (Helper nach `core/utils/`) ist Phase-25-Kandidat.
+- **Tests:** `core/tests/test_stats_collector.py::TestSelectComparableWeeks` – fünf Direct-Tests (laufende/Deload/Plan-Wechsel-Stop/Null-Volumen/fehlende-Flags-Default). `core/tests/test_advanced_stats.py::TestFatigueIndex` – fünf neue Tests (`test_deload_zwischen_nicht_als_spike` für B2-Reproduktion, `test_plan_wechsel_stoppt_vergleich`, `test_laufende_woche_wird_uebersprungen`, `test_echter_spike_ohne_deload_loch_warnt_weiter`, `test_zu_wenig_comparable_wochen_kein_spike`). 443 Tests bestanden, keine Regression. Bestehende Spike-Tests bleiben grün, weil Dicts ohne 24.1-Flags durch den Helper als „neutral" behandelt werden.
+
 
 ---
 

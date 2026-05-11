@@ -328,6 +328,78 @@ class TestFatigueIndex(StatsTestBase):
         # Muss ein Datum-String sein (DD.MM.YYYY)
         self.assertRegex(result["naechste_deload"], r"\d{2}\.\d{2}\.\d{4}")
 
+    # Phase 24.1b: Volumen-Spike-Komponente muss denselben Klassifikator wie
+    # die 24.1-Volumen-Diagnose nutzen (Deload-/Plan-Wechsel-/Laufende-Woche-Skip).
+
+    def test_deload_zwischen_nicht_als_spike(self):
+        """Regression B2: Re-Aufbau nach Deload-Woche ist kein Volumen-Spike."""
+        volume_data = [
+            {"woche": "KW17", "volumen": 23157},
+            {"woche": "KW18", "volumen": 12616, "ist_deload_majority": True},
+            {"woche": "KW19", "volumen": 23745},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        # comparable Wochen: KW17 + KW19 (KW18 als Deload-Mehrheit skipped).
+        # Vergleich +2,5 % → keine Spike-Warnung.
+        self.assertFalse(result["volumen_spike"])
+        self.assertNotIn("Sehr starker Volumen-Anstieg", result["warnungen"])
+        self.assertNotIn("Starker Volumen-Anstieg", result["warnungen"])
+
+    def test_plan_wechsel_stoppt_vergleich(self):
+        """Plan-Wechsel-Woche ist Epoch-Grenze – Vergleich nur über neue Epoch."""
+        volume_data = [
+            {"woche": "KW10", "volumen": 5000},
+            {"woche": "KW11", "volumen": 6000, "ist_plan_wechsel": True},
+            {"woche": "KW12", "volumen": 8000},
+            {"woche": "KW13", "volumen": 8500},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        # comparable rückwärts: KW13 → KW12 → KW11 (Plan-Wechsel, stop).
+        # Vergleich KW12 vs KW13 = +6 % → kein Spike.
+        self.assertFalse(result["volumen_spike"])
+
+    def test_laufende_woche_wird_uebersprungen(self):
+        """Die laufende (unvollständige) Woche darf den Spike-Vergleich nicht
+        verfälschen."""
+        volume_data = [
+            {"woche": "KW17", "volumen": 22000},
+            {"woche": "KW18", "volumen": 23000},
+            {"woche": "KW19", "volumen": 8000, "ist_laufend": True},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        # comparable: KW17 + KW18 (KW19 ist laufend). +4,5 % → kein Spike.
+        self.assertFalse(result["volumen_spike"])
+
+    def test_echter_spike_ohne_deload_loch_warnt_weiter(self):
+        """Wenn zwei aufeinanderfolgende comparable Wochen +40 % zeigen,
+        bleibt die Warnung erhalten."""
+        volume_data = [
+            {"woche": "KW17", "volumen": 10000},
+            {"woche": "KW18", "volumen": 14000},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        self.assertTrue(result["volumen_spike"])
+        self.assertIn("Sehr starker Volumen-Anstieg", result["warnungen"])
+
+    def test_zu_wenig_comparable_wochen_kein_spike(self):
+        """Nur eine comparable Woche (alle anderen Deload/laufend) → 0 Pkt."""
+        volume_data = [
+            {"woche": "KW18", "volumen": 12000, "ist_deload_majority": True},
+            {"woche": "KW19", "volumen": 23000, "ist_laufend": True},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        self.assertFalse(result["volumen_spike"])
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # calculate_plateau_analysis
