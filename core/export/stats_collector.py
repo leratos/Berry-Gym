@@ -406,30 +406,41 @@ def _fill_iso_week_range(weekly_volume: dict) -> list[str]:
     return filled[-12:]
 
 
-def _build_week_diagnose(weeks: list[dict]) -> dict | None:
-    """Phase 24.1: produce trend diagnose over the last two *comparable* weeks.
+def select_comparable_weeks(weeks: list[dict]) -> list[dict]:
+    """Phase 24.1 helper: return the comparable weeks from a weekly-volume list.
 
     Comparable = not running, not deload-majority, not skip (zero volume),
     AND inside the *current plan epoch*. The current plan epoch starts after
     the most recent plan-change week: anything before that boundary belongs
     to a different plan and must not be compared with weeks of the new plan.
 
-    Implementation: walk weeks from latest to earliest, collect candidates,
-    stop as soon as we hit a plan-change week (which itself is not collected,
-    and neither is anything before it).
+    Walks ``weeks`` from latest to earliest, collects candidates, and stops
+    as soon as a plan-change week is hit (the plan-change week itself is not
+    collected, and nothing before it).
+
+    Wird sowohl von ``_build_week_diagnose`` (Volumen-Diagnose, 24.1) als
+    auch von ``calculate_fatigue_index`` (Volumen-Spike-Komponente, 24.1b)
+    genutzt, damit beide denselben Klassifikator anwenden.
+    """
+    comparable: list[dict] = []
+    for w in reversed(weeks):
+        if w.get("ist_plan_wechsel"):
+            # Plan-Epoch-Grenze – stop. Diese Woche und alles davor zählen nicht.
+            break
+        if w.get("ist_laufend") or w.get("ist_deload_majority") or w.get("volumen", 0) <= 0:
+            continue
+        comparable.append(w)
+    comparable.reverse()
+    return comparable
+
+
+def _build_week_diagnose(weeks: list[dict]) -> dict | None:
+    """Phase 24.1: produce trend diagnose over the last two *comparable* weeks.
 
     Returns an explanatory 'inconclusive' diagnose if fewer than two
     comparable weeks are available.
     """
-    comparable: list[dict] = []
-    for w in reversed(weeks):
-        if w["ist_plan_wechsel"]:
-            # Plan-Epoch-Grenze – stop. Diese Woche und alles davor zählen nicht.
-            break
-        if w["ist_laufend"] or w["ist_deload_majority"] or w["volumen"] <= 0:
-            continue
-        comparable.append(w)
-    comparable.reverse()
+    comparable = select_comparable_weeks(weeks)
     if len(comparable) >= 2:
         prev = comparable[-2]
         curr = comparable[-1]
