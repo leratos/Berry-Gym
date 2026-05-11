@@ -642,3 +642,163 @@ Alle drei sind direkte Folgen aus Phase 24, keine neuen Konzept-Themen. Empfehlu
 
 - Volumen-Diagnose-Zeile: *„Keine eindeutige Diagnose · Tonnage stabil · Effektives Volumen steigt · Vergleich KW17→KW19"* — die vier Tokens widersprechen sich teilweise. Phase 25 sollte den Diagnose-Block lesbarer machen (Haupt-Diagnose vs. Detail-Tokens visuell trennen oder eine prägnante Hauptaussage formulieren).
 - Empfehlungstext aus 24.2: *„Volumen pro Muskelgruppe einzeln prüfen"* ist ein Hinweis, kein konkreter Schritt. Konkretisierung (z.B. „Brust/Rücken-Lat um X Sätze reduzieren, vordere/seitliche Schulter um Y ergänzen") wäre eine spätere Iteration, kein Phase-24-Defekt.
+
+
+---
+
+## 10. Verifikation der Folge-Sub-Phasen (11.05.2026, später Nachmittag)
+
+Zweiter Production-Export nach 24.1a / 24.1b / 24.5a:
+`TrainingReport_Leratos_20260411_20260511__1_.pdf` (Erstellt 11.05.2026 16:45).
+
+### 10.1 Verifikation gegen die drei Findings
+
+| Finding | Vorher (11.05. 03:55) | Jetzt (11.05. 16:45) | Status |
+|---|---|---|---|
+| B1 Streak-Regression | Aktueller Streak `0`, Bewertung „Ausbaufähig" | Aktueller Streak `19`, Bewertung „Exzellent" | ✅ gefixt |
+| B2 Fatigue ignoriert Deload | `40/100`, Warnung „Sehr starker Volumen-Anstieg" | `0/100`, „Sehr niedrig – Belastung wird gut verkraftet" | ✅ gefixt |
+| L1 Steigerungsrate All-Time | Trizeps OH → `aktive_progression_paused` bei 34,9 %/Mo | Trizeps OH → `konsolidierung_rpe_sinkt` bei +0,0 kg/Mo | ✅ gefixt |
+
+Zusätzlich zur Trizeps-OH-Re-Klassifikation hat sich die RDL-Rate von 22,3 %/Mo auf 9,4 %/Mo halbiert – ebenfalls Indiz, dass das aktuelle Fenster jetzt greift (nicht mehr All-Time-Mittel).
+
+### 10.2 Sub-Phase 24.5b – „+-"-Formatierung bei negativen Raten (Hotfix)
+
+**Status:** 📋 Konzept · **Aufwand:** XS · **Reihenfolge:** vor Phase 25
+
+#### Problem
+
+Plateau-Tabelle zeigt für Hammer Curls: *„Ø +kg/Monat: **+-0,26 kg**"*. Das Vorzeichen-Präfix `+` wird unkonditional gerendert, auch wenn die Zahl bereits ein Minus-Zeichen hat. Bei positiven Werten korrekt (`+5,92 kg`), bei negativen falsch (`+-0,26 kg`).
+
+Erst in dieser Phase sichtbar, weil 24.5a auf das aktuelle Zeitfenster umgestellt hat – Hammer Curls hat dort eine leicht negative Rate, vorher war die historische Rate positiv.
+
+#### Lösungsansatz
+
+Vorzeichen konditional rendern oder Format-Helper benutzen, der das Vorzeichen aus dem Wert ableitet. Zwei Varianten:
+
+- **Variante A:** Wenn Wert < 0, kein „+" voranstellen. Anzeige: `+5,92 kg` / `0,00 kg` / `-0,26 kg`.
+- **Variante B:** Delta-Symbol „Δ" statt Vorzeichen. Anzeige: `Δ +5,92 kg` / `Δ -0,26 kg`. Visuell etwas mehr Platz, dafür sprachlich klarer.
+
+**Empfehlung:** Variante A. Minimal-invasiv, kein Layout-Bruch in der bestehenden Tabelle.
+
+#### Vermutete betroffene Dateien
+
+- PDF-Template Plateau-Tabelle (`core/templates/core/training_pdf_simple.html` – die Spalte „Ø +kg/Monat")
+- Ggf. Formatierungs-Helper in `core/utils/` falls existent, sonst inline-Template-Logik
+
+#### Akzeptanzkriterien
+
+- Positive, null, negative Raten werden alle korrekt formatiert
+- Bestehende positive Anzeigen ändern sich nicht
+- Test-Fall mit negativer Rate ergänzt (Hammer Curls ist ein aktueller Live-Fall)
+
+### 10.3 Verschoben auf Phase 26 – Konsolidierungs-Logik nicht zeitlich begrenzt
+
+**Beobachtung (11.05.2026):** Trizeps Overhead Extension hat Status „Konsolidierung (RPE sinkt)" – RPE sank von 8,5 auf 7,5 in den letzten 4 Wochen. Letzter PR liegt aber **63 Tage** zurück, Max-Gewicht seit 9.3. unverändert. Über 9 Wochen Konsolidierung ohne PR-Versuch ist materiell entweder ein verpasster Steigerungsversuch, eine RPE-Re-Kalibrierung oder ein Plateau auf neuem Niveau – aber kein „Konsolidierung" mehr.
+
+**Status:** Kein Fix in Phase 24. Das ist kein Bug, sondern eine konzeptionelle Lücke (Konsolidierung ist zeitlich unbegrenzt definiert). Neue Logik gehört in **Phase 26** – siehe `phase26_concept.md`.
+
+### 10.4 Status Phase 24
+
+| Sub | Status |
+|---|---|
+| 24.4 Audit | ✅ |
+| 24.1 Volumen-Diagnose | ✅ |
+| 24.1a Streak-Regression | ✅ |
+| 24.1b Fatigue/Deload | ✅ |
+| 24.2 Push/Pull | ✅ |
+| 24.5 Plateau-Status | ✅ |
+| 24.5a Aktuelles Fenster | ✅ |
+| 24.5b „+-"-Format | 📋 noch offen (Hotfix) |
+| 24.3 Header-Zeitraum | ✅ |
+| 24.6 Kraftstandards | ✅ |
+
+**Phase 24 ist inhaltlich abgeschlossen** sobald 24.5b gemerged ist. Daten-Konsistenz steht.
+
+**Nachfolge-Phasen:**
+- **Phase 25:** Layout-Refactor (Struktur/Technik, kein Style) – `phase25_concept.md`
+- **Phase 26:** Konsolidierungs-Logik zeitlich begrenzen – `phase26_concept.md`
+- **Phase 27:** Style-Overhaul (Farben, Typografie, Optik) – `phase27_concept.md`
+- **Phase 28:** Dokumentations-Aktualisierung (README, PROJECT_ROADMAP, alle Docs) – `phase28_concept.md`
+
+
+---
+
+## 11. Nach-Implementierungs-Befund (11.05.2026, abends)
+
+Beobachtung im Dashboard (`statistik`-Seite, Volumen-Chart Wochenansicht): KW20 ist erste Woche eines neuen Plan-Cycles, hat erst einen Trainingstag (~6.500 kg), wird aber im Vergleich zur abgeschlossenen KW19 (~24.000 kg) als **„Echte Regression"** klassifiziert. Annotation: *„Tonnage und effektives Volumen sinken beide – echte Leistungs-Regression. Recovery, Schlaf und Ernährung prüfen."*
+
+Materiell falsch: KW20 ist die laufende Woche und darf nach Phase-24.1-Konvention nicht als Bewertungsbasis dienen.
+
+### 11.1 Diagnose
+
+Der PDF-Pfad zeigt im selben Datenstand korrekt *„Trend-Bewertung pausiert – Diese Woche läuft noch, Trainingsplan-Wechsel"* (Section 8 im Export `TrainingReport_Leratos_20260411_20260511__2_.pdf`). Das heißt:
+
+- **PDF-Pfad nutzt Helper aus `core/export/stats_collector.py` korrekt** (Ergebnis aus 24.1)
+- **Dashboard-Pfad hat eine parallele Inline-Implementierung**, die den Klassifikator NICHT aufruft
+
+Phase-24.1-Section-5.2 (Cross-Cutting-Concern „Dashboard ↔ PDF Konsistenz") hatte explizit vor parallelen Implementierungen gewarnt – die Annahme war damals, dass das Dashboard die robuste Logik bereits hat. Tatsächlich war die Annahme falsch: Dashboard hatte zwar Visualisierung (Deload-Marker, Laufende-Woche-Marker), aber die Diagnose-Logik wurde nicht entsprechend abgesichert. Erst durch den 24.1-PDF-Fix entstand der Logik-Helper, der nun ins Dashboard portiert werden muss.
+
+### 11.2 Sub-Phase 24.1c – Klassifikator-Helper in gemeinsames Modul heben + Dashboard-Diagnose umstellen
+
+**Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** vor Phase 25 (zusammen mit 24.5b)
+
+#### Lösungsansatz
+
+Zwei-Schritte:
+
+1. **Refactor:** Helper aus `core/export/stats_collector.py` in ein neutraleres Modul ziehen, da er nicht export-spezifisch ist. Vorschlag: `core/utils/week_classification.py` oder `core/utils/training_periods.py`. Funktionen die mit-umziehen sollten:
+   - `_classify_weeks_from_sessions` (Klassifikation Deload / Plan-Wechsel / laufend / normal)
+   - `_aggregate_weekly_volume` (Wochen-Aggregation)
+   - `_fill_iso_week_range` (Lückenfüllung)
+   - `_build_week_diagnose` (Diagnose-Formulierung)
+   - Ggf. weitere, die rein klassifikatorisch sind
+   Sichtprüfung beim Start: welche Helper sind tatsächlich shared, welche bleiben export-spezifisch.
+
+2. **Dashboard-Anpassung:** Die Dashboard-View (vermutlich `core/views/training_stats.py` oder ähnliches) ruft den umgezogenen Helper, statt eigene Inline-Klassifikation zu betreiben.
+
+**Begründung für das Anheben:** User-Aussage (11.05.2026): *„denke würde es höher ziehen und da der ja in mehren benötigt wird und nicht nur im export"*. Konsequenz: Helper gehört zum Stamm-Modell-Layer, nicht zum Export-Layer. Phase 25 (Layout-Refactor) wird ggf. weitere Helper-Aufrufer einführen (z.B. Plateau-Plan-Wechsel-Annotation), die noch nicht export-bezogen sind.
+
+#### Vermutete betroffene Dateien
+
+- `core/export/stats_collector.py` (Quelle, Helper-Auszug)
+- `core/utils/week_classification.py` oder `core/utils/training_periods.py` (Neu, Ziel)
+- `core/views/training_stats.py` (oder analog – Dashboard-Volumen-Diagnose-Stelle)
+- Imports in allen drei Dateien
+- Tests in `core/tests/test_stats_collector.py::TestCollectWeeklyVolumePdfDiagnose` müssen mitgezogen werden (an die neue Modul-Lokation), evtl. auch Test-Datei umbenennen
+
+#### Edge Cases
+
+- **Andere Aufrufer der alten Helper-Pfade:** Vor dem Refactor `grep`-Suche, ob es weitere Stellen gibt, die die Helper bereits importieren. Falls ja: Imports überall anpassen.
+- **Backwards-Compat:** Da es keine externen Konsumenten gibt (interner Helper), kann hart umgezogen werden, ohne Re-Exports zu hinterlassen.
+- **Test-Isolation:** Tests sollten von der konkreten Modul-Lage entkoppelt sein – nach Umzug verifizieren, dass alle bestehenden Test-Fälle weiterhin grün laufen.
+
+#### Akzeptanzkriterien
+
+- Helper liegen in einem nicht-export-spezifischen Modul
+- PDF-Pfad nutzt weiterhin denselben Helper, Verhalten unverändert
+- Dashboard-Volumen-Diagnose zeigt für KW20-Konstellation (laufende Woche als „nächste Woche" zum Vergleich) keinen Regressions-Hinweis mehr, sondern „Trend-Bewertung pausiert" oder analoge Aussage
+- Plan-Wechsel- und Deload-Klassifikation im Dashboard identisch zum PDF
+- Tests weiterhin grün, ggf. um Dashboard-Aufruf-Test erweitert
+
+#### Offene Fragen
+
+- F-24.1c-1: Modul-Name – `week_classification.py` (deskriptiv) oder `training_periods.py` (semantisch breiter)? VSCode-Claude entscheidet nach Sichtung.
+- F-24.1c-2: Sind weitere Aufrufer betroffen (z.B. API-Endpoints, andere Views)? Sichtprüfung beim Start.
+
+### 11.3 Status Phase 24 aktualisiert
+
+| Sub | Status |
+|---|---|
+| 24.4 Audit | ✅ |
+| 24.1 Volumen-Diagnose (PDF) | ✅ |
+| 24.1a Streak-Regression | ✅ |
+| 24.1b Fatigue/Deload | ✅ |
+| 24.1c Helper-Refactor + Dashboard | 📋 noch offen |
+| 24.2 Push/Pull | ✅ |
+| 24.5 Plateau-Status | ✅ |
+| 24.5a Aktuelles Fenster | ✅ |
+| 24.5b „+-"-Format | 📋 noch offen (Hotfix) |
+| 24.3 Header-Zeitraum | ✅ |
+| 24.6 Kraftstandards | ✅ |
+
+**Phase 24 inhaltlich abgeschlossen** sobald 24.5b UND 24.1c gemerged sind. Reihenfolge der zwei offenen Sub-Phasen: 24.5b zuerst (XS-Hotfix), dann 24.1c (S, mit Refactor-Anteil). Begründung: 24.5b ist kleiner und schnell verifiziert, 24.1c hat Refactor-Aspekt und braucht etwas mehr Sichtung.
