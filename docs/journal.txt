@@ -6312,3 +6312,67 @@ selbst). Section 8 im Konzept-Doc ergänzt um Sub-Phase-24.5a-Eintrag.
 
 **Phase 25 entblockt:** alle drei Phase-24-Nachzügler (B1/B2/L1) sind
 behoben. Phase 25 (Layout-Refactor) kann starten.
+
+
+
+## Abgeschlossen: Konzept-Dokumente Phase 25/26/27/28 angelegt (11.05.2026)
+
+Nach Verifikation des zweiten 11.05.-Exports (alle drei Folge-Sub-Phasen
+B1/B2/L1 gefixt) wurden die nachgelagerten Phasen als Konzepte angelegt.
+
+**Phase 24 ergänzt (Section 10):**
+
+- Verifikations-Tabelle der drei Folge-Sub-Phasen (alle ✅)
+- 24.5b Hotfix konzipiert: „+-0,26 kg"-Format bei negativen Raten in
+  Plateau-Tabelle (Hammer Curls aktueller Live-Fall)
+- Konsolidierungs-Beobachtung als Phase-26-Inhalt parkiert
+- Status-Tabelle Phase 24: Alle Sub-Phasen ✅ ausser 24.5b 📋
+- Phase 24 inhaltlich abgeschlossen, sobald 24.5b gemerged ist
+
+**Neue Konzept-Dokumente:**
+
+- `docs/concepts/phase25_concept.md` (388 Zeilen) – Layout-Refactor
+  Struktur/Technik, sieben Sub-Phasen (Reihenfolge, Pagebreaks, doppelte
+  Sichten, ToC-Verlinkung, Encoding-Artefakte, Charts, Verlauf-Tabelle),
+  Style bewusst ausgeklammert (→ Phase 27).
+- `docs/concepts/phase26_concept.md` (108 Zeilen) – Konsolidierungs-Logik
+  zeitlich begrenzen (Trizeps-OH-Fall). Stufen-Modell vorgeschlagen:
+  0-4 W = Konsolidierung, 4-8 W = Bereit für PR, > 8 W = überlang.
+  Eine klar fokussierte Phase, keine Sub-Phasen-Verteilung.
+- `docs/concepts/phase27_concept.md` (161 Zeilen) – Style-Overhaul
+  (Farben, Typo, Icons, Karten, Charts). Setzt Style-Decision-Phase mit
+  User voraus (vor Implementierungs-Start). Sechs Sub-Phasen
+  provisorisch, finale Aufteilung nach Style-Decisions.
+- `docs/concepts/phase28_concept.md` (144 Zeilen) – Dokumentations-
+  Aktualisierung (README, PROJECT_ROADMAP veraltet, sonstige Docs).
+  Setzt voraus dass Phase 24-27 abgeschlossen sind. Fünf Sub-Phasen.
+
+**Phasen-Pipeline:**
+
+```
+Phase 24 (24.5b offen) → Phase 25 (Layout-Struktur) → Phase 26
+(Konsolidierung) → Phase 27 (Style) → Phase 28 (Doku)
+```
+
+**Nicht angefasst:**
+
+- `PROJECT_ROADMAP.md` – wird in Phase 28 komplett neu geschrieben
+- `docs/phase23_concept.md` – User verschiebt manuell oder in 28.4
+- Alle Code-Dateien
+
+**Nächste Aktion in VSCode:** 24.5b umsetzen (XS, ein Template-Token),
+dann mit Phase 25 starten.
+
+
+
+## In Arbeit: Sub-Phase 24.1c eingetragen (11.05.2026, abends)
+
+User-Befund im Dashboard (Statistik-Volumen-Chart Wochenansicht): KW20 (laufende Woche, erster Trainingstag, ~6.500 kg) wird gegen KW19 (abgeschlossen, ~24.000 kg) verglichen und als „Echte Regression" mit Empfehlung zu Recovery-Prüfung klassifiziert. Falsch – laufende Woche darf nach Phase-24.1-Konvention nicht als Bewertungsbasis dienen.
+
+**Diagnose:** PDF-Pfad zeigt im selben Datenstand korrekt „Trend-Bewertung pausiert". Heißt: 24.1-Helper in `core/export/stats_collector.py` wird vom PDF-Pfad genutzt, vom Dashboard-Pfad NICHT. Dashboard hat parallele Inline-Klassifikation.
+
+**Konzept:** Helper aus `core/export/` in `core/utils/week_classification.py` (oder `training_periods.py`, finale Namens-Entscheidung in VSCode) anheben, weil Helper nicht export-spezifisch ist und in Dashboard, künftig in Phase-25-Sub-Phasen, ggf. API-Endpoints gebraucht wird. Dashboard-View ruft danach denselben Helper. Beschreibung als Section 11 in `phase24_concept.md`.
+
+**Reihenfolge offener Sub-Phasen:** 24.5b („+-"-Format, XS) zuerst, danach 24.1c (Helper-Refactor + Dashboard-Anpassung, S). Phase 24 inhaltlich abgeschlossen sobald beide gemerged sind.
+
+Bewusst NICHT angefasst: Code – Implementierung wieder in VSCode/Claude Code.
