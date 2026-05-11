@@ -178,6 +178,40 @@ class TestConsistencyMetrics(StatsTestBase):
         # Aktueller Streak = 1 (nur diese Woche), längster = mind. 1
         self.assertEqual(result["aktueller_streak"], 1)
 
+    def _days_to_monday_n_weeks_ago(self, n: int) -> int:
+        """days_ago, um den Montag vor n Wochen zu treffen (n=1 = Vorwoche)."""
+        heute = timezone.now()
+        return (heute.isoweekday() - 1) + 7 * n
+
+    def test_streak_laufende_woche_leer_zaehlt_vorwoche(self):
+        """Regression B1: Bei leerer laufender Woche zählt der Streak ab der
+        letzten abgeschlossenen Woche – nicht 0."""
+        self._make_session(days_ago=self._days_to_monday_n_weeks_ago(1))
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["aktueller_streak"], 1)
+
+    def test_streak_laufende_woche_leer_mehrere_vorwochen(self):
+        """Vier aufeinanderfolgende Vorwochen + leere laufende Woche → Streak = 4."""
+        for n in range(1, 5):
+            self._make_session(days_ago=self._days_to_monday_n_weeks_ago(n))
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["aktueller_streak"], 4)
+
+    def test_streak_laufende_woche_trainiert_zaehlt_mit(self):
+        """Laufende Woche trainiert + Vorwoche trainiert → Streak = 2."""
+        self._make_session(days_ago=0)
+        self._make_session(days_ago=self._days_to_monday_n_weeks_ago(1))
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["aktueller_streak"], 2)
+
+    def test_streak_loch_zwei_wochen_zurueck_bricht(self):
+        """Leere laufende Woche bleibt neutral, aber leere Vorwoche
+        bricht den Streak (Loch vor zwei Wochen)."""
+        # Training nur 2 Wochen zurück, Vorwoche leer, laufende Woche leer
+        self._make_session(days_ago=self._days_to_monday_n_weeks_ago(2))
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["aktueller_streak"], 0)
+
     def test_avg_pause_korrekt(self):
         self._make_session(days_ago=0)
         self._make_session(days_ago=4)

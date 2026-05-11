@@ -525,3 +525,100 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 - **Start:** 10.05.2026 (Branch `feature/phase-24-6-kraftstandards-clear-display`)
 - **Abschluss:** 10.05.2026
 - **Ergebnis:** `calculate_1rm_standards` exponiert `gerade_erreicht` (Korridor-Progress < 5 %) und `ist_endstufe` (Elite). Das PDF-Template ersetzt die ProgressBar in beiden Fällen durch einen klaren Status-Text statt einer fast leeren Bar (z. B. *„✓ Anfänger gerade erreicht. Nächstes Ziel: Fortgeschritten – noch 36,5 kg."*). Verifiziert gegen Lera (10.05.2026): Mai-Bug-Konstellation organisch gewichen, keine Übung aktuell `gerade_erreicht=True`; Anzeigen für nicht-knappe Fälle bleiben unverändert. Tests in `core/tests/test_advanced_stats.py::TestOneRmStandards` reproduzieren den Mai-Bug + drei weitere Schwellen-Fälle.
+
+### 24.1a – Streak-Regression fixen (Folge-Sub-Phase aus Section 9.2 B1)
+
+- **Start:** 11.05.2026 (Branch `feature/phase-24-1a-streak-fix`)
+- **Abschluss:** 11.05.2026
+- **Ergebnis:** Aktueller Streak zählt jetzt bis zur letzten *abgeschlossenen* Trainings-Woche; die laufende Kalenderwoche ist neutral und bricht den Streak nicht mehr, wenn sie noch leer ist. Fix in beiden Pfaden (Dashboard & PDF) parallel implementiert: `core/utils/advanced_stats.py::calculate_consistency_metrics` (PDF) und `core/views/training_stats.py::_calculate_streak` (Dashboard). In der ersten Schleifen-Iteration (`is_current_week`) wird eine leere Woche ignoriert statt den Streak zu beenden.
+- **Hypothesen-Korrektur:** Section 9.2 hatte `core/export/stats_collector.py` als Quelle vermutet. Tatsächlich liegt die Streak-Logik in `advanced_stats.py` (PDF-Pfad) und `views/training_stats.py` (Dashboard-Pfad). 24.1 hat keinen der beiden direkt angefasst – der Bug ist eine *latente* Schwäche, sichtbar geworden durch Report-Erstellung am Montag früh (KW20 noch leer).
+- **Tests:** `core/tests/test_advanced_stats.py::TestConsistencyMetrics` – vier neue Fälle (`test_streak_laufende_woche_leer_zaehlt_vorwoche`, `..._mehrere_vorwochen`, `..._trainiert_zaehlt_mit`, `test_streak_loch_zwei_wochen_zurueck_bricht`). `core/tests/test_training_stats.py::TestCalculateStreak` – neue Test-Klasse mit fünf Fällen (Null, laufende leer, mehrere Vorwochen, gemischt, Loch). 373 Tests bestanden, keine Regression.
+- **Cross-Cutting-Konsequenz:** Beide Pfade laufen wieder synchron – analog zur Lehre aus PR #165 (24.5-Reviewer-Nachzug). Kein gemeinsamer Helper extrahiert; die Logik ist <15 Zeilen pro Pfad und nutzt unterschiedliche Datenmodelle (Queryset vs. direkter DB-Zugriff).
+
+
+---
+
+## 9. Nach-Implementierungs-Befund (11.05.2026)
+
+Erster Production-Export nach Phase-24-Abschluss: `TrainingReport_Leratos_20260411_20260511.pdf` (Erstellt 11.05.2026 03:55). Bewertung gegen Phase-24-Ziele:
+
+### 9.1 Was greift wie geplant
+
+- **24.3 Zeitraum-Labels:** Executive Summary zeigt sauber *„Trainingseinheiten: 12 (insgesamt 54 seit 03.01.2026), Sätze: 156 (insgesamt 773), Trainingsvolumen: 68615 kg (insgesamt 348012 kg)"*. Berichtszeitraum und Lifetime sind nicht mehr verwechselbar.
+- **24.2 Push/Pull kontextabhängig:** Ratio 1,00:1 → *„Ausgewogen, aber Push: Brust im Übertraining-Bereich und Pull: Rücken-Lat im Übertraining-Bereich"*. Empfehlung widerspricht der Muskelgruppen-Diagnose nicht mehr.
+- **24.5 Plateau-Status:** RDL (22,3 %/Monat, 25 Tage seit PR) → `aktive_progression_paused`. Trizeps OH (34,9 %/Monat, 63 Tage seit PR) → `aktive_progression_paused`. Hammer Curls → `konsolidierung`. Kein RDL-„Plateau"-Bug mehr.
+- **24.1 Volumen-Diagnose:** Hinweis *„Vergleich KW17→KW19"* sichtbar — Deload-Skip im PDF-Trend wirkt.
+
+### 9.2 Neue Bugs / Regressionen
+
+#### B1 — Streak-Regression: aktueller Streak fälschlich auf 0 (Phase-24-Regression)
+
+**Symptom:** Karte „Aktueller Streak (Wochen)" zeigt `0`, während „Längster Streak" weiterhin `19` zeigt und die Adherence bei `100,0 %` bleibt. Vor Phase 24 stand dort konsistent `19`.
+
+**Plausibilitätsprüfung:**
+- Heatmap zeigt KW19 (Vorwoche zum Report) vollständig trainiert
+- Übungsdetail-Charts dokumentieren Trainings am 06.05. und 08.05.
+- Adherence-Berechnung scheint weiterhin korrekt, nur die Streak-Anzeige nicht
+
+**Vermutung:** Bei der Implementierung von 24.1 wurde das Konzept „laufende Woche ausschließen" auf die Streak-Berechnung mit angewendet, so dass der Streak ab der laufenden Kalenderwoche zählt — und KW20 (ab Mo 11.05.) hat naturgemäß noch kein Training, also Streak = 0.
+
+**Korrektur-Anforderung:** Streak muss bis zur letzten **abgeschlossenen** Trainings-Woche zählen. Laufende Woche ist neutral, nicht streak-brechend.
+
+**Vermutete Quelle:** `core/export/stats_collector.py` (oder dort, wo Streak nach 24.1 berührt wurde). Test-Fall: User trainiert wöchentlich, Report wird Montag früh erstellt → Streak muss `N`, nicht `0` zeigen.
+
+#### B2 — Fatigue-Index ignoriert Deload-Klassifikation
+
+**Symptom:** Fatigue-Index von `0/100` (07.05.) auf `40/100` mit Warnung *„Sehr starker Volumen-Anstieg"* (11.05.). Auslöser: KW18 = 12.616 kg (Deload), KW19 = 23.745 kg (Re-Aufbau). Der +88 %-Sprung ist das **erwartete Wiederaufnehmen nach Deload**, nicht ein gefährlicher Volumen-Spike.
+
+**Kontext:** Phase 23.4 (Hinweistext im PDF) sagt explizit *„Volumen-Spike (Vergleich der letzten beiden Wochen)"* als Komponente. Phase 24.1 hat den entsprechenden Vergleich in der **Volumen-Diagnose** auf Deload-Skip umgestellt, im **Fatigue-Index** aber nicht. Inkonsistenz zwischen zwei Sektionen, die dieselbe Mechanik nutzen.
+
+**Konsequenz wenn nicht gefixt:** Bei einem regelmäßigen 3+1-Cycle generiert der Fatigue-Index nach **jeder** Deload-Woche eine fälschliche „Volumen-Spike"-Warnung. Glaubwürdigkeit der Metrik kippt.
+
+**Korrektur-Anforderung:** Die Deload-/Plan-Wechsel-/Laufende-Woche-Klassifikation aus 24.1 muss auch in die Volumen-Spike-Komponente des Fatigue-Index einfließen — gleicher Klassifikator, gleiche Skip-Logik.
+
+**Vermutete Quelle:** `core/utils/advanced_stats.py::calculate_fatigue_index` (oder wo die Volumen-Spike-Komponente lebt). Helper aus 24.1 (`_classify_weeks_from_sessions` o.ä.) sollte wiederverwendet werden — siehe Cross-Cutting-Concern 5.1.
+
+### 9.3 Logiklücke in 24.5
+
+#### L1 — Steigerungsrate ist All-Time-Mittel statt aktueller Trend
+
+**Symptom:** Trizeps Overhead Extension hat seit dem letzten PR am **09.03.** (63 Tage zurück) keine Veränderung mehr — Max-Gewicht laut Verlauf-Chart 17,5 kg seit 09.03., 1RM 26,2 kg seit März stabil. Die historische Steigerungsrate (34,9 %/Monat) stammt fast vollständig aus dem Aufbau Jan→März (5 → 17,5 kg). Die Übung wird trotzdem als `aktive_progression_paused` klassifiziert, weil das All-Time-Mittel die Schwelle (≥ 2 %/Monat) überschreitet.
+
+**Materielle Bewertung:** 9 Wochen Stagnation der Maximalgewichts-Grenze sind kein „Aktive Progression mit Pause", sondern ein echtes Plateau. Die neue Klassifikation maskiert genau die Fälle, die sie eigentlich differenzieren sollte.
+
+**Vergleichsfall RDL:** 22,3 %/Monat historisch — aber aktuell ebenfalls noch im Trend (80→85 kg in 4 Wochen ≈ +24 %/Monat). Hier ist die Klassifikation materiell richtig, die Logik prüft das aber nicht aktiv.
+
+**Korrektur-Anforderung:** Steigerungsrate für die Klassifikations-Entscheidung darf nicht das All-Time-Mittel sein, sondern muss ein aktuelles Zeitfenster verwenden. Vorschläge:
+- Variante A: Rate über die letzten 8–12 Wochen
+- Variante B: Rate seit dem letzten PR (kein PR und keine Steigerung im aktuellen Fenster → echtes Plateau)
+- Variante C: Beide Werte berechnen, nur klassifizieren wenn aktuelle UND historische Rate die Schwelle erfüllen
+
+Das All-Time-Mittel kann als Info-Spalte sichtbar bleiben, aber **nicht als Trigger**.
+
+**Vermutete Quelle:** `classify_progression_status` (laut Phase-24.5-Ergebnis). Tests in `core/tests/test_advanced_stats.py::TestPlateauAnalysis` müssen um einen Fall „hohe Historie, flache Gegenwart" ergänzt werden — genau der Trizeps-OH-Fall.
+
+### 9.4 Status der Phase-24-Ziele nach Befund
+
+| Ziel | Status |
+|---|---|
+| 24.4 Set-Attribution-Audit | ✅ unverändert gültig |
+| 24.1 Volumen-Diagnose | ⚠️ greift, aber Streak-Regression (B1) und Fatigue-Index-Inkonsistenz (B2) sind direkte Folgen unvollständiger Klassifikator-Anwendung |
+| 24.2 Push/Pull | ✅ greift |
+| 24.5 Plateau | ⚠️ greift formal, aber Klassifikations-Trigger zu großzügig (L1) |
+| 24.3 Header-Zeitraum | ✅ greift |
+| 24.6 Kraftstandards | ✅ (organisch keine Fälle aktiv, Logik korrekt) |
+
+### 9.5 Vorgeschlagene Folge-Sub-Phasen
+
+| Sub | Inhalt | Aufwand | Priorität |
+|---|---|---|---|
+| 24.1a | Streak-Berechnung fixen (B1) — bis letzte abgeschlossene Woche zählen | S | hoch (klare Regression) |
+| 24.1b | Fatigue-Index Volumen-Spike-Komponente um Deload-Skip erweitern (B2), Helper aus 24.1 wiederverwenden | S–M | hoch (kippt bei jedem Cycle) |
+| 24.5a | Steigerungsraten-Klassifikation auf aktuelles Zeitfenster umstellen (L1) | S | mittel (materielle Falsch-Klassifikation, aber subtil) |
+
+Alle drei sind direkte Folgen aus Phase 24, keine neuen Konzept-Themen. Empfehlung: Als Sammel-Sub-Phase `24.7-data-followups` oder als drei kleine Sub-Branches umsetzen — User entscheidet beim Start in VSCode.
+
+### 9.6 Kosmetik (keine Sub-Phase, nur Anmerkung für Phase 25)
+
+- Volumen-Diagnose-Zeile: *„Keine eindeutige Diagnose · Tonnage stabil · Effektives Volumen steigt · Vergleich KW17→KW19"* — die vier Tokens widersprechen sich teilweise. Phase 25 sollte den Diagnose-Block lesbarer machen (Haupt-Diagnose vs. Detail-Tokens visuell trennen oder eine prägnante Hauptaussage formulieren).
+- Empfehlungstext aus 24.2: *„Volumen pro Muskelgruppe einzeln prüfen"* ist ein Hinweis, kein konkreter Schritt. Konkretisierung (z.B. „Brust/Rücken-Lat um X Sätze reduzieren, vordere/seitliche Schulter um Y ergänzen") wäre eine spätere Iteration, kein Phase-24-Defekt.

@@ -20,6 +20,7 @@ from core.views.training_stats import (
     FATIGUE_FREQUENCY_WINDOW_DAYS,
     FATIGUE_RPE_WINDOW_DAYS,
     _calc_rpe_trend,
+    _calculate_streak,
     _check_rpe10_warning,
     _check_session_rpe_trend_warning,
     _detect_volume_warnings,
@@ -108,6 +109,47 @@ class TestGetWeekStart(TestCase):
         self.assertEqual(result.hour, 0)
         self.assertEqual(result.minute, 0)
         self.assertEqual(result.second, 0)
+
+
+class TestCalculateStreak(TestCase):
+    """Dashboard-Streak: laufende Woche ist neutral, nicht streak-brechend."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="streak_user", password="pw")
+        self.plan = Plan.objects.create(name="P", user=self.user)
+        heute = timezone.now()
+        self.monday_current = (heute - timedelta(days=heute.isoweekday() - 1)).replace(
+            hour=12, minute=0, second=0, microsecond=0
+        )
+
+    def _session_at(self, dt):
+        t = Trainingseinheit.objects.create(user=self.user, plan=self.plan, dauer_minuten=30)
+        Trainingseinheit.objects.filter(pk=t.pk).update(datum=dt)
+        return t
+
+    def test_keine_trainings_streak_null(self):
+        self.assertEqual(_calculate_streak(self.user, self.monday_current), 0)
+
+    def test_laufende_woche_leer_zaehlt_vorwoche(self):
+        # Regression B1: Report Montag früh, laufende Woche leer,
+        # Vorwoche trainiert → Streak = 1, nicht 0.
+        self._session_at(self.monday_current - timedelta(days=4))  # Donnerstag Vorwoche
+        self.assertEqual(_calculate_streak(self.user, self.monday_current), 1)
+
+    def test_laufende_woche_leer_mehrere_vorwochen(self):
+        for n in range(1, 5):
+            self._session_at(self.monday_current - timedelta(days=7 * n - 3))
+        self.assertEqual(_calculate_streak(self.user, self.monday_current), 4)
+
+    def test_laufende_woche_trainiert_zaehlt_mit(self):
+        self._session_at(self.monday_current + timedelta(hours=2))  # heute (Mo)
+        self._session_at(self.monday_current - timedelta(days=3))  # Vorwoche
+        self.assertEqual(_calculate_streak(self.user, self.monday_current), 2)
+
+    def test_loch_vor_zwei_wochen_bricht_streak(self):
+        # Vor zwei Wochen trainiert, Vorwoche leer, laufende Woche leer → 0
+        self._session_at(self.monday_current - timedelta(days=10))
+        self.assertEqual(_calculate_streak(self.user, self.monday_current), 0)
 
 
 class TestGetFatigueRating(TestCase):
