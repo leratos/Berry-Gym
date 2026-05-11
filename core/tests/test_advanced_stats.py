@@ -570,19 +570,74 @@ class TestPlateauAnalysis(StatsTestBase):
         self.assertEqual(result[0]["status"], "plateau_light")
 
     def test_phase24_5_override_greift_auch_bei_mittlerem_plateau(self):
-        """Override greift unabhängig von der Plateau-Stufe (15-42d, 43-84d, >84d).
-        Hier: PR 50 Tage her (würde sonst 'plateau' werden), Rate hoch."""
-        # 120 Tage Historie, deutlicher Aufbau, PR 50 Tage alt
-        for days_ago, gewicht in [(120, 50), (90, 60), (70, 70), (50, 80)]:
+        """Override greift bei `plateau_light` (15-42 Tage seit PR), sofern die
+        Rate im aktuellen 8-Wochen-Fenster hoch genug ist.
+
+        Phase 24.5a: Setup auf PR-Alter 20d angepasst – ein PR im 43-84-Bereich
+        ohne neue Steigerung im 8w-Fenster ist materiell ein echtes Plateau
+        und keine 'aktive Progression mit Pause'.
+        """
+        # Aufbau im Recent-Window: 50d→50, 30d→60, 20d→80 (PR)
+        # + 2 Sätze in den letzten 4 Wochen, damit der pause-Filter nicht greift
+        for days_ago, gewicht in [(50, 50), (30, 60), (20, 80)]:
             session = self._make_session(days_ago=days_ago)
             self._add_satz(session, gewicht=gewicht, wiederholungen=8)
-        # Mindestens 2 Sätze in den letzten 4 Wochen, damit pause-Filter nicht greift
-        for days_ago in [25, 10]:
+        for days_ago in [14, 7]:
             session = self._make_session(days_ago=days_ago)
             self._add_satz(session, gewicht=78, wiederholungen=8)
         result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["status"], "active_progression_paused")
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Phase 24.5a: Steigerungsrate über aktuelles Fenster, nicht All-Time
+    # ──────────────────────────────────────────────────────────────────────
+
+    def test_phase24_5a_trizeps_oh_lange_historie_aber_recent_flach_plateau(self):
+        """Reproduktion L1: Übung mit starkem Anfangs-Aufbau, dann 9 Wochen
+        flach (Trizeps-OH-Szenario).
+
+        Vor 24.5a: All-Time-Rate 34,9 %/Monat → fälschlich
+        `active_progression_paused`. Nach 24.5a: Recent-Window-Rate 0 →
+        echtes Plateau wird korrekt erkannt.
+        """
+        # Aufbau: 100d→5, 85d→10, 70d→15, 65d→17.5 (PR, gleichstand-Logik:
+        # chronologisch erster Satz mit Bestwert gewinnt).
+        for days_ago, gewicht in [(100, 5), (85, 10), (70, 15), (65, 17.5)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8)
+        # 9 Wochen flach: 60, 45, 30, 15, 5 alle bei 17.5 kg (kein neuer PR).
+        # Damit cur_4w_n ≥ 2 ist (kein pause-Filter) und im Recent-Window
+        # mindestens zwei gleichgewichtige Sätze liegen.
+        for days_ago in [60, 45, 30, 15, 5]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=17.5, wiederholungen=8)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        # tage_seit_pr = 65, 43 ≤ 65 ≤ 84 → echte Plateau-Stufe
+        self.assertEqual(result[0]["status"], "plateau")
+        # Recent-Window: nur die flachen 17,5-kg-Sätze fallen rein → Rate = 0
+        self.assertEqual(result[0]["progression_pro_monat"], 0.0)
+        # All-Time-Mittel wäre hier ~+6 kg/Monat – wenn jemand die alte Logik
+        # zurückbringt, soll dieser Test laut anschlagen.
+        self.assertNotEqual(result[0]["status"], "active_progression_paused")
+
+    def test_phase24_5a_recent_window_zaehlt_nicht_all_time(self):
+        """Bestätigung: gleiche All-Time-Rate, zwei verschiedene Recent-
+        Verläufe → unterschiedliche Klassifikation. Sicherheitsnetz gegen
+        eine Rückkehr zur All-Time-Logik."""
+        # Aufbau Anfang, dann komplett flach im Recent-Window
+        for days_ago, gewicht in [(120, 30), (100, 45), (80, 60), (75, 65)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8)
+        for days_ago in [55, 40, 25, 12, 4]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=65, wiederholungen=8)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        # tage_seit_pr = 75 → plateau (43-84d). Override greift NICHT, weil
+        # Recent-Rate = 0, obwohl All-Time-Mittel deutlich positiv.
+        self.assertNotEqual(result[0]["status"], "active_progression_paused")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
