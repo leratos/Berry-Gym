@@ -39,6 +39,7 @@ from core.export.stats_collector import (
     collect_weekly_volume_pdf,
     collect_weight_trend,
     muscle_status,
+    select_comparable_weeks,
     sum_volume,
 )
 from core.tests.factories import (
@@ -688,6 +689,123 @@ def _set_week_volume(user, plan, datum, gewicht: Decimal, ist_deload: bool = Fal
         rpe=Decimal("8.0"),
         ist_aufwaermsatz=False,
     )
+
+
+class TestSelectComparableWeeks:
+    """Phase 24.1b: extrahierter Helper, wiederverwendet von Volumen-Diagnose
+    und Fatigue-Index Volumen-Spike-Komponente."""
+
+    def test_skipt_laufende_woche(self):
+        weeks = [
+            {
+                "woche": "KW17",
+                "volumen": 100,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+            {
+                "woche": "KW18",
+                "volumen": 110,
+                "ist_laufend": True,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+        ]
+        result = select_comparable_weeks(weeks)
+        assert [w["woche"] for w in result] == ["KW17"]
+
+    def test_skipt_deload_majority(self):
+        weeks = [
+            {
+                "woche": "KW17",
+                "volumen": 100,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+            {
+                "woche": "KW18",
+                "volumen": 50,
+                "ist_laufend": False,
+                "ist_deload_majority": True,
+                "ist_plan_wechsel": False,
+            },
+            {
+                "woche": "KW19",
+                "volumen": 110,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+        ]
+        result = select_comparable_weeks(weeks)
+        assert [w["woche"] for w in result] == ["KW17", "KW19"]
+
+    def test_stoppt_an_plan_wechsel(self):
+        weeks = [
+            {
+                "woche": "KW10",
+                "volumen": 100,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+            {
+                "woche": "KW11",
+                "volumen": 90,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": True,
+            },
+            {
+                "woche": "KW12",
+                "volumen": 80,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+            {
+                "woche": "KW13",
+                "volumen": 85,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+        ]
+        result = select_comparable_weeks(weeks)
+        # KW10/11 hinter der Plan-Epoch-Grenze, neue Epoche = KW12 + KW13
+        assert [w["woche"] for w in result] == ["KW12", "KW13"]
+
+    def test_skipt_null_volumen(self):
+        weeks = [
+            {
+                "woche": "KW17",
+                "volumen": 0,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+            {
+                "woche": "KW18",
+                "volumen": 100,
+                "ist_laufend": False,
+                "ist_deload_majority": False,
+                "ist_plan_wechsel": False,
+            },
+        ]
+        result = select_comparable_weeks(weeks)
+        assert [w["woche"] for w in result] == ["KW18"]
+
+    def test_fehlende_flags_werden_als_neutral_behandelt(self):
+        """Wochen-Dicts ohne 24.1-Flags (z.B. aus älteren Aufrufpfaden) dürfen
+        nicht crashen – defaults: nicht laufend, nicht deload, nicht plan-wechsel."""
+        weeks = [
+            {"woche": "KW17", "volumen": 100},
+            {"woche": "KW18", "volumen": 110},
+        ]
+        result = select_comparable_weeks(weeks)
+        assert [w["woche"] for w in result] == ["KW17", "KW18"]
 
 
 @pytest.mark.django_db
