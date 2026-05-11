@@ -2118,6 +2118,8 @@ def _calc_plateau_live(user) -> list[dict]:
         # (gleiche Logik wie PDF-Plateau-Analyse, inkl. Pause/Konsolidierung/Regression).
         # Phase 24.5: Steigerungsraten-Override via compute_progression_rate –
         # Live-Dashboard und PDF-Pfad teilen sich denselben Override.
+        # Phase 24.5a: Rate wird über das aktuelle 8-Wochen-Fenster berechnet,
+        # ``heute`` wird explizit durchgereicht (Konsistenz mit classify-Aufruf).
         uebung_saetze = Satz.objects.filter(
             einheit__user=user,
             uebung_id=uebung_id,
@@ -2125,7 +2127,7 @@ def _calc_plateau_live(user) -> list[dict]:
             einheit__ist_deload=False,
         ).select_related("einheit")
         progression_pro_monat, training_history_days = compute_progression_rate(
-            uebung_saetze, letzter_pr_satz
+            uebung_saetze, letzter_pr_satz, reference_date=heute
         )
         classification = classify_progression_status(
             uebung_saetze,

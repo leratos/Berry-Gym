@@ -48,6 +48,12 @@ PROGRESSION_RATE_OVERRIDE_PCT = 2.0
 # Übungen mit weniger als ~3 Wochen Historie haben zu starkes Rauschen in
 # `progression_pro_monat`, der Override soll dort nicht greifen.
 PROGRESSION_RATE_MIN_HISTORY_DAYS = 21
+# Phase 24.5a: Steigerungsrate für die Override-Entscheidung wird über das
+# aktuelle Fenster (Default 8 Wochen) berechnet, NICHT mehr über das All-Time-
+# Mittel. Damit werden lange Stagnationen mit hoher Anfangs-Steigerungsrate
+# (z.B. Trizeps OH: 9 Wochen flach nach starkem Aufbau) wieder korrekt als
+# Plateau klassifiziert. Das All-Time-Mittel war als Trigger zu großzügig.
+PROGRESSION_RATE_RECENT_WINDOW_WEEKS = 8
 
 # Phase 23.2: Effektives Volumen
 # RPE-Range, der als "produktives" Volumen gilt – außerhalb davon liegt
@@ -80,30 +86,67 @@ def _find_best_1rm_satz(uebung_saetze):
     return bester_1rm, bester_satz
 
 
-def compute_progression_rate(uebung_saetze, pr_satz) -> tuple[float, int]:
-    """Phase 24.5: Helper für ``classify_progression_status``-Override.
+def compute_progression_rate(
+    uebung_saetze,
+    pr_satz,
+    *,
+    reference_date=None,
+    recent_window_weeks: int = PROGRESSION_RATE_RECENT_WINDOW_WEEKS,
+) -> tuple[float, int]:
+    """Phase 24.5 / 24.5a: Helper für ``classify_progression_status``-Override.
 
-    Berechnet die durchschnittliche 1RM-Steigerungsrate (kg/Monat) und die
-    Trainingshistorie der Übung (Tage zwischen erstem gewichteten Satz und
-    PR-Satz). Wird sowohl von ``calculate_plateau_analysis`` (PDF) als auch
-    von ``_calc_plateau_live`` (Dashboard) genutzt, damit beide Pfade
-    identisch klassifizieren.
+    Berechnet die 1RM-Steigerungsrate (kg/Monat) über das **aktuelle Fenster**
+    (Default 8 Wochen) und die All-Time-Trainingshistorie der Übung (Tage
+    zwischen erstem gewichteten Satz und PR-Satz). Wird sowohl von
+    ``calculate_plateau_analysis`` (PDF) als auch von ``_calc_plateau_live``
+    (Dashboard) genutzt, damit beide Pfade identisch klassifizieren.
+
+    Vor Phase 24.5a war die Rate das All-Time-Mittel zwischen erstem Satz und
+    PR. Das führte dazu, dass eine Übung mit starkem Anfangsaufbau und
+    anschließender Stagnation (z.B. Trizeps OH: 5 → 17,5 kg in 8 Wochen, dann
+    9 Wochen flach) trotz materiellem Plateau als ``active_progression_paused``
+    klassifiziert wurde. Die Recent-Window-Rate misst stattdessen den
+    *aktuellen* Trend.
+
+    Args:
+        uebung_saetze: Satz-Queryset für genau eine Übung.
+        pr_satz: Satz mit dem höchsten geschätzten 1RM.
+        reference_date: Stichtag (Default ``timezone.now()``). Das
+            Recent-Window endet hier und reicht
+            ``recent_window_weeks`` Wochen zurück.
+        recent_window_weeks: Länge des Recent-Windows in Wochen
+            (Default ``PROGRESSION_RATE_RECENT_WINDOW_WEEKS``).
 
     Returns:
-        ``(progression_pro_monat, training_history_days)`` – beide Werte sind
-        ``0`` wenn Historie zu kurz oder kein erster Satz vorhanden.
+        ``(progression_pro_monat, training_history_days)`` – Rate über das
+        Recent-Window, History in Tagen *all-time* (= PR-Datum minus
+        erster-Satz-Datum). ``history_days`` bleibt all-time, damit der
+        Min-History-Schutz in ``classify_progression_status`` unverändert
+        wirken kann (junge Übungen → kein Override).
     """
     if pr_satz is None or not pr_satz.gewicht:
         return 0.0, 0
-    pr_1rm = float(pr_satz.gewicht) * (1 + (pr_satz.wiederholungen or 1) / 30.0)
-    erster = uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum").first()
-    if erster is None or not erster.gewicht:
+    weighted_saetze = list(uebung_saetze.filter(gewicht__isnull=False).order_by("einheit__datum"))
+    if not weighted_saetze:
         return 0.0, 0
-    erstes_1rm = float(erster.gewicht) * (1 + (erster.wiederholungen or 1) / 30.0)
+    erster = weighted_saetze[0]
     history_days = (pr_satz.einheit.datum.date() - erster.einheit.datum.date()).days
     if history_days <= 0:
         return 0.0, 0
-    rate = round((pr_1rm - erstes_1rm) / history_days * 30, 2)
+
+    if reference_date is None:
+        reference_date = timezone.now()
+    window_start = reference_date - timedelta(days=recent_window_weeks * 7)
+    recent = [s for s in weighted_saetze if s.einheit.datum >= window_start and s.gewicht]
+    if len(recent) < 2:
+        return 0.0, history_days
+    erster_recent, letzter_recent = recent[0], recent[-1]
+    span_days = (letzter_recent.einheit.datum.date() - erster_recent.einheit.datum.date()).days
+    if span_days <= 0:
+        return 0.0, history_days
+    erstes_1rm = float(erster_recent.gewicht) * (1 + (erster_recent.wiederholungen or 1) / 30.0)
+    letztes_1rm = float(letzter_recent.gewicht) * (1 + (letzter_recent.wiederholungen or 1) / 30.0)
+    rate = round((letztes_1rm - erstes_1rm) / span_days * 30, 2)
     return rate, history_days
 
 
@@ -240,13 +283,18 @@ def classify_progression_status(
             )
             return result
 
-    # Phase 24.5: Override – starke historische Steigerungsrate schlägt Plateau-
-    # Klassifikation. Greift NACH Konsolidierung (RPE sinkt hat Vorrang) und VOR
-    # der reinen Tage-seit-PR-Logik. Schutz: nur wenn beide Eingaben da sind und
-    # die Übungshistorie hinreichend lang ist – sonst Rauschen aus 2–3 Sätzen.
+    # Phase 24.5: Override – starke Steigerungsrate schlägt Plateau-Klassifikation.
+    # Greift NACH Konsolidierung (RPE sinkt hat Vorrang) und VOR der reinen
+    # Tage-seit-PR-Logik. Schutz: nur wenn Eingaben da sind und die
+    # Übungshistorie hinreichend lang ist – sonst Rauschen aus 2–3 Sätzen.
+    #
+    # Phase 24.5a: ``progression_pro_monat`` wird über das aktuelle 8w-Fenster
+    # berechnet (siehe ``compute_progression_rate``). Eine Rate von 0 / leicht
+    # negativ ist sinnvoll – sie zeigt eine flache Gegenwart trotz langer
+    # Historie und führt korrekt NICHT zum Override.
     if (
         progression_pro_monat is not None
-        and progression_pro_monat > 0
+        and progression_pro_monat >= 0
         and training_history_days is not None
         and training_history_days >= PROGRESSION_RATE_MIN_HISTORY_DAYS
         and pr_1rm > 0
@@ -314,9 +362,10 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
         letzter_pr = round(bester_1rm, 1)
         pr_datum = pr_satz.einheit.datum
 
-        # Durchschnittliche Progression pro Monat (auf 1RM-Basis)
+        # Phase 24.5a: Steigerungsrate über das aktuelle 8-Wochen-Fenster,
+        # nicht mehr All-Time. Anker = ``heute`` für Test-Determinismus.
         progression_pro_monat, training_history_days = compute_progression_rate(
-            uebung_saetze, pr_satz
+            uebung_saetze, pr_satz, reference_date=heute
         )
 
         classification = classify_progression_status(
