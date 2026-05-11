@@ -154,18 +154,30 @@ def _get_week_overview(user, heute) -> list[dict]:
 
 
 def _calculate_streak(user, heute) -> int:
-    """Count consecutive weeks with at least one training session."""
+    """Count consecutive weeks with at least one training session.
+
+    The current calendar week is treated as neutral: if the user has not yet
+    trained this week, that does not break the streak – we keep counting back
+    from the last completed week.
+    """
     streak = 0
     check_date = heute
-    while streak <= 52:
+    iterations = 0
+    while iterations <= 52:
         week_start = _get_week_start(check_date)
         week_end = week_start + timedelta(days=7)
-        if not Trainingseinheit.objects.filter(
+        has_training = Trainingseinheit.objects.filter(
             user=user, datum__gte=week_start, datum__lt=week_end
-        ).exists():
+        ).exists()
+        if has_training:
+            streak += 1
+        elif iterations == 0:
+            # Laufende Woche neutral – nicht streak-brechend.
+            pass
+        else:
             break
-        streak += 1
         check_date = week_start - timedelta(days=1)
+        iterations += 1
     return streak
 
 
@@ -2106,6 +2118,8 @@ def _calc_plateau_live(user) -> list[dict]:
         # (gleiche Logik wie PDF-Plateau-Analyse, inkl. Pause/Konsolidierung/Regression).
         # Phase 24.5: Steigerungsraten-Override via compute_progression_rate –
         # Live-Dashboard und PDF-Pfad teilen sich denselben Override.
+        # Phase 24.5a: Rate wird über das aktuelle 8-Wochen-Fenster berechnet,
+        # ``heute`` wird explizit durchgereicht (Konsistenz mit classify-Aufruf).
         uebung_saetze = Satz.objects.filter(
             einheit__user=user,
             uebung_id=uebung_id,
@@ -2113,7 +2127,7 @@ def _calc_plateau_live(user) -> list[dict]:
             einheit__ist_deload=False,
         ).select_related("einheit")
         progression_pro_monat, training_history_days = compute_progression_rate(
-            uebung_saetze, letzter_pr_satz
+            uebung_saetze, letzter_pr_satz, reference_date=heute
         )
         classification = classify_progression_status(
             uebung_saetze,

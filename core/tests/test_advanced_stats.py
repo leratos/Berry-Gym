@@ -178,6 +178,40 @@ class TestConsistencyMetrics(StatsTestBase):
         # Aktueller Streak = 1 (nur diese Woche), längster = mind. 1
         self.assertEqual(result["aktueller_streak"], 1)
 
+    def _days_to_monday_n_weeks_ago(self, n: int) -> int:
+        """days_ago, um den Montag vor n Wochen zu treffen (n=1 = Vorwoche)."""
+        heute = timezone.now()
+        return (heute.isoweekday() - 1) + 7 * n
+
+    def test_streak_laufende_woche_leer_zaehlt_vorwoche(self):
+        """Regression B1: Bei leerer laufender Woche zählt der Streak ab der
+        letzten abgeschlossenen Woche – nicht 0."""
+        self._make_session(days_ago=self._days_to_monday_n_weeks_ago(1))
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["aktueller_streak"], 1)
+
+    def test_streak_laufende_woche_leer_mehrere_vorwochen(self):
+        """Vier aufeinanderfolgende Vorwochen + leere laufende Woche → Streak = 4."""
+        for n in range(1, 5):
+            self._make_session(days_ago=self._days_to_monday_n_weeks_ago(n))
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["aktueller_streak"], 4)
+
+    def test_streak_laufende_woche_trainiert_zaehlt_mit(self):
+        """Laufende Woche trainiert + Vorwoche trainiert → Streak = 2."""
+        self._make_session(days_ago=0)
+        self._make_session(days_ago=self._days_to_monday_n_weeks_ago(1))
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["aktueller_streak"], 2)
+
+    def test_streak_loch_zwei_wochen_zurueck_bricht(self):
+        """Leere laufende Woche bleibt neutral, aber leere Vorwoche
+        bricht den Streak (Loch vor zwei Wochen)."""
+        # Training nur 2 Wochen zurück, Vorwoche leer, laufende Woche leer
+        self._make_session(days_ago=self._days_to_monday_n_weeks_ago(2))
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["aktueller_streak"], 0)
+
     def test_avg_pause_korrekt(self):
         self._make_session(days_ago=0)
         self._make_session(days_ago=4)
@@ -293,6 +327,78 @@ class TestFatigueIndex(StatsTestBase):
         result = calculate_fatigue_index([], self._get_rpe_saetze(), self._alle_trainings())
         # Muss ein Datum-String sein (DD.MM.YYYY)
         self.assertRegex(result["naechste_deload"], r"\d{2}\.\d{2}\.\d{4}")
+
+    # Phase 24.1b: Volumen-Spike-Komponente muss denselben Klassifikator wie
+    # die 24.1-Volumen-Diagnose nutzen (Deload-/Plan-Wechsel-/Laufende-Woche-Skip).
+
+    def test_deload_zwischen_nicht_als_spike(self):
+        """Regression B2: Re-Aufbau nach Deload-Woche ist kein Volumen-Spike."""
+        volume_data = [
+            {"woche": "KW17", "volumen": 23157},
+            {"woche": "KW18", "volumen": 12616, "ist_deload_majority": True},
+            {"woche": "KW19", "volumen": 23745},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        # comparable Wochen: KW17 + KW19 (KW18 als Deload-Mehrheit skipped).
+        # Vergleich +2,5 % → keine Spike-Warnung.
+        self.assertFalse(result["volumen_spike"])
+        self.assertNotIn("Sehr starker Volumen-Anstieg", result["warnungen"])
+        self.assertNotIn("Starker Volumen-Anstieg", result["warnungen"])
+
+    def test_plan_wechsel_stoppt_vergleich(self):
+        """Plan-Wechsel-Woche ist Epoch-Grenze – Vergleich nur über neue Epoch."""
+        volume_data = [
+            {"woche": "KW10", "volumen": 5000},
+            {"woche": "KW11", "volumen": 6000, "ist_plan_wechsel": True},
+            {"woche": "KW12", "volumen": 8000},
+            {"woche": "KW13", "volumen": 8500},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        # comparable rückwärts: KW13 → KW12 → KW11 (Plan-Wechsel, stop).
+        # Vergleich KW12 vs KW13 = +6 % → kein Spike.
+        self.assertFalse(result["volumen_spike"])
+
+    def test_laufende_woche_wird_uebersprungen(self):
+        """Die laufende (unvollständige) Woche darf den Spike-Vergleich nicht
+        verfälschen."""
+        volume_data = [
+            {"woche": "KW17", "volumen": 22000},
+            {"woche": "KW18", "volumen": 23000},
+            {"woche": "KW19", "volumen": 8000, "ist_laufend": True},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        # comparable: KW17 + KW18 (KW19 ist laufend). +4,5 % → kein Spike.
+        self.assertFalse(result["volumen_spike"])
+
+    def test_echter_spike_ohne_deload_loch_warnt_weiter(self):
+        """Wenn zwei aufeinanderfolgende comparable Wochen +40 % zeigen,
+        bleibt die Warnung erhalten."""
+        volume_data = [
+            {"woche": "KW17", "volumen": 10000},
+            {"woche": "KW18", "volumen": 14000},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        self.assertTrue(result["volumen_spike"])
+        self.assertIn("Sehr starker Volumen-Anstieg", result["warnungen"])
+
+    def test_zu_wenig_comparable_wochen_kein_spike(self):
+        """Nur eine comparable Woche (alle anderen Deload/laufend) → 0 Pkt."""
+        volume_data = [
+            {"woche": "KW18", "volumen": 12000, "ist_deload_majority": True},
+            {"woche": "KW19", "volumen": 23000, "ist_laufend": True},
+        ]
+        result = calculate_fatigue_index(
+            volume_data, self._get_rpe_saetze(), self._alle_trainings()
+        )
+        self.assertFalse(result["volumen_spike"])
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -464,19 +570,74 @@ class TestPlateauAnalysis(StatsTestBase):
         self.assertEqual(result[0]["status"], "plateau_light")
 
     def test_phase24_5_override_greift_auch_bei_mittlerem_plateau(self):
-        """Override greift unabhängig von der Plateau-Stufe (15-42d, 43-84d, >84d).
-        Hier: PR 50 Tage her (würde sonst 'plateau' werden), Rate hoch."""
-        # 120 Tage Historie, deutlicher Aufbau, PR 50 Tage alt
-        for days_ago, gewicht in [(120, 50), (90, 60), (70, 70), (50, 80)]:
+        """Override greift bei `plateau_light` (15-42 Tage seit PR), sofern die
+        Rate im aktuellen 8-Wochen-Fenster hoch genug ist.
+
+        Phase 24.5a: Setup auf PR-Alter 20d angepasst – ein PR im 43-84-Bereich
+        ohne neue Steigerung im 8w-Fenster ist materiell ein echtes Plateau
+        und keine 'aktive Progression mit Pause'.
+        """
+        # Aufbau im Recent-Window: 50d→50, 30d→60, 20d→80 (PR)
+        # + 2 Sätze in den letzten 4 Wochen, damit der pause-Filter nicht greift
+        for days_ago, gewicht in [(50, 50), (30, 60), (20, 80)]:
             session = self._make_session(days_ago=days_ago)
             self._add_satz(session, gewicht=gewicht, wiederholungen=8)
-        # Mindestens 2 Sätze in den letzten 4 Wochen, damit pause-Filter nicht greift
-        for days_ago in [25, 10]:
+        for days_ago in [14, 7]:
             session = self._make_session(days_ago=days_ago)
             self._add_satz(session, gewicht=78, wiederholungen=8)
         result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["status"], "active_progression_paused")
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Phase 24.5a: Steigerungsrate über aktuelles Fenster, nicht All-Time
+    # ──────────────────────────────────────────────────────────────────────
+
+    def test_phase24_5a_trizeps_oh_lange_historie_aber_recent_flach_plateau(self):
+        """Reproduktion L1: Übung mit starkem Anfangs-Aufbau, dann 9 Wochen
+        flach (Trizeps-OH-Szenario).
+
+        Vor 24.5a: All-Time-Rate 34,9 %/Monat → fälschlich
+        `active_progression_paused`. Nach 24.5a: Recent-Window-Rate 0 →
+        echtes Plateau wird korrekt erkannt.
+        """
+        # Aufbau: 100d→5, 85d→10, 70d→15, 65d→17.5 (PR, gleichstand-Logik:
+        # chronologisch erster Satz mit Bestwert gewinnt).
+        for days_ago, gewicht in [(100, 5), (85, 10), (70, 15), (65, 17.5)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8)
+        # 9 Wochen flach: 60, 45, 30, 15, 5 alle bei 17.5 kg (kein neuer PR).
+        # Damit cur_4w_n ≥ 2 ist (kein pause-Filter) und im Recent-Window
+        # mindestens zwei gleichgewichtige Sätze liegen.
+        for days_ago in [60, 45, 30, 15, 5]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=17.5, wiederholungen=8)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        # tage_seit_pr = 65, 43 ≤ 65 ≤ 84 → echte Plateau-Stufe
+        self.assertEqual(result[0]["status"], "plateau")
+        # Recent-Window: nur die flachen 17,5-kg-Sätze fallen rein → Rate = 0
+        self.assertEqual(result[0]["progression_pro_monat"], 0.0)
+        # All-Time-Mittel wäre hier ~+6 kg/Monat – wenn jemand die alte Logik
+        # zurückbringt, soll dieser Test laut anschlagen.
+        self.assertNotEqual(result[0]["status"], "active_progression_paused")
+
+    def test_phase24_5a_recent_window_zaehlt_nicht_all_time(self):
+        """Bestätigung: gleiche All-Time-Rate, zwei verschiedene Recent-
+        Verläufe → unterschiedliche Klassifikation. Sicherheitsnetz gegen
+        eine Rückkehr zur All-Time-Logik."""
+        # Aufbau Anfang, dann komplett flach im Recent-Window
+        for days_ago, gewicht in [(120, 30), (100, 45), (80, 60), (75, 65)]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=gewicht, wiederholungen=8)
+        for days_ago in [55, 40, 25, 12, 4]:
+            session = self._make_session(days_ago=days_ago)
+            self._add_satz(session, gewicht=65, wiederholungen=8)
+        result = calculate_plateau_analysis(self._alle_saetze(), self._top_uebungen())
+        self.assertEqual(len(result), 1)
+        # tage_seit_pr = 75 → plateau (43-84d). Override greift NICHT, weil
+        # Recent-Rate = 0, obwohl All-Time-Mittel deutlich positiv.
+        self.assertNotEqual(result[0]["status"], "active_progression_paused")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
