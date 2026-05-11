@@ -535,6 +535,26 @@ Phase 25 startet erst nach Abschluss von Phase 24. Layout-Themen, die schon jetz
 - **Tests:** `core/tests/test_advanced_stats.py::TestConsistencyMetrics` – vier neue Fälle (`test_streak_laufende_woche_leer_zaehlt_vorwoche`, `..._mehrere_vorwochen`, `..._trainiert_zaehlt_mit`, `test_streak_loch_zwei_wochen_zurueck_bricht`). `core/tests/test_training_stats.py::TestCalculateStreak` – neue Test-Klasse mit fünf Fällen (Null, laufende leer, mehrere Vorwochen, gemischt, Loch). 373 Tests bestanden, keine Regression.
 - **Cross-Cutting-Konsequenz:** Beide Pfade laufen wieder synchron – analog zur Lehre aus PR #165 (24.5-Reviewer-Nachzug). Kein gemeinsamer Helper extrahiert; die Logik ist <15 Zeilen pro Pfad und nutzt unterschiedliche Datenmodelle (Queryset vs. direkter DB-Zugriff).
 
+### 24.1b – Fatigue-Index Deload-Skip (Folge-Sub-Phase aus Section 9.2 B2)
+
+- **Start:** 11.05.2026 (Branch `feature/phase-24-1b-fatigue-deload-skip`, Stack-Basis 24.1a)
+- **Abschluss:** 11.05.2026
+- **Ergebnis:** Die Volumen-Spike-Komponente des Fatigue-Index nutzt jetzt denselben Klassifikator wie die 24.1-Volumen-Diagnose. Re-Aufbau-Wochen nach Deload triggern keine fälschliche „Sehr starker Volumen-Anstieg"-Warnung mehr. Die comparable-Wochen-Selektion (`ist_laufend`/`ist_deload_majority`/`ist_plan_wechsel`/Plan-Epoch-Grenze) wurde aus `_build_week_diagnose` in einen public Helper `select_comparable_weeks` in `core/export/stats_collector.py` extrahiert und wird von beiden Aufrufpfaden konsumiert.
+- **Helper-Reuse statt Parallel-Implementierung:** `calculate_fatigue_index` in `core/utils/advanced_stats.py` importiert `select_comparable_weeks` lazy (analog zum bereits bestehenden Lazy-Import auf `core.views.training_stats`-Helper). Wenn weniger als zwei comparable Wochen vorhanden sind, liefert die Spike-Komponente 0 Punkte und keine Warnung statt eines irreführenden Vergleichs.
+- **Layer-Bruch:** `advanced_stats → export` ist neu. Pragmatisch akzeptiert; vollständige Bereinigung (Helper nach `core/utils/`) ist Phase-25-Kandidat.
+- **Tests:** `core/tests/test_stats_collector.py::TestSelectComparableWeeks` – fünf Direct-Tests (laufende/Deload/Plan-Wechsel-Stop/Null-Volumen/fehlende-Flags-Default). `core/tests/test_advanced_stats.py::TestFatigueIndex` – fünf neue Tests (`test_deload_zwischen_nicht_als_spike` für B2-Reproduktion, `test_plan_wechsel_stoppt_vergleich`, `test_laufende_woche_wird_uebersprungen`, `test_echter_spike_ohne_deload_loch_warnt_weiter`, `test_zu_wenig_comparable_wochen_kein_spike`). 443 Tests bestanden, keine Regression. Bestehende Spike-Tests bleiben grün, weil Dicts ohne 24.1-Flags durch den Helper als „neutral" behandelt werden.
+
+### 24.5a – Steigerungsrate auf aktuelles Fenster (Folge-Sub-Phase aus Section 9.3 L1)
+
+- **Start:** 11.05.2026 (Branch `feature/phase-24-5a-plateau-current-window`, Stack-Basis 24.1b)
+- **Abschluss:** 11.05.2026
+- **Variante gewählt:** A – Rate über die letzten 8 Wochen statt All-Time-Mittel (am wenigsten invasiv). B (seit letztem PR) verworfen, weil per Definition nie positiv; C (beide Raten kombinieren) redundant zur Recent-Variante.
+- **Ergebnis:** `compute_progression_rate` in `core/utils/advanced_stats.py` berechnet die Steigerungsrate jetzt über das aktuelle 8-Wochen-Fenster (neue Konstante `PROGRESSION_RATE_RECENT_WINDOW_WEEKS = 8`). `training_history_days` bleibt All-Time, damit der Schutz „nur bei ≥ 21 Tage Historie" wie bisher gegen junge Übungen greift. `calculate_plateau_analysis` (PDF) und `_calc_plateau_live` (Dashboard) reichen `reference_date=heute` explizit durch, damit beide Pfade deterministisch denselben Stichtag nutzen. `classify_progression_status` akzeptiert beim Override-Check jetzt `progression_pro_monat >= 0` statt `> 0`, damit `progression_rate_pct = 0.0` bei flachem Recent-Fenster sichtbar bleibt; bei negativer Rate (Drop) bleibt der Override aus.
+- **Verifikation gegen L1-Befund:** Trizeps OH (PR 63 Tage her, davor 8 Wochen Aufbau, danach 9 Wochen flach) → Recent-Window-Rate 0 → `plateau` statt `active_progression_paused`. RDL-Fall (PR 25 Tage her, weiter steigend) → Recent-Window-Rate weiterhin hoch → `active_progression_paused` bleibt korrekt. Konsolidierung (RPE sinkt) hat unverändert Vorrang. Schutz „junge Übung" bleibt durch All-Time-`training_history_days` intakt.
+- **Template-Wirkung:** Spalte „+X kg/Monat" zeigt jetzt die Recent-Rate. Bei langer flacher Phase steht dort „+0,0 kg" statt eines irreführenden All-Time-Mittels – semantisch konsistent zur Plateau-Stufe.
+- **Tests:** `core/tests/test_advanced_stats.py::TestPlateauAnalysis` – `test_phase24_5_override_greift_auch_bei_mittlerem_plateau` auf Recent-Window-Semantik umgebaut (PR-Alter 20 Tage statt 50, Rate weiterhin hoch); zwei neue Fälle: `test_phase24_5a_trizeps_oh_lange_historie_aber_recent_flach_plateau` (Reproduktion L1) und `test_phase24_5a_recent_window_zaehlt_nicht_all_time` (Sicherheitsnetz gegen Rückkehr zur All-Time-Logik). 445 Tests bestanden, keine Regression. Bestehende RDL-/Plateau-/Konsolidierungs-/Kurze-Historie-Tests bleiben grün.
+- **Phase 25 entblockt:** alle drei Phase-24-Nachzügler (B1/B2/L1) sind nun behoben; der Layout-Refactor kann starten.
+
 
 ---
 
