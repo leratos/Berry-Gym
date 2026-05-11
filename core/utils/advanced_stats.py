@@ -380,6 +380,7 @@ def calculate_consistency_metrics(alle_trainings):
         week_start = check_date - timedelta(days=iso_weekday - 1)
         week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
         week_end = week_start + timedelta(days=7)
+        is_current_week = wochen_geprueft == 0
 
         trainings_in_week = alle_trainings.filter(datum__gte=week_start, datum__lt=week_end).count()
 
@@ -390,6 +391,10 @@ def calculate_consistency_metrics(alle_trainings):
             # Aktueller Streak: Nur Wochen die direkt zusammenhängen bis heute
             if aktueller_streak_aktiv:
                 aktueller_streak = temp_streak
+        elif is_current_week:
+            # Laufende Woche ohne Training ist neutral – sie darf den Streak
+            # nicht brechen, weil der User noch Zeit hat zu trainieren.
+            pass
         else:
             # Streak unterbrochen
             if aktueller_streak_aktiv:
