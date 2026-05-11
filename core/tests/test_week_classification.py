@@ -26,11 +26,7 @@ from core.tests.factories import (
     UebungFactory,
     UserFactory,
 )
-from core.utils.week_classification import (
-    build_weekly_volume_overview,
-    select_comparable_weeks,
-)
-
+from core.utils.week_classification import build_weekly_volume_overview, select_comparable_weeks
 
 # ─────────────────────────────────────────────────────────────────────────────
 # build_weekly_volume_overview – Basis
