@@ -197,7 +197,9 @@ def build_weekly_volume_overview(
     Stabil-/Wachstums-Diagnose ein klarer Hinweis ``Trend-Bewertung pausiert``
     erzeugt.
     """
-    saetze_qs = alle_saetze.filter(ist_aufwaermsatz=False).select_related("uebung")
+    # ``einheit`` muss mit-gejoined werden, weil ``_aggregate_weekly_volume``
+    # pro Satz auf ``satz.einheit.datum`` zugreift – sonst eine Query pro Satz.
+    saetze_qs = alle_saetze.filter(ist_aufwaermsatz=False).select_related("uebung", "einheit")
     weekly_volume, weekly_effective = _aggregate_weekly_volume(saetze_qs, user_kg)
     if not weekly_volume:
         return []
