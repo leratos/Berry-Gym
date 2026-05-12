@@ -1286,3 +1286,51 @@ class TestDiagnoseVolumeTrend(TestCase):
     def test_returns_none_when_prev_zero(self):
         result = diagnose_volume_trend(0, 100, 0, 50)
         self.assertIsNone(result)
+
+
+class PlateauTableRateSignFormatTests(TestCase):
+    """Phase 24.5b: „Ø +kg/Monat"-Spalte darf bei negativer Rate kein „+"
+    voranstellen (sonst entsteht „+-0,26 kg" wie im Hammer-Curls-Live-Fall)."""
+
+    TEMPLATE_PATH = "core/templates/core/training_pdf_simple.html"
+
+    def _render_rate_cell(self, rate):
+        from django.template import Context, Template
+
+        # Spiegelt die fixed Zelle aus training_pdf_simple.html ‒ Änderung an
+        # der Templatezeile muss hier ebenfalls nachgezogen werden.
+        tmpl = Template(
+            "{% if item.progression_pro_monat > 0 %}+{% endif %}"
+            "{{ item.progression_pro_monat }} kg"
+        )
+        return tmpl.render(Context({"item": {"progression_pro_monat": rate}}))
+
+    def test_positive_rate_haengt_plus_voran(self):
+        # Locale-agnostisch: nur das Vorzeichen prüfen (de → Komma, en → Punkt).
+        rendered = self._render_rate_cell(5.92)
+        self.assertTrue(rendered.startswith("+"), rendered)
+        self.assertTrue(rendered.endswith(" kg"), rendered)
+        self.assertNotIn("+-", rendered)
+
+    def test_negative_rate_kein_plus_vorangestellt(self):
+        # Hammer-Curls-Live-Fall (Section 10.2 phase24_concept.md): die alte
+        # Templatezeile hat hier „+-0,26 kg" produziert.
+        rendered = self._render_rate_cell(-0.26)
+        self.assertTrue(rendered.startswith("-"), rendered)
+        self.assertNotIn("+", rendered)
+        self.assertTrue(rendered.endswith(" kg"), rendered)
+
+    def test_null_rate_kein_plus_vorangestellt(self):
+        rendered = self._render_rate_cell(0.0)
+        self.assertFalse(rendered.startswith("+"), rendered)
+        self.assertFalse(rendered.startswith("-"), rendered)
+        self.assertTrue(rendered.endswith(" kg"), rendered)
+
+    def test_template_file_enthaelt_konditionale_vorzeichen_logik(self):
+        """Statisches Lint: alte Buggy-Form '+{{ item.progression_pro_monat }}'
+        darf nicht zurückkommen."""
+        from pathlib import Path
+
+        content = Path(self.TEMPLATE_PATH).read_text(encoding="utf-8")
+        self.assertNotIn(">+{{ item.progression_pro_monat }} kg<", content)
+        self.assertIn("{% if item.progression_pro_monat > 0 %}+{% endif %}", content)
