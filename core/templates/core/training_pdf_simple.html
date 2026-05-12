@@ -354,6 +354,36 @@
             color: #6c757d;
             font-size: 8px;
         }
+
+        /* Phase 25.2: Pagebreak-Verhalten. xhtml2pdf unterstützt
+           page-break-after/before/inside auf den meisten Block-Elementen.
+           h1/h2/h3 haben bereits page-break-after: avoid (siehe oben),
+           hier kommen die Schutz-Regeln für Tabellen-Zeilen und visuelle
+           Container, damit Header/erste-Zeile zusammenbleiben und
+           Boxen/Widgets nicht mitten durchgeschnitten werden.
+
+           Tabellen-Header-Wiederholung läuft über das xhtml2pdf-spezifische
+           Attribut repeat="N" am <table>-Element (→ ReportLab repeatRows).
+           CSS display:table-header-group wird von xhtml2pdf NICHT
+           ausgewertet — siehe xhtml2pdf/tables.py:228, default.py:316. */
+        tr {
+            page-break-inside: avoid;
+        }
+
+        .info-box,
+        .warning-box,
+        .recommendation-box,
+        .bewertung-box {
+            page-break-inside: avoid;
+        }
+
+        .stats-grid,
+        .fatigue-meter,
+        .meter-bar,
+        .rpe-distribution,
+        .quality-metrics {
+            page-break-inside: avoid;
+        }
     </style>
 </head>
 <body>
@@ -445,7 +475,7 @@
     {% if koerperwerte %}
 
     {% if letzter_koerperwert %}
-    <table>
+    <table repeat="1">
         <thead>
             <tr>
                 <th>Messwert</th>
@@ -662,7 +692,7 @@
     {% endif %}
 
     <h3>Verlauf</h3>
-    <table>
+    <table repeat="1">
         <thead>
             <tr>
                 <th>Datum</th>
@@ -705,7 +735,7 @@
     <h1>■ Muskelgruppen-Analyse (30 Tage)</h1>
 
     <h2>Trainingsvolumen pro Muskelgruppe</h2>
-    <table>
+    <table repeat="1">
         <thead>
             <tr>
                 <th>Muskelgruppe</th>
@@ -750,7 +780,7 @@
         Balken zeigen das Trainingsvolumen relativ zum optimalen Bereich. Grün = Optimal, Gelb = Untertrainiert, Rot = Übertrainiert.
     </p>
 
-    <table>
+    <table repeat="1">
         <thead>
             <tr>
                 <th>Muskelgruppe</th>
@@ -846,7 +876,7 @@
 
     <h2>Kraftentwicklung Top 5</h2>
     {% if kraftentwicklung %}
-    <table>
+    <table repeat="1">
         <thead>
             <tr>
                 <th>Übung</th>
@@ -887,7 +917,7 @@
     </div>
 
     {% if plateau_analysis %}
-    <table>
+    <table repeat="1">
         <thead>
             <tr>
                 <th>Übung</th>
