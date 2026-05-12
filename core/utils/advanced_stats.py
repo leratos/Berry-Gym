@@ -534,7 +534,7 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     - volumen_spike, rpe_steigend, deload_empfohlen
     - naechste_deload, warnungen
     """
-    from core.export.stats_collector import select_comparable_weeks
+    from core.utils.week_classification import select_comparable_weeks
     from core.views.training_stats import (
         _get_cardio_fatigue,
         _get_frequency_fatigue,

@@ -47,7 +47,6 @@ from ..utils.advanced_stats import (
     calculate_rpe_quality_analysis_windowed,
     classify_progression_status,
     compute_progression_rate,
-    diagnose_volume_trend,
 )
 from ..utils.periodization import get_block_age_warning
 from ..utils.plan_helpers import (
@@ -55,6 +54,7 @@ from ..utils.plan_helpers import (
     get_active_plan_start_date,
     is_active_plan_too_new,
 )
+from ..utils.week_classification import build_weekly_volume_overview
 from .body_tracking import _prepare_body_chart_data
 
 logger = logging.getLogger(__name__)
@@ -2312,17 +2312,18 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     # Achsen synchron zum bestehenden weekly_data (gleiche Labels)
     weekly_effective_data = [round(weekly_effective_map.get(k, 0), 1) for k in weekly_labels]
     weekly_deload_majority_flags = [weekly_deload_majority.get(k, False) for k in weekly_labels]
-    # Diagnose der letzten Woche (Trend gegenüber Vorwoche)
-    volume_diagnosis = None
-    if len(weekly_labels) >= 2:
-        prev_label, curr_label = weekly_labels[-2], weekly_labels[-1]
-        volume_diagnosis = diagnose_volume_trend(
-            prev_tonnage=weekly_tonnage_map.get(prev_label, 0),
-            curr_tonnage=weekly_tonnage_map.get(curr_label, 0),
-            prev_effective=weekly_effective_map.get(prev_label, 0),
-            curr_effective=weekly_effective_map.get(curr_label, 0),
-            is_deload_week=weekly_deload_majority.get(curr_label, False),
-        )
+    # Phase 24.1c: Diagnose über den gemeinsamen Klassifikator (statt inline
+    # ``diagnose_volume_trend`` auf den letzten zwei Labels). Ohne diese
+    # Filterung hat das Dashboard die laufende KW20 fälschlich gegen die
+    # abgeschlossene KW19 als „Echte Regression" klassifiziert, obwohl der
+    # PDF-Pfad korrekt „Trend-Bewertung pausiert" zeigt.
+    alle_saetze_inkl_deload = Satz.objects.filter(
+        einheit__user=request.user, ist_aufwaermsatz=False
+    )
+    weekly_overview = build_weekly_volume_overview(
+        alle_saetze_inkl_deload, trainings, user_kg=user_kg, heute=timezone.now()
+    )
+    volume_diagnosis = weekly_overview[-1].get("diagnose") if weekly_overview else None
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(
         trainings, request.user
     )
