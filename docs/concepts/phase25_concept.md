@@ -110,7 +110,7 @@ Thematische Gruppen klar trennen:
 
 ### 3.2 Sub-Phase 25.2 – Pagebreak-Verhalten
 
-**Status:** 📋 Konzept · **Aufwand:** S–M · **Reihenfolge:** nach 25.1
+**Status:** ✅ Umgesetzt (12.05.2026) · **Aufwand:** S · **Reihenfolge:** nach 25.1
 
 #### Problem
 
@@ -145,9 +145,28 @@ CSS-basierte Pagebreak-Kontrolle:
 - Charts und ihre Beschriftung werden nicht durch Pagebreak getrennt
 - Tabellen-Header und mindestens die erste Daten-Zeile auf derselben Seite
 
----
+#### Umsetzung (12.05.2026)
 
-### 3.3 Sub-Phase 25.3 – Doppelte Sichten konsolidieren
+CSS-only Änderungen im inline `<style>`-Block von `core/templates/core/training_pdf_simple.html` (kein Template-Restructure, keine Section-Wrapper-Component — die bleibt für 5.1 zurückgestellt).
+
+Vorhandene Regeln (vor 25.2):
+- `h1`, `h2`, `h3` haben `page-break-after: avoid`
+- `img` hat `page-break-inside: avoid` und `page-break-before: auto`
+- Vier Chart-Wrapper-`<div>`s tragen inline `page-break-inside: avoid`
+- `.exercise-1rm-card` hat `page-break-inside: avoid`
+
+Hinzugefügte CSS-Regeln:
+- `tr { page-break-inside: avoid }` — Tabellen-Zeilen werden nicht mitten durchgeteilt
+- `.info-box`, `.warning-box`, `.recommendation-box`, `.bewertung-box { page-break-inside: avoid }` — kurze Erläuterungs-Boxen als Einheit
+- `.stats-grid`, `.fatigue-meter`, `.meter-bar`, `.rpe-distribution`, `.quality-metrics { page-break-inside: avoid }` — visuelle Widgets als Einheit
+
+Tabellen-Header-Wiederholung (Code-Review-Korrektur 12.05.2026):
+- `repeat="1"` als Attribut am `<table>`-Element bei allen sechs Tabellen mit `<thead>` (Körperwerte „Aktuell" + „Verlauf", Muskelgruppen, Muskel-Balance-Fallback, Top 5, Plateau-Analyse).
+- **Wichtig:** Der ursprünglich vorgesehene CSS-Weg `thead { display: table-header-group }` wird von xhtml2pdf **nicht** ausgewertet (verifiziert in `xhtml2pdf/tables.py:228` und `xhtml2pdf/default.py:316`). xhtml2pdf liest das `repeat`-Attribut direkt und gibt es als `repeatRows` an ReportLabs `Table(...)` weiter. Ohne `repeat="1"` verlieren längere Tabellen (Plateau-Analyse, Verlauf) ihre Spalten-Header auf jeder Folgeseite.
+
+Bewusst ausgeklammert:
+- **Section-Wrapper-Component** (Cross-Cutting 5.1) — wäre der saubere Weg, h1 + erste Content-Zeile als Einheit zu schützen. Aktuell verlässt sich 25.2 auf `page-break-after: avoid` auf den H1s. Falls Orphan-Header weiter empirisch auftreten, ist die Wrapper-Component der Folgeschritt.
+- **Globale `page-break-before: auto`-Direktive** im Konzept-Lösungsansatz erwähnt — ist xhtml2pdf-Default, kein expliziter Eintrag nötig.
 
 **Status:** 📋 Konzept · **Aufwand:** M · **Reihenfolge:** nach 25.2
 
