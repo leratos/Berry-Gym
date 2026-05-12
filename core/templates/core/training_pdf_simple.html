@@ -1331,6 +1331,18 @@
     <div class="info-box success">Keine Schwachstellen identifiziert - ausgewogenes Training!</div>
     {% endif %}
 
+    {# Phase 25.1: Akute Handlungsfelder (Fatigue/Plateau/Junk-Volume) aus der entfallenen Zusammenfassung integriert. #}
+    {% if handlungsfelder %}
+    <h2>Handlungsfelder</h2>
+    <div class="info-box warning">
+        <ul style="margin: 5px 0; padding-left: 20px;">
+            {% for feld in handlungsfelder %}
+            <li style="margin: 4px 0;">{{ feld }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     <h2>Nächste Schritte</h2>
     <div class="info-box">
         <ol style="margin: 5px 0; padding-left: 20px;">
