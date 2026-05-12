@@ -237,6 +237,30 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         )
     handlungsfelder = handlungsfelder[:3]
 
+    # Phase 25.4: Sections-Liste für klickbares ToC. Das Template iteriert die
+    # Liste und nutzt forloop.counter für die Numerierung, statt fest verdrahteter
+    # Indizes mit {% if %}-Fallbacks. Die Anchor-Slugs entsprechen den `<a name="...">`-
+    # Markern in den jeweiligen Section-H1s.
+    sections = [
+        {"title": "Executive Summary", "anchor": "executive-summary"},
+        {"title": "Muskelgruppen-Analyse (30 Tage)", "anchor": "muskelgruppen"},
+        {"title": "Push/Pull Balance", "anchor": "push-pull"},
+        {"title": "Trainingsvolumen-Entwicklung", "anchor": "volumen-entwicklung"},
+        {
+            "title": "Trainingsfortschritt (inkl. Plateau-Status)",
+            "anchor": "trainingsfortschritt",
+        },
+    ]
+    if exercise_detail_charts:
+        sections.append({"title": "Übungsdetails — Gewichtsverlauf", "anchor": "uebungsdetails"})
+    sections += [
+        {"title": "1RM-Entwicklung & Kraftstandards", "anchor": "rm-standards"},
+        {"title": "Trainings-Konsistenz", "anchor": "konsistenz"},
+        {"title": "Trainings-Qualität (RPE-Analyse)", "anchor": "rpe-qualitaet"},
+        {"title": "Ermüdungs-Index & Deload-Empfehlung", "anchor": "fatigue"},
+        {"title": "Trainer-Empfehlungen", "anchor": "trainer-empfehlungen"},
+    ]
+
     context = {
         "user": request.user,
         "datum": heute,
@@ -250,6 +274,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         "exercise_detail_charts": exercise_detail_charts,
         "top_fortschritte": top_fortschritte,
         "handlungsfelder": handlungsfelder,
+        "sections": sections,
         **stats,
     }
 
