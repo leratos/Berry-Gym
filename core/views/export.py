@@ -169,7 +169,10 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
                 }
             )
 
-    # Phase D4: Zusammenfassung — Top 3 Fortschritte + Handlungsfelder
+    # Phase 25.1: Top Fortschritte und akute Handlungsfelder wandern in
+    # Trainer-Empfehlungen. handlungsfelder enthält nur Threshold-Warnungen
+    # (Fatigue/Plateau/Junk-Volume) — die früher mit-aufgenommenen Top-Schwachstellen
+    # sind redundant mit dem bestehenden Schwachstellen-Block und entfallen hier.
     top_fortschritte = []
     for prog in stats.get("kraft_progression", [])[:3]:
         top_fortschritte.append(
@@ -184,8 +187,6 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     top_fortschritte = top_fortschritte[:3]
 
     handlungsfelder = []
-    for schwach in stats.get("schwachstellen", [])[:2]:
-        handlungsfelder.append(f"{schwach['name']}: {schwach['erklaerung']}")
     fatigue = stats.get("fatigue_analysis")
     if fatigue and fatigue.get("fatigue_index", 0) > 60:
         handlungsfelder.append(

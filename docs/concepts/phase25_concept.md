@@ -94,7 +94,9 @@ Thematische Gruppen klar trennen:
 
 #### Entscheidung (12.05.2026)
 
-- **F1 → Trainer-Empfehlungen bleibt, Zusammenfassung entfällt.** Begründung: Empfehlungen ist mit *Stärken / Schwachstellen (Priorität) / Nächste Schritte* konkreter und handlungsorientiert (nummerierte To-do-Liste). Überlapp `Schwachstellen ≈ Handlungsfelder`. **Migration:** „Top Fortschritte" der bisherigen Zusammenfassung wird als neuer Block ganz oben in den Empfehlungen integriert (vor „Stärken") — keine Information verloren.
+- **F1 → Trainer-Empfehlungen bleibt, Zusammenfassung entfällt.** Begründung: Empfehlungen ist mit *Stärken / Schwachstellen (Priorität) / Nächste Schritte* konkreter und handlungsorientiert (nummerierte To-do-Liste). **Migration:** Zwei Inhalte aus der bisherigen Zusammenfassung wandern in die Empfehlungen, damit keine Information verloren geht:
+  - „Top Fortschritte" als neuer Block ganz oben in den Empfehlungen (vor „Stärken").
+  - „Handlungsfelder" als neuer Block zwischen „Schwachstellen (Priorität)" und „Nächste Schritte". **Wichtig:** `handlungsfelder` enthielt vier Quellen — Top-2-Schwachstellen, Fatigue-Index > 60, Plateau-Warnungen, Junk-Volume > 30 %. Die Schwachstellen-Items waren redundant zum bestehenden Block; sie werden im View entfernt. Übrig bleiben die drei **Threshold-Warnungen**, die ohne Migration verloren gegangen wären (Identifiziert durch Code-Review-Feedback, 12.05.2026).
 - **F2 → Getrennt halten, aber Volumen-Entwicklung aus Push/Pull herauslösen.** Push/Pull-Chart bleibt in Push/Pull-Sektion. Volumen-Entwicklungs-Chart wird zur eigenen H1-Sektion in der Volumen-Gruppe (zwischen Push/Pull und Trainingsfortschritt). Begründung: Die zwei Charts zeigen unterschiedliche Dimensionen (Verhältnis vs. Zeitverlauf), Konsolidierung in ein Chart verliert beides.
 
 #### Akzeptanzkriterien
@@ -420,7 +422,7 @@ Beim Implementieren: keine Style-Entscheidungen mit reinmischen. Wenn ein Pagebr
 
 Alle Fragen am 12.05.2026 anhand Code-Sichtung entschieden. Details siehe jeweilige Sub-Phase „Entscheidung"-Block.
 
-- ✅ F1 (25.1): **Trainer-Empfehlungen bleibt, Zusammenfassung entfällt** — „Top Fortschritte" wandert in Empfehlungen.
+- ✅ F1 (25.1): **Trainer-Empfehlungen bleibt, Zusammenfassung entfällt** — „Top Fortschritte" und gefilterte „Handlungsfelder" (nur Threshold-Warnungen) wandern in Empfehlungen.
 - ✅ F2 (25.1): **Getrennt** — Volumen-Entwicklung wird eigene H1-Sektion, nicht mehr unter Push/Pull.
 - ✅ F3 (25.3): **Variante (b) Hierarchie** — Plateau-Begründungen als Annotation in Übungsdetails-Charts erhalten.
 - ✅ F4 (25.3): **Max. 6 Spalten** — Schema `Übung | Start | Aktuell | Steigerung | Letzter PR (vor X Tagen) | Status`.
