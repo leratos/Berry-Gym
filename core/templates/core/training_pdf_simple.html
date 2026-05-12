@@ -427,26 +427,23 @@
     <pdf:nextpage />
 
     <!-- INHALTSVERZEICHNIS (Seite 2) -->
-    {# Phase 25.1: ToC-Reihenfolge folgt den thematischen Gruppen (Status / Volumen / Fortschritt / Belastung / Ableitung). Bedingte Numerierung bleibt bis Phase 25.4 (Auto-ToC). #}
+    {# Phase 25.4: ToC wird aus der Sections-Liste im Context generiert (View),
+       die Numerierung folgt aus forloop.counter. Jeder Eintrag verlinkt auf den
+       <a name="..."></a>-Anker im jeweiligen Section-H1. #}
     <h1>■ Inhaltsverzeichnis</h1>
     <table style="border: none; font-size: 11px; line-height: 2.2;">
-        <tr><td style="border: none; padding: 2px 0;"><strong>1.</strong> Executive Summary</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>2.</strong> Muskelgruppen-Analyse (30 Tage)</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>3.</strong> Push/Pull Balance</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>4.</strong> Trainingsvolumen-Entwicklung</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>5.</strong> Trainingsfortschritt (inkl. Plateau-Status)</td></tr>
-        {% if exercise_detail_charts %}<tr><td style="border: none; padding: 2px 0;"><strong>6.</strong> Übungsdetails — Gewichtsverlauf</td></tr>{% endif %}
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}7{% else %}6{% endif %}.</strong> 1RM-Entwicklung &amp; Kraftstandards</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}8{% else %}7{% endif %}.</strong> Trainings-Konsistenz</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}9{% else %}8{% endif %}.</strong> Trainings-Qualität (RPE-Analyse)</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}10{% else %}9{% endif %}.</strong> Ermüdungs-Index &amp; Deload-Empfehlung</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}11{% else %}10{% endif %}.</strong> Trainer-Empfehlungen</td></tr>
+        {% for sec in sections %}
+        <tr><td style="border: none; padding: 2px 0;">
+            <strong>{{ forloop.counter }}.</strong>
+            <a href="#{{ sec.anchor }}" style="color: #0d6efd; text-decoration: none;">{{ sec.title }}</a>
+        </td></tr>
+        {% endfor %}
     </table>
 
     <pdf:nextpage />
 
     <!-- EXECUTIVE SUMMARY -->
-    <h1>■ Executive Summary</h1>
+    <h1><a name="executive-summary"></a>■ Executive Summary</h1>
 
     {% if total_einheiten < 8 %}
     <div class="info-box warning">
@@ -731,7 +728,7 @@
     <pdf:nextpage />
 
     <!-- MUSKELGRUPPEN-ANALYSE -->
-    <h1>■ Muskelgruppen-Analyse (30 Tage)</h1>
+    <h1><a name="muskelgruppen"></a>■ Muskelgruppen-Analyse (30 Tage)</h1>
 
     <h2>Trainingsvolumen pro Muskelgruppe</h2>
     <table repeat="1">
@@ -808,7 +805,7 @@
     {% endif %}
 
     <!-- PUSH/PULL BALANCE -->
-    <h1>■ Push/Pull Balance</h1>
+    <h1><a name="push-pull"></a>■ Push/Pull Balance</h1>
 
     {% if push_pull_chart %}
     <div style="text-align: center; margin: 20px 0;">
@@ -830,7 +827,7 @@
 
     {# Phase 25.1: Volumen-Entwicklung als eigene H1-Sektion in der Volumen-Gruppe (vorher H2 unter Push/Pull). #}
     <!-- VOLUMEN-ENTWICKLUNG -->
-    <h1>■ Trainingsvolumen-Entwicklung</h1>
+    <h1><a name="volumen-entwicklung"></a>■ Trainingsvolumen-Entwicklung</h1>
 
     {% if volume_chart %}
     <div style="page-break-inside: avoid;">
@@ -871,7 +868,7 @@
     {% endif %}
 
     <!-- TRAININGSFORTSCHRITT -->
-    <h1>■ Trainingsfortschritt</h1>
+    <h1><a name="trainingsfortschritt"></a>■ Trainingsfortschritt</h1>
 
     {# Phase 25.3: Top-5-Tabelle ist jetzt die Übersicht über Kraft + Plateau-Status.
        Die früher separate Plateau-Analyse-Sektion ist entfallen; ihre Begründungs-
@@ -940,7 +937,7 @@
     <!-- ÜBUNGSDETAIL-SEITEN -->
     {% if exercise_detail_charts %}
     <pdf:nextpage />
-    <h1>■ Übungsdetails — Gewichtsverlauf</h1>
+    <h1><a name="uebungsdetails"></a>■ Übungsdetails — Gewichtsverlauf</h1>
 
     <div class="info-box">
         <p style="font-size: 9px; margin: 0;"><strong>Übungsdetails:</strong>
@@ -989,7 +986,7 @@
     {% endif %}
 
     <!-- 1RM-STANDARDS -->
-    <h1>■ 1RM-Entwicklung & Kraftstandards</h1>
+    <h1><a name="rm-standards"></a>■ 1RM-Entwicklung & Kraftstandards</h1>
 
     <div class="info-box">
         <p style="font-size: 9px; margin: 0;"><strong>Was ist der 1RM?</strong>
@@ -1061,7 +1058,7 @@
 
     {# Phase 25.1: Belastungs-Sicht — Konsistenz → RPE → Fatigue/Deload. #}
     <!-- KONSISTENZ-ANALYSE -->
-    <h1>■ Trainings-Konsistenz</h1>
+    <h1><a name="konsistenz"></a>■ Trainings-Konsistenz</h1>
 
     <div class="info-box">
         <p style="font-size: 9px; margin: 0;"><strong>Was bedeuten diese Werte?</strong>
@@ -1115,7 +1112,7 @@
     {% endif %}
 
     <!-- RPE-QUALITÄT -->
-    <h1>■ Trainings-Qualität (RPE-Analyse)</h1>
+    <h1><a name="rpe-qualitaet"></a>■ Trainings-Qualität (RPE-Analyse)</h1>
 
     <div class="info-box">
         <p style="font-size: 9px; margin: 0;"><strong>Was ist RPE?</strong>
@@ -1242,7 +1239,7 @@
     {% endif %}
 
     <!-- ERMÜDUNGS-INDEX -->
-    <h1>■ Ermüdungs-Index & Deload-Empfehlung</h1>
+    <h1><a name="fatigue"></a>■ Ermüdungs-Index & Deload-Empfehlung</h1>
 
     <div class="info-box">
         <p style="font-size: 9px; margin: 0;"><strong>Was ist der Ermüdungs-Index?</strong>
@@ -1290,7 +1287,7 @@
     <pdf:nextpage />
 
     <!-- TRAINER-EMPFEHLUNGEN -->
-    <h1>■ Trainer-Empfehlungen</h1>
+    <h1><a name="trainer-empfehlungen"></a>■ Trainer-Empfehlungen</h1>
 
     {# Phase 25.1: „Top Fortschritte" aus der entfallenen Zusammenfassung integriert. #}
     {% if top_fortschritte %}

@@ -243,7 +243,7 @@ Drei Optionen:
 
 ### 3.4 Sub-Phase 25.4 – Inhaltsverzeichnis verlinken
 
-**Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** nach 25.3
+**Status:** ✅ Umgesetzt (12.05.2026) · **Aufwand:** S · **Reihenfolge:** nach 25.3
 
 #### Problem
 
@@ -289,9 +289,22 @@ PDF-Bookmarks (interne Links) generieren. Vermutung: Wenn `weasyprint` oder ähn
 - ToC bleibt nach 25.1-Reihenfolge-Änderung automatisch konsistent
 - Keine hartkodierten Nummerierungs-Conditionals mehr im Template
 
----
+#### Umsetzung (12.05.2026)
 
-### 3.5 Sub-Phase 25.5 – Encoding-Artefakte ersetzen
+**View** (`core/views/export.py`):
+- Neue `sections`-Liste im Context, im View aufgebaut. Schema: `[{"title": str, "anchor": str}, …]`. Die Übungsdetails-Section wird konditional eingefügt (`if exercise_detail_charts`), sodass die ToC nur Einträge enthält, die im Bericht auch wirklich gerendert werden.
+
+**Template** (`core/templates/core/training_pdf_simple.html`):
+- ToC-Block iteriert `{% for sec in sections %}` und nutzt `forloop.counter` für die Numerierung. Hartkodierte Indizes und `{% if exercise_detail_charts %}…{% else %}…{% endif %}`-Conditionals sind weg.
+- ToC-Einträge sind `<a href="#{{ sec.anchor }}">`-Links in dezentem Blau (`#0d6efd`).
+- Jedes der elf Section-H1s erhält einen `<a name="…"></a>`-Marker direkt nach dem `<h1>`-Tag (vor dem `■`-Glyph). Slugs synchron zur View-Liste: `executive-summary`, `muskelgruppen`, `push-pull`, `volumen-entwicklung`, `trainingsfortschritt`, `uebungsdetails`, `rm-standards`, `konsistenz`, `rpe-qualitaet`, `fatigue`, `trainer-empfehlungen`.
+
+**Renderer-Verifikation:**
+- xhtml2pdf-Source bestätigt Anchor-Support: `tags.py:138` registriert `<a name="…">` als `kind="anchor"` und sammelt es in `c.anchorName`. `<a href="#…">` löst gegen diese Anchor-Namen auf.
+- Das `-pdf-outline: true` (CSS auf h1/h2, schon vor 25.4 gesetzt) erzeugt zusätzlich Reader-Bookmarks im Outline-Panel — kein extra Markup nötig.
+
+**Was 25.4 bewusst nicht macht:**
+- Section-Wrapper-Component (Cross-Cutting 5.1). Die Sections-Liste liefert zwar bereits Title + Anchor; das Iterieren der Sektion-Render-Blöcke aus derselben Liste wäre der nächste Schritt (Wrapper-Template-Include) und gehört in eine spätere Aufräum-Phase.
 
 **Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** nach 25.4
 
