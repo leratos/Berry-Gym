@@ -1327,10 +1327,16 @@ class PlateauTableRateSignFormatTests(TestCase):
         self.assertTrue(rendered.endswith(" kg"), rendered)
 
     def test_template_file_enthaelt_konditionale_vorzeichen_logik(self):
-        """Statisches Lint: alte Buggy-Form '+{{ item.progression_pro_monat }}'
-        darf nicht zurückkommen."""
+        """Statisches Lint: progression_pro_monat muss konditional gesignt werden.
+
+        Phase 24.5b: Bug-Quelle war ein hartes `+{{ item.progression_pro_monat }} kg`
+        in der Plateau-Tabelle (ergab bei negativer Rate „+-0,26 kg").
+        Phase 25.3: Die Plateau-Tabelle ist entfallen; die Rate-Zelle lebt jetzt
+        als Annotation in den Übungsdetails-Charts mit `ex.progression_pro_monat`.
+        """
         from pathlib import Path
 
         content = Path(self.TEMPLATE_PATH).read_text(encoding="utf-8")
-        self.assertNotIn(">+{{ item.progression_pro_monat }} kg<", content)
-        self.assertIn("{% if item.progression_pro_monat > 0 %}+{% endif %}", content)
+        self.assertIn(
+            "{% if ex.progression_pro_monat > 0 %}+{% endif %}", content
+        )
