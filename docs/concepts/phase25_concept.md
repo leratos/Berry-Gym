@@ -110,7 +110,7 @@ Thematische Gruppen klar trennen:
 
 ### 3.2 Sub-Phase 25.2 – Pagebreak-Verhalten
 
-**Status:** 📋 Konzept · **Aufwand:** S–M · **Reihenfolge:** nach 25.1
+**Status:** ✅ Umgesetzt (12.05.2026) · **Aufwand:** S · **Reihenfolge:** nach 25.1
 
 #### Problem
 
@@ -145,9 +145,25 @@ CSS-basierte Pagebreak-Kontrolle:
 - Charts und ihre Beschriftung werden nicht durch Pagebreak getrennt
 - Tabellen-Header und mindestens die erste Daten-Zeile auf derselben Seite
 
----
+#### Umsetzung (12.05.2026)
 
-### 3.3 Sub-Phase 25.3 – Doppelte Sichten konsolidieren
+CSS-only Änderungen im inline `<style>`-Block von `core/templates/core/training_pdf_simple.html` (kein Template-Restructure, keine Section-Wrapper-Component — die bleibt für 5.1 zurückgestellt).
+
+Vorhandene Regeln (vor 25.2):
+- `h1`, `h2`, `h3` haben `page-break-after: avoid`
+- `img` hat `page-break-inside: avoid` und `page-break-before: auto`
+- Vier Chart-Wrapper-`<div>`s tragen inline `page-break-inside: avoid`
+- `.exercise-1rm-card` hat `page-break-inside: avoid`
+
+Hinzugefügte Regeln:
+- `thead { display: table-header-group }` und `tfoot { display: table-footer-group }` — Tabellen-Header soll bei Pagebreak auf jeder Seite wiederholt werden (xhtml2pdf-Idiom)
+- `tr { page-break-inside: avoid }` — Tabellen-Zeilen werden nicht mitten durchgeteilt
+- `.info-box`, `.warning-box`, `.recommendation-box`, `.bewertung-box { page-break-inside: avoid }` — kurze Erläuterungs-Boxen als Einheit
+- `.stats-grid`, `.fatigue-meter`, `.meter-bar`, `.rpe-distribution`, `.quality-metrics { page-break-inside: avoid }` — visuelle Widgets als Einheit
+
+Bewusst ausgeklammert:
+- **Section-Wrapper-Component** (Cross-Cutting 5.1) — wäre der saubere Weg, h1 + erste Content-Zeile als Einheit zu schützen. Aktuell verlässt sich 25.2 auf `page-break-after: avoid` auf den H1s. Falls Orphan-Header weiter empirisch auftreten, ist die Wrapper-Component der Folgeschritt.
+- **Globale `page-break-before: auto`-Direktive** im Konzept-Lösungsansatz erwähnt — ist xhtml2pdf-Default, kein expliziter Eintrag nötig.
 
 **Status:** 📋 Konzept · **Aufwand:** M · **Reihenfolge:** nach 25.2
 

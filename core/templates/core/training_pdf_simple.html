@@ -354,6 +354,39 @@
             color: #6c757d;
             font-size: 8px;
         }
+
+        /* Phase 25.2: Pagebreak-Verhalten. xhtml2pdf unterstützt
+           page-break-after/before/inside auf den meisten Block-Elementen.
+           h1/h2/h3 haben bereits page-break-after: avoid (siehe oben),
+           hier kommen die Schutz-Regeln für Tabellen-Zeilen und visuelle
+           Container, damit Header/erste-Zeile zusammenbleiben und
+           Boxen/Widgets nicht mitten durchgeschnitten werden. */
+        thead {
+            display: table-header-group;
+        }
+
+        tfoot {
+            display: table-footer-group;
+        }
+
+        tr {
+            page-break-inside: avoid;
+        }
+
+        .info-box,
+        .warning-box,
+        .recommendation-box,
+        .bewertung-box {
+            page-break-inside: avoid;
+        }
+
+        .stats-grid,
+        .fatigue-meter,
+        .meter-bar,
+        .rpe-distribution,
+        .quality-metrics {
+            page-break-inside: avoid;
+        }
     </style>
 </head>
 <body>
