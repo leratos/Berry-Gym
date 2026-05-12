@@ -169,6 +169,37 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
                 }
             )
 
+    # Phase 25.3: Plateau-Status pro Übung in die Top-5-Tabelle und in die
+    # Übungsdetails-Charts einmischen. Der ursprünglich separate Plateau-Abschnitt
+    # entfällt im Template; die Status-Spalte und die Begründungs-Annotation
+    # (RPE-Drop, 1RM-Drop, „letzte 4 W nicht trainiert" usw.) übernehmen die
+    # Information. Lookup per Übungs-Name; calculate_plateau_analysis überspringt
+    # Übungen mit < 2 Sätzen, daher kann der Lookup leer sein.
+    plateau_by_name = {p["uebung"]: p for p in stats.get("plateau_analysis", [])}
+    plateau_fields = (
+        "letzter_pr",
+        "pr_datum",
+        "tage_seit_pr",
+        "progression_pro_monat",
+        "progression_rate_pct",
+        "status",
+        "status_label",
+        "status_farbe",
+        "rpe_first_half",
+        "rpe_second_half",
+        "rpe_delta",
+        "weight_drop_pct",
+    )
+
+    def _merge_plateau_fields(item):
+        plateau = plateau_by_name.get(item["uebung"], {})
+        return {**item, **{k: plateau[k] for k in plateau_fields if k in plateau}}
+
+    stats["kraftentwicklung"] = [
+        _merge_plateau_fields(p) for p in stats.get("kraftentwicklung", [])
+    ]
+    exercise_detail_charts = [_merge_plateau_fields(ed) for ed in exercise_detail_charts]
+
     # Phase 25.1: Top Fortschritte und akute Handlungsfelder wandern in
     # Trainer-Empfehlungen. handlungsfelder enthält nur Threshold-Warnungen
     # (Fatigue/Plateau/Junk-Volume) — die früher mit-aufgenommenen Top-Schwachstellen
