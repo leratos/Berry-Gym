@@ -900,7 +900,9 @@
                 <td>{{ item.letzter_pr }} kg</td>
                 <td>{{ item.pr_datum }}</td>
                 <td>{% if item.tage_seit_pr == 0 %}Heute{% elif item.tage_seit_pr == 1 %}Gestern{% else %}{{ item.tage_seit_pr }} Tage{% endif %}</td>
-                <td>+{{ item.progression_pro_monat }} kg</td>
+                {# Phase 24.5b: Vorzeichen-Präfix konditional – bei negativer Rate
+                   darf kein „+" voranstehen, sonst entsteht „+-0,26 kg". #}
+                <td>{% if item.progression_pro_monat > 0 %}+{% endif %}{{ item.progression_pro_monat }} kg</td>
                 <td>
                     {% if item.status_farbe == 'success' %}
                     <span class="badge badge-success">{{ item.status_label }}</span>
