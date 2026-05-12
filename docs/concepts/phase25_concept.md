@@ -155,11 +155,14 @@ Vorhandene Regeln (vor 25.2):
 - Vier Chart-Wrapper-`<div>`s tragen inline `page-break-inside: avoid`
 - `.exercise-1rm-card` hat `page-break-inside: avoid`
 
-Hinzugefügte Regeln:
-- `thead { display: table-header-group }` und `tfoot { display: table-footer-group }` — Tabellen-Header soll bei Pagebreak auf jeder Seite wiederholt werden (xhtml2pdf-Idiom)
+Hinzugefügte CSS-Regeln:
 - `tr { page-break-inside: avoid }` — Tabellen-Zeilen werden nicht mitten durchgeteilt
 - `.info-box`, `.warning-box`, `.recommendation-box`, `.bewertung-box { page-break-inside: avoid }` — kurze Erläuterungs-Boxen als Einheit
 - `.stats-grid`, `.fatigue-meter`, `.meter-bar`, `.rpe-distribution`, `.quality-metrics { page-break-inside: avoid }` — visuelle Widgets als Einheit
+
+Tabellen-Header-Wiederholung (Code-Review-Korrektur 12.05.2026):
+- `repeat="1"` als Attribut am `<table>`-Element bei allen sechs Tabellen mit `<thead>` (Körperwerte „Aktuell" + „Verlauf", Muskelgruppen, Muskel-Balance-Fallback, Top 5, Plateau-Analyse).
+- **Wichtig:** Der ursprünglich vorgesehene CSS-Weg `thead { display: table-header-group }` wird von xhtml2pdf **nicht** ausgewertet (verifiziert in `xhtml2pdf/tables.py:228` und `xhtml2pdf/default.py:316`). xhtml2pdf liest das `repeat`-Attribut direkt und gibt es als `repeatRows` an ReportLabs `Table(...)` weiter. Ohne `repeat="1"` verlieren längere Tabellen (Plateau-Analyse, Verlauf) ihre Spalten-Header auf jeder Folgeseite.
 
 Bewusst ausgeklammert:
 - **Section-Wrapper-Component** (Cross-Cutting 5.1) — wäre der saubere Weg, h1 + erste Content-Zeile als Einheit zu schützen. Aktuell verlässt sich 25.2 auf `page-break-after: avoid` auf den H1s. Falls Orphan-Header weiter empirisch auftreten, ist die Wrapper-Component der Folgeschritt.
