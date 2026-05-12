@@ -1,6 +1,6 @@
 # Phase 25 – Report-Layout-Refactor (Struktur & Technik)
 
-**Status:** 📋 Konzept (11.05.2026)
+**Status:** 📋 Konzept (11.05.2026) · Offene Fragen F1–F7 entschieden (12.05.2026)
 **Vorgänger:** Phase 24 (Report-Daten-Konsistenz) – ✅ inhaltlich abgeschlossen, 24.5b Hotfix noch offen
 **Nachfolger:** Phase 26 (Konsolidierungs-Logik), Phase 27 (Style-Overhaul), Phase 28 (Dokumentations-Aktualisierung)
 **Branch-Schema:** `feature/phase-25-X-kurzbeschreibung` pro Sub-Phase
@@ -92,11 +92,17 @@ Thematische Gruppen klar trennen:
 - F1: Trainer-Empfehlungen oder Zusammenfassung – welche bleibt?
 - F2: Sollen Volumen-Chart und Push/Pull-Chart konsolidiert oder getrennt bleiben? Aktuell beide unter Push/Pull-Sektion.
 
+#### Entscheidung (12.05.2026)
+
+- **F1 → Trainer-Empfehlungen bleibt, Zusammenfassung entfällt.** Begründung: Empfehlungen ist mit *Stärken / Schwachstellen (Priorität) / Nächste Schritte* konkreter und handlungsorientiert (nummerierte To-do-Liste). Überlapp `Schwachstellen ≈ Handlungsfelder`. **Migration:** „Top Fortschritte" der bisherigen Zusammenfassung wird als neuer Block ganz oben in den Empfehlungen integriert (vor „Stärken") — keine Information verloren.
+- **F2 → Getrennt halten, aber Volumen-Entwicklung aus Push/Pull herauslösen.** Push/Pull-Chart bleibt in Push/Pull-Sektion. Volumen-Entwicklungs-Chart wird zur eigenen H1-Sektion in der Volumen-Gruppe (zwischen Push/Pull und Trainingsfortschritt). Begründung: Die zwei Charts zeigen unterschiedliche Dimensionen (Verhältnis vs. Zeitverlauf), Konsolidierung in ein Chart verliert beides.
+
 #### Akzeptanzkriterien
 
 - Sektionen folgen den fünf thematischen Gruppen
 - Keine inhaltlichen Sprünge mehr (z.B. Volumen-Chart in Pull-Sektion)
-- Wenn Empfehlungen oder Zusammenfassung entfällt, sind Inhalte konsolidiert (keine Information verloren)
+- Zusammenfassung entfernt; „Top Fortschritte"-Inhalt in Trainer-Empfehlungen migriert (keine Information verloren)
+- Volumen-Entwicklungs-Chart hat eigene H1-Sektion (nicht mehr unter Push/Pull)
 
 ---
 
@@ -177,11 +183,22 @@ Drei Optionen:
 - F3: Welche Variante (a/b/c)?
 - F4: Wenn (b): wie viele Spalten verträgt die Top-5-Tabelle, ohne unleserlich zu werden?
 
+#### Entscheidung (12.05.2026)
+
+- **F3 → Variante (b) Hierarchie.** Top-5-Tabelle wird zur Übersicht (inkl. Plateau-Status als Spalte), separate Plateau-Sektion entfällt, Übungsdetails-Charts bleiben als Detail-View. Begründung: (a) verliert die Quer-Sicht (Spitzenreiter vs. Sorgenkind) — für Trainer-Report essentiell. (c) verliert die wertvollen Plateau-Begründungs-Zeilen („RPE sank von X auf Y", „1RM-Drop X% vs. PR").
+- **Zusatz zu F3:** Plateau-Begründungs-Zeilen (RPE-Drop, 1RM-Drop, „letzte 4 W nicht trainiert" etc.) wandern als Annotation pro Übung in die Übungsdetails-Charts. Keine Diagnose-Info geht verloren.
+- **F4 → Max. 6 Spalten.** Vorschlag-Layout:
+  ```
+  Übung (mode_label als small darunter) | Start | Aktuell | Steigerung | Letzter PR (vor X Tagen) | Status
+  ```
+  „Datum" und „Tage her" werden zu einer Zelle (`PR-Datum (vor X Tagen)`) zusammengefasst. „Ø +kg/Monat" wandert zu den Begründungs-Annotationen in Übungsdetails-Charts.
+
 #### Akzeptanzkriterien
 
 - Übungs-Datensatz wird nicht mehr dreifach gezeigt
 - Übersicht-Detail-Verhältnis klar erkennbar
-- Keine Information verloren
+- Keine Information verloren (Plateau-Begründungen in Übungsdetails-Charts erhalten)
+- Top-5-Tabelle bleibt mit max. 6 Spalten lesbar
 
 ---
 
@@ -214,10 +231,24 @@ PDF-Bookmarks (interne Links) generieren. Vermutung: Wenn `weasyprint` oder ähn
 - F5: Welcher PDF-Renderer wird eingesetzt? Bestimmt, wie Bookmarks generiert werden.
 - F6: ToC-Auto-Generierung aus Section-Liste oder weiterhin hardcoded?
 
+#### Entscheidung (12.05.2026)
+
+- **F5 → Renderer ist `xhtml2pdf`** (`requirements.txt:39`, `core/views/export.py:24`, `core/export/pdf_renderer.py:17`) — reportlab-basiert. Implikationen:
+  - In-Doc-Links via `<a href="#section-id">` mit korrespondierenden `id`-Attributen auf Section-Headern funktioniert nativ.
+  - PDF-Outline-Bookmarks (linker Reader-Panel) via xhtml2pdf-spezifisches `<pdf:outline name="..." level="0">`-Tag.
+  - **Empfehlung:** Beides implementieren (In-Doc-Klick + Reader-Bookmark). Kein Renderer-Wechsel nötig.
+- **F6 → Auto-generieren.** Eine `sections`-Liste im View-Context (Schema: `[{title, anchor, visible_if}, ...]`), Template iteriert. Löst zwei Probleme:
+  1. ToC bleibt nach 25.1-Reihenfolge-Änderung automatisch konsistent.
+  2. Die bedingte Nummerierung `{% if exercise_detail_charts %}11{% else %}10{% endif %}` (heute in `training_pdf_simple.html:412-413`) entfällt — Index wird beim Rendern aus der Liste abgeleitet.
+
+  Synergie mit Cross-Cutting Section-Wrapper aus Konzept 5.1: Section-Wrapper liest aus derselben Liste (Header + Anchor-ID + Pagebreak-Verhalten).
+
 #### Akzeptanzkriterien
 
-- ToC-Einträge sind klickbar
-- ToC bleibt nach 25.1-Reihenfolge-Änderung konsistent (idealerweise automatisch)
+- ToC-Einträge sind klickbar (In-Doc-Sprung)
+- PDF-Outline-Panel zeigt Section-Hierarchie (zusätzlich, falls Reader es darstellt)
+- ToC bleibt nach 25.1-Reihenfolge-Änderung automatisch konsistent
+- Keine hartkodierten Nummerierungs-Conditionals mehr im Template
 
 ---
 
@@ -238,7 +269,11 @@ Zwei Varianten:
 - **(a) Echte Icons:** SVG-Inline-Icons oder Icon-Font (z.B. Bootstrap Icons, Lucide) statt Unicode-Glyphen. Setzt voraus, dass der PDF-Renderer Inline-SVG kann.
 - **(b) Saubere Unicode-Alternativen:** Bestätigte renderbare Glyphen (z.B. `▸`, `●`, `▪`) – Risiko, dass diese ebenfalls Substitution-Probleme haben.
 
-**Empfehlung:** Variante (a) mit SVG-Icons. Plus Definition eines kleinen Icon-Sets (Status-Indikator Optimal/Übertraining/Untertraining, Section-Marker, etc.), das später in Phase 27 (Style) wiederverwendet wird.
+**Empfehlung (revidiert 12.05.2026):** Wegen des nachgewiesenen Renderers `xhtml2pdf` (siehe F5) ist Inline-SVG **nicht nativ unterstützt** — die ursprünglich favorisierte Variante (a) ist so nicht direkt umsetzbar. Stattdessen:
+
+- **Status-Marker und Section-Marker:** Variante (b) mit verifizierten Unicode-Glyphen (`▶`, `●`, `▪`). Beim Implementieren mit Test-Export prüfen, dass der eingebettete Font diese Glyphen sauber rendert (DejaVu Sans deckt sie typischerweise ab).
+- **Branding/Cover-Icons (falls vorhanden):** PNG-Konvertierung via `cairosvg` (Projekt hat den Stack bereits — siehe `core/chart_generator.py` rendert die Muscle-Map-SVG nach PNG für xhtml2pdf).
+- **Status-Farben:** Bleiben über CSS-Klassen (`badge-success`/`-warning`/`-danger`/`-info`/`-secondary`) erhalten, unabhängig von der Glyphe.
 
 #### Vermutete betroffene Dateien
 
@@ -325,10 +360,24 @@ Drei Varianten:
 
 - F7: Variante (a) bestätigt oder andere Präferenz?
 
+#### Entscheidung (12.05.2026)
+
+- **F7 → Variante (a) bestätigt, mit leichter Justierung.** Endgültiges Spalten-Set für die Verlauf-Tabelle:
+  ```
+  Datum | Gewicht | BMI | KFA % | Muskeln % | (Viszeral, conditional)
+  ```
+  5 Spalten (6 mit Viszeral, wenn `any_viszeral`). Entfernt:
+  - **FFMI** — aus Gewicht + KFA ableitbar, eigene Spalte redundant.
+  - **Wasser %** — höchste BIA-Unzuverlässigkeit, geringster Nutzwert.
+  - **BMR** — berechneter Wert, erscheint bereits in der „Aktuell"-Tabelle (`training_pdf_simple.html:588`).
+
+  KFA und Muskelmasse bleiben (BIA, aber etablierte Tracking-Metriken). Alle entfernten Werte bleiben über die Detail-Sichten / Aktuell-Tabelle weiter sichtbar.
+
 #### Akzeptanzkriterien
 
-- Tabelle bleibt scanbar
-- Wenn Spalten reduziert: keine Information verloren (alles weiter in Detail-Sichten verfügbar)
+- Tabelle bleibt scanbar (max. 6 Spalten inkl. Viszeral)
+- Entfernte Werte (FFMI, Wasser %, BMR) bleiben in den Detail-Sichten verfügbar
+- Keine Information verloren
 
 ---
 
@@ -369,15 +418,17 @@ Beim Implementieren: keine Style-Entscheidungen mit reinmischen. Wenn ein Pagebr
 
 ## 6. Offene Fragen Übersicht
 
-- F1 (25.1): Trainer-Empfehlungen oder Zusammenfassung – welche bleibt?
-- F2 (25.1): Volumen-Chart und Push/Pull-Chart konsolidiert oder getrennt?
-- F3 (25.3): Konsolidierungs-Variante (a) Pro-Übung-Block / (b) Hierarchie / (c) Plateau entfällt?
-- F4 (25.3): Wenn (b): Spalten-Anzahl in Top-5-Tabelle?
-- F5 (25.4): PDF-Renderer (weasyprint / reportlab / anderes)?
-- F6 (25.4): ToC-Auto-Generierung oder weiterhin hardcoded?
-- F7 (25.7): Verlauf-Tabelle Variante (a) bestätigt?
+Alle Fragen am 12.05.2026 anhand Code-Sichtung entschieden. Details siehe jeweilige Sub-Phase „Entscheidung"-Block.
 
-Alle Fragen brauchen Code- oder Template-Sichtung und werden beim Start der jeweiligen Sub-Phase geklärt.
+- ✅ F1 (25.1): **Trainer-Empfehlungen bleibt, Zusammenfassung entfällt** — „Top Fortschritte" wandert in Empfehlungen.
+- ✅ F2 (25.1): **Getrennt** — Volumen-Entwicklung wird eigene H1-Sektion, nicht mehr unter Push/Pull.
+- ✅ F3 (25.3): **Variante (b) Hierarchie** — Plateau-Begründungen als Annotation in Übungsdetails-Charts erhalten.
+- ✅ F4 (25.3): **Max. 6 Spalten** — Schema `Übung | Start | Aktuell | Steigerung | Letzter PR (vor X Tagen) | Status`.
+- ✅ F5 (25.4): **`xhtml2pdf`** (reportlab-basiert, bereits im Projekt). Kein Renderer-Wechsel. Links via `<a href="#anchor">` + Bookmarks via `<pdf:outline>`.
+- ✅ F6 (25.4): **Auto-generieren** aus `sections`-Liste im Context. Synergie mit Cross-Cutting Section-Wrapper.
+- ✅ F7 (25.7): **Variante (a) bestätigt** — Verlauf-Tabelle auf 5–6 Spalten reduziert (FFMI / Wasser % / BMR entfernt).
+
+**Nebeneffekt aus F5 für 25.5:** Inline-SVG ist mit xhtml2pdf nicht nativ möglich — die ursprünglich favorisierte „Variante (a) SVG-Icons" wurde im Lösungsansatz auf Unicode-Glyphen (Status-Marker) + PNG-via-cairosvg (Branding) revidiert.
 
 ---
 

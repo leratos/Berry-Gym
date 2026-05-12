@@ -397,20 +397,21 @@
     <pdf:nextpage />
 
     <!-- INHALTSVERZEICHNIS (Seite 2) -->
+    {# Phase 25.1: ToC-Reihenfolge folgt den thematischen Gruppen (Status / Volumen / Fortschritt / Belastung / Ableitung). Bedingte Numerierung bleibt bis Phase 25.4 (Auto-ToC). #}
     <h1>■ Inhaltsverzeichnis</h1>
     <table style="border: none; font-size: 11px; line-height: 2.2;">
         <tr><td style="border: none; padding: 2px 0;"><strong>1.</strong> Executive Summary</td></tr>
         <tr><td style="border: none; padding: 2px 0;"><strong>2.</strong> Muskelgruppen-Analyse (30 Tage)</td></tr>
         <tr><td style="border: none; padding: 2px 0;"><strong>3.</strong> Push/Pull Balance</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>4.</strong> Trainingsfortschritt</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>5.</strong> Plateau-Analyse - Progression-Tracking</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>6.</strong> Trainings-Konsistenz</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>7.</strong> Ermüdungs-Index &amp; Deload-Empfehlung</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>8.</strong> 1RM-Entwicklung &amp; Kraftstandards</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>9.</strong> Trainings-Qualität (RPE-Analyse)</td></tr>
-        {% if exercise_detail_charts %}<tr><td style="border: none; padding: 2px 0;"><strong>10.</strong> Übungsdetails — Gewichtsverlauf</td></tr>{% endif %}
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}11{% else %}10{% endif %}.</strong> Trainer-Empfehlungen</td></tr>
-        {% if top_fortschritte or handlungsfelder %}<tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}12{% else %}11{% endif %}.</strong> Zusammenfassung</td></tr>{% endif %}
+        <tr><td style="border: none; padding: 2px 0;"><strong>4.</strong> Trainingsvolumen-Entwicklung</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>5.</strong> Trainingsfortschritt</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>6.</strong> Plateau-Analyse - Progression-Tracking</td></tr>
+        {% if exercise_detail_charts %}<tr><td style="border: none; padding: 2px 0;"><strong>7.</strong> Übungsdetails — Gewichtsverlauf</td></tr>{% endif %}
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}8{% else %}7{% endif %}.</strong> 1RM-Entwicklung &amp; Kraftstandards</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}9{% else %}8{% endif %}.</strong> Trainings-Konsistenz</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}10{% else %}9{% endif %}.</strong> Trainings-Qualität (RPE-Analyse)</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}11{% else %}10{% endif %}.</strong> Ermüdungs-Index &amp; Deload-Empfehlung</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}12{% else %}11{% endif %}.</strong> Trainer-Empfehlungen</td></tr>
     </table>
 
     <pdf:nextpage />
@@ -798,10 +799,12 @@
     </div>
     {% endif %}
 
+    {# Phase 25.1: Volumen-Entwicklung als eigene H1-Sektion in der Volumen-Gruppe (vorher H2 unter Push/Pull). #}
     <!-- VOLUMEN-ENTWICKLUNG -->
+    <h1>■ Trainingsvolumen-Entwicklung</h1>
+
     {% if volume_chart %}
     <div style="page-break-inside: avoid;">
-        <h2 style="margin-bottom: 15px; border-bottom: none; padding-bottom: 5px;">Trainingsvolumen-Entwicklung</h2>
         <div style="text-align: center; margin: 0;">
             <img src="data:image/png;base64,{{ volume_chart }}" style="max-width: 100%; height: auto;" alt="Volumen Entwicklung">
         </div>
@@ -831,6 +834,10 @@
         </div>
         {% endif %}
         {% endwith %}
+    </div>
+    {% else %}
+    <div class="info-box warning">
+        Noch nicht genügend Daten für Volumen-Entwicklung verfügbar.
     </div>
     {% endif %}
 
@@ -951,107 +958,34 @@
     </div>
     {% endif %}
 
-    <!-- KONSISTENZ-ANALYSE -->
-    <h1>■ Trainings-Konsistenz</h1>
-
-    <div class="info-box">
-        <p style="font-size: 9px; margin: 0;"><strong>Was bedeuten diese Werte?</strong>
-        <strong>Streak</strong> = Anzahl aufeinanderfolgender Wochen, in denen du mindestens einmal trainiert hast.
-        <strong>Training Adherence</strong> (Trainings-Treue) = Der Prozentsatz der Wochen, in denen du tatsächlich trainiert hast, gemessen an deiner gesamten aktiven Trainingszeit. Eine Adherence von 80%+ gilt als sehr gut und zeigt, dass du regelmäßig am Ball bleibst.
-        <strong>Ø Pause</strong> = Durchschnittliche Anzahl an Ruhetagen zwischen zwei Trainingseinheiten.</p>
-    </div>
-
-    {% if consistency_metrics %}
-    <div class="stats-grid">
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-value">{{ consistency_metrics.aktueller_streak }}</div>
-                <div class="stat-label">Aktueller Streak (Wochen)</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">{{ consistency_metrics.laengster_streak }}</div>
-                <div class="stat-label">Längster Streak</div>
-            </div>
-        </div>
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-value">{{ consistency_metrics.adherence_rate }}%</div>
-                <div class="stat-label">Training Adherence</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">{{ consistency_metrics.avg_pause_tage }}</div>
-                <div class="stat-label">Ø Pause (Tage)</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="bewertung-box {{ consistency_metrics.bewertung_farbe }}">
-        <strong>Bewertung:</strong> {{ consistency_metrics.bewertung }}
-    </div>
-    {% else %}
-    <div class="info-box warning">
-        Noch nicht genügend Daten für Konsistenz-Analyse verfügbar.
-    </div>
-    {% endif %}
-
-    <!-- TRAININGSAKTIVITÄT HEATMAP -->
-    {% if training_heatmap_chart %}
-    <div style="page-break-inside: avoid; margin-top: 15px;">
-        <h2 style="margin-bottom: 10px;">Trainingsaktivität (Heatmap)</h2>
-        <div style="text-align: center; margin: 0;">
-            <img src="data:image/png;base64,{{ training_heatmap_chart }}" style="max-width: 100%; height: auto;" alt="Trainings-Heatmap">
-        </div>
-        <p class="text-muted" style="text-align: center; margin-top: 4px;">Dunklere Felder = höhere Trainingsintensität (basierend auf RPE)</p>
-    </div>
-    {% endif %}
-
-    <!-- ERMÜDUNGS-INDEX -->
-    <h1>■ Ermüdungs-Index & Deload-Empfehlung</h1>
-
-    <div class="info-box">
-        <p style="font-size: 9px; margin: 0;"><strong>Was ist der Ermüdungs-Index?</strong>
-        Der Ermüdungs-Index (0-100) schätzt deine aktuelle Gesamtbelastung anhand von Trainingsvolumen, Intensität (RPE), Frequenz und Cardio-Last.
-        Ein hoher Wert bedeutet, dass sich Ermüdung aufbaut und eine <strong>Deload-Woche</strong> sinnvoll sein könnte.
-        Beim Deload trainierst du mit reduziertem Gewicht (~50-60%) und weniger Sätzen, damit sich Muskeln, Gelenke und Nervensystem vollständig erholen können.
-        <em>Hinweis (Phase 23.4): Die Berechnung addiert Punkte aus vier Komponenten:
-        Volumen-Spike (Vergleich der letzten beiden Wochen), RPE-Belastung über die letzten 14 Tage
-        (RPE-10-Anteil als primärer Faktor, Avg-RPE als sekundärer), Trainingsfrequenz der letzten 7 Tage
-        und Cardio-Last der letzten 7 Tage. Sie ist eine Annäherung – keine medizinische Diagnose.</em></p>
-    </div>
-
-    {% if fatigue_analysis %}
-    <div class="fatigue-meter">
-        <div class="meter-bar">
-            <div class="meter-fill {{ fatigue_analysis.bewertung_farbe }}"
-                 style="width: {{ fatigue_analysis.fatigue_index }}%;">
-                {{ fatigue_analysis.fatigue_index }}/100
-            </div>
-        </div>
-        <p style="margin-top: 10px;"><strong>{{ fatigue_analysis.bewertung }}</strong></p>
-    </div>
-
-    {% if fatigue_analysis.warnungen %}
-    <div class="warning-box">
-        <h3 style="margin-top: 0;">⚠️ Warnungen:</h3>
-        <ul style="margin: 5px 0; padding-left: 20px; font-size: 9px;">
-        {% for warnung in fatigue_analysis.warnungen %}
-            <li>{{ warnung }}</li>
-        {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-
-    <div class="recommendation-box">
-        <p><strong>Empfehlung:</strong> {{ fatigue_analysis.empfehlung }}</p>
-        <p><strong>Geschätzte Deload-Woche (Heuristik):</strong> {{ fatigue_analysis.naechste_deload }}</p>
-    </div>
-    {% else %}
-    <div class="info-box warning">
-        Noch nicht genügend Daten für Ermüdungs-Analyse verfügbar.
-    </div>
-    {% endif %}
-
+    {# Phase 25.1: Fortschritts-Sicht — Trainingsfortschritt → Plateau → Übungsdetails → 1RM. #}
+    <!-- ÜBUNGSDETAIL-SEITEN -->
+    {% if exercise_detail_charts %}
     <pdf:nextpage />
+    <h1>■ Übungsdetails — Gewichtsverlauf</h1>
+
+    <div class="info-box">
+        <p style="font-size: 9px; margin: 0;"><strong>Übungsdetails:</strong>
+        Für jede deiner Top-Übungen wird hier der Gewichtsverlauf über alle Trainingseinheiten dargestellt.
+        Die Trendlinie zeigt die langfristige Entwicklung — eine steigende Linie bedeutet progressive Überlastung.</p>
+    </div>
+
+    {% for ex in exercise_detail_charts %}
+    <div style="page-break-inside: avoid; margin-bottom: 15px;">
+        <h2 style="margin-bottom: 4px;">{{ ex.uebung }}
+            <span style="font-size: 9px; color: #6c757d; font-weight: normal;">{{ ex.muskelgruppe }}</span>
+        </h2>
+        <div style="font-size: 9px; margin-bottom: 6px;">
+            <strong>Start:</strong> {{ ex.start_gewicht|floatformat:1 }} kg →
+            <strong>Aktuell:</strong> {{ ex.aktuell_gewicht|floatformat:1 }} kg |
+            <strong>Sessions:</strong> {{ ex.sessions }}
+        </div>
+        <div style="text-align: center;">
+            <img src="data:image/png;base64,{{ ex.chart }}" style="max-width: 100%; height: auto;" alt="Gewichtsverlauf {{ ex.uebung }}">
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
 
     <!-- 1RM-STANDARDS -->
     <h1>■ 1RM-Entwicklung & Kraftstandards</h1>
@@ -1118,6 +1052,64 @@
     {% else %}
     <div class="info-box warning">
         Noch nicht genügend Daten für 1RM-Analyse verfügbar.
+    </div>
+    {% endif %}
+
+    {# Phase 25.1: Gruppen-Trenner Fortschritts-Sicht → Belastungs-Sicht. #}
+    <pdf:nextpage />
+
+    {# Phase 25.1: Belastungs-Sicht — Konsistenz → RPE → Fatigue/Deload. #}
+    <!-- KONSISTENZ-ANALYSE -->
+    <h1>■ Trainings-Konsistenz</h1>
+
+    <div class="info-box">
+        <p style="font-size: 9px; margin: 0;"><strong>Was bedeuten diese Werte?</strong>
+        <strong>Streak</strong> = Anzahl aufeinanderfolgender Wochen, in denen du mindestens einmal trainiert hast.
+        <strong>Training Adherence</strong> (Trainings-Treue) = Der Prozentsatz der Wochen, in denen du tatsächlich trainiert hast, gemessen an deiner gesamten aktiven Trainingszeit. Eine Adherence von 80%+ gilt als sehr gut und zeigt, dass du regelmäßig am Ball bleibst.
+        <strong>Ø Pause</strong> = Durchschnittliche Anzahl an Ruhetagen zwischen zwei Trainingseinheiten.</p>
+    </div>
+
+    {% if consistency_metrics %}
+    <div class="stats-grid">
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value">{{ consistency_metrics.aktueller_streak }}</div>
+                <div class="stat-label">Aktueller Streak (Wochen)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ consistency_metrics.laengster_streak }}</div>
+                <div class="stat-label">Längster Streak</div>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value">{{ consistency_metrics.adherence_rate }}%</div>
+                <div class="stat-label">Training Adherence</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ consistency_metrics.avg_pause_tage }}</div>
+                <div class="stat-label">Ø Pause (Tage)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bewertung-box {{ consistency_metrics.bewertung_farbe }}">
+        <strong>Bewertung:</strong> {{ consistency_metrics.bewertung }}
+    </div>
+    {% else %}
+    <div class="info-box warning">
+        Noch nicht genügend Daten für Konsistenz-Analyse verfügbar.
+    </div>
+    {% endif %}
+
+    <!-- TRAININGSAKTIVITÄT HEATMAP -->
+    {% if training_heatmap_chart %}
+    <div style="page-break-inside: avoid; margin-top: 15px;">
+        <h2 style="margin-bottom: 10px;">Trainingsaktivität (Heatmap)</h2>
+        <div style="text-align: center; margin: 0;">
+            <img src="data:image/png;base64,{{ training_heatmap_chart }}" style="max-width: 100%; height: auto;" alt="Trainings-Heatmap">
+        </div>
+        <p class="text-muted" style="text-align: center; margin-top: 4px;">Dunklere Felder = höhere Trainingsintensität (basierend auf RPE)</p>
     </div>
     {% endif %}
 
@@ -1248,38 +1240,68 @@
     </div>
     {% endif %}
 
-    <!-- ÜBUNGSDETAIL-SEITEN -->
-    {% if exercise_detail_charts %}
-    <pdf:nextpage />
-    <h1>■ Übungsdetails — Gewichtsverlauf</h1>
+    <!-- ERMÜDUNGS-INDEX -->
+    <h1>■ Ermüdungs-Index & Deload-Empfehlung</h1>
 
     <div class="info-box">
-        <p style="font-size: 9px; margin: 0;"><strong>Übungsdetails:</strong>
-        Für jede deiner Top-Übungen wird hier der Gewichtsverlauf über alle Trainingseinheiten dargestellt.
-        Die Trendlinie zeigt die langfristige Entwicklung — eine steigende Linie bedeutet progressive Überlastung.</p>
+        <p style="font-size: 9px; margin: 0;"><strong>Was ist der Ermüdungs-Index?</strong>
+        Der Ermüdungs-Index (0-100) schätzt deine aktuelle Gesamtbelastung anhand von Trainingsvolumen, Intensität (RPE), Frequenz und Cardio-Last.
+        Ein hoher Wert bedeutet, dass sich Ermüdung aufbaut und eine <strong>Deload-Woche</strong> sinnvoll sein könnte.
+        Beim Deload trainierst du mit reduziertem Gewicht (~50-60%) und weniger Sätzen, damit sich Muskeln, Gelenke und Nervensystem vollständig erholen können.
+        <em>Hinweis (Phase 23.4): Die Berechnung addiert Punkte aus vier Komponenten:
+        Volumen-Spike (Vergleich der letzten beiden Wochen), RPE-Belastung über die letzten 14 Tage
+        (RPE-10-Anteil als primärer Faktor, Avg-RPE als sekundärer), Trainingsfrequenz der letzten 7 Tage
+        und Cardio-Last der letzten 7 Tage. Sie ist eine Annäherung – keine medizinische Diagnose.</em></p>
     </div>
 
-    {% for ex in exercise_detail_charts %}
-    <div style="page-break-inside: avoid; margin-bottom: 15px;">
-        <h2 style="margin-bottom: 4px;">{{ ex.uebung }}
-            <span style="font-size: 9px; color: #6c757d; font-weight: normal;">{{ ex.muskelgruppe }}</span>
-        </h2>
-        <div style="font-size: 9px; margin-bottom: 6px;">
-            <strong>Start:</strong> {{ ex.start_gewicht|floatformat:1 }} kg →
-            <strong>Aktuell:</strong> {{ ex.aktuell_gewicht|floatformat:1 }} kg |
-            <strong>Sessions:</strong> {{ ex.sessions }}
+    {% if fatigue_analysis %}
+    <div class="fatigue-meter">
+        <div class="meter-bar">
+            <div class="meter-fill {{ fatigue_analysis.bewertung_farbe }}"
+                 style="width: {{ fatigue_analysis.fatigue_index }}%;">
+                {{ fatigue_analysis.fatigue_index }}/100
+            </div>
         </div>
-        <div style="text-align: center;">
-            <img src="data:image/png;base64,{{ ex.chart }}" style="max-width: 100%; height: auto;" alt="Gewichtsverlauf {{ ex.uebung }}">
-        </div>
+        <p style="margin-top: 10px;"><strong>{{ fatigue_analysis.bewertung }}</strong></p>
     </div>
-    {% endfor %}
+
+    {% if fatigue_analysis.warnungen %}
+    <div class="warning-box">
+        <h3 style="margin-top: 0;">⚠️ Warnungen:</h3>
+        <ul style="margin: 5px 0; padding-left: 20px; font-size: 9px;">
+        {% for warnung in fatigue_analysis.warnungen %}
+            <li>{{ warnung }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="recommendation-box">
+        <p><strong>Empfehlung:</strong> {{ fatigue_analysis.empfehlung }}</p>
+        <p><strong>Geschätzte Deload-Woche (Heuristik):</strong> {{ fatigue_analysis.naechste_deload }}</p>
+    </div>
+    {% else %}
+    <div class="info-box warning">
+        Noch nicht genügend Daten für Ermüdungs-Analyse verfügbar.
+    </div>
     {% endif %}
 
     <pdf:nextpage />
 
     <!-- TRAINER-EMPFEHLUNGEN -->
     <h1>■ Trainer-Empfehlungen</h1>
+
+    {# Phase 25.1: „Top Fortschritte" aus der entfallenen Zusammenfassung integriert. #}
+    {% if top_fortschritte %}
+    <h2>Top Fortschritte</h2>
+    <div class="info-box success">
+        <ol style="margin: 5px 0; padding-left: 20px;">
+            {% for fortschritt in top_fortschritte %}
+            <li style="margin: 4px 0;"><strong>{{ fortschritt }}</strong></li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% endif %}
 
     <h2>Deine Stärken</h2>
     {% if staerken %}
@@ -1323,43 +1345,7 @@
         </ol>
     </div>
 
-    <!-- ZUSAMMENFASSUNG (1-Page-Summary) -->
-    {% if top_fortschritte or handlungsfelder %}
-    <pdf:nextpage />
-    <h1>■ Zusammenfassung</h1>
-
-    <div style="text-align: center; margin-bottom: 20px;">
-        <p style="font-size: 11px; color: #555;">Dein Training auf einen Blick — die wichtigsten Erkenntnisse dieses Reports.</p>
-    </div>
-
-    {% if top_fortschritte %}
-    <div class="info-box success" style="margin-bottom: 15px;">
-        <h2 style="margin-top: 0; color: #198754; border-bottom-color: #198754;">Top Fortschritte</h2>
-        <ol style="margin: 8px 0; padding-left: 20px; font-size: 10px; line-height: 1.8;">
-            {% for fortschritt in top_fortschritte %}
-            <li style="margin: 6px 0;"><strong>{{ fortschritt }}</strong></li>
-            {% endfor %}
-        </ol>
-    </div>
-    {% endif %}
-
-    {% if handlungsfelder %}
-    <div class="info-box warning" style="margin-bottom: 15px;">
-        <h2 style="margin-top: 0; color: #856404; border-bottom-color: #ffc107;">Handlungsfelder</h2>
-        <ol style="margin: 8px 0; padding-left: 20px; font-size: 10px; line-height: 1.8;">
-            {% for feld in handlungsfelder %}
-            <li style="margin: 6px 0;"><strong>{{ feld }}</strong></li>
-            {% endfor %}
-        </ol>
-    </div>
-    {% endif %}
-
-    <div class="info-box" style="margin-top: 20px;">
-        <p style="font-size: 9px; margin: 0;"><strong>Nächster Schritt:</strong>
-        Konzentriere dich auf das wichtigste Handlungsfeld und integriere es in dein Training der kommenden Woche.
-        Fortschritt entsteht durch konsistente, kleine Verbesserungen — nicht durch radikale Änderungen.</p>
-    </div>
-    {% endif %}
+    {# Phase 25.1: Zusammenfassungs-Sektion entfernt. „Top Fortschritte" wurde in Trainer-Empfehlungen migriert. #}
 
     <!-- FOOTER -->
     <div class="page-footer">
