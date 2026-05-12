@@ -434,14 +434,13 @@
         <tr><td style="border: none; padding: 2px 0;"><strong>2.</strong> Muskelgruppen-Analyse (30 Tage)</td></tr>
         <tr><td style="border: none; padding: 2px 0;"><strong>3.</strong> Push/Pull Balance</td></tr>
         <tr><td style="border: none; padding: 2px 0;"><strong>4.</strong> Trainingsvolumen-Entwicklung</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>5.</strong> Trainingsfortschritt</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>6.</strong> Plateau-Analyse - Progression-Tracking</td></tr>
-        {% if exercise_detail_charts %}<tr><td style="border: none; padding: 2px 0;"><strong>7.</strong> Übungsdetails — Gewichtsverlauf</td></tr>{% endif %}
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}8{% else %}7{% endif %}.</strong> 1RM-Entwicklung &amp; Kraftstandards</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}9{% else %}8{% endif %}.</strong> Trainings-Konsistenz</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}10{% else %}9{% endif %}.</strong> Trainings-Qualität (RPE-Analyse)</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}11{% else %}10{% endif %}.</strong> Ermüdungs-Index &amp; Deload-Empfehlung</td></tr>
-        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}12{% else %}11{% endif %}.</strong> Trainer-Empfehlungen</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>5.</strong> Trainingsfortschritt (inkl. Plateau-Status)</td></tr>
+        {% if exercise_detail_charts %}<tr><td style="border: none; padding: 2px 0;"><strong>6.</strong> Übungsdetails — Gewichtsverlauf</td></tr>{% endif %}
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}7{% else %}6{% endif %}.</strong> 1RM-Entwicklung &amp; Kraftstandards</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}8{% else %}7{% endif %}.</strong> Trainings-Konsistenz</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}9{% else %}8{% endif %}.</strong> Trainings-Qualität (RPE-Analyse)</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}10{% else %}9{% endif %}.</strong> Ermüdungs-Index &amp; Deload-Empfehlung</td></tr>
+        <tr><td style="border: none; padding: 2px 0;"><strong>{% if exercise_detail_charts %}11{% else %}10{% endif %}.</strong> Trainer-Empfehlungen</td></tr>
     </table>
 
     <pdf:nextpage />
@@ -874,121 +873,70 @@
     <!-- TRAININGSFORTSCHRITT -->
     <h1>■ Trainingsfortschritt</h1>
 
+    {# Phase 25.3: Top-5-Tabelle ist jetzt die Übersicht über Kraft + Plateau-Status.
+       Die früher separate Plateau-Analyse-Sektion ist entfallen; ihre Begründungs-
+       Daten wandern als Annotationen in die Übungsdetails-Charts. #}
     <h2>Kraftentwicklung Top 5</h2>
     {% if kraftentwicklung %}
     <table repeat="1">
         <thead>
             <tr>
                 <th>Übung</th>
-                <th>Vergleich</th>
-                <th>Start-Gewicht</th>
+                <th>Start</th>
                 <th>Aktuell</th>
                 <th>Steigerung</th>
+                <th>Letzter PR</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
             {% for prog in kraftentwicklung|slice:":5" %}
             <tr>
-                <td><strong>{{ prog.uebung }}</strong></td>
-                <td><small>{{ prog.mode_label|default:"–" }}</small></td>
+                <td><strong>{{ prog.uebung }}</strong>{% if prog.mode_label %}<br><span class="text-muted">{{ prog.mode_label }}</span>{% endif %}</td>
                 <td>{{ prog.start_gewicht|floatformat:1 }} kg</td>
                 <td>{{ prog.aktuell_gewicht|floatformat:1 }} kg</td>
                 <td style="font-weight: bold; color: {% if prog.progression > 100 %}#DAA520{% elif prog.progression > 50 %}#28a745{% elif prog.progression > 20 %}#0d6efd{% elif prog.progression > 0 %}#6c757d{% else %}#dc3545{% endif %};">
                     {% if prog.progression > 0 %}+{% endif %}{{ prog.progression|floatformat:1 }}%
                 </td>
+                <td>
+                    {% if prog.letzter_pr %}
+                        {{ prog.letzter_pr }} kg
+                        <br><span class="text-muted">{% if prog.tage_seit_pr == 0 %}heute{% elif prog.tage_seit_pr == 1 %}gestern{% else %}vor {{ prog.tage_seit_pr }} Tagen{% endif %}</span>
+                    {% else %}–{% endif %}
+                </td>
+                <td>
+                    {% if prog.status_label %}
+                        {% if prog.status_farbe == 'success' %}
+                        <span class="badge badge-success">{{ prog.status_label }}</span>
+                        {% elif prog.status_farbe == 'warning' %}
+                        <span class="badge badge-warning">{{ prog.status_label }}</span>
+                        {% elif prog.status_farbe == 'info' %}
+                        <span class="badge badge-info">{{ prog.status_label }}</span>
+                        {% elif prog.status_farbe == 'secondary' %}
+                        <span class="badge badge-secondary">{{ prog.status_label }}</span>
+                        {% else %}
+                        <span class="badge badge-danger">{{ prog.status_label }}</span>
+                        {% endif %}
+                    {% else %}–{% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <div class="info-box">
+        <p style="font-size: 8px; margin: 0;"><strong>Status-Legende:</strong>
+        ✅ Aktive Progression · 👀 Beobachten · 💪 Konsolidierung · 📈 Aktive Progression (PR-Pause) ·
+        ⏸️ Pause · ⚠️ Leichtes Plateau · 🔴 Plateau · ❌ Langzeit-Plateau · ⚠️ Rückschritt.
+        Detail-Begründungen zu jeder Übung siehe Sektion „Übungsdetails — Gewichtsverlauf".</p>
+    </div>
     {% else %}
     <div class="info-box warning">
         Noch keine Kraftentwicklung messbar. Fortschritte werden nach mehreren Trainingseinheiten sichtbar.
     </div>
     {% endif %}
 
-    <!-- PLATEAU-ANALYSE -->
-    <h1>■ Plateau-Analyse - Progression-Tracking</h1>
-
-    <div class="info-box">
-        <p style="font-size: 9px; margin: 0;"><strong>Was ist ein Plateau?</strong>
-        Ein Trainingsplateau liegt vor, wenn du über einen längeren Zeitraum keine neuen persönlichen Rekorde (PRs) mehr erzielst.
-        Diese Analyse überwacht für jede deiner Top-Übungen, wie lange der letzte PR zurückliegt und ob du aktiv Fortschritte machst.
-        Kürzere Plateaus (2-4 Wochen) sind normal, längere können auf fehlende Variation oder unzureichende Erholung hinweisen.</p>
-    </div>
-
-    {% if plateau_analysis %}
-    <table repeat="1">
-        <thead>
-            <tr>
-                <th>Übung</th>
-                <th>Letzter PR</th>
-                <th>Datum</th>
-                <th>Tage her</th>
-                <th>Ø +kg/Monat</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for item in plateau_analysis %}
-            <tr>
-                <td><strong>{{ item.uebung }}</strong><br>
-                    <span class="text-muted">{{ item.muskelgruppe }}</span>
-                </td>
-                <td>{{ item.letzter_pr }} kg</td>
-                <td>{{ item.pr_datum }}</td>
-                <td>{% if item.tage_seit_pr == 0 %}Heute{% elif item.tage_seit_pr == 1 %}Gestern{% else %}{{ item.tage_seit_pr }} Tage{% endif %}</td>
-                {# Phase 24.5b: Vorzeichen-Präfix konditional – bei negativer Rate
-                   darf kein „+" voranstehen, sonst entsteht „+-0,26 kg". #}
-                <td>{% if item.progression_pro_monat > 0 %}+{% endif %}{{ item.progression_pro_monat }} kg</td>
-                <td>
-                    {% if item.status_farbe == 'success' %}
-                    <span class="badge badge-success">{{ item.status_label }}</span>
-                    {% elif item.status_farbe == 'warning' %}
-                    <span class="badge badge-warning">{{ item.status_label }}</span>
-                    {% elif item.status_farbe == 'info' %}
-                    <span class="badge badge-info">{{ item.status_label }}</span>
-                    {% elif item.status_farbe == 'secondary' %}
-                    <span class="badge badge-secondary">{{ item.status_label }}</span>
-                    {% else %}
-                    <span class="badge badge-danger">{{ item.status_label }}</span>
-                    {% endif %}
-                    {# Phase 23.3: Begründung hinter dem Status-Label, sofern Daten vorliegen. #}
-                    {% if item.status == 'consolidation' and item.rpe_first_half %}
-                    <br><span style="font-size: 7px; color: #6c757d;">RPE sank von {{ item.rpe_first_half }} auf {{ item.rpe_second_half }} in den letzten 4 W</span>
-                    {% elif item.status == 'regression' and item.weight_drop_pct %}
-                    <br><span style="font-size: 7px; color: #6c757d;">1RM-Drop {{ item.weight_drop_pct }}% vs. PR</span>
-                    {% elif item.status == 'pause' %}
-                    <br><span style="font-size: 7px; color: #6c757d;">Letzte 4 W nicht trainiert</span>
-                    {% elif item.status == 'active_progression_paused' and item.progression_rate_pct %}
-                    <br><span style="font-size: 7px; color: #6c757d;">Historischer Aufbau {{ item.progression_rate_pct }} %/Monat – starker Trend trotz PR-Pause</span>
-                    {% endif %}
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-
-    <div class="info-box">
-        <p><strong>Legende:</strong></p>
-        <ul style="margin: 5px 0; padding-left: 20px; font-size: 8px;">
-            <li>✅ Aktive Progression: PR innerhalb der letzten Woche</li>
-            <li>👀 Beobachten: PR 1–2 Wochen alt</li>
-            <li>💪 Konsolidierung: Gewicht stabil, RPE sinkt → User wird stärker</li>
-            <li>📈 Aktive Progression (PR-Pause): historische Steigerungsrate ≥ 2 %/Monat → kein echtes Plateau</li>
-            <li>⏸️ Pause: Übung in den letzten 4 Wochen nicht trainiert</li>
-            <li>⚠️ Leichtes Plateau: 2–6 Wochen ohne PR</li>
-            <li>🔴 Plateau: 6–12 Wochen ohne Fortschritt</li>
-            <li>❌ Langzeit-Plateau: >12 Wochen ohne PR</li>
-            <li>⚠️ Rückschritt: aktueller 1RM &gt;5% unter dem letzten PR</li>
-        </ul>
-    </div>
-    {% else %}
-    <div class="info-box warning">
-        Noch nicht genügend Daten für Plateau-Analyse verfügbar.
-    </div>
-    {% endif %}
-
-    {# Phase 25.1: Fortschritts-Sicht — Trainingsfortschritt → Plateau → Übungsdetails → 1RM. #}
+    {# Phase 25.1: Fortschritts-Sicht — Trainingsfortschritt → Übungsdetails → 1RM. #}
     <!-- ÜBUNGSDETAIL-SEITEN -->
     {% if exercise_detail_charts %}
     <pdf:nextpage />
@@ -1010,6 +958,29 @@
             <strong>Aktuell:</strong> {{ ex.aktuell_gewicht|floatformat:1 }} kg |
             <strong>Sessions:</strong> {{ ex.sessions }}
         </div>
+        {# Phase 25.3: Plateau-Status und Begründungs-Daten aus der entfallenen Plateau-Sektion. #}
+        {% if ex.status_label %}
+        <div style="font-size: 9px; margin-bottom: 6px;">
+            <strong>Status:</strong>
+            {% if ex.status_farbe == 'success' %}<span class="badge badge-success">{{ ex.status_label }}</span>
+            {% elif ex.status_farbe == 'warning' %}<span class="badge badge-warning">{{ ex.status_label }}</span>
+            {% elif ex.status_farbe == 'info' %}<span class="badge badge-info">{{ ex.status_label }}</span>
+            {% elif ex.status_farbe == 'secondary' %}<span class="badge badge-secondary">{{ ex.status_label }}</span>
+            {% else %}<span class="badge badge-danger">{{ ex.status_label }}</span>
+            {% endif %}
+            {% if ex.letzter_pr %} · <strong>Letzter PR:</strong> {{ ex.letzter_pr }} kg ({% if ex.tage_seit_pr == 0 %}heute{% elif ex.tage_seit_pr == 1 %}gestern{% else %}vor {{ ex.tage_seit_pr }} Tagen{% endif %}){% endif %}
+            {% if ex.progression_pro_monat is not None %} · <strong>Ø</strong> {% if ex.progression_pro_monat > 0 %}+{% endif %}{{ ex.progression_pro_monat }} kg/Monat{% endif %}
+            {% if ex.status == 'consolidation' and ex.rpe_first_half %}
+            <br><span class="text-muted">RPE sank von {{ ex.rpe_first_half }} auf {{ ex.rpe_second_half }} in den letzten 4 W</span>
+            {% elif ex.status == 'regression' and ex.weight_drop_pct %}
+            <br><span class="text-muted">1RM-Drop {{ ex.weight_drop_pct }}% vs. PR</span>
+            {% elif ex.status == 'pause' %}
+            <br><span class="text-muted">Letzte 4 W nicht trainiert</span>
+            {% elif ex.status == 'active_progression_paused' and ex.progression_rate_pct %}
+            <br><span class="text-muted">Historischer Aufbau {{ ex.progression_rate_pct }} %/Monat – starker Trend trotz PR-Pause</span>
+            {% endif %}
+        </div>
+        {% endif %}
         <div style="text-align: center;">
             <img src="data:image/png;base64,{{ ex.chart }}" style="max-width: 100%; height: auto;" alt="Gewichtsverlauf {{ ex.uebung }}">
         </div>

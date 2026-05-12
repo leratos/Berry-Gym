@@ -168,7 +168,7 @@ Bewusst ausgeklammert:
 - **Section-Wrapper-Component** (Cross-Cutting 5.1) — wäre der saubere Weg, h1 + erste Content-Zeile als Einheit zu schützen. Aktuell verlässt sich 25.2 auf `page-break-after: avoid` auf den H1s. Falls Orphan-Header weiter empirisch auftreten, ist die Wrapper-Component der Folgeschritt.
 - **Globale `page-break-before: auto`-Direktive** im Konzept-Lösungsansatz erwähnt — ist xhtml2pdf-Default, kein expliziter Eintrag nötig.
 
-**Status:** 📋 Konzept · **Aufwand:** M · **Reihenfolge:** nach 25.2
+**Status:** ✅ Umgesetzt (12.05.2026) · **Aufwand:** M · **Reihenfolge:** nach 25.2
 
 #### Problem
 
@@ -220,6 +220,24 @@ Drei Optionen:
 - Übersicht-Detail-Verhältnis klar erkennbar
 - Keine Information verloren (Plateau-Begründungen in Übungsdetails-Charts erhalten)
 - Top-5-Tabelle bleibt mit max. 6 Spalten lesbar
+
+#### Umsetzung (12.05.2026)
+
+**View** (`core/views/export.py`):
+- Lookup-Dict `plateau_by_name` aus `stats["plateau_analysis"]` aufgebaut (Schlüssel = `uebung`-Name).
+- Helper-Closure `_merge_plateau_fields` mischt die zwölf Plateau-Status-Felder (`letzter_pr`, `pr_datum`, `tage_seit_pr`, `progression_pro_monat`, `progression_rate_pct`, `status`, `status_label`, `status_farbe`, `rpe_first_half`, `rpe_second_half`, `rpe_delta`, `weight_drop_pct`) in jedes Item ein.
+- Angewendet auf `stats["kraftentwicklung"]` (Top-5-Tabelle) und `exercise_detail_charts` (Annotationen pro Chart). `kraft_progression` bleibt unverändert — das Migrations-Snippet für Top-Fortschritte greift weiter darauf zu.
+- Übungen ohne Plateau-Auswertung (< 2 Sätze) erhalten keinen Status; das Template behandelt das via `{% if prog.status_label %}`.
+
+**Template** (`core/templates/core/training_pdf_simple.html`):
+- Top-5-Tabelle (Kraftentwicklung) auf sechs Spalten erweitert: `Übung (mode_label als small) | Start | Aktuell | Steigerung | Letzter PR (vor X Tagen) | Status`. Status-Spalte trägt die Badge mit `status_label`.
+- Status-Legende als kompakte Inline-Zeile direkt unter der Tabelle (statt eigener Listenblock).
+- Komplette Plateau-Analyse-Sektion (H1 + Intro + Tabelle + Legende) entfernt.
+- Übungsdetails-Charts erhalten oberhalb des Charts eine Status-Zeile mit Badge, Letzter PR (vor X Tagen), Ø-kg/Monat und der konditionalen Begründungs-Zeile (RPE-Drop, 1RM-Drop, „letzte 4 W nicht trainiert", historischer Aufbau).
+- ToC: Plateau-Eintrag entfernt, Numerierung um eins reduziert.
+
+**Test-Anpassung:**
+- `PlateauTableRateSignFormatTests.test_template_file_enthaelt_konditionale_vorzeichen_logik` prüfte ein Pattern aus der entfallenen Plateau-Tabelle (`item.progression_pro_monat`). Lint-Assertion auf das neue Pattern aus den Übungsdetails-Annotationen umgestellt (`ex.progression_pro_monat`); die Rendering-Tests `_render_rate_cell` bleiben unverändert (testen das Fragment, nicht die Template-Position).
 
 ---
 
