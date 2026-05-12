@@ -1337,6 +1337,4 @@ class PlateauTableRateSignFormatTests(TestCase):
         from pathlib import Path
 
         content = Path(self.TEMPLATE_PATH).read_text(encoding="utf-8")
-        self.assertIn(
-            "{% if ex.progression_pro_monat > 0 %}+{% endif %}", content
-        )
+        self.assertIn("{% if ex.progression_pro_monat > 0 %}+{% endif %}", content)
