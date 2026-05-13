@@ -789,6 +789,21 @@ def generate_push_pull_pie(push_saetze, pull_saetze):
     return image_base64
 
 
+def _evenly_spaced_label_indices(n: int, max_labels: int) -> list[int]:
+    """Wählt bis zu max_labels gleichmäßig verteilte Indizes aus [0, n-1].
+
+    Kurze Reihen (n <= max_labels) geben alle Indizes zurück — bewusst kein
+    Ausdünnen. Längere Reihen werden auf max_labels Positionen reduziert,
+    inkl. erstem und letztem Eintrag. Verhindert überlappende X-Achsen-Labels
+    bei vielen Datenpunkten (Phase 25.6).
+    """
+    if n <= 0:
+        return []
+    if n <= max_labels:
+        return list(range(n))
+    return np.linspace(0, n - 1, max_labels, dtype=int).tolist()
+
+
 def generate_body_trend_chart(koerperwerte: list) -> str | None:
     """Körperwerte-Trend-Chart für den PDF-Report.
 
@@ -864,8 +879,10 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
     ax2.set_ylabel("% Körperzusammensetzung", color="#555", fontsize=9)
     ax2.tick_params(axis="y", labelcolor="#555")
 
-    ax1.set_xticks(list(x))
-    ax1.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
+    # Phase 25.6: Tick-Dichte begrenzen, damit Datums-Labels nicht überlappen.
+    visible_indices = _evenly_spaced_label_indices(len(labels), max_labels=10)
+    ax1.set_xticks(visible_indices)
+    ax1.set_xticklabels([labels[i] for i in visible_indices], rotation=45, ha="right", fontsize=8)
     ax1.set_title("Körperwerte-Trend", fontsize=12, fontweight="bold", pad=15)
     ax1.grid(True, alpha=0.3, linestyle=":", linewidth=0.5)
     ax1.set_axisbelow(True)
@@ -1021,8 +1038,10 @@ def generate_exercise_progression_chart(exercise_data: list[dict]) -> str | None
             label="Trend",
         )
 
-    ax.set_xticks(list(x))
-    ax.set_xticklabels(dates, rotation=45, ha="right", fontsize=7)
+    # Phase 25.6: Tick-Dichte begrenzen, damit Datums-Labels nicht überlappen.
+    visible_indices = _evenly_spaced_label_indices(len(dates), max_labels=8)
+    ax.set_xticks(visible_indices)
+    ax.set_xticklabels([dates[i] for i in visible_indices], rotation=45, ha="right", fontsize=7)
     ax.set_ylabel("Gewicht (kg)", fontsize=9)
     ax.legend(fontsize=7, loc="upper left")
     ax.grid(True, alpha=0.3, linestyle=":", linewidth=0.5)
