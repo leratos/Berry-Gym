@@ -687,6 +687,10 @@
     </div>
     {% endif %}
 
+    {# Phase 25.7: Verlauf-Tabelle reduziert auf stabilere Werte.
+       Entfernt: FFMI (aus Gewicht + KFA ableitbar), Wasser % (höchste BIA-
+       Unzuverlässigkeit), BMR (erscheint bereits in der „Aktuell"-Tabelle).
+       BIA-Detailwerte bleiben für interessierte Nutzer in den Detail-Sichten. #}
     <h3>Verlauf</h3>
     <table repeat="1">
         <thead>
@@ -694,12 +698,9 @@
                 <th>Datum</th>
                 <th>Gewicht</th>
                 <th>BMI</th>
-                <th>FFMI</th>
                 <th>KFA %</th>
                 <th>Muskeln %</th>
-                <th>Wasser %</th>
                 {% if any_viszeral %}<th>Viszeral</th>{% endif %}
-                <th>BMR</th>
             </tr>
         </thead>
         <tbody>
@@ -708,12 +709,9 @@
                 <td>{{ wert.datum|date:"d.m.Y" }}</td>
                 <td>{{ wert.gewicht|floatformat:1 }} kg</td>
                 <td>{{ wert.bmi|default:"-" }}</td>
-                <td>{{ wert.ffmi|default:"-" }}</td>
                 <td>{{ wert.koerperfett_prozent|floatformat:1|default:"-" }}{% if wert.koerperfett_prozent %} %{% endif %}</td>
                 <td>{{ wert.muskelmasse_prozent|floatformat:1|default:"-" }}{% if wert.muskelmasse_prozent %} %{% endif %}</td>
-                <td>{{ wert.koerperwasser_prozent|floatformat:1|default:"-" }}{% if wert.koerperwasser_prozent %} %{% endif %}</td>
                 {% if any_viszeral %}<td>{{ wert.viszeralfett|default:"-" }}</td>{% endif %}
-                <td>{% if wert.grundumsatz_kcal %}{{ wert.grundumsatz_kcal }}{% else %}-{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
