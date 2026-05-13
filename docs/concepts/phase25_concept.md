@@ -422,7 +422,7 @@ Die Linien selbst zeichnen weiter alle Datenpunkte; nur die Tick-Labels werden a
 
 ### 3.7 Sub-Phase 25.7 – Verlauf-Tabelle Spalten-Priorisierung
 
-**Status:** 📋 Konzept · **Aufwand:** XS · **Reihenfolge:** zuletzt
+**Status:** ✅ Umgesetzt (12.05.2026) · **Aufwand:** XS · **Reihenfolge:** zuletzt
 
 #### Problem
 
@@ -470,6 +470,15 @@ Drei Varianten:
 - Tabelle bleibt scanbar (max. 6 Spalten inkl. Viszeral)
 - Entfernte Werte (FFMI, Wasser %, BMR) bleiben in den Detail-Sichten verfügbar
 - Keine Information verloren
+
+#### Umsetzung (12.05.2026)
+
+**Template** (`core/templates/core/training_pdf_simple.html`, Verlauf-Tabelle in der Executive-Summary-Sektion):
+- Drei `<th>`/`<td>`-Spalten-Paare entfernt: FFMI, Wasser %, BMR.
+- Spaltenset jetzt: `Datum | Gewicht | BMI | KFA % | Muskeln %` (+ `Viszeral` konditional via `{% if any_viszeral %}`).
+- Die `koerperwerte`-Context-Variable bleibt unverändert; die entfernten Felder (`ffmi`, `koerperwasser_prozent`, `grundumsatz_kcal`) werden weiter im Stats-Collector berechnet und sind weiterhin in der „Aktuell"-Tabelle (BMR, FFMI) sowie im Body-Trend-Chart (KFA + Muskeln) sichtbar.
+
+**Bewusst nicht gemacht:** Der View-/Collector-Code, der die nicht mehr angezeigten Felder einsammelt, bleibt unverändert. Dead-Field-Cleanup im Datenmodell wäre eine separate Tech-Debt-Aufgabe; die aktuellen Felder sind harmlos und werden teilweise von anderen Sichten (Dashboard) weiter genutzt.
 
 ---
 
