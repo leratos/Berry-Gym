@@ -372,7 +372,7 @@ Zwei Varianten:
 
 ### 3.6 Sub-Phase 25.6 – Chart-Achsen-Beschriftung
 
-**Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** nach 25.5
+**Status:** ✅ Umgesetzt (12.05.2026) · **Aufwand:** S · **Reihenfolge:** nach 25.5
 
 #### Problem
 
@@ -401,6 +401,22 @@ Standard-Chart-Konfiguration in matplotlib (vermuteter Renderer):
 - Keine überlappenden Datums-Labels in keinem Chart
 - Bei kurzer Historie alle Datenpunkte sichtbar gelabelt
 - Bei langer Historie sinnvolle Tick-Auswahl (z.B. monatliche Marker)
+
+#### Umsetzung (12.05.2026)
+
+**Renderer:** Beide betroffenen Charts werden in `core/chart_generator.py` mit matplotlib generiert. `rotation=45, ha="right"` war bereits gesetzt — die Überlappung kam vom expliziten `set_xticks(list(x))`, das pro Datenpunkt einen Tick erzwang.
+
+**Lösung:** Neuer Helper `_evenly_spaced_label_indices(n, max_labels)` (in `core/chart_generator.py` direkt vor `generate_body_trend_chart`):
+- Bei `n <= max_labels`: alle Indizes — kein Ausdünnen kurzer Reihen.
+- Bei `n > max_labels`: `np.linspace(0, n-1, max_labels, dtype=int).tolist()` — gleichmäßig verteilte Auswahl, garantiert inkl. erstem (`0`) und letztem (`n-1`) Index.
+
+Anwendung in beiden Funktionen:
+- `generate_body_trend_chart` (Executive-Summary, `figsize=(12, 4)`): `max_labels=10`.
+- `generate_exercise_progression_chart` (Übungsdetails, `figsize=(8, 3)`): `max_labels=8`.
+
+Die Linien selbst zeichnen weiter alle Datenpunkte; nur die Tick-Labels werden auf die Auswahl reduziert.
+
+**Bewusst nicht gemacht:** Echte zeitachsen-basierte Locators (`MonthLocator`/`MaxNLocator` von matplotlib.dates). Beide Funktionen plotten an Integer-X-Positionen mit pre-formatierten String-Labels, nicht an Datetime-Objekten — ein Wechsel zu Datetime-Achsen wäre ein Datenmodell-Refactor und gehört in Phase 27 (Chart-Style).
 
 ---
 
