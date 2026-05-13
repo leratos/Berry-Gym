@@ -168,6 +168,10 @@ Bewusst ausgeklammert:
 - **Section-Wrapper-Component** (Cross-Cutting 5.1) — wäre der saubere Weg, h1 + erste Content-Zeile als Einheit zu schützen. Aktuell verlässt sich 25.2 auf `page-break-after: avoid` auf den H1s. Falls Orphan-Header weiter empirisch auftreten, ist die Wrapper-Component der Folgeschritt.
 - **Globale `page-break-before: auto`-Direktive** im Konzept-Lösungsansatz erwähnt — ist xhtml2pdf-Default, kein expliziter Eintrag nötig.
 
+---
+
+### 3.3 Sub-Phase 25.3 – Doppelte Sichten konsolidieren
+
 **Status:** ✅ Umgesetzt (12.05.2026) · **Aufwand:** M · **Reihenfolge:** nach 25.2
 
 #### Problem
@@ -306,7 +310,11 @@ PDF-Bookmarks (interne Links) generieren. Vermutung: Wenn `weasyprint` oder ähn
 **Was 25.4 bewusst nicht macht:**
 - Section-Wrapper-Component (Cross-Cutting 5.1). Die Sections-Liste liefert zwar bereits Title + Anchor; das Iterieren der Sektion-Render-Blöcke aus derselben Liste wäre der nächste Schritt (Wrapper-Template-Include) und gehört in eine spätere Aufräum-Phase.
 
-**Status:** 📋 Konzept · **Aufwand:** S · **Reihenfolge:** nach 25.4
+---
+
+### 3.5 Sub-Phase 25.5 – Encoding-Artefakte ersetzen
+
+**Status:** ✅ Umgesetzt (12.05.2026) · **Aufwand:** XS · **Reihenfolge:** nach 25.4
 
 #### Problem
 
@@ -343,6 +351,22 @@ Zwei Varianten:
 - Keine `■`-Glyphen mehr im Output
 - Status-Farben bleiben erhalten
 - Renderer-Kompatibilität geprüft
+
+#### Umsetzung (12.05.2026)
+
+**Abgeglichener Scope:** Beim Inventory der `■`-Vorkommen zeigte sich, dass alle 12 Treffer in den Section-H1s sitzen. Die im ursprünglichen Konzept erwähnten Plateau-/Status-Indikatoren mit `■` (z. B. „■ Aktive Progression") existieren im Template nicht mehr — die Status-Klassifikation rendert seit längerem über Emoji (`✅`, `👀`, `💪`, `📈`, `⏸️`, `⚠️`, `🔴`, `❌`) plus farbige `.badge`-Klassen. Diese Stellen waren also bereits sauber und brauchten keine Änderung.
+
+**Encoding-Analyse:**
+- Im Projekt ist **keine Font-Registrierung** vorhanden (Grep nach `registerFont` / `@font-face` / `TTFont` / `pdfmetrics` ohne Treffer in `core/` und `config/`). Die CSS-Deklaration `font-family: Arial, Helvetica, sans-serif` fällt in xhtml2pdf auf ReportLabs Standard-Helvetica zurück.
+- Standard-Helvetica verwendet `WinAnsiEncoding` (`xhtml2pdf/default.py:157`) — Latin-1-Range, ohne den Geometric-Shapes-Block (U+25xx). Sowohl das aktuelle `■` (U+25A0) als auch die im Konzept-Lösungsansatz favorisierten Glyphen `▶` (U+25B6) / `●` (U+25CF) / `▪` (U+25AA) liegen außerhalb dieser Range — ein Wechsel von einem zum anderen Glyph würde das Encoding-Risiko nur verschieben, nicht beheben.
+
+**Entscheidung:** Marker **ersatzlos entfernen** statt zu ersetzen.
+- Die H1-Stilregeln (blau `#0d6efd`, fett, 20 px, `border-bottom: 3px solid`) tragen die visuelle Hierarchie bereits stark genug; der `■`-Glyph war redundant.
+- Garantiert kein neuer Tofu-Kandidat — die Encoding-Beschwerde verschwindet zu 100 %.
+- Phase 27 (Style-Overhaul) kann später eine echte Icon-Strategie einführen (TTF-Registrierung von DejaVu Sans oder Icon-Font), wenn Brand-Identity gewünscht ist.
+
+**Template** (`core/templates/core/training_pdf_simple.html`):
+- Alle zwölf `■ ` (mit nachfolgendem Space) aus den H1s entfernt (`replace_all`-Edit). Betrifft ToC-Heading + elf Section-H1s; H1s starten jetzt direkt mit dem Titel oder mit dem `<a name="…"></a>`-Anker aus 25.4.
 
 ---
 
