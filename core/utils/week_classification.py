@@ -53,14 +53,28 @@ def _aggregate_weekly_volume(saetze_qs, user_kg: float) -> tuple[dict, dict]:
 
 
 def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict]:
-    """Return (deload_weeks, deload_majority_weeks, plans_per_week) from sessions."""
+    """Return (deload_weeks, deload_majority_weeks, routines_per_week) from sessions.
+
+    Phase 25.8: ``routines_per_week`` maps each ISO-week-key to the set of
+    *routine identities* trained that week – not raw plan IDs. A routine
+    identity is the plan's ``gruppe_id`` when set (a split routine spreads its
+    days over several ``Plan`` rows that share one ``gruppe_id``), otherwise
+    the plan's own id (a standalone, ungrouped plan).
+
+    Collapsing all split days of one routine onto a single key is what keeps a
+    *partially logged* split week from looking like a plan change: a week with
+    only ``{Push}`` logged so far and a full week with ``{Push, Pull, Legs}``
+    both reduce to the same single ``gruppe_id``. See ``build_weekly_volume_overview``.
+    """
     deload_weeks: set[str] = set()
     deload_majority_weeks: set[str] = set()
-    plans_per_week: dict[str, set] = defaultdict(set)
+    routines_per_week: dict[str, set] = defaultdict(set)
     if alle_trainings is None:
-        return deload_weeks, deload_majority_weeks, plans_per_week
+        return deload_weeks, deload_majority_weeks, routines_per_week
     sessions_per_week: dict[str, dict] = defaultdict(lambda: {"total": 0, "deload": 0})
-    for t in alle_trainings.all():
+    # ``select_related("plan")`` joins the routine's ``gruppe_id`` into the same
+    # query – avoids an N+1 on ``t.plan`` while keeping the query count flat.
+    for t in alle_trainings.select_related("plan").all():
         iso_year, iso_week, _ = t.datum.isocalendar()
         key = f"{iso_year}-W{iso_week:02d}"
         sessions_per_week[key]["total"] += 1
@@ -68,14 +82,16 @@ def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict]:
             sessions_per_week[key]["deload"] += 1
             deload_weeks.add(key)
         if t.plan_id is not None:
-            plans_per_week[key].add(t.plan_id)
+            # gruppe_id identifies the routine across all of its split days;
+            # fall back to the plan id for ungrouped standalone plans.
+            routines_per_week[key].add(t.plan.gruppe_id or t.plan_id)
     for key, counts in sessions_per_week.items():
         if (
             counts["total"]
             and (counts["deload"] / counts["total"]) * 100 >= DELOAD_WEEK_MAJORITY_PCT
         ):
             deload_majority_weeks.add(key)
-    return deload_weeks, deload_majority_weeks, plans_per_week
+    return deload_weeks, deload_majority_weeks, routines_per_week
 
 
 def _fill_iso_week_range(weekly_volume: dict) -> list[str]:
@@ -191,11 +207,15 @@ def build_weekly_volume_overview(
 
     Phase 24.1: Diagnose vergleicht ausschließlich die letzten zwei
     *vergleichbaren* Wochen (nicht laufend, nicht Deload-Mehrheit, nicht
-    Plan-Wechsel-Woche). Plan-Wechsel-Wochen werden über die Plan-IDs der
-    Sessions ermittelt und als ``ist_plan_wechsel`` markiert. Wenn keine
-    zwei vergleichbaren Wochen verfügbar sind, wird statt einer irreführenden
-    Stabil-/Wachstums-Diagnose ein klarer Hinweis ``Trend-Bewertung pausiert``
-    erzeugt.
+    Plan-Wechsel-Woche). Wenn keine zwei vergleichbaren Wochen verfügbar
+    sind, wird statt einer irreführenden Stabil-/Wachstums-Diagnose ein
+    klarer Hinweis ``Trend-Bewertung pausiert`` erzeugt.
+
+    Phase 25.8: Plan-Wechsel-Wochen werden über die *Routine-Identität*
+    (``Plan.gruppe_id``, Fallback ``plan_id``) aufeinanderfolgender Wochen
+    ermittelt und als ``ist_plan_wechsel`` markiert – nicht mehr über rohe
+    Plan-IDs. Sonst sieht jede noch nicht vollständig geloggte Splitwoche
+    (z.B. erst Push geloggt, Pull/Legs offen) wie ein Plan-Wechsel aus.
     """
     # ``einheit`` muss mit-gejoined werden, weil ``_aggregate_weekly_volume``
     # pro Satz auf ``satz.einheit.datum`` zugreift – sonst eine Query pro Satz.
@@ -204,7 +224,7 @@ def build_weekly_volume_overview(
     if not weekly_volume:
         return []
 
-    deload_weeks, deload_majority_weeks, plans_per_week = _classify_weeks_from_sessions(
+    deload_weeks, deload_majority_weeks, routines_per_week = _classify_weeks_from_sessions(
         alle_trainings
     )
 
@@ -215,11 +235,19 @@ def build_weekly_volume_overview(
 
     labels = _fill_iso_week_range(weekly_volume)
     weeks: list[dict] = []
-    prev_plans: set | None = None
+    prev_routines: set | None = None
     for label in labels:
-        cur_plans = plans_per_week.get(label, set())
+        cur_routines = routines_per_week.get(label, set())
+        # Phase 25.8: a plan change is a week whose set of routine identities
+        # differs from the previous routine-bearing week. Comparing routine
+        # identities (gruppe_id) instead of raw plan IDs means a partially
+        # logged split week – only some of the routine's split days done so
+        # far – is no longer mistaken for a plan change.
         ist_plan_wechsel = bool(
-            prev_plans is not None and cur_plans and prev_plans and cur_plans != prev_plans
+            prev_routines is not None
+            and cur_routines
+            and prev_routines
+            and cur_routines != prev_routines
         )
         weeks.append(
             {
@@ -233,8 +261,8 @@ def build_weekly_volume_overview(
                 "ist_plan_wechsel": ist_plan_wechsel,
             }
         )
-        if cur_plans:
-            prev_plans = cur_plans
+        if cur_routines:
+            prev_routines = cur_routines
 
     if len(weeks) >= 2:
         weeks[-1]["diagnose"] = _build_week_diagnose(weeks)
