@@ -536,3 +536,113 @@ Alle Fragen am 12.05.2026 anhand Code-Sichtung entschieden. Details siehe jeweil
 ## 7. Status-Updates pro Sub-Phase
 
 *(Wird beim Start und Abschluss jeder Sub-Phase ergänzt.)*
+
+Die Umsetzungs-Notizen zu 25.1–25.7 stehen direkt in den jeweiligen
+3.x-Blöcken („Umsetzung"/„Entscheidung"). Alle sieben sind umgesetzt und
+gemerged (PRs #175–#181).
+
+---
+
+### 25.8 – Plan-Wechsel-Falsch-Positiv bei Teil-Splitwochen
+
+**Status:** ✅ Abgeschlossen (18.05.2026) · **Aufwand:** S · **Branch:** `feature/phase-25-8-pdf-volume-diagnose-fix`
+
+Nicht im ursprünglichen Phase-25-Konzept (25.1–25.7) enthalten – als
+Hotfix-Sub-Phase aus einem Export-Review hinzugekommen.
+
+#### Auslöser & Verifikation
+
+Der PDF-Export vom 18.05.2026 04:17 zeigte im Volumen-Block „Stabile Phase ·
+Vergleich KW19→KW20" statt „Trend-Bewertung pausiert". Erst-Vermutung war
+eine Regression der laufende-Woche-Logik. Verifikation gegen Production
+(SSH, User Leratos) hat das widerlegt:
+
+- 18.05.2026 ist ISO-**KW21**, nicht KW20.
+- KW20 (11.–17.05.) ist eine abgeschlossene, normale 3-Session-Woche
+  (Mo/Mi/Sa, 24.105 kg, kein Deload, gleiche Plan-Gruppe wie KW19).
+- KW21 hat am Mo 04:17 null Sessions → fehlt im Chart und ist – korrekt –
+  nicht Bewertungsbasis.
+- Der einzige Plan-Wechsel war KW14→KW15 (06.04.2026), nicht KW20.
+- `KW19 (23.967) → KW20 (24.105)`, +0,6 %, „stabil" ist nach
+  24.1-Konvention **korrekt**. Der 18.05-Export hatte keinen Bug; die
+  Hypothesen A/B/C aus dem Auftrag treffen alle nicht zu (Klassifikator
+  korrekt aufgerufen, Logik seit 24.1c unverändert – 24.1c war ein reiner
+  Code-Move).
+
+#### Tatsächlicher Befund (umdefinierter 25.8-Scope, mit User abgestimmt)
+
+`ist_plan_wechsel` in `_classify_weeks_from_sessions` erkannte Plan-Wechsel
+über die Menge der rohen `plan_id`s aufeinanderfolgender Wochen. Eine
+Split-Routine verteilt ihre Tage auf mehrere `Plan`-Zeilen mit gemeinsamer
+`gruppe_id` (Production: Push/Pull/Legs = Plan 131/132/133, gruppe
+`553417d0…`). Jede noch nicht vollständig geloggte Woche hat damit eine
+*Teilmenge* der Plan-IDs und wurde fälschlich als Plan-Wechsel markiert.
+Im 11.05-Export erzeugte das die spurious Begründung „Trainingsplan-Wechsel"
+(folgenlos, weil KW20 dort auch `ist_laufend` war). In einer *nicht*-
+laufenden Teil-Splitwoche bricht `select_comparable_weeks` an der falsch
+markierten Woche ab → echter Diagnose-Fehler. Es ist eine 24.1-Logiklücke
+(siehe `phase24_concept.md` Section 11.4).
+
+#### Fix
+
+`_classify_weeks_from_sessions` sammelt pro Woche *Routine-Identitäten* statt
+roher Plan-IDs: `Plan.gruppe_id`, Fallback `plan_id` für ungruppierte
+Standalone-Pläne. Alle Split-Tage einer Routine kollabieren auf einen
+Schlüssel – Teilwochen sind dann nicht mehr „anders" als Vollwochen.
+`select_related("plan")` hält den Query-Count flach (kein N+1, n+1-Test
+grün). Pläne ohne `gruppe_id` verhalten sich unverändert (Fallback =
+plan_id), daher keine Regression bestehender Tests.
+
+#### Warum kein bestehender Test den Fall erfasst hat
+
+Der Test-Helper `_set_week_volume` legt genau eine Session (= ein Plan) pro
+Woche an; jede Test-Woche hatte damit eine einelementige Plan-Menge. Der
+Teilmengen-Fall (`{Push,Pull}` ⊂ `{Push,Pull,Legs}`) – der eigentliche
+Auslöser – kam in keinem Test vor; alle Plan-Wechsel-Tests nutzen vollständig
+disjunkte Einzel-Plan-Wochen. Neu: Test-Klasse `TestPlanWechselSplitRoutine`
+mit Mehr-Session-Splitwochen (Teilwoche kein Wechsel, laufende Teilwoche
+ohne spurious Begründung, echter Gruppen-Wechsel weiterhin erkannt).
+
+#### Geänderte Dateien
+
+`core/utils/week_classification.py`, `core/tests/test_week_classification.py`,
+`docs/journal.txt`, `docs/concepts/phase25_concept.md`,
+`docs/concepts/phase24_concept.md`.
+
+#### Anmerkung Test-Suite
+
+Der vorbekannte Flake `TestCollectExerciseDetailData::test_mit_verlauf`
+(im Journal als Test-Isolations-Race dokumentiert) trat erneut auf
+(~1 von 5 isolierten Läufen, ohne Bezug zu 25.8 – `collect_exercise_detail_data`
+liegt in `stats_collector.py` und wird hier nicht berührt). Alle übrigen
+geprüften Suites grün (week_classification, stats_collector, n_plus_one,
+advanced_stats, training_stats, export, algorithm_audit, caching).
+
+---
+
+### Offene Punkte aus dem 18.05.2026-Export-Review (nicht Teil von 25.8)
+
+Beim selben Review aufgefallen, bewusst nicht mitgefixt – jeweils mit
+Vorschlag für eine spätere Sub-Phase:
+
+**a) BIA-Sensor-Sprung in der Verlauf-Tabelle.** 06.05.2026: KFA 25,3 % /
+Muskeln 35,3 %; 12.05.2026: KFA 21,2 % / Muskeln 39,8 % – ein Sprung von
+über 4 Prozentpunkten in 6 Tagen, physiologisch unmöglich (bekanntes
+BIA-Artefakt nach gastrischem Bypass). Die „Aktuell"-Tabelle rendert das
+positive Vormonats-Delta (KFA −0,3 %, Muskeln +0,4 kg, Wasser +0,3 %)
+trotzdem mit grünem Pfeil als positive Bewertung – inhaltliche Aussage auf
+instabiler Datenbasis. *Vorschlag:* Phase-26-Anhang oder eigene Sub-Phase
+„BIA-Plausibilitätsprüfung" – Delta-Anzeige bei großen Schwankungen
+ausblenden, oder pro-User-Toggle für BIA-Aussagen.
+
+**b) Status „Beobachten" semantisch unklar.** Kniebeuge (PR vor 10 Tagen)
+und Bankdrücken (PR vor 14 Tagen) stehen auf Status „Beobachten". Die
+Legende erklärt nur das Alter („PR 1–2 Wochen alt"), nicht die inhaltliche
+Aussage – positiv, neutral, leicht warnend? Im Konzept nicht definiert.
+*Vorschlag:* in Phase 26 (Konsolidierungs-Logik) mit-adressieren oder als
+eigene Mini-Phase.
+
+**c) Trainer-Empfehlungen „Nächste Schritte".** Mischt weiterhin
+Bewertungen mit Handlungs-Schritten und enthält generische Tipps. War die
+gestrichene Sub-Phase 24.7. *Vorschlag:* für eine spätere, dedizierte
+Empfehlungs-Phase aufgehoben – hier als offener Punkt markiert.
