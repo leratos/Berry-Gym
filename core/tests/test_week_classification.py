@@ -13,6 +13,7 @@ wurden. Umfasst:
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+from uuid import uuid4
 
 from django.urls import reverse
 from django.utils import timezone
@@ -507,3 +508,123 @@ class TestDashboardVolumeDiagnoseUsesSharedClassifier:
             # prüfen das indirekt darüber, dass kein 'regression'-Key aus
             # dem laufenden-Wochen-Drop folgt.
             assert diag["key"] != "regression"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 25.8: Plan-Wechsel-Erkennung über Routine-Identität (gruppe_id)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _log_split_week(user, plaene, monday, gewicht=Decimal("100.00")) -> None:
+    """Log one session per plan in ``plaene`` across the given ISO week.
+
+    Sessions land on Monday, Wednesday, Friday, ... of the week of ``monday``,
+    so a 1-, 2- or 3-element ``plaene`` models a partially or fully logged
+    split week.
+    """
+    for offset, plan in enumerate(plaene):
+        _set_week_volume(user, plan, monday + timedelta(days=offset * 2), gewicht)
+
+
+@pytest.mark.django_db
+class TestPlanWechselSplitRoutine:
+    """Phase 25.8: Eine Splitroutine verteilt ihre Tage auf mehrere ``Plan``-
+    Zeilen, die eine gemeinsame ``gruppe_id`` teilen. Der Plan-Wechsel-
+    Klassifikator vergleicht Routine-Identitäten (gruppe_id), nicht rohe
+    Plan-IDs – sonst sieht jede noch nicht vollständig geloggte Splitwoche
+    wie ein Plan-Wechsel aus (Auslöser-Befund: 18.05.2026-Export-Review).
+    """
+
+    def test_partielle_splitwoche_kein_falscher_plan_wechsel(self):
+        """Volle Splitwochen (Push/Pull/Legs) gefolgt von einer Woche, in der
+        nur zwei der drei Split-Tage geloggt sind. Vor 25.8 wurde die
+        Teilwoche – Plan-ID-Teilmenge ``{Push,Pull}`` ⊂ ``{Push,Pull,Legs}`` –
+        fälschlich als Plan-Wechsel markiert; ``select_comparable_weeks`` brach
+        dort ab und die Diagnose pausierte ohne Grund."""
+        from core.models import Satz, Trainingseinheit
+
+        user = UserFactory()
+        gruppe = uuid4()
+        push = PlanFactory(user=user, gruppe_id=gruppe)
+        pull = PlanFactory(user=user, gruppe_id=gruppe)
+        legs = PlanFactory(user=user, gruppe_id=gruppe)
+        ref_year = 2026
+        for week in (17, 18, 19):
+            _log_split_week(user, [push, pull, legs], _iso_monday(ref_year, week))
+        # KW20 abgeschlossen, aber nur Push + Pull geloggt – Legs fehlt.
+        _log_split_week(user, [push, pull], _iso_monday(ref_year, 20))
+
+        heute = timezone.make_aware(_iso_monday(ref_year, 21))  # KW21, KW20 fertig
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = build_weekly_volume_overview(alle_saetze, alle_trainings, heute=heute)
+
+        kw20 = next(w for w in result if w["woche"] == "KW20")
+        assert kw20["ist_plan_wechsel"] is False
+        # Durchgehende Routine → keine einzige Plan-Wechsel-Woche.
+        assert all(not w["ist_plan_wechsel"] for w in result)
+        # Diagnose vergleicht die zwei abgeschlossenen Wochen, statt zu pausieren.
+        assert result[-1]["diagnose"]["compared_weeks"] == ("KW19", "KW20")
+
+    def test_laufende_partielle_splitwoche_nennt_keinen_plan_wechsel_grund(self):
+        """Reproduktion des 11.05.2026-Exports: die laufende KW20 hat erst
+        einen von drei Split-Tagen geloggt. Vor 25.8 markierte das die Woche
+        zusätzlich als Plan-Wechsel – die Pause-Begründung lautete fälschlich
+        „Diese Woche läuft noch, Trainingsplan-Wechsel"."""
+        from core.models import Satz, Trainingseinheit
+
+        user = UserFactory()
+        gruppe = uuid4()
+        push = PlanFactory(user=user, gruppe_id=gruppe)
+        pull = PlanFactory(user=user, gruppe_id=gruppe)
+        legs = PlanFactory(user=user, gruppe_id=gruppe)
+        ref_year = 2026
+        for week in (18, 19):
+            _log_split_week(user, [push, pull, legs], _iso_monday(ref_year, week))
+        # KW20 läuft: nur der erste Split-Tag (Push) ist geloggt.
+        _log_split_week(user, [push], _iso_monday(ref_year, 20))
+
+        heute = timezone.make_aware(_iso_monday(ref_year, 20))  # Montag KW20 → laufend
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = build_weekly_volume_overview(alle_saetze, alle_trainings, heute=heute)
+
+        kw20 = next(w for w in result if w["woche"] == "KW20")
+        assert kw20["ist_laufend"] is True
+        assert kw20["ist_plan_wechsel"] is False
+        diag = result[-1]["diagnose"]
+        # Laufende Woche nie im Vergleich; falls die Diagnose pausiert, dann
+        # nicht mit der spurious Begründung „Trainingsplan-Wechsel".
+        if diag["compared_weeks"]:
+            assert "KW20" not in diag["compared_weeks"]
+        assert "Trainingsplan-Wechsel" not in diag["message"]
+
+    def test_echter_gruppen_wechsel_weiterhin_erkannt(self):
+        """Schutz gegen Über-Korrektur: ein Wechsel zwischen zwei Routinen mit
+        unterschiedlicher ``gruppe_id`` muss weiterhin als Plan-Wechsel
+        markiert werden."""
+        from core.models import Satz, Trainingseinheit
+
+        user = UserFactory()
+        gruppe_a, gruppe_b = uuid4(), uuid4()
+        a_push = PlanFactory(user=user, gruppe_id=gruppe_a)
+        a_pull = PlanFactory(user=user, gruppe_id=gruppe_a)
+        b_push = PlanFactory(user=user, gruppe_id=gruppe_b)
+        b_pull = PlanFactory(user=user, gruppe_id=gruppe_b)
+        ref_year = 2026
+        _log_split_week(user, [a_push, a_pull], _iso_monday(ref_year, 16))
+        _log_split_week(user, [a_push, a_pull], _iso_monday(ref_year, 17))
+        _log_split_week(user, [b_push, b_pull], _iso_monday(ref_year, 18))
+        _log_split_week(user, [b_push, b_pull], _iso_monday(ref_year, 19))
+
+        heute = timezone.make_aware(_iso_monday(ref_year, 20))
+        alle_saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        alle_trainings = Trainingseinheit.objects.filter(user=user)
+        result = build_weekly_volume_overview(alle_saetze, alle_trainings, heute=heute)
+
+        kw17 = next(w for w in result if w["woche"] == "KW17")
+        kw18 = next(w for w in result if w["woche"] == "KW18")
+        kw19 = next(w for w in result if w["woche"] == "KW19")
+        assert kw17["ist_plan_wechsel"] is False
+        assert kw18["ist_plan_wechsel"] is True  # erste Woche der neuen Routine
+        assert kw19["ist_plan_wechsel"] is False  # gleiche Routine wie KW18
