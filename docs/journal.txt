@@ -6377,7 +6377,77 @@ User-Befund im Dashboard (Statistik-Volumen-Chart Wochenansicht): KW20 (laufende
 
 Bewusst NICHT angefasst: Code – Implementierung wieder in VSCode/Claude Code.
 
+## In Arbeit: Sub-Phase 25.8 – Plan-Wechsel-Falsch-Positiv bei Teil-Splitwochen (18.05.2026)
 
+**Auslöser-Befund (User):** PDF-Export 18.05.2026 04:17 zeigt im Volumen-Block
+„Stabile Phase · Vergleich KW19→KW20" statt „Trend-Bewertung pausiert". User
+vermutete eine Regression der laufenden-Woche-Logik gegenüber dem 11.05-Export.
+
+**Verifikation (SSH gegen Production, User 2 Leratos):** Der 18.05-Export ist
+korrekt. 18.05.2026 ist ISO-KW21, nicht KW20. KW20 (11.–17.05.) ist eine
+abgeschlossene, normale 3-Session-Woche (Mo/Mi/Sa, 24.105 kg, kein Deload,
+gleiche Plan-Gruppe wie KW19). KW21 hat am Mo 04:17 null Sessions → fehlt im
+Chart. KW19→KW20 (+0,6 %) zu vergleichen ist nach 24.1-Konvention richtig.
+Der Plan-Wechsel war KW14→KW15 (06.04.), nicht KW20. Hypothesen A/B/C aus dem
+Auftrag treffen alle nicht zu – Klassifikator wird korrekt aufgerufen, die
+Logik ist seit 24.1c unverändert (24.1c war ein reiner Code-Move).
+
+**Echter Befund daraus (Scope von 25.8, mit User abgestimmt):** `ist_plan_wechsel`
+in `_classify_weeks_from_sessions` vergleicht rohe `plan_id`-Mengen pro Woche.
+Bei einem Split (Push/Pull/Legs = 3 `Plan`-Zeilen mit gemeinsamer `gruppe_id`)
+hat jede noch nicht vollständig geloggte Woche eine Teilmenge der Plan-IDs →
+fälschlich als Plan-Wechsel markiert. Im 11.05-Export erzeugte das die
+spurious Begründung „Trainingsplan-Wechsel" (damals folgenlos, weil KW20 auch
+`laufend` war); in einer *nicht*-laufenden Teil-Splitwoche würde
+`select_comparable_weeks` aber an der Stelle abbrechen → echter Diagnose-Fehler.
+
+**Fix-Richtung:** Routine-Identität (`plan.gruppe_id`, Fallback `plan_id`)
+statt roher Plan-IDs vergleichen. Alle Split-Tage einer Routine kollabieren
+auf einen Schlüssel; Teilwochen sind dann nicht mehr „anders". Pläne ohne
+`gruppe_id` verhalten sich unverändert (Fallback = plan_id).
+
+Branch: `feature/phase-25-8-pdf-volume-diagnose-fix`.
+
+
+## Abgeschlossen: Sub-Phase 25.8 – Plan-Wechsel über Routine-Identität (18.05.2026)
+
+**Reproduktion (test-first):** Neue Test-Klasse `TestPlanWechselSplitRoutine`
+in `test_week_classification.py`. Auf dem ungefixten Stand schlugen die zwei
+bug-zielenden Tests fehl – eine Teil-Splitwoche (`{Push,Pull}` ⊂
+`{Push,Pull,Legs}`) wurde `ist_plan_wechsel=True` – der Guard-Test (echter
+Gruppen-Wechsel) blieb grün. Befund bestätigt.
+
+**Fix:** `_classify_weeks_from_sessions` sammelt jetzt Routine-Identitäten
+(`Plan.gruppe_id`, Fallback `plan_id`) statt roher Plan-IDs;
+`build_weekly_volume_overview` vergleicht entsprechend `prev_routines` ↔
+`cur_routines`. `select_related("plan")` gegen N+1. Eine Datei, zwei
+Funktionen plus Docstrings. Pläne ohne `gruppe_id` unverändert (Fallback).
+
+**Warum kein Test den Regress erfasst hatte:** `_set_week_volume` legt eine
+Session / einen Plan pro Woche an → einelementige Plan-Mengen, der
+Teilmengen-Fall kam nie vor. Alle bestehenden Plan-Wechsel-Tests nutzen
+disjunkte Einzel-Plan-Wochen und bleiben über den Fallback grün.
+
+**Tests:** week_classification, stats_collector, n_plus_one, advanced_stats,
+training_stats, export, algorithm_audit, caching – grün (352 Bestand + 3
+neue). Einziger Ausreißer: der vorbekannte Flake
+`TestCollectExerciseDetailData::test_mit_verlauf` (~1 von 5 isolierten
+Läufen, ohne Bezug zu 25.8 – `collect_exercise_detail_data` wird hier nicht
+berührt).
+
+**Verifikations-Nebenergebnis:** Der auslösende 18.05-Export war selbst
+korrekt (18.05. = KW21, KW20 abgeschlossene Normalwoche). Drei weitere
+Review-Findings (BIA-Sensor-Sprung, Status „Beobachten", Trainer-
+Empfehlungen) sind in `phase25_concept.md` Section 7 als spätere Sub-Phasen
+geparkt – bewusst nicht in 25.8 gefixt.
+
+**Geänderte Dateien:** `core/utils/week_classification.py`,
+`core/tests/test_week_classification.py`, `docs/journal.txt`,
+`docs/concepts/phase25_concept.md`, `docs/concepts/phase24_concept.md`.
+
+**Nicht angefasst:** kein PR-Push (User macht das selbst). Phase 24
+inhaltlich abgeschlossen; nächster Schritt nach 25.8 ist Phase 26
+(Konsolidierungs-Logik).
 
 ## Abgeschlossen: Phase 29 Konzept angelegt (18.05.2026)
 
