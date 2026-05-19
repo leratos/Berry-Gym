@@ -166,6 +166,61 @@ def test_build_user_prompt_covers_frequency_and_periodization_branches(monkeypat
     assert "Linear" in prompt_none and "Deload" in prompt_none
 
 
+def test_distribute_example_sets_sums_exactly():
+    """Phase 29.2 (F1): _distribute_example_sets verteilt Sätze exakt."""
+    from ai_coach.prompt_builder import _distribute_example_sets
+
+    for total in (12, 16, 18, 20, 22, 26):
+        dist = _distribute_example_sets(total, 6)
+        assert len(dist) == 6
+        assert sum(dist) == total, f"Summe {sum(dist)} != {total}"
+        # Werte unterscheiden sich max. um 1, Rest landet vorne (Compounds)
+        assert max(dist) - min(dist) <= 1
+        assert dist == sorted(dist, reverse=True)
+
+
+def test_build_user_prompt_uses_exact_set_target():
+    """Phase 29.2 (F1): der Prompt nennt die exakte Zielzahl, kein 18er-Anker."""
+    builder = PromptBuilder()
+    available = [
+        "Bankdrücken (Langhantel)",
+        "Kniebeuge (Langhantel, Back Squat)",
+        "Crunch",
+    ]
+
+    prompt = builder.build_user_prompt(
+        _analysis_data(freq=3.0),
+        available,
+        plan_type="3er-split",
+        sets_per_session=22,
+    )
+
+    # Exakte Zielzahl statt 4-breiter Range
+    assert "GENAU 22" in prompt
+    assert "18-22" not in prompt
+    # Kein hartcodierter 18-Sätze-Anker mehr
+    assert "18 Sätze total" not in prompt
+    # Beispiel-Tage skalieren mit → Summe = 22
+    assert "Summe = 22 Sätze" in prompt
+    assert "= 22 Sätze total" in prompt
+    # Keine widersprüchliche ±1-Toleranz neben der "exakt"-Regel (Code-Review 29.2)
+    assert "±1" not in prompt
+
+
+def test_build_user_prompt_examples_scale_with_sets():
+    """Phase 29.2 (F1): bei sets_per_session=16 zeigen die Beispiele 16, nicht 18."""
+    builder = PromptBuilder()
+    prompt = builder.build_user_prompt(
+        _analysis_data(freq=3.0),
+        ["Bankdrücken (Langhantel)", "Crunch"],
+        plan_type="3er-split",
+        sets_per_session=16,
+    )
+    assert "GENAU 16" in prompt
+    assert "= 16 Sätze total" in prompt
+    assert "18 Sätze total" not in prompt
+
+
 def test_build_messages_structure(monkeypatch):
     builder = PromptBuilder()
     monkeypatch.setattr(builder, "build_user_prompt", lambda *args, **kwargs: "USER_PROMPT")

@@ -156,11 +156,34 @@ class TestOllamaAndOpenRouterPaths:
         assert result["response"]["plan_name"] == "Test"
         assert result["tokens"] == 123
         assert result["cost"] == 0.0
+        assert result["truncated"] is False
+
+    def test_generate_with_ollama_truncated_sets_flag(self):
+        """done_reason='length' → result['truncated'] ist True (Phase 29.2 / F2)."""
+        client = LLMClient(use_openrouter=True)
+
+        with (
+            patch(
+                "ai_coach.llm_client.ollama.chat",
+                return_value={
+                    "message": {"content": '{"plan_name": "Test", "sessions": []}'},
+                    "total_duration": 1_000_000_000,
+                    "eval_count": 1000,
+                    "done_reason": "length",
+                },
+            ),
+            patch.object(
+                client, "_extract_json", return_value={"plan_name": "Test", "sessions": []}
+            ),
+        ):
+            result = client._generate_with_ollama(messages=[], max_tokens=1000, timeout=10)
+
+        assert result["truncated"] is True
 
     def test_generate_with_openrouter_success(self):
         usage = types.SimpleNamespace(total_tokens=1000, prompt_tokens=700, completion_tokens=300)
         msg = types.SimpleNamespace(content='{"plan_name":"X","sessions":[]}')
-        choice = types.SimpleNamespace(message=msg)
+        choice = types.SimpleNamespace(message=msg, finish_reason="stop")
         response = types.SimpleNamespace(choices=[choice], usage=usage)
 
         fake_client = MagicMock()
@@ -177,6 +200,26 @@ class TestOllamaAndOpenRouterPaths:
         assert result["tokens"] == 1000
         assert "usage" in result
         assert result["response"]["plan_name"] == "X"
+        assert result["truncated"] is False
+
+    def test_generate_with_openrouter_truncated_sets_flag(self):
+        """finish_reason='length' → result['truncated'] ist True (Phase 29.2 / F2)."""
+        usage = types.SimpleNamespace(total_tokens=2000, prompt_tokens=700, completion_tokens=1300)
+        msg = types.SimpleNamespace(content='{"plan_name":"X","sessions":[]}')
+        choice = types.SimpleNamespace(message=msg, finish_reason="length")
+        response = types.SimpleNamespace(choices=[choice], usage=usage)
+
+        fake_client = MagicMock()
+        fake_client.chat.completions.create.return_value = response
+
+        client = LLMClient(use_openrouter=True)
+        with (
+            patch.object(client, "_get_openrouter_client", return_value=fake_client),
+            patch.object(client, "_extract_json", return_value={"plan_name": "X", "sessions": []}),
+        ):
+            result = client._generate_with_openrouter(messages=[], max_tokens=1300, timeout=20)
+
+        assert result["truncated"] is True
 
     def test_generate_with_ollama_json_decode_error_reraises(self):
         client = LLMClient(use_openrouter=True)

@@ -194,12 +194,23 @@ class LLMClient:
             # Stats ausgeben
             total_duration = response.get("total_duration", 0) / 1e9
             eval_count = response.get("eval_count", 0)
+            done_reason = response.get("done_reason")
 
             print("✓ Ollama Response:")
             print(f"   Dauer: {total_duration:.1f}s")
             print(f"   Tokens: {eval_count}")
             print(f"   Länge: {len(content)} Zeichen")
-            print("   Kosten: 0€ (lokal)\n")
+            print("   Kosten: 0€ (lokal)")
+
+            # Phase 29.2 (F2): Truncation-Detektor – done_reason == "length"
+            # oder eval_count am num_predict-Limit = abgeschnittene Antwort.
+            truncated = done_reason == "length" or (bool(eval_count) and eval_count >= max_tokens)
+            if truncated:
+                print(
+                    f"   ⚠️  WARNUNG: Antwort gegen Token-Limit ({max_tokens}) gelaufen "
+                    f"– Plan ist ABGESCHNITTEN!"
+                )
+            print()
 
             # JSON parsen und mit Metadaten zurückgeben
             return {
@@ -207,6 +218,7 @@ class LLMClient:
                 "cost": 0.0,
                 "model": self.model,
                 "tokens": eval_count,
+                "truncated": truncated,
             }
 
         except json.JSONDecodeError as e:
@@ -250,6 +262,7 @@ class LLMClient:
             )
 
             content = response.choices[0].message.content
+            finish_reason = getattr(response.choices[0], "finish_reason", None)
 
             # Stats ausgeben
             tokens_used = response.usage.total_tokens
@@ -265,7 +278,18 @@ class LLMClient:
             print("✓ OpenRouter Response:")
             print(f"   Tokens: {tokens_used} (in: {prompt_tokens}, out: {completion_tokens})")
             print(f"   Länge: {len(content)} Zeichen")
-            print(f"   Kosten: {total_cost:.4f}€ (~{total_cost * 100:.2f} Cent)\n")
+            print(f"   Kosten: {total_cost:.4f}€ (~{total_cost * 100:.2f} Cent)")
+
+            # Phase 29.2 (F2): Truncation-Detektor. finish_reason == "length"
+            # bedeutet, das Modell lief gegen max_tokens – die Antwort ist
+            # abgeschnitten und der Plan unvollständig.
+            truncated = finish_reason == "length"
+            if truncated:
+                print(
+                    f"   ⚠️  WARNUNG: Antwort gegen Token-Limit ({max_tokens}) gelaufen "
+                    f"(finish_reason='length') – Plan ist ABGESCHNITTEN!"
+                )
+            print()
 
             # JSON parsen und mit Metadaten zurückgeben
             return {
@@ -273,6 +297,7 @@ class LLMClient:
                 "cost": total_cost,
                 "model": model,
                 "tokens": tokens_used,
+                "truncated": truncated,
                 "usage": {
                     "prompt_tokens": prompt_tokens,
                     "completion_tokens": completion_tokens,
