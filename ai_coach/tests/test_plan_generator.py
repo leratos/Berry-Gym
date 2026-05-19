@@ -629,8 +629,9 @@ class TestDynamicMaxTokens:
         gen = PlanGenerator(user_id=1, plan_type="irgendwas-unbekanntes")
         tokens = gen._get_max_tokens()
 
-        assert tokens >= 2000, f"Default muss mindestens 2000 sein, war: {tokens}"
-        assert tokens <= 5000, f"Default sollte unter 5000 bleiben, war: {tokens}"
+        # Phase 29.2: Default großzügig genug für einen mehrtägigen Plan.
+        assert tokens >= 5000, f"Default muss mindestens 5000 sein, war: {tokens}"
+        assert tokens <= 12000, f"Default sollte unter 12000 bleiben, war: {tokens}"
 
     def test_aliases_have_same_token_count(self):
         """ppl und push-pull-legs sind Aliase → gleiche Token-Anzahl."""
@@ -648,8 +649,13 @@ class TestDynamicMaxTokens:
 
         assert split4._get_max_tokens() > split3._get_max_tokens()
 
-    def test_no_plan_type_hardcodes_4000(self):
-        """Kein Plan-Typ darf mehr als 5000 Tokens bekommen (Kostenschutz)."""
+    def test_all_plan_types_have_sane_token_ceiling(self):
+        """Jeder Plan-Typ bekommt eine plausible Token-Obergrenze.
+
+        Phase 29.2: max_tokens ist eine Obergrenze, kein Kostenfaktor –
+        abgerechnet werden nur tatsächlich erzeugte Tokens. Die Werte dürfen
+        daher großzügig sein, müssen aber in einem plausiblen Rahmen bleiben.
+        """
         plan_types = [
             "ganzkörper",
             "2er-split",
@@ -663,11 +669,23 @@ class TestDynamicMaxTokens:
             gen = PlanGenerator(user_id=1, plan_type=pt)
             tokens = gen._get_max_tokens()
             assert (
-                tokens <= 5000
-            ), f"Plan-Typ '{pt}' hat {tokens} Tokens – das ist zu hoch (max 5000)"
+                tokens <= 12000
+            ), f"Plan-Typ '{pt}' hat {tokens} Tokens – unplausibel hoch (max 12000)"
             assert (
-                tokens >= 1500
-            ), f"Plan-Typ '{pt}' hat nur {tokens} Tokens – zu niedrig (min 1500)"
+                tokens >= 3000
+            ), f"Plan-Typ '{pt}' hat nur {tokens} Tokens – zu niedrig (min 3000)"
+
+    def test_3er_split_has_headroom_for_three_full_days(self):
+        """Phase 29.2 (F2): 3er-Split braucht deutlich mehr als das alte Limit.
+
+        Der Live-Diagnose-Lauf lief mit completion_tokens exakt gegen das alte
+        3000-Limit und schnitt den dritten Trainingstag ab.
+        """
+        gen = PlanGenerator(user_id=1, plan_type="3er-split")
+        tokens = gen._get_max_tokens()
+        assert (
+            tokens >= 5000
+        ), f"3er-Split muss klar über dem alten 3000-Limit liegen, war: {tokens}"
 
 
 class TestPeriodizationHelpers:
@@ -1004,6 +1022,46 @@ class TestGenerateWithExistingDjangoPhase2:
         assert "Hypertrophie-3ER/SPLIT" in result["plan_data"]["plan_name"]
         assert "Fokus Bauch" in result["plan_data"]["plan_name"]
         mock_save.assert_called_once()
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_truncated_response_returns_error_and_does_not_save(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Phase 29.2 (F2): abgeschnittene LLM-Antwort → success=False, kein Save.
+
+        Ein als truncated markiertes llm_result darf nicht still als
+        unvollständiger Plan in der DB landen.
+        """
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        llm_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "Abgeschnittener Plan",
+                "sessions": [{"day_name": "A", "exercises": []}],
+            },
+            "usage": {},
+            "cost": 0.01,
+            "truncated": True,
+        }
+
+        gen = PlanGenerator(user_id=1, plan_type="3er-split")
+        with patch.object(gen, "_save_plan_to_db") as mock_save:
+            result = gen._generate_with_existing_django(save_to_db=True)
+
+        assert result["success"] is False
+        assert any("abgeschnitten" in err.lower() for err in result["errors"])
+        mock_save.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

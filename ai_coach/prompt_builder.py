@@ -144,6 +144,29 @@ def _build_periodization_note(
     return f"{structure} + Deload in Woche {deload_str}. Progression: {progression}"
 
 
+def _distribute_example_sets(total: int, n_exercises: int = 6) -> List[int]:
+    """Verteilt `total` Sätze möglichst gleichmäßig auf n Übungen.
+
+    Der Rest wird auf die vorderen Positionen (Compounds) gelegt. Wird nur für
+    die illustrativen Beispiel-Tage im Prompt verwendet (Phase 29.2 / F1) –
+    damit die Beispiele mit `sets_per_session` skalieren statt fix bei 18 zu
+    stehen.
+    """
+    n_exercises = max(1, n_exercises)
+    base, remainder = divmod(max(0, total), n_exercises)
+    return [base + 1 if i < remainder else base for i in range(n_exercises)]
+
+
+def _format_example_day(day_label: str, target_sets: int, slots: List[str]) -> str:
+    """Baut einen Beispiel-Trainingstag, dessen Satz-Summe exakt `target_sets` ist."""
+    dist = _distribute_example_sets(target_sets, len(slots))
+    lines = [f"   - Beispiel {day_label} (Summe = {target_sets} Sätze):"]
+    for slot, sets in zip(slots, dist):
+        lines.append(f"     * {slot}: {sets} Sätze")
+    lines.append(f"     = {target_sets} Sätze total, {len(slots)} Übungen")
+    return "\n".join(lines)
+
+
 class PromptBuilder:
 
     def __init__(self):
@@ -392,9 +415,47 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             example_exercises = available_exercises[:3]
         examples_str = "\n".join([f'  "{ex}"' for ex in example_exercises])
 
-        # Satzbudget als Range (Flexibilität für LLM)
-        min_sets = max(10, sets_per_session - 4)
-        max_sets = sets_per_session
+        # Phase 29.2 (F1): exakte Zielzahl statt 4 Sätze breiter Range.
+        # Die alte Range (min = sets-4) erlaubte dem LLM, an der Untergrenze
+        # zu landen; zusätzlich verstärkten fix bei 18 stehende Beispiel-Tage
+        # diesen Anker. Jetzt: feste Zielzahl + dynamisch skalierte Beispiele.
+        target_sets = sets_per_session
+        push_example = _format_example_day(
+            "Push-Tag",
+            target_sets,
+            [
+                "Brust Übung 1",
+                "Brust Übung 2",
+                "Schultern Übung 1",
+                "Schultern Übung 2",
+                "Trizeps Übung 1",
+                "Trizeps Übung 2",
+            ],
+        )
+        pull_example = _format_example_day(
+            "Pull-Tag",
+            target_sets,
+            [
+                "Vertikaler Zug (Klimmzüge/Latzug)",
+                "1 horizontales Ruder (NICHT zwei!)",
+                "Oberer Rücken/Scapula (z.B. Face Pulls)",
+                "Bizeps Übung 1",
+                "Bizeps Übung 2",
+                "Hintere Schulter / Rücken-Isolation",
+            ],
+        )
+        legs_example = _format_example_day(
+            "Legs-Tag",
+            target_sets,
+            [
+                "Kniebeuge (Quad-Hauptübung)",
+                "RDL oder Beinbeuger (Hamstrings)",
+                "Split Squat / Ausfallschritt (einbeinig)",
+                "Pflicht-Schwachstelle (Adduktoren/Hüftbeuger)",
+                "Core/Bauch",
+                "Wadenheben",
+            ],
+        )
 
         # Coach-Sicherheitsregeln
         coach_rules = """**🏥 COACH-SICHERHEITSREGELN (MUST):**
@@ -500,7 +561,7 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 - Makrozyklus: {duration_weeks} Wochen, Periodisierung: {periodization_note}
 - Deload: Wochen {deload_weeks_str} → Volumen 80%, Intensität ~90% der Vorwoche
 - Zielprofil: {target_profile} → {profile_guides.get(target_profile, profile_guides['hypertrophie'])}
-- Mikrozyklus: Nutze das Satz-Budget ({min_sets}-{max_sets}) voll aus, +1 Satz auf Hauptübungen in Nicht-Deload-Wochen, danach Deload-Reset
+- Mikrozyklus: Basiswoche mit GENAU {target_sets} Arbeitssätzen pro Tag, +1 Satz auf Hauptübungen in Nicht-Deload-Wochen (siehe progression_strategy), danach Deload-Reset
 
 **AUFGABE:**
 {instruction}
@@ -517,33 +578,13 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 0. 🚨 PFLICHT-SCHWACHSTELLEN: Alle im Pflicht-Block #0 genannten Muskelgruppen MÜSSEN mit mind. 1 Übung im Plan sein! Kein optionaler Hinweis – HARTE REGEL!
 1. ** VERWENDE NUR ÜBUNGEN AUS DER OBIGEN LISTE** - keine anderen!
 2. Push/Pull Balance beachten (bei Unbalance gegensteuern)
-3. SATZ-BUDGET: {min_sets}-{max_sets} Sätze pro Trainingstag (ca. 1 Stunde Training)
-   - Nutze das KOMPLETTE Satz-Budget aus (nicht weniger!)
-   - Verteile die Sätze auf 5-6 Übungen
-   - Beispiel Push-Tag (18 Sätze):
-     * Brust Übung 1: 4 Sätze
-     * Brust Übung 2: 3 Sätze
-     * Schultern Übung 1: 3 Sätze
-     * Schultern Übung 2: 3 Sätze
-     * Trizeps Übung 1: 3 Sätze
-     * Trizeps Übung 2: 2 Sätze
-     = 18 Sätze total, 6 Übungen
-   - Beispiel Pull-Tag (18 Sätze):
-     * Klimmzüge (vertikaler Zug): 4 Sätze
-     * Langhantelrudern ODER Einarmiges Rudern (1 horizontales Ruder – NICHT beides!): 3 Sätze
-     * Oberer Rücken / Scapula (z.B. Face Pulls): 3 Sätze
-     * Bizeps Übung 1: 3 Sätze
-     * Bizeps Übung 2: 2 Sätze
-     * Hintere Schulter oder Rücken Isolation: 3 Sätze
-     = 18 Sätze total, 6 Übungen
-   - Beispiel Legs-Tag (18 Sätze):
-     * Kniebeuge (Hauptübung Quad): 4 Sätze
-     * RDL oder Beinbeuger (Hamstrings): 3 Sätze
-     * Split Squat oder Ausfallschritt (einbeinig): 3 Sätze
-     * Adduktoren/Hüftbeuger (aus Pflicht-Block falls Schwachstelle): 3 Sätze
-     * Core/Bauch (aus Pflicht-Block falls Schwachstelle): 3 Sätze
-     * Wadenheben (optional, nur wenn Budget noch nicht voll): 2 Sätze
-     = 16-18 Sätze total
+3. SATZ-BUDGET: Jeder Trainingstag MUSS GENAU {target_sets} Arbeitssätze enthalten (ca. 1 Stunde Training)
+   - Die Summe aller "sets"-Werte eines Tages MUSS exakt {target_sets} ergeben – nicht weniger, nicht mehr!
+   - Alle Trainingstage haben dieselbe Satzzahl ({target_sets} Sätze, max. ±1 Satz Abweichung zwischen den Tagen)
+   - Verteile die {target_sets} Sätze auf 5-6 Übungen; Compounds zuerst und mit den meisten Sätzen
+{push_example}
+{pull_example}
+{legs_example}
 4. ** MINDESTENS 2 ÜBUNGEN PRO HAUPTMUSKELGRUPPE**:
    - Push-Tag: 2x Brust, 2x Schultern, 1-2x Trizeps
    - Pull-Tag: 1x vertikaler Zug (Klimmzüge/Latzug) + NUR 1x horizontales Ruder + 1-2x Bizeps + 1x Scapula/hintere Schulter
