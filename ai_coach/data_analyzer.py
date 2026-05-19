@@ -42,16 +42,20 @@ class TrainingAnalyzer:
         "Hüfte",
     ]
 
-    # Push/Pull Kategorisierung
-    PUSH_GROUPS = ["Brust", "Schultern", "Trizeps", "Vordere Schulter", "Seitliche Schulter"]
+    # Push/Pull Kategorisierung – DB-Konstanten!
+    # Phase 29.3: muscle_volume ist mit uebung.muskelgruppe gekeyt, also mit
+    # DB-Konstanten ("BRUST", "RUECKEN_LAT", ...). Die frühere Klartext-Liste
+    # ("Brust", "Rücken", ...) traf nie zu → push_volume/pull_volume waren
+    # immer 0 und der Prompt bekam "Push: 0 | Pull: 0 – Unbalanced" als Müll.
+    PUSH_GROUPS = ["BRUST", "SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS"]
     PULL_GROUPS = [
-        "Rücken",
-        "Bizeps",
-        "Trapez",
-        "Oberer Rücken",
-        "Mittlerer Rücken",
-        "Latissimus",
-        "Hintere Schulter",
+        "RUECKEN_LAT",
+        "RUECKEN_TRAPEZ",
+        "RUECKEN_UNTEN",
+        "RUECKEN_OBERER",
+        "BIZEPS",
+        "UNTERARME",
+        "SCHULTER_HINT",
     ]
 
     def __init__(self, user_id: int, days: int = 30):

@@ -25,10 +25,11 @@ class TestTrainingAnalyzerCore:
 
     def test_analyze_with_sessions_computes_metrics(self):
         user = UserFactory()
-        brust = UebungFactory(bezeichnung="Bankdrücken", muskelgruppe="Brust")
-        ruecken = UebungFactory(bezeichnung="Rudern", muskelgruppe="Rücken")
-        beine = UebungFactory(bezeichnung="Kniebeuge", muskelgruppe="Beine")
-        schulter = UebungFactory(bezeichnung="Schulterdrücken", muskelgruppe="Schultern")
+        # DB-Konstanten als muskelgruppe (wie in Produktion – Phase 29.3)
+        brust = UebungFactory(bezeichnung="Bankdrücken", muskelgruppe="BRUST")
+        ruecken = UebungFactory(bezeichnung="Rudern", muskelgruppe="RUECKEN_LAT")
+        beine = UebungFactory(bezeichnung="Kniebeuge", muskelgruppe="BEINE_QUAD")
+        schulter = UebungFactory(bezeichnung="Schulterdrücken", muskelgruppe="SCHULTER_VORN")
 
         session1 = TrainingseinheitFactory(
             user=user, datum=timezone.now() - timedelta(days=6), dauer_minuten=60
@@ -105,13 +106,13 @@ class TestTrainingAnalyzerCore:
         assert balance["pull_volume"] > 0
         assert isinstance(balance["balanced"], bool)
 
-        assert "Brust" in result["muscle_groups"]
-        assert result["muscle_groups"]["Brust"]["avg_rpe"] > 0
-        assert isinstance(result["muscle_groups"]["Brust"]["last_trained"], str)
+        assert "BRUST" in result["muscle_groups"]
+        assert result["muscle_groups"]["BRUST"]["avg_rpe"] > 0
+        assert isinstance(result["muscle_groups"]["BRUST"]["last_trained"], str)
 
     def test_analyze_ratio_zero_when_no_pull(self):
         user = UserFactory()
-        brust = UebungFactory(bezeichnung="Dips", muskelgruppe="Brust")
+        brust = UebungFactory(bezeichnung="Dips", muskelgruppe="BRUST")
         session = TrainingseinheitFactory(
             user=user, datum=timezone.now() - timedelta(days=1), dauer_minuten=45
         )

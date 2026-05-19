@@ -11,6 +11,7 @@ from typing import Dict, List
 from .data_analyzer import TrainingAnalyzer
 from .db_client import DatabaseClient
 from .llm_client import LLMClient
+from .muscle_labels import MIN_SETS_PER_WEAKNESS, resolve_weakness_keys
 from .prompt_builder import PromptBuilder
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1046,50 +1047,8 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         if not weaknesses:
             return []
 
-        LABEL_TO_KEYS: dict[str, list[str]] = {
-            "brust": ["BRUST"],
-            "rücken": ["RUECKEN_LAT", "RUECKEN_TRAPEZ", "RUECKEN_UNTEN", "RUECKEN_OBERER"],
-            "beine": [
-                "BEINE_QUAD",
-                "BEINE_HAM",
-                "PO",
-                "WADEN",
-                "ADDUKTOREN",
-                "ABDUKTOREN",
-                "HUEFTBEUGER",
-            ],
-            "schultern": ["SCHULTER_VORN", "SCHULTER_SEIT", "SCHULTER_HINT"],
-            "vordere schulter": ["SCHULTER_VORN"],
-            "seitliche schulter": ["SCHULTER_SEIT"],
-            "hintere schulter": ["SCHULTER_HINT"],
-            "bizeps": ["BIZEPS"],
-            "trizeps": ["TRIZEPS"],
-            "bauch": ["BAUCH"],
-            "unterer rücken": ["RUECKEN_UNTEN"],
-            "waden": ["WADEN"],
-            "unterarme": ["UNTERARME"],
-            "trapez": ["RUECKEN_TRAPEZ"],
-            "oberer rücken": ["RUECKEN_OBERER"],
-            "oberschenkel vorne": ["BEINE_QUAD"],
-            "oberschenkel hinten": ["BEINE_HAM"],
-            "gesäß": ["PO"],
-            "adduktoren": ["ADDUKTOREN"],
-            "abduktoren": ["ABDUKTOREN"],
-            "hüfte": ["HUEFTBEUGER", "ADDUKTOREN", "ABDUKTOREN"],
-            "hüftbeuger": ["HUEFTBEUGER"],
-            # DB-Konstanten als Keys (data_analyzer liefert z.B. "HUEFTBEUGER: Untertrainiert")
-            "hueftbeuger": ["HUEFTBEUGER"],
-            "schulter_hint": ["SCHULTER_HINT"],
-            "schulter_vorn": ["SCHULTER_VORN"],
-            "schulter_seit": ["SCHULTER_SEIT"],
-            "ruecken_lat": ["RUECKEN_LAT"],
-            "ruecken_trapez": ["RUECKEN_TRAPEZ"],
-            "ruecken_unten": ["RUECKEN_UNTEN"],
-            "ruecken_oberer": ["RUECKEN_OBERER"],
-            "beine_quad": ["BEINE_QUAD"],
-            "beine_ham": ["BEINE_HAM"],
-            "po": ["PO"],
-        }
+        # Phase 29.3: Label-Zuordnung kommt aus der gemeinsamen Mapping-Quelle
+        # (ai_coach/muscle_labels.py) – erkennt DB-Konstanten und Klartext.
 
         # Welche Muskelgruppen-Keys kommen im Plan vor?
         # Phase 13.2: Primär (muskelgruppe) und sekundär (hilfsmuskeln) getrennt tracken.
@@ -1097,17 +1056,28 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         try:
             from core.models import Uebung
 
-            all_ex_names = {
-                ex["exercise_name"]
-                for session in plan_json.get("sessions", [])
-                for ex in session.get("exercises", [])
-            }
-            plan_exercises = Uebung.objects.filter(bezeichnung__in=all_ex_names)
-            primary_keys = set(plan_exercises.values_list("muskelgruppe", flat=True).distinct())
+            plan_exercises = list(
+                Uebung.objects.filter(
+                    bezeichnung__in={
+                        ex["exercise_name"]
+                        for session in plan_json.get("sessions", [])
+                        for ex in session.get("exercises", [])
+                    }
+                )
+            )
+            primary_keys = {ex.muskelgruppe for ex in plan_exercises}
+            name_to_mg = {ex.bezeichnung: ex.muskelgruppe for ex in plan_exercises}
             secondary_keys: set[str] = set()
             for ex in plan_exercises:
                 if ex.hilfsmuskeln:
                     secondary_keys.update(ex.hilfsmuskeln)
+            # Phase 29.3: Arbeitssätze pro primärer Muskelgruppe über den ganzen Plan
+            primary_sets_by_key: dict[str, int] = {}
+            for session in plan_json.get("sessions", []):
+                for ex in session.get("exercises", []):
+                    mg = name_to_mg.get(ex.get("exercise_name", ""))
+                    if mg:
+                        primary_sets_by_key[mg] = primary_sets_by_key.get(mg, 0) + ex.get("sets", 0)
         except Exception as e:
             print(f"   ⚠️ Coverage-Check DB-Fehler: {e}")
             return []
@@ -1116,18 +1086,28 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         for weakness in weaknesses:
             if ":" not in weakness or "Untertrainiert" not in weakness:
                 continue
-            label = weakness.split(":")[0].strip().lower()
-            target_keys = LABEL_TO_KEYS.get(label)
+            mg_display = weakness.split(":")[0].strip()
+            target_keys = resolve_weakness_keys(mg_display)
             if not target_keys:
                 continue
 
             # Phase 13.2: Nur primäre Muskelgruppe zählt als Coverage
             covered_primary = any(k in primary_keys for k in target_keys)
             if covered_primary:
-                print(f"   ✓ Coverage OK: {weakness.split(':')[0].strip()}")
+                # Phase 29.3: Präsenz reicht nicht – auch das Volumen prüfen.
+                group_sets = sum(primary_sets_by_key.get(k, 0) for k in target_keys)
+                if group_sets < MIN_SETS_PER_WEAKNESS:
+                    warnings.append(
+                        f"⚠️ Untertrainiert-Volumen zu niedrig: {mg_display} hat nur "
+                        f"{group_sets} Sätze (Ziel: mind. {MIN_SETS_PER_WEAKNESS})"
+                    )
+                    print(
+                        f"   ⚠️ Volumen knapp: {mg_display} = {group_sets} "
+                        f"Sätze (Ziel ≥{MIN_SETS_PER_WEAKNESS})"
+                    )
+                else:
+                    print(f"   ✓ Coverage OK: {mg_display} ({group_sets} Sätze)")
                 continue
-
-            mg_display = weakness.split(":")[0].strip()
 
             # Nur sekundär abgedeckt → nicht ausreichend, Auto-Fix versuchen
             covered_secondary = any(k in secondary_keys for k in target_keys)
@@ -1144,6 +1124,45 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
                 )
                 if fixed:
                     primary_keys.update(target_keys)
+                    # Phase 29.3 (P1-Review): Der Auto-Fix erzeugt nur Präsenz
+                    # und fügt typischerweise ~3 Sätze ein – das verfehlt das
+                    # MIN_SETS_PER_WEAKNESS-Ziel. Volumen daher hier nochmal
+                    # explizit prüfen, sonst entstehen falsche "covered"-
+                    # Meldungen ohne Volumen-Warnung.
+                    fresh_names = {
+                        e["exercise_name"]
+                        for session in plan_json.get("sessions", [])
+                        for e in session.get("exercises", [])
+                    }
+                    fresh_name_to_mg = {
+                        u.bezeichnung: u.muskelgruppe
+                        for u in Uebung.objects.filter(
+                            bezeichnung__in=fresh_names,
+                            muskelgruppe__in=target_keys,
+                        )
+                    }
+                    group_sets = sum(
+                        e.get("sets", 0)
+                        for session in plan_json.get("sessions", [])
+                        for e in session.get("exercises", [])
+                        if fresh_name_to_mg.get(e.get("exercise_name", "")) in target_keys
+                    )
+                    if group_sets < MIN_SETS_PER_WEAKNESS:
+                        warnings.append(
+                            f"⚠️ Untertrainiert-Volumen nach Auto-Fix zu niedrig: "
+                            f"{mg_display} hat nur {group_sets} Sätze "
+                            f"(Ziel: mind. {MIN_SETS_PER_WEAKNESS})"
+                        )
+                        print(
+                            f"   ⚠️ Auto-Fix eingefügt, aber Volumen knapp: "
+                            f"{mg_display} = {group_sets} Sätze "
+                            f"(Ziel ≥{MIN_SETS_PER_WEAKNESS})"
+                        )
+                    else:
+                        print(
+                            f"   ✓ Auto-Fix + ausreichend Volumen: "
+                            f"{mg_display} ({group_sets} Sätze)"
+                        )
                     continue
 
             qualifier = " (nur als Hilfsmuskel)" if covered_secondary else ""
