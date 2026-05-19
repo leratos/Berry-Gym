@@ -6734,5 +6734,11 @@ späteren Phase nachjustieren.
   `test_prompt_builder.py`
 - `docs/journal.txt`
 
+**Review-Nachtrag (Codex-Bot, P2):** Im SATZ-BUDGET-Block des Prompts
+widersprachen sich zwei Bullets – einer forderte „exakt {target_sets}“, der
+nächste erlaubte „±1 Satz Abweichung“. Die ±1-Toleranz wurde entfernt; beide
+Bullets fordern jetzt konsistent die exakte Zielzahl. Test um eine
+±1-Guard-Assertion ergänzt.
+
 **Nächste Aktion:** 29.3 (Untertrainiert-Liste als Generator-Input, F3) im
 Branch `feature/phase-29-3-untertrainiert-input`.
