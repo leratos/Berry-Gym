@@ -203,6 +203,8 @@ def test_build_user_prompt_uses_exact_set_target():
     # Beispiel-Tage skalieren mit → Summe = 22
     assert "Summe = 22 Sätze" in prompt
     assert "= 22 Sätze total" in prompt
+    # Keine widersprüchliche ±1-Toleranz neben der "exakt"-Regel (Code-Review 29.2)
+    assert "±1" not in prompt
 
 
 def test_build_user_prompt_examples_scale_with_sets():

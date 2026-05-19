@@ -580,7 +580,7 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 2. Push/Pull Balance beachten (bei Unbalance gegensteuern)
 3. SATZ-BUDGET: Jeder Trainingstag MUSS GENAU {target_sets} Arbeitssätze enthalten (ca. 1 Stunde Training)
    - Die Summe aller "sets"-Werte eines Tages MUSS exakt {target_sets} ergeben – nicht weniger, nicht mehr!
-   - Alle Trainingstage haben dieselbe Satzzahl ({target_sets} Sätze, max. ±1 Satz Abweichung zwischen den Tagen)
+   - Alle Trainingstage haben exakt dieselbe Satzzahl: jeder Tag {target_sets} Sätze, kein Tag mit weniger oder mehr
    - Verteile die {target_sets} Sätze auf 5-6 Übungen; Compounds zuerst und mit den meisten Sätzen
 {push_example}
 {pull_example}
