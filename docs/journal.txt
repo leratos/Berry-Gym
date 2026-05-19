@@ -6485,3 +6485,75 @@ mitfixen.
 
 **Nächste Aktion:** 29.2 (strukturelle Garantien F1 + F2) im Branch
 `feature/phase-29-2-strukturelle-garantien`.
+
+
+---
+
+## In Arbeit: 29.2 – Strukturelle Garantien (19.05.2026)
+
+**Branch:** `feature/phase-29-2-strukturelle-garantien` (gestapelt auf 29.1,
+damit `journal.txt` konfliktfrei bleibt)
+
+Fix für F1 (Volumen-Steuerung) und F2 (Strukturbruch) gemäß Diagnose 29.1.
+
+- **F2:** `_get_max_tokens()` für alle Plan-Typen erhöht (3er-split 3000 →
+  6000). max_tokens ist eine Obergrenze, kein Kostenfaktor – das alte Limit
+  schnitt den dritten Tag ab. Zusätzlich Truncation-Detektor in `llm_client`
+  (`finish_reason == "length"`); `plan_generator` speichert abgeschnittene
+  Pläne nicht mehr still, sondern meldet einen klaren Fehler.
+- **F1:** `prompt_builder` nennt jetzt eine exakte Zielzahl statt einer
+  4 Sätze breiten Range; die hartcodierten „18 Sätze“-Beispiel-Tage skalieren
+  dynamisch mit `sets_per_session`.
+
+Tests in `ai_coach/tests/` ergänzt; Live-Verifikation mit 3 Generierungen.
+
+
+---
+
+## Abgeschlossen: 29.2 – Strukturelle Garantien (19.05.2026)
+
+**Branch:** `feature/phase-29-2-strukturelle-garantien`
+
+F1 und F2 behoben und live verifiziert (3 unabhängige Generierungen,
+Sonnet 4.6, User 2, 22 Sätze/Tag – im git-worktree gefahren, Produktion
+blieb unberührt).
+
+**F2 – Strukturbruch:**
+- `_get_max_tokens()`: alle Plan-Typen erhöht (3er-split 3000 → 6000, ppl
+  4500 → 10000, Default 3500 → 7000). max_tokens ist eine Obergrenze, kein
+  Kostenfaktor – die alte Doku-Begründung „verschwendet Geld“ war falsch.
+- Truncation-Detektor in `llm_client`: `finish_reason == "length"`
+  (OpenRouter) bzw. `done_reason`/`eval_count` (Ollama) → `truncated`-Flag
+  im Result-Dict.
+- `plan_generator` bricht bei `truncated` mit klarem Fehler ab statt einen
+  unvollständigen Plan still zu speichern.
+
+**F1 – Volumen-Steuerung:**
+- `prompt_builder`: exakte Zielzahl statt 4 Sätze breiter Range; die
+  hartcodierten „18 Sätze“-Beispiel-Tage skalieren jetzt dynamisch mit
+  `sets_per_session` (`_distribute_example_sets`).
+
+**Live-Verifikation – alle 3 Läufe OK:**
+- Jeder Lauf: 3 Tage, Satz-Summen [22, 22, 22], Tag-Symmetrie 0.
+- `completion_tokens` 4110 / 4358 / 4187 – klar unter dem neuen 6000-Limit,
+  aber über dem alten 3000 (das hätte abgeschnitten → F2 bestätigt behoben).
+
+**Tests:** 141 ai_coach-Tests grün, davon 9 neu/angepasst für die F1/F2-
+Garantien (Token-Obergrenzen, Truncation-Flag, exakte Zielzahl,
+`_distribute_example_sets`).
+
+**Beobachtung (kein Blocker):** Bei 22 Sätzen/Tag auf 6 Übungen erreichen
+2 Übungen derselben Muskelgruppe gelegentlich 8 Sätze – der Validator-
+Schwellenwert `_MAX_SETS_PER_MUSCLE_GROUP=7` (für ~18 Sätze kalibriert)
+warnt dann. Der Plan bleibt strukturell korrekt (3×22); ggf. in einer
+späteren Phase nachjustieren.
+
+**Geänderte Dateien:**
+- `ai_coach/plan_generator.py`, `ai_coach/llm_client.py`,
+  `ai_coach/prompt_builder.py`
+- `ai_coach/tests/test_plan_generator.py`, `test_llm_client.py`,
+  `test_prompt_builder.py`
+- `docs/journal.txt`
+
+**Nächste Aktion:** 29.3 (Untertrainiert-Liste als Generator-Input, F3) im
+Branch `feature/phase-29-3-untertrainiert-input`.
