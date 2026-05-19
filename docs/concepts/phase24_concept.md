@@ -793,12 +793,34 @@ Zwei-Schritte:
 | 24.1 Volumen-Diagnose (PDF) | ✅ |
 | 24.1a Streak-Regression | ✅ |
 | 24.1b Fatigue/Deload | ✅ |
-| 24.1c Helper-Refactor + Dashboard | 📋 noch offen |
+| 24.1c Helper-Refactor + Dashboard | ✅ (#172/#173) |
 | 24.2 Push/Pull | ✅ |
 | 24.5 Plateau-Status | ✅ |
 | 24.5a Aktuelles Fenster | ✅ |
-| 24.5b „+-"-Format | 📋 noch offen (Hotfix) |
+| 24.5b „+-"-Format | ✅ (#171) |
 | 24.3 Header-Zeitraum | ✅ |
 | 24.6 Kraftstandards | ✅ |
 
-**Phase 24 inhaltlich abgeschlossen** sobald 24.5b UND 24.1c gemerged sind. Reihenfolge der zwei offenen Sub-Phasen: 24.5b zuerst (XS-Hotfix), dann 24.1c (S, mit Refactor-Anteil). Begründung: 24.5b ist kleiner und schnell verifiziert, 24.1c hat Refactor-Aspekt und braucht etwas mehr Sichtung.
+**Phase 24 inhaltlich abgeschlossen** – 24.5b (#171) und 24.1c (#172/#173) sind gemerged. (Nachtrag-Befund siehe 11.4.)
+
+### 11.4 Nachtrag (18.05.2026) – Plan-Wechsel-Klassifikator-Lücke (→ Phase 25.8)
+
+Beim Review des PDF-Exports vom 18.05.2026 fiel eine Logiklücke im
+Plan-Wechsel-Klassifikator auf. Sie entstand bereits mit **24.1** und wurde
+von 24.1c als reiner Modul-Umzug unverändert übernommen – also **keine
+24.1c-Regression**, sondern eine 24.1-Logiklücke.
+
+`_classify_weeks_from_sessions` erkannte Plan-Wechsel über die Menge der
+rohen `plan_id`s aufeinanderfolgender Wochen. Eine Split-Routine
+(Push/Pull/Legs) verteilt ihre Tage auf mehrere `Plan`-Zeilen mit
+gemeinsamer `gruppe_id`; eine noch nicht vollständig geloggte Woche hat
+dann nur eine *Teilmenge* der Plan-IDs und wurde fälschlich als
+Plan-Wechsel markiert. `select_comparable_weeks` bricht an einer solchen
+Woche ab → in einer nicht-laufenden Teil-Splitwoche ein echter
+Diagnose-Fehler.
+
+Behoben in **Sub-Phase 25.8** (Branch `feature/phase-25-8-pdf-volume-diagnose-fix`):
+Vergleich der Routine-Identität (`gruppe_id`, Fallback `plan_id`) statt
+roher Plan-IDs. Vollständiger Verifikations-Befund (u.a. dass der
+auslösende 18.05-Export selbst korrekt war) und Fix-Details in
+`phase25_concept.md` Section 7.
