@@ -4,56 +4,15 @@ Prompt Builder - Erstellt strukturierte Prompts für LLM
 
 from typing import Any, Dict, List, Optional
 
-# Mapping: Analyzer-Label (lowercase) → DB-Muskelgruppen-Keys
-# Gleiche Quelle wie plan_generator._validate_weakness_coverage
-WEAKNESS_LABEL_TO_KEYS: Dict[str, List[str]] = {
-    "brust": ["BRUST"],
-    "rücken": ["RUECKEN_LAT", "RUECKEN_TRAPEZ", "RUECKEN_UNTEN", "RUECKEN_OBERER"],
-    "beine": ["BEINE_QUAD", "BEINE_HAM", "PO", "WADEN", "ADDUKTOREN", "ABDUKTOREN", "HUEFTBEUGER"],
-    "schultern": ["SCHULTER_VORN", "SCHULTER_SEIT", "SCHULTER_HINT"],
-    "vordere schulter": ["SCHULTER_VORN"],
-    "seitliche schulter": ["SCHULTER_SEIT"],
-    "hintere schulter": ["SCHULTER_HINT"],
-    "bizeps": ["BIZEPS"],
-    "trizeps": ["TRIZEPS"],
-    "bauch": ["BAUCH"],
-    "unterer rücken": ["RUECKEN_UNTEN"],
-    "waden": ["WADEN"],
-    "unterarme": ["UNTERARME"],
-    "trapez": ["RUECKEN_TRAPEZ"],
-    "oberer rücken": ["RUECKEN_OBERER"],
-    "oberschenkel vorne": ["BEINE_QUAD"],
-    "oberschenkel hinten": ["BEINE_HAM"],
-    "gesäß": ["PO"],
-    "adduktoren": ["ADDUKTOREN"],
-    "abduktoren": ["ABDUKTOREN"],
-    "hüfte": ["HUEFTBEUGER", "ADDUKTOREN", "ABDUKTOREN"],
-    "hüftbeuger": ["HUEFTBEUGER"],
-}
-
-# Lesbare Namen für DB-Keys (für Prompt-Ausgabe)
-KEY_TO_DISPLAY: Dict[str, str] = {
-    "BAUCH": "Bauch / Core",
-    "ADDUKTOREN": "Adduktoren (Oberschenkel Innen)",
-    "ABDUKTOREN": "Abduktoren (Oberschenkel Außen)",
-    "HUEFTBEUGER": "Hüftbeuger",
-    "BEINE_QUAD": "Quadrizeps",
-    "BEINE_HAM": "Hamstrings",
-    "PO": "Gesäß",
-    "WADEN": "Waden",
-    "BRUST": "Brust",
-    "RUECKEN_LAT": "Latissimus",
-    "RUECKEN_OBERER": "Oberer Rücken",
-    "RUECKEN_TRAPEZ": "Trapez",
-    "RUECKEN_UNTEN": "Unterer Rücken",
-    "SCHULTER_VORN": "Vordere Schulter",
-    "SCHULTER_SEIT": "Seitliche Schulter",
-    "SCHULTER_HINT": "Hintere Schulter",
-    "BIZEPS": "Bizeps",
-    "TRIZEPS": "Trizeps",
-    "UNTERARME": "Unterarme",
-}
-
+# Phase 29.3: gemeinsame Mapping-Quelle für prompt_builder und plan_generator.
+# WEAKNESS_LABEL_TO_KEYS / KEY_TO_DISPLAY werden re-exportiert, damit bestehende
+# Importe (ai_coach.prompt_builder.WEAKNESS_LABEL_TO_KEYS) weiter funktionieren.
+from .muscle_labels import (  # noqa: F401
+    KEY_TO_DISPLAY,
+    MIN_SETS_PER_WEAKNESS,
+    WEAKNESS_LABEL_TO_KEYS,
+    resolve_weakness_keys,
+)
 
 _PROFILE_DEFAULTS = {
     "kraft": {"rep_range": "3-6", "rpe_range": "7.5-9"},
@@ -196,7 +155,13 @@ class PromptBuilder:
     ) -> Optional[str]:
         """
         Baut einen zwingenden Pflicht-Block für untertrainierte Muskelgruppen.
-        Enthält konkrete Übungen aus der verfügbaren Liste.
+
+        Phase 29.3: Jede untertrainierte Muskelgruppe wird mit einer echten
+        Volumen-Vorgabe (MIN_SETS_PER_WEAKNESS Sätze) gefordert, nicht mehr nur
+        mit „mind. 1 Übung". Labels werden über die gemeinsame Mapping-Quelle
+        aufgelöst – das erkennt auch DB-Konstanten (z.B. „BEINE_HAM"), die der
+        data_analyzer liefert und die früher still verworfen wurden (F3).
+
         Gibt None zurück wenn keine relevanten Schwachstellen gefunden.
         """
         if not weaknesses:
@@ -211,8 +176,7 @@ class PromptBuilder:
                 continue
 
             label = weakness.split(":")[0].strip()
-            label_lower = label.lower()
-            keys = WEAKNESS_LABEL_TO_KEYS.get(label_lower)
+            keys = resolve_weakness_keys(label)
             if not keys:
                 continue
 
@@ -224,14 +188,16 @@ class PromptBuilder:
             if not ex_list:
                 # Kein passendes Equipment → trotzdem Hinweis, aber ohne konkrete Übungen
                 mandatory_items.append(
-                    f"❗ {display_name.upper()} – PFLICHT: mind. 1 Übung\n"
+                    f"❗ {display_name.upper()} – PFLICHT: mind. {MIN_SETS_PER_WEAKNESS} "
+                    f"Arbeitssätze (1-2 Übungen)\n"
                     f"   (Keine passende Übung in verfügbarer Equipment-Liste – "
                     f"trotzdem versuchen!)"
                 )
             else:
                 ex_lines = "\n".join(f'   → "{ex}"' for ex in ex_list)
                 mandatory_items.append(
-                    f"❗ {display_name.upper()} – PFLICHT: mind. 1 Übung aus dieser Liste:\n"
+                    f"❗ {display_name.upper()} – PFLICHT: mind. {MIN_SETS_PER_WEAKNESS} "
+                    f"Arbeitssätze, verteilt auf 1-2 Übungen aus dieser Liste:\n"
                     f"{ex_lines}"
                 )
 
@@ -242,16 +208,18 @@ class PromptBuilder:
         return f"""🚨🚨🚨 PFLICHT-ANFORDERUNG #0 – HÖCHSTE PRIORITÄT 🚨🚨🚨
 
 Folgende Muskelgruppen sind CHRONISCH UNTERTRAINIERT.
-Sie MÜSSEN im fertigen Plan mit mind. 1 Übung vertreten sein.
+Sie MÜSSEN im fertigen Plan mit jeweils mindestens {MIN_SETS_PER_WEAKNESS} Arbeitssätzen
+(verteilt auf 1-2 Übungen) adressiert werden – nicht nur „vorhanden", sondern
+mit spürbarem Volumen!
 Diese Anforderung hat VORRANG vor allen anderen strukturellen Regeln!
 
 {items_str}
 
-⛔ FEHLER wenn diese Muskelgruppen im Plan FEHLEN.
-✅ Notfalls Sätze von anderen Gruppen KÜRZEN um Platz zu schaffen.
+⛔ FEHLER wenn eine dieser Muskelgruppen unter {MIN_SETS_PER_WEAKNESS} Sätzen bleibt oder ganz fehlt.
+✅ Notfalls Sätze von anderen (gut trainierten) Gruppen KÜRZEN um Platz zu schaffen.
 ⚠️ ADDUKTOREN ≠ ABDUKTOREN: Adduktoren = Oberschenkel INNEN (Sumo Squats, Adduktoren-Maschine)
 ⚠️ ABDUKTOREN = Oberschenkel AUSSEN (Hip Abduction) – das ist NICHT dasselbe!
-⚠️ Jede Pflicht-Schwachstelle braucht einen EIGENEN Übungsslot – nicht kombinieren!
+⚠️ Jede Pflicht-Schwachstelle braucht eigene Übungsslots – nicht mit anderen Gruppen kombinieren!
 """
 
     def _build_system_prompt(self) -> str:

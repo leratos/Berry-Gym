@@ -6742,3 +6742,89 @@ Bullets fordern jetzt konsistent die exakte Zielzahl. Test um eine
 
 **Nächste Aktion:** 29.3 (Untertrainiert-Liste als Generator-Input, F3) im
 Branch `feature/phase-29-3-untertrainiert-input`.
+
+
+---
+
+## In Arbeit: 29.3 – Untertrainiert-Liste als Generator-Input (19.05.2026)
+
+**Branch:** `feature/phase-29-3-untertrainiert-input` (gestapelt auf 29.2)
+
+Fix für F3 gemäß Diagnose 29.1.
+
+- **Label-Format-Mismatch beheben:** gemeinsame Mapping-Quelle
+  (`ai_coach/muscle_labels.py`) für `prompt_builder` und `plan_generator` –
+  erkennt sowohl DB-Konstanten (`BEINE_HAM`) als auch menschenlesbare Labels.
+- **Weakness-Block:** von „mind. 1 Übung“ auf eine echte Volumen-Vorgabe
+  (mind. 6 Sätze pro untertrainierter Muskelgruppe) heben.
+- **`_validate_weakness_coverage`:** zusätzlich zur Präsenz auch das Volumen
+  prüfen (< 6 Sätze → Warnung).
+- **Nebenbefund:** `push_pull_balance` (immer 0) mitfixen.
+
+N=6 statt Konzept-Vorschlag 12: Der Per-Session-Validator
+(`_MAX_SETS_PER_MUSCLE_GROUP=7`) deckelt eine Muskelgruppe pro Tag; in einem
+3er-Split trainiert z. B. Hamstrings nur den Legs-Tag → >7 Sätze/Woche sind
+ohne Validator-Konflikt nicht erreichbar. N=6 ist klar „prominent“ und
+konfliktfrei.
+
+
+---
+
+## Abgeschlossen: 29.3 – Untertrainiert-Liste als Generator-Input (19.05.2026)
+
+**Branch:** `feature/phase-29-3-untertrainiert-input`
+
+F3 behoben und live verifiziert (2 unabhängige Generierungen im git-worktree,
+Produktion unberührt).
+
+**Änderungen:**
+
+- **`ai_coach/muscle_labels.py` (neu):** gemeinsame Mapping-Quelle für
+  `prompt_builder` und `plan_generator`. Erkennt DB-Konstanten („BEINE_HAM")
+  UND menschenlesbare Labels („Hintere Schulter"). Damit landet endlich jede
+  Schwachstelle aus `data_analyzer` im Prompt – Ursache von F3 (Commit
+  `932efbc` hatte das nur im Post-Validator gefixt, nicht im Prompt-Builder).
+- **`prompt_builder._build_weakness_block`:** Pflicht-Vorgabe von „mind. 1
+  Übung" auf `MIN_SETS_PER_WEAKNESS=6` Arbeitssätze gehoben.
+- **`plan_generator._validate_weakness_coverage`:** nutzt die gemeinsame
+  Mapping-Quelle und prüft nicht nur Präsenz, sondern auch das Volumen pro
+  Schwachstelle (<6 Sätze → Warnung).
+- **`data_analyzer`:** `PUSH_GROUPS`/`PULL_GROUPS` nutzen DB-Konstanten statt
+  veralteter Klartext-Labels → `push_pull_balance` ist nicht mehr konstant
+  0/0 (Nebenbefund aus 29.1).
+
+**Live-Verifikation (2 Läufe, Sonnet 4.6):**
+
+- Hamstrings landet jetzt im Prompt-Pflicht-Block (vorher still verworfen).
+- `push_pull_balance: {push: 809.4, pull: 655.9, ratio: 1.23}` statt 0/0.
+- Lauf 1: Hamstrings 7 Sätze ✓, Bauch 7 Sätze ✓
+- Lauf 2: Hamstrings 11 Sätze ✓, Bauch 7 Sätze ✓ (Auto-Fix 13.1 hat hier
+  zusätzlich Quad → Hamstrings getauscht – sinnvolle Verstärkung)
+
+**Tests:** 305 ai_coach-Tests grün. Neu: `test_muscle_labels.py` (6 Tests),
+zwei neue Tests in test_prompt_builder.py (`_resolves_db_constants`,
+`_demands_volume`), ein neuer Test in test_plan_generator.py
+(`test_abgedeckte_aber_zu_wenig_volumen_warnt`). Zwei Bestandstests in
+test_data_analyzer.py / test_plan_generator.py auf realistische
+DB-Konstanten-Werte umgestellt (vorher unrealistische Klartext-Labels).
+
+**Akzeptanzkriterien 29.3 erfüllt:**
+
+- ✅ Aktuelle Untertrainiert-Liste fließt nachweislich in jeden Plan ein.
+- ✅ Generierter Plan enthält für jede gelistete Muskelgruppe ≥6 Sätze.
+- ✅ Tests decken den Fall ab.
+
+**Review-Nachtrag (Codex-Bot, P1, 20.05.2026):** In
+`_validate_weakness_coverage` lief der Volumen-Check nur im
+`covered_primary`-Branch; bei erfolgreicher Auto-Fix-Insertion brach das
+`continue` ohne Volumen-Prüfung ab. Da `_auto_fix_weakness` typischerweise
+nur ~3 Sätze einfügt, konnten so falsche „covered"-Meldungen für
+untertrainierte Gruppen entstehen, die unter `MIN_SETS_PER_WEAKNESS`
+blieben. Nach dem Auto-Fix wird das Volumen jetzt neu berechnet (frischer
+DB-Lookup beschränkt auf die Ziel-Muskelgruppen) und bei Unterschreitung
+eine Volumen-Warnung erzeugt. Test ergänzt:
+`test_auto_fix_fills_presence_but_volume_warns`.
+
+**Nächste Aktion:** Phase 29 ist inhaltlich abgeschlossen. Folge-Phasen
+gemäß Konzept: Phase 26 (Konsolidierungs-Logik), 27 (Style), 28 (Doku),
+30 (volle Adaptive Plan Generation).

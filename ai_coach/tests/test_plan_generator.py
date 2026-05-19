@@ -1204,12 +1204,12 @@ class TestValidateWeaknessCoverage:
 
         plan_json = _make_plan_json(
             "Test",
-            [_make_session("A", [_make_exercise("Bankdrücken")])],
+            [_make_session("A", [_make_exercise("Bankdrücken", sets=6)])],
         )
         warnings = gen._validate_weakness_coverage(
             plan_json, weaknesses=["Brust: Untertrainiert (2 Sätze/Woche)"]
         )
-        # Brust ist abgedeckt → keine Warning
+        # Brust abgedeckt UND mit genug Volumen (6 Sätze) → keine Warning
         assert len(warnings) == 0
 
     def test_fehlende_schwachstelle_erzeugt_warning(self):
@@ -1279,12 +1279,74 @@ class TestValidateWeaknessCoverage:
 
         plan_json = _make_plan_json(
             "Test",
-            [_make_session("Legs", [_make_exercise("Hüftbeuger-Stretch")])],
+            [_make_session("Legs", [_make_exercise("Hüftbeuger-Stretch", sets=6)])],
         )
         warnings = gen._validate_weakness_coverage(
             plan_json, weaknesses=["Hüftbeuger: Untertrainiert (0 Sätze/Woche)"]
         )
         assert len(warnings) == 0
+
+    def test_abgedeckte_aber_zu_wenig_volumen_warnt(self):
+        """Phase 29.3: Muskelgruppe vorhanden, aber unter MIN_SETS_PER_WEAKNESS
+        Sätzen → explizite Volumen-Warnung (Präsenz allein reicht nicht)."""
+        UebungFactory(
+            bezeichnung="Crunch",
+            muskelgruppe="BAUCH",
+            gewichts_typ="KOERPERGEWICHT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        # Nur 3 Sätze Bauch – abgedeckt, aber zu wenig (Ziel: 6)
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Core", [_make_exercise("Crunch", sets=3)])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json, weaknesses=["BAUCH: Untertrainiert (0 Sätze/Woche)"]
+        )
+        assert len(warnings) >= 1
+        assert any("Volumen zu niedrig" in w for w in warnings)
+
+    def test_auto_fix_fills_presence_but_volume_warns(self):
+        """Phase 29.3 (P1-Review): wenn eine Muskelgruppe komplett fehlt und
+        der Auto-Fix nur ~3 Sätze einfügt, muss die Volumen-Warnung trotzdem
+        feuern – sonst entsteht ein falsches "covered"-Ergebnis ohne Hinweis,
+        dass MIN_SETS_PER_WEAKNESS unterschritten ist.
+        """
+        UebungFactory(
+            bezeichnung="Bankdrücken",
+            muskelgruppe="BRUST",
+            gewichts_typ="GESAMT",
+        )
+        UebungFactory(
+            bezeichnung="Crunch",
+            muskelgruppe="BAUCH",
+            gewichts_typ="KOERPERGEWICHT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        # Plan hat NUR Bankdrücken → BAUCH komplett fehlend
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Push", [_make_exercise("Bankdrücken", sets=3)])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json,
+            weaknesses=["BAUCH: Untertrainiert (0 Sätze/Woche)"],
+            available_exercises=["Bankdrücken", "Crunch"],
+        )
+
+        # Auto-Fix sollte Crunch eingefügt haben (Präsenz hergestellt)
+        all_ex = [e for s in plan_json["sessions"] for e in s["exercises"]]
+        assert any(
+            e["exercise_name"] == "Crunch" for e in all_ex
+        ), "Auto-Fix sollte Crunch einsetzen"
+        # ABER: < MIN_SETS_PER_WEAKNESS → Volumen-Warnung muss trotzdem feuern
+        assert any(
+            "Auto-Fix" in w and "Volumen" in w for w in warnings
+        ), f"Volumen-Warnung nach Auto-Fix erwartet, bekam: {warnings}"
 
     def test_db_constant_label_hueftbeuger_resolves(self):
         """Bug-Fix: data_analyzer liefert 'HUEFTBEUGER: Untertrainiert' (DB-Konstante).
