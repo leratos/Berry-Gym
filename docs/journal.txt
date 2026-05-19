@@ -6377,7 +6377,6 @@ User-Befund im Dashboard (Statistik-Volumen-Chart Wochenansicht): KW20 (laufende
 
 Bewusst NICHT angefasst: Code – Implementierung wieder in VSCode/Claude Code.
 
-
 ## In Arbeit: Sub-Phase 25.8 – Plan-Wechsel-Falsch-Positiv bei Teil-Splitwochen (18.05.2026)
 
 **Auslöser-Befund (User):** PDF-Export 18.05.2026 04:17 zeigt im Volumen-Block
@@ -6449,3 +6448,110 @@ geparkt – bewusst nicht in 25.8 gefixt.
 **Nicht angefasst:** kein PR-Push (User macht das selbst). Phase 24
 inhaltlich abgeschlossen; nächster Schritt nach 25.8 ist Phase 26
 (Konsolidierungs-Logik).
+
+## Abgeschlossen: Phase 29 Konzept angelegt (18.05.2026)
+
+Test-Generierungen vom 18.05. (Gemini 3 Tage / Sonnet 2 Tage zweimal) haben drei reproduzierbare Probleme im Plan-Generator aufgedeckt. Phase 29 adressiert sie und wird vor Phase 26 priorisiert (Trainingsplanung in ~5 Wochen ansteht).
+
+**Drei Findings:**
+
+- **F1 Volumen-Steuerung:** UI-Eingabe „Sätze pro Tag" (22 angefordert) wirkt nicht auf Output. Vier Ursachen-Hypothesen.
+- **F2 Strukturbruch Sonnet:** Sonnet 4.6 erzeugt deterministisch 2 statt 3 Tagen (Legs-Tag fehlt). Drei Ursachen-Hypothesen. Plan-Generator wurde laut User-Erinnerung zuletzt in Phase 23 angefasst – Validator-Regeln aus Phase 23 sind Verdachts-Quelle.
+- **F3 Fokus-Hint und Untertrainiert-Liste wirken schwach:** Plan-Titel-Fokus und untertrainierte Muskelgruppen aus Trainings-Report werden nicht systematisch ins Prompt eingebaut.
+
+**Phase-29-Struktur:**
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| 29.1 | Diagnose aller drei Findings, Code-Sichtung, Validator-Regel-Audit, Token-Limit-Check | M |
+| 29.2 | Strukturelle Garantien (Tag-Anzahl deterministisch, Set-Volumen wirkt) | S–M |
+| 29.3 | Untertrainiert-Liste als Generator-Input (abgespeckte Feedback-Loop-Variante) | M |
+
+**Entscheidungen fixiert:**
+
+- Sonnet 4.6 bleibt aktives LLM (kein Rückgang auf Gemini geplant)
+- Phase 29 läuft vor Phase 26, weil Trainingsplanung höhere Prio
+- Volle Feedback-Loop-Architektur (Plateau-Status etc. als Generator-Input) für spätere Phase 30 aufgehoben
+
+**Neue Datei:**
+
+- `docs/concepts/phase29_concept.md` (271 Zeilen)
+
+**Bewusst NICHT angefasst:**
+
+- Code – Implementierung in VSCode/Claude Code (siehe VSCode-Startprompt im aktuellen Chat)
+- Phase-25/26/27/28-Konzepte – bleiben unverändert, Reihenfolge nur in Phase 29 dokumentiert
+
+**Nächste Aktion in VSCode:** Sub-Phase 29.1 starten (Diagnose, kein Code-Change im Generator selbst), danach 29.2 und 29.3.
+
+
+---
+
+## In Arbeit: 29.1 – Plan-Generator-Diagnose (19.05.2026)
+
+**Branch:** `feature/phase-29-1-generator-diagnose`
+
+Diagnose der drei Findings F1/F2/F3 aus dem Phase-29-Konzept. 29.1 ist
+**reine Diagnose** – kein Fix im Generator. Ziel: pro Finding eine
+identifizierte Ursache + Fix-Strategie für 29.2/29.3.
+
+Geplante Schritte: Code-Sichtung der Generator-Pipeline (`plan_generator`,
+`prompt_builder`, `llm_client`, `plan_validator`, `data_analyzer`),
+Validator-Regel-Audit mit Phase-Zuordnung, Token-Limit-Check, Reproduktion
+mit Debug-Logging, Diagnose-Bericht als Section 9 in `phase29_concept.md`.
+
+
+---
+
+## Abgeschlossen: 29.1 – Plan-Generator-Diagnose (19.05.2026)
+
+**Branch:** `feature/phase-29-1-generator-diagnose`
+
+Alle drei Findings reproduziert und mit identifizierter Ursache belegt.
+Live-Reproduktion auf dem Produktions-Server (Sonnet 4.6, User 2, 22 Sätze/Tag,
+3er-Split, Preview – kein DB-Write, kein Produktions-Code geändert; eigenes
+Diagnose-Script nach Lauf gelöscht).
+
+**F1 – Volumen-Steuerung · Hypothese (c):**
+Der Prompt widerspricht sich selbst. `sets_per_session` wird korrekt
+durchgereicht, aber `prompt_builder` baut daraus eine 4 Sätze breite Range
+(Untergrenze = `sets-4` = 18 = Status quo) UND drei hartcodierte
+„18 Sätze“-Beispiel-Tage. Das LLM ankert an den Beispielen → Output ~18-20
+statt 22. Hypothesen (a)/(b)/(d) widerlegt. → Fix 29.2 (S).
+
+**F2 – Strukturbruch · Hypothese (b) primär, (c) sekundär:**
+`max_tokens=3000` für `3er-split` ist für Sonnet 4.6 zu niedrig. Reproduziert:
+`completion_tokens` = 3000 = exakt `max_tokens` → Antwort mitten im Legs-Tag
+abgeschnitten. `json-repair` rettet still einen Teil-Plan (mal 2 Tage, mal
+Stummel-Legs mit 4 Sätzen – gleiche Wurzel, je nach Abschneide-Punkt). Gemini
+ist knapper und passt in 3000. Validator-Regel-Audit: KEINE Regel entfernt
+einen Trainingstag – Hypothese (a) widerlegt. → Fix 29.2 (S–M).
+
+**F3 – Fokus/Untertrainiert · Label-Format-Mismatch:**
+`data_analyzer` liefert Schwachstellen mit DB-Konstanten als Label
+(`BEINE_HAM:`), `prompt_builder.WEAKNESS_LABEL_TO_KEYS` kennt nur
+menschenlesbare Labels → Hamstrings wird still aus dem Prompt verworfen, nur
+Bauch überlebt (reproduziert). Ursprung: unvollständiger Fix in Commit
+`932efbc` (28.03.) – erweiterte nur das Mapping im Post-Validator, nicht im
+Prompt-Builder. Zusätzlich fordert der Weakness-Block nur „mind. 1 Übung“
+statt Volumen. Der Plan-Titel „Fokus …“ ist rein kosmetisch. → Fix 29.3 (M).
+
+**Phase-23-Verdacht widerlegt:** Der Generator wurde zuletzt in Phase 20
+angefasst (nicht Phase 23 – diese betraf nur Stats-Code). Alle Validator-Regeln
+stammen aus Phase 11/13/16; keine Phase-23-Regel existiert.
+
+**Nebenbefund:** `push_pull_balance` ist immer 0/„Unbalanced“ –
+`data_analyzer.PUSH_GROUPS/PULL_GROUPS` nutzen menschenlesbare Labels, die
+Volumen-Map ist DB-Konstanten-gekeyt. Gleiche Bug-Klasse wie F3, in 29.3
+mitfixen.
+
+**Neue / geänderte Dateien:**
+- `docs/concepts/phase29-diagnose.md` (neu) – vollständiger Diagnose-Bericht
+  inkl. Datenfluss, Validator-Regel-Audit, Token-Limit-Check, Fix-Roadmap
+- `docs/concepts/phase29_concept.md` – Section 9 mit 29.1-Status ergänzt
+- `docs/journal.txt` – dieser Eintrag
+
+**Kein Generator-Code geändert** – 29.1 ist reine Diagnose.
+
+**Nächste Aktion:** 29.2 (strukturelle Garantien F1 + F2) im Branch
+`feature/phase-29-2-strukturelle-garantien`.
