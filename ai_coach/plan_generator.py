@@ -1124,6 +1124,45 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
                 )
                 if fixed:
                     primary_keys.update(target_keys)
+                    # Phase 29.3 (P1-Review): Der Auto-Fix erzeugt nur Präsenz
+                    # und fügt typischerweise ~3 Sätze ein – das verfehlt das
+                    # MIN_SETS_PER_WEAKNESS-Ziel. Volumen daher hier nochmal
+                    # explizit prüfen, sonst entstehen falsche "covered"-
+                    # Meldungen ohne Volumen-Warnung.
+                    fresh_names = {
+                        e["exercise_name"]
+                        for session in plan_json.get("sessions", [])
+                        for e in session.get("exercises", [])
+                    }
+                    fresh_name_to_mg = {
+                        u.bezeichnung: u.muskelgruppe
+                        for u in Uebung.objects.filter(
+                            bezeichnung__in=fresh_names,
+                            muskelgruppe__in=target_keys,
+                        )
+                    }
+                    group_sets = sum(
+                        e.get("sets", 0)
+                        for session in plan_json.get("sessions", [])
+                        for e in session.get("exercises", [])
+                        if fresh_name_to_mg.get(e.get("exercise_name", "")) in target_keys
+                    )
+                    if group_sets < MIN_SETS_PER_WEAKNESS:
+                        warnings.append(
+                            f"⚠️ Untertrainiert-Volumen nach Auto-Fix zu niedrig: "
+                            f"{mg_display} hat nur {group_sets} Sätze "
+                            f"(Ziel: mind. {MIN_SETS_PER_WEAKNESS})"
+                        )
+                        print(
+                            f"   ⚠️ Auto-Fix eingefügt, aber Volumen knapp: "
+                            f"{mg_display} = {group_sets} Sätze "
+                            f"(Ziel ≥{MIN_SETS_PER_WEAKNESS})"
+                        )
+                    else:
+                        print(
+                            f"   ✓ Auto-Fix + ausreichend Volumen: "
+                            f"{mg_display} ({group_sets} Sätze)"
+                        )
                     continue
 
             qualifier = " (nur als Hilfsmuskel)" if covered_secondary else ""

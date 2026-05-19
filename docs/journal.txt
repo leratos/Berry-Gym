@@ -6814,6 +6814,17 @@ DB-Konstanten-Werte umgestellt (vorher unrealistische Klartext-Labels).
 - ✅ Generierter Plan enthält für jede gelistete Muskelgruppe ≥6 Sätze.
 - ✅ Tests decken den Fall ab.
 
+**Review-Nachtrag (Codex-Bot, P1, 20.05.2026):** In
+`_validate_weakness_coverage` lief der Volumen-Check nur im
+`covered_primary`-Branch; bei erfolgreicher Auto-Fix-Insertion brach das
+`continue` ohne Volumen-Prüfung ab. Da `_auto_fix_weakness` typischerweise
+nur ~3 Sätze einfügt, konnten so falsche „covered"-Meldungen für
+untertrainierte Gruppen entstehen, die unter `MIN_SETS_PER_WEAKNESS`
+blieben. Nach dem Auto-Fix wird das Volumen jetzt neu berechnet (frischer
+DB-Lookup beschränkt auf die Ziel-Muskelgruppen) und bei Unterschreitung
+eine Volumen-Warnung erzeugt. Test ergänzt:
+`test_auto_fix_fills_presence_but_volume_warns`.
+
 **Nächste Aktion:** Phase 29 ist inhaltlich abgeschlossen. Folge-Phasen
 gemäß Konzept: Phase 26 (Konsolidierungs-Logik), 27 (Style), 28 (Doku),
 30 (volle Adaptive Plan Generation).
