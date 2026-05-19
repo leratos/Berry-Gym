@@ -1308,6 +1308,46 @@ class TestValidateWeaknessCoverage:
         assert len(warnings) >= 1
         assert any("Volumen zu niedrig" in w for w in warnings)
 
+    def test_auto_fix_fills_presence_but_volume_warns(self):
+        """Phase 29.3 (P1-Review): wenn eine Muskelgruppe komplett fehlt und
+        der Auto-Fix nur ~3 Sätze einfügt, muss die Volumen-Warnung trotzdem
+        feuern – sonst entsteht ein falsches "covered"-Ergebnis ohne Hinweis,
+        dass MIN_SETS_PER_WEAKNESS unterschritten ist.
+        """
+        UebungFactory(
+            bezeichnung="Bankdrücken",
+            muskelgruppe="BRUST",
+            gewichts_typ="GESAMT",
+        )
+        UebungFactory(
+            bezeichnung="Crunch",
+            muskelgruppe="BAUCH",
+            gewichts_typ="KOERPERGEWICHT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        # Plan hat NUR Bankdrücken → BAUCH komplett fehlend
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Push", [_make_exercise("Bankdrücken", sets=3)])],
+        )
+        warnings = gen._validate_weakness_coverage(
+            plan_json,
+            weaknesses=["BAUCH: Untertrainiert (0 Sätze/Woche)"],
+            available_exercises=["Bankdrücken", "Crunch"],
+        )
+
+        # Auto-Fix sollte Crunch eingefügt haben (Präsenz hergestellt)
+        all_ex = [e for s in plan_json["sessions"] for e in s["exercises"]]
+        assert any(
+            e["exercise_name"] == "Crunch" for e in all_ex
+        ), "Auto-Fix sollte Crunch einsetzen"
+        # ABER: < MIN_SETS_PER_WEAKNESS → Volumen-Warnung muss trotzdem feuern
+        assert any(
+            "Auto-Fix" in w and "Volumen" in w for w in warnings
+        ), f"Volumen-Warnung nach Auto-Fix erwartet, bekam: {warnings}"
+
     def test_db_constant_label_hueftbeuger_resolves(self):
         """Bug-Fix: data_analyzer liefert 'HUEFTBEUGER: Untertrainiert' (DB-Konstante).
         LABEL_TO_KEYS muss auch 'hueftbeuger' (ohne Umlaut) als Key erkennen."""
