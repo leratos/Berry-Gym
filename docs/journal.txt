@@ -6555,3 +6555,190 @@ mitfixen.
 
 **Nächste Aktion:** 29.2 (strukturelle Garantien F1 + F2) im Branch
 `feature/phase-29-2-strukturelle-garantien`.
+
+
+
+## Abgeschlossen: Phase 29 Konzept angelegt (18.05.2026)
+
+Test-Generierungen vom 18.05. (Gemini 3 Tage / Sonnet 2 Tage zweimal) haben drei reproduzierbare Probleme im Plan-Generator aufgedeckt. Phase 29 adressiert sie und wird vor Phase 26 priorisiert (Trainingsplanung in ~5 Wochen ansteht).
+
+**Drei Findings:**
+
+- **F1 Volumen-Steuerung:** UI-Eingabe „Sätze pro Tag" (22 angefordert) wirkt nicht auf Output. Vier Ursachen-Hypothesen.
+- **F2 Strukturbruch Sonnet:** Sonnet 4.6 erzeugt deterministisch 2 statt 3 Tagen (Legs-Tag fehlt). Drei Ursachen-Hypothesen. Plan-Generator wurde laut User-Erinnerung zuletzt in Phase 23 angefasst – Validator-Regeln aus Phase 23 sind Verdachts-Quelle.
+- **F3 Fokus-Hint und Untertrainiert-Liste wirken schwach:** Plan-Titel-Fokus und untertrainierte Muskelgruppen aus Trainings-Report werden nicht systematisch ins Prompt eingebaut.
+
+**Phase-29-Struktur:**
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| 29.1 | Diagnose aller drei Findings, Code-Sichtung, Validator-Regel-Audit, Token-Limit-Check | M |
+| 29.2 | Strukturelle Garantien (Tag-Anzahl deterministisch, Set-Volumen wirkt) | S–M |
+| 29.3 | Untertrainiert-Liste als Generator-Input (abgespeckte Feedback-Loop-Variante) | M |
+
+**Entscheidungen fixiert:**
+
+- Sonnet 4.6 bleibt aktives LLM (kein Rückgang auf Gemini geplant)
+- Phase 29 läuft vor Phase 26, weil Trainingsplanung höhere Prio
+- Volle Feedback-Loop-Architektur (Plateau-Status etc. als Generator-Input) für spätere Phase 30 aufgehoben
+
+**Neue Datei:**
+
+- `docs/concepts/phase29_concept.md` (271 Zeilen)
+
+**Bewusst NICHT angefasst:**
+
+- Code – Implementierung in VSCode/Claude Code (siehe VSCode-Startprompt im aktuellen Chat)
+- Phase-25/26/27/28-Konzepte – bleiben unverändert, Reihenfolge nur in Phase 29 dokumentiert
+
+**Nächste Aktion in VSCode:** Sub-Phase 29.1 starten (Diagnose, kein Code-Change im Generator selbst), danach 29.2 und 29.3.
+
+
+---
+
+## In Arbeit: 29.1 – Plan-Generator-Diagnose (19.05.2026)
+
+**Branch:** `feature/phase-29-1-generator-diagnose`
+
+Diagnose der drei Findings F1/F2/F3 aus dem Phase-29-Konzept. 29.1 ist
+**reine Diagnose** – kein Fix im Generator. Ziel: pro Finding eine
+identifizierte Ursache + Fix-Strategie für 29.2/29.3.
+
+Geplante Schritte: Code-Sichtung der Generator-Pipeline (`plan_generator`,
+`prompt_builder`, `llm_client`, `plan_validator`, `data_analyzer`),
+Validator-Regel-Audit mit Phase-Zuordnung, Token-Limit-Check, Reproduktion
+mit Debug-Logging, Diagnose-Bericht als Section 9 in `phase29_concept.md`.
+
+
+---
+
+## Abgeschlossen: 29.1 – Plan-Generator-Diagnose (19.05.2026)
+
+**Branch:** `feature/phase-29-1-generator-diagnose`
+
+Alle drei Findings reproduziert und mit identifizierter Ursache belegt.
+Live-Reproduktion auf dem Produktions-Server (Sonnet 4.6, User 2, 22 Sätze/Tag,
+3er-Split, Preview – kein DB-Write, kein Produktions-Code geändert; eigenes
+Diagnose-Script nach Lauf gelöscht).
+
+**F1 – Volumen-Steuerung · Hypothese (c):**
+Der Prompt widerspricht sich selbst. `sets_per_session` wird korrekt
+durchgereicht, aber `prompt_builder` baut daraus eine 4 Sätze breite Range
+(Untergrenze = `sets-4` = 18 = Status quo) UND drei hartcodierte
+„18 Sätze“-Beispiel-Tage. Das LLM ankert an den Beispielen → Output ~18-20
+statt 22. Hypothesen (a)/(b)/(d) widerlegt. → Fix 29.2 (S).
+
+**F2 – Strukturbruch · Hypothese (b) primär, (c) sekundär:**
+`max_tokens=3000` für `3er-split` ist für Sonnet 4.6 zu niedrig. Reproduziert:
+`completion_tokens` = 3000 = exakt `max_tokens` → Antwort mitten im Legs-Tag
+abgeschnitten. `json-repair` rettet still einen Teil-Plan (mal 2 Tage, mal
+Stummel-Legs mit 4 Sätzen – gleiche Wurzel, je nach Abschneide-Punkt). Gemini
+ist knapper und passt in 3000. Validator-Regel-Audit: KEINE Regel entfernt
+einen Trainingstag – Hypothese (a) widerlegt. → Fix 29.2 (S–M).
+
+**F3 – Fokus/Untertrainiert · Label-Format-Mismatch:**
+`data_analyzer` liefert Schwachstellen mit DB-Konstanten als Label
+(`BEINE_HAM:`), `prompt_builder.WEAKNESS_LABEL_TO_KEYS` kennt nur
+menschenlesbare Labels → Hamstrings wird still aus dem Prompt verworfen, nur
+Bauch überlebt (reproduziert). Ursprung: unvollständiger Fix in Commit
+`932efbc` (28.03.) – erweiterte nur das Mapping im Post-Validator, nicht im
+Prompt-Builder. Zusätzlich fordert der Weakness-Block nur „mind. 1 Übung“
+statt Volumen. Der Plan-Titel „Fokus …“ ist rein kosmetisch. → Fix 29.3 (M).
+
+**Phase-23-Verdacht widerlegt:** Der Generator wurde zuletzt in Phase 20
+angefasst (nicht Phase 23 – diese betraf nur Stats-Code). Alle Validator-Regeln
+stammen aus Phase 11/13/16; keine Phase-23-Regel existiert.
+
+**Nebenbefund:** `push_pull_balance` ist immer 0/„Unbalanced“ –
+`data_analyzer.PUSH_GROUPS/PULL_GROUPS` nutzen menschenlesbare Labels, die
+Volumen-Map ist DB-Konstanten-gekeyt. Gleiche Bug-Klasse wie F3, in 29.3
+mitfixen.
+
+**Neue / geänderte Dateien:**
+- `docs/concepts/phase29-diagnose.md` (neu) – vollständiger Diagnose-Bericht
+  inkl. Datenfluss, Validator-Regel-Audit, Token-Limit-Check, Fix-Roadmap
+- `docs/concepts/phase29_concept.md` – Section 9 mit 29.1-Status ergänzt
+- `docs/journal.txt` – dieser Eintrag
+
+**Kein Generator-Code geändert** – 29.1 ist reine Diagnose.
+
+**Nächste Aktion:** 29.2 (strukturelle Garantien F1 + F2) im Branch
+`feature/phase-29-2-strukturelle-garantien`.
+
+
+---
+
+## In Arbeit: 29.2 – Strukturelle Garantien (19.05.2026)
+
+**Branch:** `feature/phase-29-2-strukturelle-garantien` (gestapelt auf 29.1,
+damit `journal.txt` konfliktfrei bleibt)
+
+Fix für F1 (Volumen-Steuerung) und F2 (Strukturbruch) gemäß Diagnose 29.1.
+
+- **F2:** `_get_max_tokens()` für alle Plan-Typen erhöht (3er-split 3000 →
+  6000). max_tokens ist eine Obergrenze, kein Kostenfaktor – das alte Limit
+  schnitt den dritten Tag ab. Zusätzlich Truncation-Detektor in `llm_client`
+  (`finish_reason == "length"`); `plan_generator` speichert abgeschnittene
+  Pläne nicht mehr still, sondern meldet einen klaren Fehler.
+- **F1:** `prompt_builder` nennt jetzt eine exakte Zielzahl statt einer
+  4 Sätze breiten Range; die hartcodierten „18 Sätze“-Beispiel-Tage skalieren
+  dynamisch mit `sets_per_session`.
+
+Tests in `ai_coach/tests/` ergänzt; Live-Verifikation mit 3 Generierungen.
+
+
+---
+
+## Abgeschlossen: 29.2 – Strukturelle Garantien (19.05.2026)
+
+**Branch:** `feature/phase-29-2-strukturelle-garantien`
+
+F1 und F2 behoben und live verifiziert (3 unabhängige Generierungen,
+Sonnet 4.6, User 2, 22 Sätze/Tag – im git-worktree gefahren, Produktion
+blieb unberührt).
+
+**F2 – Strukturbruch:**
+- `_get_max_tokens()`: alle Plan-Typen erhöht (3er-split 3000 → 6000, ppl
+  4500 → 10000, Default 3500 → 7000). max_tokens ist eine Obergrenze, kein
+  Kostenfaktor – die alte Doku-Begründung „verschwendet Geld“ war falsch.
+- Truncation-Detektor in `llm_client`: `finish_reason == "length"`
+  (OpenRouter) bzw. `done_reason`/`eval_count` (Ollama) → `truncated`-Flag
+  im Result-Dict.
+- `plan_generator` bricht bei `truncated` mit klarem Fehler ab statt einen
+  unvollständigen Plan still zu speichern.
+
+**F1 – Volumen-Steuerung:**
+- `prompt_builder`: exakte Zielzahl statt 4 Sätze breiter Range; die
+  hartcodierten „18 Sätze“-Beispiel-Tage skalieren jetzt dynamisch mit
+  `sets_per_session` (`_distribute_example_sets`).
+
+**Live-Verifikation – alle 3 Läufe OK:**
+- Jeder Lauf: 3 Tage, Satz-Summen [22, 22, 22], Tag-Symmetrie 0.
+- `completion_tokens` 4110 / 4358 / 4187 – klar unter dem neuen 6000-Limit,
+  aber über dem alten 3000 (das hätte abgeschnitten → F2 bestätigt behoben).
+
+**Tests:** 141 ai_coach-Tests grün, davon 9 neu/angepasst für die F1/F2-
+Garantien (Token-Obergrenzen, Truncation-Flag, exakte Zielzahl,
+`_distribute_example_sets`).
+
+**Beobachtung (kein Blocker):** Bei 22 Sätzen/Tag auf 6 Übungen erreichen
+2 Übungen derselben Muskelgruppe gelegentlich 8 Sätze – der Validator-
+Schwellenwert `_MAX_SETS_PER_MUSCLE_GROUP=7` (für ~18 Sätze kalibriert)
+warnt dann. Der Plan bleibt strukturell korrekt (3×22); ggf. in einer
+späteren Phase nachjustieren.
+
+**Geänderte Dateien:**
+- `ai_coach/plan_generator.py`, `ai_coach/llm_client.py`,
+  `ai_coach/prompt_builder.py`
+- `ai_coach/tests/test_plan_generator.py`, `test_llm_client.py`,
+  `test_prompt_builder.py`
+- `docs/journal.txt`
+
+**Review-Nachtrag (Codex-Bot, P2):** Im SATZ-BUDGET-Block des Prompts
+widersprachen sich zwei Bullets – einer forderte „exakt {target_sets}“, der
+nächste erlaubte „±1 Satz Abweichung“. Die ±1-Toleranz wurde entfernt; beide
+Bullets fordern jetzt konsistent die exakte Zielzahl. Test um eine
+±1-Guard-Assertion ergänzt.
+
+**Nächste Aktion:** 29.3 (Untertrainiert-Liste als Generator-Input, F3) im
+Branch `feature/phase-29-3-untertrainiert-input`.

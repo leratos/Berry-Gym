@@ -147,26 +147,31 @@ class PlanGenerator:
 
     def _get_max_tokens(self) -> int:
         """
-        Gibt plan-typ-spezifisches max_tokens zurück.
+        Gibt plan-typ-spezifisches max_tokens (Output-Obergrenze) zurück.
 
-        Grundlage: ~700 Tokens pro Session (Übungen + Metadaten) +
-        ~500 Tokens für Makrozyklus/Periodisierungs-Header.
-        Puffer: +20% für Varianz in Übungsanzahl und Notizen.
+        Phase 29.2 (F2): Die alten Werte waren zu niedrig. Eine Live-Diagnose
+        (Sonnet 4.6, 3er-Split) zeigte, dass completion_tokens exakt gegen das
+        alte Limit von 3000 lief und den dritten Trainingstag abschnitt.
 
-        Hardcodiertes 4000 für alle Typen war falsch:
-        - 2er-Split: ~1400 Tokens → 4000 verschwendet Geld
-        - PPL (6 Sessions): ~4700 Tokens → 4000 schneidet den Plan ab
+        max_tokens ist eine OBERGRENZE, kein Kostenfaktor – abgerechnet werden
+        nur tatsächlich erzeugte Tokens. Die Grenze darf daher großzügig sein;
+        sie dient nur als Schutz gegen Ausreißer. Sonnet 4.6 formuliert
+        deutlich ausführlicher als Gemini (lange notes-Felder + vollständiger
+        12-Wochen-Makrozyklus, der im JSON-Schema vor den Sessions steht).
+
+        Richtwert: ~1500-1800 Output-Tokens pro Trainingstag (Sonnet) +
+        ~800 Tokens Periodisierungs-Metadaten, plus reichlich Puffer.
         """
         token_map = {
-            "ganzkörper": 2000,  # 2-3 Sessions × ~500 + Header
-            "2er-split": 2200,  # 2 Sessions × ~700 + Header
-            "upper-lower": 2200,  # Alias für 2er-Split
-            "3er-split": 3000,  # 3 Sessions × ~700 + Header
-            "4er-split": 3800,  # 4 Sessions × ~700 + Header
-            "ppl": 4500,  # bis 6 Sessions × ~650 + Header
-            "push-pull-legs": 4500,  # Alias für ppl
+            "ganzkörper": 4000,  # 2-3 Sessions
+            "2er-split": 4500,  # 2 Sessions
+            "upper-lower": 4500,  # Alias für 2er-Split
+            "3er-split": 6000,  # 3 Sessions – Live-Bedarf >3000 bestätigt
+            "4er-split": 7500,  # 4 Sessions
+            "ppl": 10000,  # bis 6 Sessions
+            "push-pull-legs": 10000,  # Alias für ppl
         }
-        return token_map.get(self.plan_type, 3500)
+        return token_map.get(self.plan_type, 7000)
 
     def generate(self, save_to_db: bool = True) -> dict:
         """
@@ -316,6 +321,22 @@ class PlanGenerator:
                 print(
                     f"   ✓ OpenRouter Plan JSON mit Keys: {list(plan_json.keys()) if isinstance(plan_json, dict) else 'KEIN DICT!'}"
                 )
+
+        # Phase 29.2 (F2): Abgeschnittene LLM-Antworten nicht still
+        # weiterverarbeiten – sonst landet ein unvollständiger Plan (fehlende
+        # oder verstümmelte Trainingstage) in der DB.
+        if isinstance(llm_result, dict) and llm_result.get("truncated"):
+            print("\n❌ LLM-Antwort wurde abgeschnitten (Token-Limit erreicht)")
+            print("   Plan ist unvollständig – wird NICHT gespeichert.")
+            return {
+                "success": False,
+                "errors": [
+                    "Die KI-Antwort wurde wegen des Token-Limits abgeschnitten "
+                    "und ist unvollständig. Bitte erneut versuchen."
+                ],
+                "plan_data": plan_json,
+                "analysis_data": analysis_data,
+            }
 
         plan_json = self._ensure_periodization_metadata(plan_json)
 
