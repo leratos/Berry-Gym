@@ -113,6 +113,40 @@ def test_build_weakness_block_variants(monkeypatch):
     assert "ADDUKTOREN" in block
 
 
+def test_build_weakness_block_resolves_db_constants(monkeypatch):
+    """Phase 29.3 (F3): data_analyzer liefert DB-Konstanten als Label
+    ('BEINE_HAM'). Diese müssen aufgelöst werden, nicht still verworfen."""
+    builder = PromptBuilder()
+    monkeypatch.setattr(builder, "_get_exercises_for_keys", lambda keys, avail: ["Beinbeuger"])
+
+    block = builder._build_weakness_block(
+        ["BEINE_HAM: Untertrainiert (nur 82 eff. Wdh vs. Ø 176)"],
+        ["Beinbeuger"],
+    )
+
+    assert block is not None, "DB-Konstanten-Label darf nicht still verworfen werden"
+    assert "HAMSTRINGS" in block  # KEY_TO_DISPLAY["BEINE_HAM"] = "Hamstrings"
+
+
+def test_build_weakness_block_demands_volume(monkeypatch):
+    """Phase 29.3: Der Pflicht-Block fordert ein Satz-Volumen, nicht nur
+    'mind. 1 Übung'."""
+    from ai_coach.muscle_labels import MIN_SETS_PER_WEAKNESS
+
+    builder = PromptBuilder()
+    monkeypatch.setattr(builder, "_get_exercises_for_keys", lambda keys, avail: ["Crunch"])
+
+    block = builder._build_weakness_block(
+        ["BAUCH: Untertrainiert (nur 10 eff. Wdh vs. Ø 50)"],
+        ["Crunch"],
+    )
+
+    assert block is not None
+    assert "Arbeitssätze" in block
+    assert "mind. 1 Übung" not in block
+    assert str(MIN_SETS_PER_WEAKNESS) in block
+
+
 def test_build_user_prompt_covers_frequency_and_periodization_branches(monkeypatch):
     builder = PromptBuilder()
     available = [
