@@ -6828,3 +6828,60 @@ eine Volumen-Warnung erzeugt. Test ergänzt:
 **Nächste Aktion:** Phase 29 ist inhaltlich abgeschlossen. Folge-Phasen
 gemäß Konzept: Phase 26 (Konsolidierungs-Logik), 27 (Style), 28 (Doku),
 30 (volle Adaptive Plan Generation).
+
+
+---
+
+## Abgeschlossen: Phase 30 Konzept angelegt (20.05.2026)
+
+**Branch:** `feature/phase-30-concept` (gestapelt auf 29.3)
+
+**Anlass:** Konkreter Plan-Output vom 19.05. gegen den Trainings-Report vom
+selben Tag deckte einen Architektur-Gap auf: der Phase-29-Generator addiert
+8/8/11 Sätze für Brust/Lat/Quad — die laut Report bereits im Übertraining-
+Bereich stehen (28/21/21 Sätze/30 Tage) — und übersieht Hüftbeuger als
+Schwachstelle (9 Sätze, Untertrainiert per Volumen-Schwelle, aber nicht per
+data_analyzer-Heuristik).
+
+**Wurzel-Mechanik (zwei strukturelle Lücken):**
+
+1. **Metrik-Mismatch:** Generator nutzt effektive Wiederholungen
+   (`eff_reps < 0.6 × Ø`), Report nutzt Satzzahl gegen Volumen-Schwellenwert.
+   Bei hochrepetitiven Muskelgruppen (Hüftbeuger) bleiben eff. Wdh hoch
+   trotz niedriger Satzzahl → Generator sieht keine Schwäche.
+2. **Kein Übertraining-Signal** im Generator-Input. Phase 29.3 hat nur die
+   Untertrainiert-Seite eingebaut. Der Prompt enthält keinerlei Information
+   darüber, welche Muskelgruppen bereits über dem Soll-Max stehen.
+
+**Ziel von Phase 30:** Single Source of Truth – derselbe Muskelgruppen-
+Status, den der User im Dashboard und PDF sieht, fließt in den Plan-Prompt.
+Generator hört auf, parallel zu rechnen, konsumiert stattdessen die Helper
+aus `core/utils/`, die der Report nutzt.
+
+**Sub-Phasen-Struktur:**
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| 30.1 | **Übertraining-Cap** (akuter Hotfix für den 19.05.-Befund) | S–M |
+| 30.2 | Untertrainiert-Quelle vom data_analyzer auf Report-Basis | M |
+| 30.3 | Plateau-Status als Volumen-Hint im Prompt | M |
+| 30.4 | Ermüdungs-/Konsistenz-Adaption (Deload-Modus, Frequenz→Split) | M |
+
+**Eine zentrale offene Frage vor 30.1:** Die Volumen-Schwellenwerte in
+`core/utils/periodization.py` (gross 12–25, mittel 10–18, klein 8–16,
+haltung 6–12) widersprechen der im PDF-Report durchgängig genutzten
+12–20-Anzeige. Welches System ist kanonisch? Wenn der Generator den Cap
+auf 6–12 für Hüftbeuger setzt, der Report aber 12–20 zeigt, divergieren
+User-Sicht und Plan-Verhalten erneut.
+
+**Neue Datei:**
+
+- `docs/concepts/phase30_concept.md` (~250 Zeilen)
+
+**Bewusst NICHT angefasst:**
+
+- Code – Phase 30 startet mit eigenen Sub-Phasen-Branches.
+
+**Nächste Aktion:** Implementierung von **30.1 (Übertraining-Cap)** im
+Branch `feature/phase-30-1-uebertraining-cap` – schließt das akute Risiko
+für die anstehende reale Plan-Generierung (in ca. 4 Wochen).
