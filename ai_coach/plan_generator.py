@@ -253,8 +253,24 @@ class PlanGenerator:
         # statt der data_analyzer-Heuristik. data_analyzer.weaknesses bleibt
         # in analysis_data für die informative „Schwachstellen"-Anzeige im
         # Prompt-Header bestehen, ist aber nicht mehr die Pflicht-Quelle.
+        #
+        # P1-Review (30.2): Der Helfer liefert ``None`` wenn die
+        # Stats-Collector-Quelle nicht antwortet – in diesem Fall fallen wir
+        # explizit auf die data_analyzer-Heuristik zurück, sonst entfiele
+        # das Schwächen-Enforcement (Pflicht-Block leer, Coverage-Check ohne
+        # Eingabe). Erfolgreich-leeres ``[]`` ist dagegen die korrekte
+        # Antwort „keine Untertrainiert-Lage" – kein Fallback nötig.
         undertrained_targets = self._compute_undertrained_targets()
-        undertrained_strings = self._undertrained_targets_to_strings(undertrained_targets)
+        if undertrained_targets is None:
+            print(
+                "   ⚠️ Stats-Collector-Quelle für Untertrainiert nicht verfügbar – "
+                "Fallback auf data_analyzer-Heuristik."
+            )
+            undertrained_strings: list[str] | None = None  # → prompt-Fallback
+            weakness_input_for_validator = list(analysis_data.get("weaknesses", []))
+        else:
+            undertrained_strings = self._undertrained_targets_to_strings(undertrained_targets)
+            weakness_input_for_validator = undertrained_strings
 
         messages = builder.build_messages(
             analysis_data=analysis_data,
@@ -427,10 +443,14 @@ class PlanGenerator:
         # 5c. Schwachstellen-Coverage prüfen + Auto-Fix
         print("\n🎯 SCHRITT 5c: Schwachstellen-Coverage prüfen")
         print("-" * 60)
-        # Phase 30.2: Coverage-Check operiert jetzt auf der kanonischen
-        # Untertrainiert-Liste (gleiche Quelle wie der Prompt-Pflicht-Block).
+        # Phase 30.2: Coverage-Check operiert auf derselben Quelle wie der
+        # Prompt-Pflicht-Block. ``weakness_input_for_validator`` enthält
+        # entweder die kanonische Untertrainiert-Liste (Erfolgsfall) oder
+        # die data_analyzer-Fallback-Liste (wenn der Helfer ``None`` zurück-
+        # gab – siehe P1-Review-Fix oben). So bleiben Pflicht-Block und
+        # Coverage-Check immer synchron.
         coverage_warnings = self._validate_weakness_coverage(
-            plan_json, undertrained_strings, available_exercises
+            plan_json, weakness_input_for_validator, available_exercises
         )
         if coverage_warnings:
             print(f"   ⚠️ {len(coverage_warnings)} nicht abgedeckte Schwachstellen:")
@@ -1275,7 +1295,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             )
         return caps
 
-    def _compute_undertrained_targets(self) -> list[dict]:
+    def _compute_undertrained_targets(self) -> list[dict] | None:
         """Phase 30.2: Liste der aktuell untertrainierten Muskelgruppen.
 
         Spiegel zu ``_compute_overtrained_caps`` – speist sich aus derselben
@@ -1283,10 +1303,23 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         PDF-Report). Filtert auf ``status == "untertrainiert"`` und liefert
         pro Gruppe ``{key, name, ist_sets, soll_min}``.
 
-        Ersetzt die alte data_analyzer-Heuristik (``eff_reps < 0.6 × Ø``) als
-        Pflicht-Quelle für den Weakness-Block; die data_analyzer-Liste bleibt
-        zwar in ``analysis_data["weaknesses"]`` erhalten, dient ab Phase 30.2
-        aber nur noch der informativen Anzeige im Prompt-Header.
+        Rückgabewerte (Phase 30.2 P1-Review – Sentinel-Semantik):
+
+        - ``[]``  – Berechnung erfolgreich, keine Muskelgruppe ist
+          untertrainiert.
+        - ``[{...}, ...]``  – mind. eine untertrainierte Gruppe mit
+          konkreten Ist/Soll-Werten.
+        - ``None``  – Berechnung **fehlgeschlagen** (DB-Problem,
+          Stats-Collector-Exception o.ä.). Der Aufrufer MUSS dann auf die
+          alte ``data_analyzer``-Heuristik zurückfallen, sonst entfällt
+          der Schwachstellen-Pflicht-Block stillschweigend und das
+          Schwächen-Enforcement ist effektiv aus.
+
+        Die Trennung ``[]`` vs. ``None`` ist absichtlich: bei ``[]`` weiß
+        der Aufrufer „die kanonische Quelle hat geantwortet, es ist nichts
+        untertrainiert" – kein PFLICHT-Block ist die korrekte Antwort. Bei
+        ``None`` weiß der Aufrufer „die kanonische Quelle ist tot, lieber
+        die Heuristik nutzen als gar keine Pflicht-Liste".
         """
         from datetime import timedelta
 
@@ -1309,7 +1342,10 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             balance = collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30)
         except Exception as exc:  # noqa: BLE001
             print(f"   ⚠️ Untertrainiert-Status nicht berechenbar: {exc}")
-            return []
+            # Sentinel für Fallback-Pfad – NICHT ``[]`` (sonst hätte der
+            # Aufrufer keine Möglichkeit zu unterscheiden „nichts
+            # untertrainiert" vs. „Quelle kaputt").
+            return None
 
         targets: list[dict] = []
         for mg in balance:
