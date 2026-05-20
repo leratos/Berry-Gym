@@ -7089,3 +7089,129 @@ kann erneut generieren – Sonnet respektiert den Cap-Block in der Praxis
 data_analyzer-Heuristik) im Branch `feature/phase-30-2-untertrain-source`.
 Damit schließt sich die Symmetrie: Untertraining wie Übertraining stammen
 beide aus derselben Stats-Collector-Quelle.
+
+
+---
+
+## In Arbeit: 30.2 – Untertrainiert-Quelle auf Report-Basis (20.05.2026)
+
+**Branch:** `feature/phase-30-2-untertrain-source` (gestapelt auf 30.1)
+
+**Ziel:** Die Pflicht-Liste der untertrainierten Muskelgruppen, die heute
+über `data_analyzer._identify_weaknesses` aus der „eff. Wdh < 60 % Ø"-
+Heuristik kommt, wird auf `collect_muscle_balance` (Single Source of Truth
+mit Report + Übertraining-Cap) umgestellt. Damit ist Symmetrie hergestellt:
+Unter- und Übertraining stammen aus derselben Quelle.
+
+**Anmerkung zum konzeptionellen „Hüftbeuger-Loch":** Phase 30 Section 1.1
+hatte Hüftbeuger als das Paradebeispiel für eine durch die data_analyzer-
+Heuristik übersehene Schwachstelle dokumentiert. Nach dem 30.0-Fix der
+Schwellenwerte (`periodization.py`-Klassen statt Universal-Default 12-20)
+ist Hüftbeuger bei User 2 mit 9 Sätzen in der `haltung`-Klasse (6-12)
+allerdings **nicht** untertrainiert – das „Loch" war ein Artefakt der
+buggy Report-Default-Schwelle. Der architektonische Wert von 30.2 (Single
+Source of Truth, kanonische Schwellen, konsistent mit dem PDF-Report)
+bleibt trotzdem; der konkrete Hüftbeuger-Regressions-Test entfällt.
+
+**Architektur:**
+
+- Neue `PlanGenerator._compute_undertrained_targets` (Spiegel zu
+  `_compute_overtrained_caps`) – nutzt `collect_muscle_balance`, filtert
+  auf `status == "untertrainiert"`, liefert pro Gruppe
+  `{key, name, ist_sets, soll_min}`.
+- Plan-Generator leitet daraus eine Strings-Liste im Format
+  `"<KEY>: Untertrainiert (aktuell X Sätze, Ziel min Y)"` ab und
+  übergibt sie als neuen `undertrained`-Parameter an
+  `build_messages` / `build_user_prompt`. Damit bleibt
+  `_build_weakness_block` (Signatur stabil) und ebenso
+  `_validate_weakness_coverage` (Strings rein, parsen unverändert).
+- Wenn `undertrained` nicht übergeben wird, fällt der Prompt-Pflicht-
+  Block auf `analysis_data["weaknesses"]` zurück (Backward-Compat).
+- `data_analyzer._identify_weaknesses` bleibt für die informative
+  „Schwachstellen"-Anzeige im Prompt-Header bestehen (zweites Signal,
+  aber nicht mehr Pflicht-Quelle).
+
+**Akzeptanzkriterien:**
+
+- Die Pflicht-Liste der untertrainierten Muskelgruppen kommt aus
+  `collect_muscle_balance` (Single Source mit dem PDF-Report).
+- Für User 2 enthält der Pflicht-Block die per Volumen-Schwellenwerten
+  untertrainierten Gruppen (Hamstrings, Bauch) – nicht Hüftbeuger
+  (Optimum laut 30.0-Schwellen).
+- Tests + Live-Verifikation.
+
+
+---
+
+## Abgeschlossen: 30.2 – Untertrainiert-Quelle auf Report-Basis (20.05.2026)
+
+**Branch:** `feature/phase-30-2-untertrain-source`
+
+Single Source of Truth ist hergestellt – Untertrainiert- und Übertraining-
+Listen stammen beide aus derselben `collect_muscle_balance`-Quelle.
+
+**Änderungen:**
+
+- `PlanGenerator._compute_undertrained_targets` (neu, Spiegel zu 30.1's
+  `_compute_overtrained_caps`): filtert `collect_muscle_balance` auf
+  `status == "untertrainiert"` und liefert `{key, name, ist_sets, soll_min}`.
+- `PlanGenerator._undertrained_targets_to_strings` (Helper, statisch): formt
+  Targets ins Legacy-String-Format `"<KEY>: Untertrainiert (aktuell X
+  Sätze, Ziel min Y)"` – Parser von `_build_weakness_block` und
+  `_validate_weakness_coverage` bleiben unverändert.
+- `build_user_prompt` / `build_messages` haben einen neuen optionalen
+  `undertrained`-Parameter. Wird er übergeben, ist er die alleinige
+  Quelle des PFLICHT-Blocks; sonst Fallback auf `analysis_data["weaknesses"]`
+  (Backward-Compat).
+- `_generate_with_existing_django` berechnet die Targets, leitet die
+  Strings ab, übergibt sie an `build_messages` UND an
+  `_validate_weakness_coverage`. data_analyzer's `weaknesses` bleibt
+  in `analysis_data` als informative Quelle für den Prompt-Header.
+
+**Live-Verifikation gegen User 2 (Sonnet 4.6, im git-worktree):**
+
+| Aspekt | Ergebnis |
+|---|---|
+| `_compute_undertrained_targets` Output | BEINE_HAM (9/12) + BAUCH (9/10) ✓ |
+| data_analyzer-Heuristik (zum Vergleich) | nur BEINE_HAM (avg=159, BAUCH-eff_reps 104 ≥ 0.6·159) – BAUCH **verpasst** |
+| PFLICHT-Block im Prompt | enthält Hamstrings UND Bauch mit konkreten Ist/Soll-Zahlen ✓ |
+| Plan-Generierung | Trizeps-Cap (3) gerissen (5 Sätze) → 30.1 Hard-Fail → `success=False` ✓ |
+
+Der Source-Switch zeigt direkt seinen Nutzen: BAUCH wäre per
+data_analyzer in diesem Datenstand stillschweigend übersehen worden,
+mit der neuen Quelle steht es kanonisch im Pflicht-Block.
+
+**Nebenbefund (out of scope für 30.2):** Auto-Fix 13.1 ersetzt im Live-Lauf
+eine BAUCH-Übung (`Hanging Leg Raises`) auf dem Legs-Tag durch
+`Frontkniebeuge` (Quad-Overrep-Fix). Das entfernt ungewollt die
+PFLICHT-Block-Coverage. Interaktion zwischen 13.1 (Überrepräsentation)
+und 29.3 (PFLICHT-Block) – wert dokumentiert als künftige Aufgabe:
+13.1 sollte PFLICHT-Block-Übungen nicht entfernen.
+
+**Tests:** 324 ai_coach-Tests grün; davon 7 neu für 30.2:
+`TestComputeUndertrainedTargets` (3), `TestUndertrainedTargetsToStrings`
+(2), `test_undertrained_param_takes_precedence_over_analysis_weaknesses`,
+`test_undertrained_none_falls_back_to_analysis_weaknesses`.
+
+**Review-Nachtrag (Codex-Bot, P1, 20.05.2026):** Bei Exception in
+`_compute_undertrained_targets` (`collect_muscle_balance` schlägt fehl)
+wurde stillschweigend `[]` zurückgegeben – nicht unterscheidbar vom
+Erfolgsfall „keine Untertrainiert". Im Erfolgs-Auswertpfad bedeutete
+das: `undertrained=[]` ans Prompt → leerer Pflicht-Block, und derselbe
+leere Input am Validator → keine Coverage-Warnungen. Damit war das
+gesamte Schwächen-Enforcement bei einem Stats-Collector-Ausfall
+deaktiviert – genau dort, wo der Fallback auf die data_analyzer-
+Heuristik die Plan-Qualität gerettet hätte. Fix:
+`_compute_undertrained_targets` liefert jetzt **`None`** als Sentinel
+für Helfer-Fehler (vs. `[]` für „erfolgreich, niemand untertrainiert").
+Der Aufrufer im `_generate_with_existing_django` fällt bei `None`
+explizit auf `analysis_data["weaknesses"]` zurück – sowohl für den
+Prompt-Pflicht-Block (über `undertrained=None` → `prompt_builder`-
+Fallback-Pfad) als auch für den Coverage-Check. Tests ergänzt:
+`test_compute_returns_none_on_exception`,
+`test_undertrained_helper_failure_falls_back_to_analysis_weaknesses`.
+
+**Nächste Aktion:** Mit 30.2 ist die Symmetrie hergestellt. Die offenen
+30.3 (Plateau-Status als Volumen-Hint) und 30.4 (Ermüdungs-/Konsistenz-
+Adaption) bleiben für später; die akuten Befunde aus dem 19.05.-Plan
+sind mit 30.0+30.1+30.2 alle adressiert.
