@@ -235,6 +235,69 @@ def test_build_user_prompt_without_overtrain_caps_omits_block():
     assert "0b." not in prompt
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 30.2: undertrained-Parameter überschreibt data_analyzer-Heuristik
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_undertrained_param_takes_precedence_over_analysis_weaknesses(monkeypatch):
+    """Phase 30.2: wenn der Aufrufer eine `undertrained`-Liste übergibt, wird
+    NUR diese für den PFLICHT-Block verwendet – die alte data_analyzer-
+    Heuristik in `analysis_data["weaknesses"]` darf den Pflicht-Block nicht
+    mehr füllen."""
+    builder = PromptBuilder()
+    # Wir mocken _get_exercises_for_keys, damit der Block-Inhalt deterministisch ist.
+    monkeypatch.setattr(builder, "_get_exercises_for_keys", lambda keys, avail: ["Crunch"])
+
+    # analysis_data enthält eine "alte" Heuristik-Schwachstelle (Brust),
+    # die NICHT mehr im PFLICHT-Block landen soll.
+    analysis = _analysis_data(
+        freq=3.0,
+        weaknesses=["Brust: Untertrainiert (Heuristik-Altlast)"],
+    )
+    # Kanonische (Stats-Collector) Untertrainiert-Liste hat nur BAUCH.
+    undertrained = ["BAUCH: Untertrainiert (aktuell 9 Sätze, Ziel min 10)"]
+
+    prompt = builder.build_user_prompt(
+        analysis,
+        ["Crunch", "Bankdrücken (Langhantel)"],
+        plan_type="3er-split",
+        sets_per_session=22,
+        undertrained=undertrained,
+    )
+
+    # PFLICHT-Block enthält Bauch (aus undertrained), NICHT Brust.
+    assert "BAUCH" in prompt or "Bauch" in prompt
+    # "PFLICHT" sollte nicht für Brust gelten – der Block-Text "❗ BRUST" ist
+    # der Indikator. Der Header "Schwachstellen" zeigt Brust noch
+    # informativ (data_analyzer), nur die ❗-Pflicht-Zeile darf nicht da sein.
+    assert "❗ BRUST" not in prompt
+
+
+def test_undertrained_none_falls_back_to_analysis_weaknesses(monkeypatch):
+    """Phase 30.2: wird `undertrained` nicht übergeben (Backward-Compat),
+    muss der Pflicht-Block weiterhin aus `analysis_data["weaknesses"]`
+    gefüllt werden – sonst brechen Aufrufer ohne 30.2-Update."""
+    builder = PromptBuilder()
+    monkeypatch.setattr(builder, "_get_exercises_for_keys", lambda keys, avail: ["Crunch"])
+
+    analysis = _analysis_data(
+        freq=3.0,
+        weaknesses=["Bauch: Untertrainiert (Heuristik-Fallback)"],
+    )
+
+    prompt = builder.build_user_prompt(
+        analysis,
+        ["Crunch", "Bankdrücken (Langhantel)"],
+        plan_type="3er-split",
+        sets_per_session=22,
+        # undertrained NICHT übergeben → Fallback-Pfad
+    )
+
+    # Fallback funktioniert: Bauch landet im Pflicht-Block
+    assert "❗ BAUCH" in prompt or "BAUCH" in prompt
+
+
 def test_build_user_prompt_covers_frequency_and_periodization_branches(monkeypatch):
     builder = PromptBuilder()
     available = [

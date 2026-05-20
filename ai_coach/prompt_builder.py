@@ -360,6 +360,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         periodization: str = "linear",
         duration_weeks: int = 12,
         overtrained_caps: Optional[List[Dict[str, Any]]] = None,
+        undertrained: Optional[List[str]] = None,
     ) -> str:
         # Plan-Type spezifische Anweisungen (Frontend-kompatible Keys)
         plan_instructions = {
@@ -401,10 +402,17 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             [f"{mg} ({int(data['effective_reps'])} eff.Wdh)" for mg, data in mg_sorted]
         )
 
-        # Schwachstellen-Pflicht-Block (höchste Priorität)
-        weakness_block = self._build_weakness_block(
-            analysis_data["weaknesses"][:5], available_exercises
+        # Schwachstellen-Pflicht-Block (höchste Priorität).
+        # Phase 30.2: Pflicht-Quelle ist die kanonische Untertrainiert-Liste
+        # aus dem Stats-Collector (durch den Aufrufer als ``undertrained``
+        # übergeben). Wird sie nicht übergeben, fallen wir auf
+        # ``analysis_data["weaknesses"]`` (data_analyzer-Heuristik) zurück –
+        # damit existierende Aufrufer ohne den neuen Parameter weiterhin
+        # funktionieren.
+        weakness_source = (
+            undertrained if undertrained is not None else analysis_data["weaknesses"][:5]
         )
+        weakness_block = self._build_weakness_block(weakness_source, available_exercises)
         weakness_section = (weakness_block + "\n\n") if weakness_block else ""
 
         # Phase 30.1: Übertraining-Cap-Block (analog zum Weakness-Block, aber
@@ -629,6 +637,7 @@ Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
         periodization: str = "linear",
         duration_weeks: int = 12,
         overtrained_caps: Optional[List[Dict[str, Any]]] = None,
+        undertrained: Optional[List[str]] = None,
     ) -> List[Dict[str, str]]:
         return [
             {"role": "system", "content": self.system_prompt},
@@ -643,6 +652,7 @@ Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
                     periodization,
                     duration_weeks,
                     overtrained_caps=overtrained_caps,
+                    undertrained=undertrained,
                 ),
             },
         ]
