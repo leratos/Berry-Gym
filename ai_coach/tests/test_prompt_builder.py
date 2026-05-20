@@ -147,6 +147,94 @@ def test_build_weakness_block_demands_volume(monkeypatch):
     assert str(MIN_SETS_PER_WEAKNESS) in block
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 30.1: Übertraining-Cap-Block
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_build_overtraining_cap_block_returns_none_for_empty():
+    builder = PromptBuilder()
+    assert builder._build_overtraining_cap_block([]) is None
+
+
+def test_build_overtraining_cap_block_contains_cap_details():
+    """Phase 30.1: Block muss Muskelgruppen-Name, Cap, Ist-Wert und Soll-Max
+    enthalten, damit der Prompt klar ist."""
+    builder = PromptBuilder()
+    caps = [
+        {
+            "key": "BRUST",
+            "name": "Brust (Pectoralis major)",
+            "ist_sets": 28,
+            "soll_max": 25,
+            "weekly_cap": 5,
+        },
+        {
+            "key": "TRIZEPS",
+            "name": "Trizeps (Triceps brachii)",
+            "ist_sets": 20,
+            "soll_max": 18,
+            "weekly_cap": 3,
+        },
+    ]
+    block = builder._build_overtraining_cap_block(caps)
+
+    assert block is not None
+    assert "ÜBERTRAINING-CAP" in block
+    # Beide Muskelgruppen (uppercase) vertreten
+    assert "BRUST" in block
+    assert "TRIZEPS" in block
+    # Cap-Werte sichtbar
+    assert "max. 5" in block  # Brust-Cap
+    assert "max. 3" in block  # Trizeps-Cap
+    # Ist-Werte und Soll-Max sichtbar
+    assert "28" in block and "25" in block
+    assert "20" in block and "18" in block
+
+
+def test_build_user_prompt_inserts_overtrain_block_and_requirement():
+    """Phase 30.1: bei nicht-leeren Caps muss der Prompt sowohl den
+    Cap-Block als auch den Anforderungspunkt 0b enthalten."""
+    builder = PromptBuilder()
+    prompt = builder.build_user_prompt(
+        _analysis_data(freq=3.0),
+        ["Bankdrücken (Langhantel)", "Crunch"],
+        plan_type="3er-split",
+        sets_per_session=22,
+        overtrained_caps=[
+            {
+                "key": "BRUST",
+                "name": "Brust",
+                "ist_sets": 28,
+                "soll_max": 25,
+                "weekly_cap": 5,
+            }
+        ],
+    )
+
+    assert "ÜBERTRAINING-CAP" in prompt
+    assert "BRUST" in prompt
+    assert "max. 5" in prompt
+    # Anforderungspunkt 0b muss sichtbar sein
+    assert "0b." in prompt
+
+
+def test_build_user_prompt_without_overtrain_caps_omits_block():
+    """Phase 30.1: ohne überlastete Muskelgruppen darf der Block NICHT im
+    Prompt auftauchen (kein irreführender Hinweis auf einen leeren Block)."""
+    builder = PromptBuilder()
+    prompt = builder.build_user_prompt(
+        _analysis_data(freq=3.0),
+        ["Bankdrücken (Langhantel)", "Crunch"],
+        plan_type="3er-split",
+        sets_per_session=22,
+        overtrained_caps=None,
+    )
+
+    assert "ÜBERTRAINING-CAP" not in prompt
+    assert "0b." not in prompt
+
+
 def test_build_user_prompt_covers_frequency_and_periodization_branches(monkeypatch):
     builder = PromptBuilder()
     available = [
