@@ -7193,6 +7193,24 @@ und 29.3 (PFLICHT-Block) – wert dokumentiert als künftige Aufgabe:
 (2), `test_undertrained_param_takes_precedence_over_analysis_weaknesses`,
 `test_undertrained_none_falls_back_to_analysis_weaknesses`.
 
+**Review-Nachtrag (Codex-Bot, P1, 20.05.2026):** Bei Exception in
+`_compute_undertrained_targets` (`collect_muscle_balance` schlägt fehl)
+wurde stillschweigend `[]` zurückgegeben – nicht unterscheidbar vom
+Erfolgsfall „keine Untertrainiert". Im Erfolgs-Auswertpfad bedeutete
+das: `undertrained=[]` ans Prompt → leerer Pflicht-Block, und derselbe
+leere Input am Validator → keine Coverage-Warnungen. Damit war das
+gesamte Schwächen-Enforcement bei einem Stats-Collector-Ausfall
+deaktiviert – genau dort, wo der Fallback auf die data_analyzer-
+Heuristik die Plan-Qualität gerettet hätte. Fix:
+`_compute_undertrained_targets` liefert jetzt **`None`** als Sentinel
+für Helfer-Fehler (vs. `[]` für „erfolgreich, niemand untertrainiert").
+Der Aufrufer im `_generate_with_existing_django` fällt bei `None`
+explizit auf `analysis_data["weaknesses"]` zurück – sowohl für den
+Prompt-Pflicht-Block (über `undertrained=None` → `prompt_builder`-
+Fallback-Pfad) als auch für den Coverage-Check. Tests ergänzt:
+`test_compute_returns_none_on_exception`,
+`test_undertrained_helper_failure_falls_back_to_analysis_weaknesses`.
+
 **Nächste Aktion:** Mit 30.2 ist die Symmetrie hergestellt. Die offenen
 30.3 (Plateau-Status als Volumen-Hint) und 30.4 (Ermüdungs-/Konsistenz-
 Adaption) bleiben für später; die akuten Befunde aus dem 19.05.-Plan
