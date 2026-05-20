@@ -601,6 +601,71 @@ class TestCollectMuscleBalance:
         result = collect_muscle_balance(alle_saetze, letzte_30_tage, 10)
         keys = [r["key"] for r in result]
         assert "BRUST" in keys
+        # Phase 30.0: BRUST ist eine "gross"-Muskelgruppe → Schwelle (12, 25),
+        # NICHT der frühere kaputte Default (12, 20).
+        brust_entry = next(r for r in result if r["key"] == "BRUST")
+        assert brust_entry["empfehlung_min"] == 12
+        assert brust_entry["empfehlung_max"] == 25
+        assert brust_entry["status"] == "optimal"  # 15 ist im Bereich [12, 25]
+
+    def test_db_constants_resolve_to_size_specific_thresholds(self):
+        """Phase 30.0 (Regressions-Test): jeder Größenklasse muss ihre eigene
+        Schwelle bekommen – früher matchte EMPFOHLENE_SAETZE.get(...) nie und
+        alle Gruppen erbten (12, 20) als Default.
+        """
+        user = UserFactory()
+        heute = timezone.now()
+        cases = [
+            # (muskelgruppe, sätze, soll_min, soll_max, erwarteter_status)
+            ("BRUST", 15, 12, 25, "optimal"),  # gross
+            ("TRIZEPS", 20, 10, 18, "uebertrainiert"),  # mittel – früher fälschlich "optimal"
+            ("BIZEPS", 8, 8, 16, "optimal"),  # klein – früher fälschlich "untertrainiert"
+            ("HUEFTBEUGER", 9, 6, 12, "optimal"),  # haltung – früher fälschlich "untertrainiert"
+        ]
+        for i, (mg, n_saetze, _min, _max, _status) in enumerate(cases):
+            uebung = UebungFactory(bezeichnung=f"X-{mg}", muskelgruppe=mg)
+            einheit = TrainingseinheitFactory(user=user, datum=heute - timedelta(hours=i))
+            for _ in range(n_saetze):
+                SatzFactory(
+                    einheit=einheit, uebung=uebung, gewicht=Decimal("40.0"), rpe=Decimal("7.0")
+                )
+
+        from core.models import Satz
+
+        alle_saetze = Satz.objects.filter(einheit__user=user)
+        letzte_30_tage = (heute - timedelta(days=30)).date()
+        result = collect_muscle_balance(alle_saetze, letzte_30_tage, 10)
+        by_key = {r["key"]: r for r in result}
+
+        for mg, _n, soll_min, soll_max, soll_status in cases:
+            assert mg in by_key, f"{mg} fehlt im Ergebnis"
+            assert (
+                by_key[mg]["empfehlung_min"] == soll_min
+            ), f"{mg}: min sollte {soll_min} sein, war {by_key[mg]['empfehlung_min']}"
+            assert (
+                by_key[mg]["empfehlung_max"] == soll_max
+            ), f"{mg}: max sollte {soll_max} sein, war {by_key[mg]['empfehlung_max']}"
+            assert (
+                by_key[mg]["status"] == soll_status
+            ), f"{mg}: Status sollte {soll_status!r} sein, war {by_key[mg]['status']!r}"
+
+    def test_ganzkoerper_wird_uebersprungen(self):
+        """Phase 30.0: GANZKOERPER hat keinen sinnvollen Set-Schwellenwert
+        (Cardio/Spezial) und wird im Set-basierten Balance-View übersprungen.
+        """
+        user = UserFactory()
+        heute = timezone.now()
+        uebung = UebungFactory(bezeichnung="Burpees", muskelgruppe="GANZKOERPER")
+        einheit = TrainingseinheitFactory(user=user, datum=heute)
+        for _ in range(5):
+            SatzFactory(einheit=einheit, uebung=uebung, gewicht=Decimal("0.0"), rpe=Decimal("8.0"))
+        from core.models import Satz
+
+        alle_saetze = Satz.objects.filter(einheit__user=user)
+        letzte_30_tage = (heute - timedelta(days=30)).date()
+        result = collect_muscle_balance(alle_saetze, letzte_30_tage, 10)
+        keys = [r["key"] for r in result]
+        assert "GANZKOERPER" not in keys
 
 
 # ─────────────────────────────────────────────────────────────────────────────
