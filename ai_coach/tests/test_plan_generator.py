@@ -1065,6 +1065,64 @@ class TestGenerateWithExistingDjangoPhase2:
         assert any("abgeschnitten" in err.lower() for err in result["errors"])
         mock_save.assert_not_called()
 
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_overtraining_cap_violation_returns_error_and_does_not_save(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Phase 30.1 (P1-Review): cap-Verletzung muss success=False ergeben
+        und ein save_to_db=True darf NICHT zum Speichern führen – sonst ist
+        die Cap nur eine kosmetische Warnung, keine Sicherheits-Regel.
+        """
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        llm_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "Cap-Verletzer",
+                "sessions": [{"day_name": "A", "exercises": []}],
+            },
+            "usage": {},
+            "cost": 0.01,
+        }
+        llm_client.validate_plan.return_value = (True, [])
+
+        fake_caps = [
+            {
+                "key": "BRUST",
+                "name": "Brust",
+                "ist_sets": 28,
+                "soll_max": 25,
+                "weekly_cap": 5,
+            }
+        ]
+        fake_warning = (
+            "⚠️ Übertraining-Cap überschritten: Brust hat im Plan 8 Sätze/Woche "
+            "(Cap: 5, aktuell 28/30 T, Soll-Max 25)"
+        )
+
+        gen = PlanGenerator(user_id=1, plan_type="3er-split")
+        with (
+            patch.object(gen, "_compute_overtrained_caps", return_value=fake_caps),
+            patch.object(gen, "_validate_weakness_coverage", return_value=[]),
+            patch.object(gen, "_validate_overtraining_cap", return_value=[fake_warning]),
+            patch.object(gen, "_save_plan_to_db") as mock_save,
+        ):
+            result = gen._generate_with_existing_django(save_to_db=True)
+
+        assert result["success"] is False
+        assert any("Cap überschritten" in err for err in result["errors"])
+        mock_save.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Phase 5.3 – Plan-Name Eindeutigkeit (inline-Logik in generate())

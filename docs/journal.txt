@@ -7073,6 +7073,18 @@ der ursprüngliche Befund forderte.
 `test_build_user_prompt_inserts_overtrain_block_and_requirement`,
 `test_build_user_prompt_without_overtrain_caps_omits_block`).
 
+**Review-Nachtrag (Codex-Bot, P1, 20.05.2026):** `_validate_overtraining_cap`
+hat eine Cap-Verletzung zwar erkannt, aber nur eine Warnung in
+`coverage_warnings` angehängt und den Success-Pfad weitergeführt. Der Plan
+wäre bei `save_to_db=True` trotzdem als „erfolgreich generiert"
+gespeichert worden – das macht den Cap zu einer kosmetischen Warnung
+statt zur Sicherheits-Regel, die sein Name verspricht. SCHRITT 5d bricht
+jetzt bei Cap-Verletzung hart ab (analog zum F2-Truncation-Detector aus
+29.2): `success=False`, kein Speichern, klare Fehlermeldung. Der User
+kann erneut generieren – Sonnet respektiert den Cap-Block in der Praxis
+(live-Verifikation zeigte das). Test ergänzt:
+`test_overtraining_cap_violation_returns_error_and_does_not_save`.
+
 **Nächste Aktion:** 30.2 (Untertrainiert-Quelle auf Report-Basis statt
 data_analyzer-Heuristik) im Branch `feature/phase-30-2-untertrain-source`.
 Damit schließt sich die Symmetrie: Untertraining wie Übertraining stammen
