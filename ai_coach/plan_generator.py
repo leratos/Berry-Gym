@@ -435,7 +435,21 @@ class PlanGenerator:
         print("-" * 60)
         cap_warnings = self._validate_overtraining_cap(plan_json, overtrained_caps)
         if cap_warnings:
-            coverage_warnings.extend(cap_warnings)
+            # Phase 30.1 (P1-Review): Cap-Verletzung ist KEINE bloße Warnung,
+            # sondern eine aktive Sicherheits-Regel – der Plan würde eine
+            # bereits überlastete Muskelgruppe weiter verschlimmern. Wir
+            # brechen hart ab (analog zum F2-Truncation-Detector in 29.2):
+            # success=False, kein Speichern, klare Fehlermeldung. Der User
+            # kann erneut generieren – Sonnet respektiert den Cap-Block
+            # üblicherweise (live verifiziert in der 30.1-Verifikation).
+            print("\n❌ Plan überschreitet einen oder mehrere Übertraining-Caps")
+            print("   Plan wird NICHT gespeichert – bitte erneut versuchen.")
+            return {
+                "success": False,
+                "errors": cap_warnings,
+                "plan_data": plan_json,
+                "analysis_data": analysis_data,
+            }
         elif overtrained_caps:
             print(f"   ✓ Alle {len(overtrained_caps)} Cap(s) eingehalten")
         else:
