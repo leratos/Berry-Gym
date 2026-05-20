@@ -11,7 +11,7 @@ from django.db import models
 from django.db.models import Avg, Count, F, Max, Sum
 from django.utils import timezone
 
-from core.export.constants import EMPFOHLENE_SAETZE, PULL_GROUPS, PUSH_GROUPS
+from core.export.constants import PULL_GROUPS, PUSH_GROUPS
 from core.helpers.volume import calc_volume, get_user_kg
 from core.models import MUSKELGRUPPEN, KoerperWerte, Satz, Trainingseinheit
 from core.utils.advanced_stats import (
@@ -22,6 +22,7 @@ from core.utils.advanced_stats import (
     calculate_rpe_quality_analysis,
     calculate_rpe_quality_analysis_windowed,
 )
+from core.utils.periodization import get_volumen_schwellenwerte
 from core.utils.plan_helpers import (
     get_active_plan_exercise_ids,
     get_active_plan_start_date,
@@ -79,7 +80,17 @@ def collect_muscle_balance(
             uebung__muskelgruppe=gruppe_key, einheit__datum__gte=letzte_30_tage
         ).select_related("uebung")
         anzahl = gruppe_saetze.count()
-        min_s, max_s = EMPFOHLENE_SAETZE.get(gruppe_key, (12, 20))
+        # Phase 30.0: Single Source of Truth – dieselbe Schwellenwert-Quelle
+        # wie _save_weakness_snapshot im Plan-Generator. Der alte
+        # EMPFOHLENE_SAETZE.get(gruppe_key, (12, 20))-Lookup matchte nie
+        # (Tabelle hatte lowercase-deutsche Keys gegen DB-Konstanten) und
+        # fiel universell auf (12, 20) zurück – alle Muskelgruppen bekamen
+        # dieselbe Schwelle, statt der größenklassen-spezifischen.
+        schwelle = get_volumen_schwellenwerte(gruppe_key)
+        if schwelle is None:
+            # GANZKOERPER / spezial: kein Set-basierter Schwellenwert sinnvoll
+            continue
+        min_s, max_s = schwelle
         status, status_label, erklaerung = muscle_status(anzahl, min_s, max_s, wenig_daten)
         if anzahl > 0:
             volumen = calc_volume(gruppe_saetze, user_kg)
