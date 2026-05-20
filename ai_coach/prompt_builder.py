@@ -222,6 +222,43 @@ Diese Anforderung hat VORRANG vor allen anderen strukturellen Regeln!
 ⚠️ Jede Pflicht-Schwachstelle braucht eigene Übungsslots – nicht mit anderen Gruppen kombinieren!
 """
 
+    def _build_overtraining_cap_block(self, caps: List[Dict[str, Any]]) -> Optional[str]:
+        """
+        Phase 30.1: Baut den Pflicht-Block für aktuell ÜBERTRAINIERTE
+        Muskelgruppen. Diese Gruppen dürfen im neuen Plan kein zusätzliches
+        Wochenvolumen über ihrem Cap bekommen, damit ihr 30-Tage-Ist-Wert
+        zurück in den Optimal-Bereich wandert.
+
+        Gibt None zurück, wenn keine Muskelgruppe aktuell überlastet ist.
+        """
+        if not caps:
+            return None
+
+        items = []
+        for cap in caps:
+            items.append(
+                f"❗ {cap['name'].upper()} – CAP: max. {cap['weekly_cap']} "
+                f"Arbeitssätze pro Woche\n"
+                f"   (aktuell {cap['ist_sets']} Sätze/30 Tage, "
+                f"Optimal-Max {cap['soll_max']})"
+            )
+        items_str = "\n\n".join(items)
+
+        return f"""🛑🛑🛑 ÜBERTRAINING-CAP – HÖCHSTE PRIORITÄT 🛑🛑🛑
+
+Folgende Muskelgruppen sind in den letzten 30 Tagen ÜBERTRAINIERT
+(zu viel Volumen). Der neue Plan DARF KEIN zusätzliches Volumen für diese
+Gruppen aufbauen – das Wochen-Volumen MUSS unter dem Cap bleiben, damit der
+30-Tage-Ist-Wert wieder in den Optimal-Bereich sinkt.
+
+{items_str}
+
+⛔ FEHLER wenn eine dieser Muskelgruppen im Plan ihr Cap überschreitet.
+✅ Andere (untertrainierte oder optimale) Muskelgruppen bekommen das
+   frei werdende Volumen.
+ℹ️ Ziel: über 4 Plan-Wochen sinkt der 30-Tage-Wert wieder ins Optimum.
+"""
+
     def _build_system_prompt(self) -> str:
         return """Du bist ein professioneller Trainingsplan-Generator.
 
@@ -322,6 +359,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         target_profile: str = "hypertrophie",
         periodization: str = "linear",
         duration_weeks: int = 12,
+        overtrained_caps: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         # Plan-Type spezifische Anweisungen (Frontend-kompatible Keys)
         plan_instructions = {
@@ -368,6 +406,20 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
             analysis_data["weaknesses"][:5], available_exercises
         )
         weakness_section = (weakness_block + "\n\n") if weakness_block else ""
+
+        # Phase 30.1: Übertraining-Cap-Block (analog zum Weakness-Block, aber
+        # in die Gegenrichtung: hier wird das Volumen begrenzt).
+        overtrain_block = self._build_overtraining_cap_block(overtrained_caps or [])
+        overtrain_section = (overtrain_block + "\n\n") if overtrain_block else ""
+        # Anforderungs-Punkt "0b" – nur einbauen, wenn der Block oben da ist.
+        overtrain_requirement = (
+            "\n0b. 🛑 ÜBERTRAINING-CAP (PFLICHT): Jede im Übertraining-Cap-"
+            "Block oben gelistete Muskelgruppe DARF im Plan NICHT mehr Sätze "
+            "pro Woche bekommen als ihr Cap! Lieber das freie Volumen auf "
+            "untertrainierte oder optimale Gruppen umleiten."
+            if overtrain_section
+            else ""
+        )
 
         # Schwachstellen für allgemeine Info-Anzeige (kompakt)
         weaknesses_str = "\n".join([f"  - {w}" for w in analysis_data["weaknesses"][:5]])
@@ -525,7 +577,7 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 
 ═══════════════════════════════════════════════════════════
 
-{weakness_section}**Trainingsprogrammierung Defaults:**
+{weakness_section}{overtrain_section}**Trainingsprogrammierung Defaults:**
 - Makrozyklus: {duration_weeks} Wochen, Periodisierung: {periodization_note}
 - Deload: Wochen {deload_weeks_str} → Volumen 80%, Intensität ~90% der Vorwoche
 - Zielprofil: {target_profile} → {profile_guides.get(target_profile, profile_guides['hypertrophie'])}
@@ -543,7 +595,7 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 {coach_rules}
 
 **Anforderungen:**
-0. 🚨 PFLICHT-SCHWACHSTELLEN: Alle im Pflicht-Block #0 genannten Muskelgruppen MÜSSEN mit mind. 1 Übung im Plan sein! Kein optionaler Hinweis – HARTE REGEL!
+0. 🚨 PFLICHT-SCHWACHSTELLEN: Alle im Pflicht-Block #0 genannten Muskelgruppen MÜSSEN mit dem geforderten Mindest-Volumen im Plan sein! Kein optionaler Hinweis – HARTE REGEL!{overtrain_requirement}
 1. ** VERWENDE NUR ÜBUNGEN AUS DER OBIGEN LISTE** - keine anderen!
 2. Push/Pull Balance beachten (bei Unbalance gegensteuern)
 3. SATZ-BUDGET: Jeder Trainingstag MUSS GENAU {target_sets} Arbeitssätze enthalten (ca. 1 Stunde Training)
@@ -576,6 +628,7 @@ Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
         target_profile: str = "hypertrophie",
         periodization: str = "linear",
         duration_weeks: int = 12,
+        overtrained_caps: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, str]]:
         return [
             {"role": "system", "content": self.system_prompt},
@@ -589,6 +642,7 @@ Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
                     target_profile,
                     periodization,
                     duration_weeks,
+                    overtrained_caps=overtrained_caps,
                 ),
             },
         ]

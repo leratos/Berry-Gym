@@ -247,6 +247,9 @@ class PlanGenerator:
         print("-" * 60)
         self._progress(20, "Erstelle personalisierten Prompt...")
 
+        # Phase 30.1: Übertraining-Cap aus dem Stats-Collector (Report-Pfad)
+        overtrained_caps = self._compute_overtrained_caps()
+
         messages = builder.build_messages(
             analysis_data=analysis_data,
             available_exercises=available_exercises,
@@ -255,6 +258,7 @@ class PlanGenerator:
             target_profile=self.target_profile,
             periodization=self.periodization,
             duration_weeks=self.duration_weeks,
+            overtrained_caps=overtrained_caps,
         )
 
         print(f"✓ System Prompt: {len(messages[0]['content'])} Zeichen")
@@ -426,7 +430,32 @@ class PlanGenerator:
         else:
             print("   ✓ Alle Schwachstellen im Plan abgedeckt")
 
-        # 5d. Plan-Namen Fallback: generische Namen mit Datum ergänzen
+        # 5d. Übertraining-Cap prüfen (Phase 30.1)
+        print("\n🛑 SCHRITT 5d: Übertraining-Cap prüfen")
+        print("-" * 60)
+        cap_warnings = self._validate_overtraining_cap(plan_json, overtrained_caps)
+        if cap_warnings:
+            # Phase 30.1 (P1-Review): Cap-Verletzung ist KEINE bloße Warnung,
+            # sondern eine aktive Sicherheits-Regel – der Plan würde eine
+            # bereits überlastete Muskelgruppe weiter verschlimmern. Wir
+            # brechen hart ab (analog zum F2-Truncation-Detector in 29.2):
+            # success=False, kein Speichern, klare Fehlermeldung. Der User
+            # kann erneut generieren – Sonnet respektiert den Cap-Block
+            # üblicherweise (live verifiziert in der 30.1-Verifikation).
+            print("\n❌ Plan überschreitet einen oder mehrere Übertraining-Caps")
+            print("   Plan wird NICHT gespeichert – bitte erneut versuchen.")
+            return {
+                "success": False,
+                "errors": cap_warnings,
+                "plan_data": plan_json,
+                "analysis_data": analysis_data,
+            }
+        elif overtrained_caps:
+            print(f"   ✓ Alle {len(overtrained_caps)} Cap(s) eingehalten")
+        else:
+            print("   ℹ️ Keine Übertraining-Caps aktiv")
+
+        # 5e. Plan-Namen Fallback: generische Namen mit Datum ergänzen
         raw_name = plan_json.get("plan_name", "").strip()
         generic_names = {
             "mein trainingsplan",
@@ -1172,6 +1201,123 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             )
             print(f"   ⚠️ Coverage fehlt: {mg_display} (Keys: {target_keys})")
 
+        return warnings
+
+    def _compute_overtrained_caps(self) -> list[dict]:
+        """Phase 30.1: Liste der aktuell überlasteten Muskelgruppen mit
+        wöchentlichem Cap.
+
+        Quelle: ``collect_muscle_balance`` aus dem Stats-Collector –
+        Single Source of Truth mit dem PDF-Report (Phase 30.0 hat sicher-
+        gestellt, dass dort die korrekten Schwellen aus
+        ``periodization.get_volumen_schwellenwerte`` greifen).
+
+        Gibt eine Liste von ``{key, name, ist_sets, soll_max, weekly_cap}``
+        zurück – leer, wenn niemand überlastet ist oder die Berechnung
+        nicht möglich ist.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        try:
+            from core.export.stats_collector import collect_muscle_balance
+            from core.models import Satz, Trainingseinheit
+
+            heute = timezone.now()
+            letzte_30_tage = (heute - timedelta(days=30)).date()
+            alle_saetze = Satz.objects.filter(
+                einheit__user_id=self.user_id,
+                ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
+            )
+            trainings_30 = Trainingseinheit.objects.filter(
+                user_id=self.user_id, datum__gte=letzte_30_tage
+            ).count()
+            balance = collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30)
+        except Exception as exc:  # noqa: BLE001
+            print(f"   ⚠️ Übertraining-Status nicht berechenbar: {exc}")
+            return []
+
+        caps: list[dict] = []
+        for mg in balance:
+            if mg.get("status") != "uebertrainiert":
+                continue
+            soll_max = mg.get("empfehlung_max", 20)
+            # Wochen-Cap so wählen, dass der 30-Tage-Ist über ca. 4 Plan-Wochen
+            # wieder in den Optimum-Bereich sinkt. soll_max / 5 entspricht
+            # einem Puffer von 20 % unterhalb des Soll-Max auf Wochenbasis;
+            # Mindestcap 2 Sätze, damit die Muskelgruppe noch trainierbar
+            # bleibt.
+            weekly_cap = max(2, soll_max // 5)
+            caps.append(
+                {
+                    "key": mg["key"],
+                    "name": mg["name"],
+                    "ist_sets": mg["saetze"],
+                    "soll_max": soll_max,
+                    "weekly_cap": weekly_cap,
+                }
+            )
+        if caps:
+            print(
+                "   ℹ️ Übertraining-Cap aktiv für: "
+                + ", ".join(f"{c['name']} (≤{c['weekly_cap']}/Wo.)" for c in caps)
+            )
+        return caps
+
+    def _validate_overtraining_cap(
+        self, plan_json: dict, overtrained_caps: list[dict]
+    ) -> list[str]:
+        """Phase 30.1: prüft, dass keine überlastete Muskelgruppe ihr
+        Wochen-Cap im generierten Plan überschreitet.
+
+        Returns eine Liste von Warnungen (leer = alle Caps eingehalten).
+        """
+        if not overtrained_caps:
+            return []
+
+        try:
+            from core.models import Uebung
+
+            all_ex_names = {
+                e["exercise_name"]
+                for session in plan_json.get("sessions", [])
+                for e in session.get("exercises", [])
+            }
+            name_to_mg = {
+                u.bezeichnung: u.muskelgruppe
+                for u in Uebung.objects.filter(bezeichnung__in=all_ex_names)
+            }
+        except Exception as exc:  # noqa: BLE001
+            print(f"   ⚠️ Übertraining-Cap-Check DB-Fehler: {exc}")
+            return []
+
+        sets_by_mg: dict[str, int] = {}
+        for session in plan_json.get("sessions", []):
+            for e in session.get("exercises", []):
+                mg = name_to_mg.get(e.get("exercise_name", ""))
+                if mg:
+                    sets_by_mg[mg] = sets_by_mg.get(mg, 0) + e.get("sets", 0)
+
+        warnings: list[str] = []
+        for cap in overtrained_caps:
+            ist_im_plan = sets_by_mg.get(cap["key"], 0)
+            if ist_im_plan > cap["weekly_cap"]:
+                warnings.append(
+                    f"⚠️ Übertraining-Cap überschritten: {cap['name']} hat im Plan "
+                    f"{ist_im_plan} Sätze/Woche (Cap: {cap['weekly_cap']}, "
+                    f"aktuell {cap['ist_sets']}/30 T, Soll-Max {cap['soll_max']})"
+                )
+                print(
+                    f"   ⚠️ Cap-Verletzung: {cap['name']} = "
+                    f"{ist_im_plan} > {cap['weekly_cap']} Sätze/Woche"
+                )
+            else:
+                print(
+                    f"   ✓ Cap eingehalten: {cap['name']} = "
+                    f"{ist_im_plan} ≤ {cap['weekly_cap']} Sätze/Woche"
+                )
         return warnings
 
     def _auto_fix_weakness(
