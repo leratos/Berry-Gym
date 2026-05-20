@@ -272,6 +272,15 @@ class PlanGenerator:
             undertrained_strings = self._undertrained_targets_to_strings(undertrained_targets)
             weakness_input_for_validator = undertrained_strings
 
+        # Phase 30.3: Plateau-/Konsolidierungs-Übungen als Soft-Hint an den
+        # Prompt – kein Pflicht-Block, nur ein Hinweis „für diese Übungen
+        # KEIN zusätzliches Volumen, lieber Frequenz/Tempo/Akzessoire".
+        plateau_hints = self._compute_plateau_hints()
+
+        # Phase 30.4: Drei zusätzliche Adaptions-Hinweise (Fatigue, Frequenz,
+        # Push/Pull) – jeweils nur wenn relevant. Auch Soft-Hints.
+        training_context = self._compute_training_context()
+
         messages = builder.build_messages(
             analysis_data=analysis_data,
             available_exercises=available_exercises,
@@ -282,6 +291,8 @@ class PlanGenerator:
             duration_weeks=self.duration_weeks,
             overtrained_caps=overtrained_caps,
             undertrained=undertrained_strings,
+            plateau_hints=plateau_hints,
+            training_context=training_context,
         )
 
         print(f"✓ System Prompt: {len(messages[0]['content'])} Zeichen")
@@ -1381,6 +1392,195 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             f"Ziel min {t['soll_min']})"
             for t in targets
         ]
+
+    # Status-Keys aus ``classify_progression_status`` (advanced_stats.py),
+    # bei denen eine Volumen-Steigerung kontraproduktiv ist. Phase 30.3 nutzt
+    # diese als Filter für den Plateau-Soft-Hint im Prompt.
+    _PLATEAU_NO_VOLUME_PUSH_STATUS = frozenset(
+        {
+            "active_progression_paused",
+            "consolidation",
+            "plateau",
+            "plateau_long",
+            "regression",
+        }
+    )
+
+    def _compute_plateau_hints(self) -> list[dict]:
+        """Phase 30.3: Liste der Top-Übungen mit Plateau-/Konsolidierungs-
+        Status für den Prompt-Soft-Hint.
+
+        Quelle: ``core.utils.advanced_stats.calculate_plateau_analysis`` –
+        dieselbe Funktion, die auch der PDF-Report konsumiert (Single Source
+        of Truth). Wir filtern auf jene Status-Keys, bei denen ein Volumen-
+        Push nicht hilft (siehe ``_PLATEAU_NO_VOLUME_PUSH_STATUS``).
+
+        Im Fehlerfall wird ``[]`` zurückgegeben. Anders als beim
+        Untertrainiert-Block braucht es hier keinen Sentinel/Fallback: pre-
+        30.3 gab es überhaupt keinen Plateau-Hint, ein Helfer-Ausfall
+        fällt also auf den pre-30.3-Status zurück – keine Regression.
+
+        Returns:
+            Liste von ``{uebung, muskelgruppe, status_label}`` für
+            betroffene Übungen; leer, wenn nichts zu flaggen ist oder die
+            Berechnung fehlschlägt.
+        """
+        try:
+            from core.export.stats_collector import build_top_uebungen
+            from core.models import MUSKELGRUPPEN, Satz
+            from core.utils.advanced_stats import calculate_plateau_analysis
+
+            alle_saetze = Satz.objects.filter(
+                einheit__user_id=self.user_id,
+                ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
+            )
+            muskelgruppen_dict = dict(MUSKELGRUPPEN)
+            top_uebungen = build_top_uebungen(alle_saetze, muskelgruppen_dict)
+            plateau = calculate_plateau_analysis(alle_saetze, top_uebungen)
+        except Exception as exc:  # noqa: BLE001
+            print(f"   ⚠️ Plateau-Status nicht berechenbar: {exc}")
+            return []
+
+        hints: list[dict] = []
+        for entry in plateau:
+            if entry.get("status") not in self._PLATEAU_NO_VOLUME_PUSH_STATUS:
+                continue
+            hints.append(
+                {
+                    "uebung": entry.get("uebung", ""),
+                    "muskelgruppe": entry.get("muskelgruppe", ""),
+                    "status_label": entry.get("status_label", ""),
+                }
+            )
+        if hints:
+            print(
+                "   ℹ️ Plateau-Hints (kein Volumen-Push): " + ", ".join(h["uebung"] for h in hints)
+            )
+        return hints
+
+    # Schwellenwert: ab diesem Ermüdungs-Index wird ein Deload-Hinweis im
+    # Prompt platziert. Wert (60) übernommen aus dem Konzept-Vorschlag in
+    # ``docs/concepts/phase30_concept.md`` Section 3.4.
+    _FATIGUE_HINT_THRESHOLD = 60
+
+    def _compute_training_context(self) -> dict:
+        """Phase 30.4: drei Adaptions-Hinweise für den Prompt-Soft-Hint-Block.
+
+        Sammelt aus dem Report-Pfad (Single Source of Truth):
+
+        - ``fatigue_hint``: bei Ermüdungs-Index ≥ ``_FATIGUE_HINT_THRESHOLD``.
+        - ``frequency_hint``: bei < 2x/Woche Trainings und ein Split-
+          ``plan_type`` (für Ganzkörper-Pläne ist die niedrige Frequenz
+          unproblematisch, kein Hinweis nötig).
+        - ``push_pull_hint``: aus ``collect_push_pull`` (selbe Bewertungs-/
+          Empfehlungs-Logik wie im PDF-Report), wenn Bewertung weder
+          „Ausgewogen" noch „Keine Daten" ist.
+
+        Jede Komponente wird unabhängig berechnet (eigener ``try/except``);
+        Fehler in einer setzt nur deren Feld auf ``None``, die anderen
+        Komponenten bleiben unberührt. Pre-30.4 gab es überhaupt keinen
+        dieser Hinweise – ein Helfer-Ausfall fällt also auf den
+        pre-30.4-Status zurück, keine Regression.
+
+        Returns:
+            Dict mit drei optionalen String-Feldern.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        result: dict[str, str | None] = {
+            "fatigue_hint": None,
+            "frequency_hint": None,
+            "push_pull_hint": None,
+        }
+
+        heute = timezone.now()
+        letzte_30_tage = (heute - timedelta(days=30)).date()
+
+        # --- 1) Frequenz-Hinweis -------------------------------------------
+        try:
+            from core.models import Trainingseinheit
+
+            sessions_30 = Trainingseinheit.objects.filter(
+                user_id=self.user_id, datum__gte=letzte_30_tage
+            ).count()
+            frequency = round(sessions_30 / (30 / 7), 1)
+            if frequency < 2.0 and self.plan_type != "ganzkörper":
+                result["frequency_hint"] = (
+                    f"Trainings-Frequenz: {frequency}x/Woche (nur {sessions_30} "
+                    f"Sessions in 30 Tagen). Bei dieser Frequenz wäre ein "
+                    f"Ganzkörper-Plan passender als der gewählte "
+                    f"'{self.plan_type}' – im Split trifft jede Muskelgruppe "
+                    f"nur 1× alle 1-2 Wochen, was die Reiz-Frequenz für "
+                    f"Hypertrophie zu gering hält."
+                )
+        except Exception as exc:  # noqa: BLE001
+            print(f"   ⚠️ Frequenz-Hint nicht berechenbar: {exc}")
+
+        # --- 2) Push/Pull-Hinweis ------------------------------------------
+        try:
+            from core.export.stats_collector import collect_muscle_balance, collect_push_pull
+            from core.models import Satz, Trainingseinheit
+
+            alle_saetze = Satz.objects.filter(
+                einheit__user_id=self.user_id,
+                ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
+            )
+            trainings_30 = Trainingseinheit.objects.filter(
+                user_id=self.user_id, datum__gte=letzte_30_tage
+            ).count()
+            balance = collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30)
+            pp = collect_push_pull(balance)
+            bewertung = pp.get("bewertung")
+            empfehlung = pp.get("empfehlung", "")
+            if bewertung not in ("Keine Daten", "Ausgewogen") and empfehlung:
+                result["push_pull_hint"] = f"Push/Pull-Balance: {bewertung} – {empfehlung}"
+        except Exception as exc:  # noqa: BLE001
+            print(f"   ⚠️ Push/Pull-Hint nicht berechenbar: {exc}")
+
+        # --- 3) Ermüdungs-Hinweis ------------------------------------------
+        try:
+            from django.contrib.auth.models import User
+
+            from core.helpers.volume import get_user_kg
+            from core.models import Satz, Trainingseinheit
+            from core.utils.advanced_stats import calculate_fatigue_index
+            from core.utils.week_classification import build_weekly_volume_overview
+
+            user = User.objects.get(id=self.user_id)
+            alle_trainings = Trainingseinheit.objects.filter(user=user)
+            # build_weekly_volume_overview will alle_saetze inkl. Deload (im
+            # Report-Pfad bewusst), damit Deload-Wochen real angezeigt werden.
+            alle_saetze_inkl_deload = Satz.objects.filter(
+                einheit__user=user, ist_aufwaermsatz=False
+            )
+            rpe_saetze = alle_saetze_inkl_deload.filter(
+                rpe__isnull=False, einheit__datum__gte=letzte_30_tage
+            )
+            user_kg = get_user_kg(user)
+            volumen_wochen = build_weekly_volume_overview(
+                alle_saetze_inkl_deload, alle_trainings, user_kg, heute=heute
+            )
+            fatigue = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
+            idx = fatigue.get("fatigue_index", 0)
+            if isinstance(idx, (int, float)) and idx >= self._FATIGUE_HINT_THRESHOLD:
+                bewertung = fatigue.get("bewertung", "")
+                empfehlung = fatigue.get("empfehlung", "")
+                result["fatigue_hint"] = (
+                    f"Ermüdungs-Index: {idx}/100 ({bewertung}). {empfehlung} "
+                    f"Im neuen Plan reduziertes Volumen ansetzen, Compounds "
+                    f"priorisieren, RPE-Ziel max. 8, längere Pausen."
+                )
+        except Exception as exc:  # noqa: BLE001
+            print(f"   ⚠️ Fatigue-Hint nicht berechenbar: {exc}")
+
+        active_keys = [k for k, v in result.items() if v]
+        if active_keys:
+            print("   ℹ️ Trainings-Kontext-Hints aktiv: " + ", ".join(active_keys))
+        return result
 
     def _validate_overtraining_cap(
         self, plan_json: dict, overtrained_caps: list[dict]

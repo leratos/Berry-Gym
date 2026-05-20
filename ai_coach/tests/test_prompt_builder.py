@@ -298,6 +298,144 @@ def test_undertrained_none_falls_back_to_analysis_weaknesses(monkeypatch):
     assert "❗ BAUCH" in prompt or "BAUCH" in prompt
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 30.3: Plateau-Soft-Hint-Block
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_build_plateau_hint_block_returns_none_for_empty():
+    builder = PromptBuilder()
+    assert builder._build_plateau_hint_block([]) is None
+
+
+def test_build_plateau_hint_block_lists_exercises_with_status():
+    """Block muss Übungs-Name, Muskelgruppe und Status-Label enthalten,
+    damit der Prompt klar zeigt, welche Übungen Plateau haben."""
+    builder = PromptBuilder()
+    hints = [
+        {
+            "uebung": "Bankdrücken (Langhantel)",
+            "muskelgruppe": "Brust (Pectoralis major)",
+            "status_label": "📈 Aktive Progression (PR-Pause)",
+        },
+        {
+            "uebung": "Hammer Curls (Kurzhantel)",
+            "muskelgruppe": "Bizeps (Biceps brachii)",
+            "status_label": "💪 Konsolidierung (RPE sinkt)",
+        },
+    ]
+    block = builder._build_plateau_hint_block(hints)
+    assert block is not None
+    assert "TRAININGS-FORTSCHRITT-KONTEXT" in block
+    assert "Bankdrücken (Langhantel)" in block
+    assert "Hammer Curls (Kurzhantel)" in block
+    assert "PR-Pause" in block
+    assert "Konsolidierung" in block
+    # Soft-Hint, nicht Pflicht-Constraint
+    assert "Soft-Hint" in block or "nicht Pflicht-Block" in block
+
+
+def test_build_user_prompt_inserts_plateau_block():
+    """Phase 30.3: wird ``plateau_hints`` übergeben, taucht der
+    Soft-Hint-Block im Prompt auf."""
+    builder = PromptBuilder()
+    prompt = builder.build_user_prompt(
+        _analysis_data(freq=3.0),
+        ["Bankdrücken (Langhantel)", "Crunch"],
+        plan_type="3er-split",
+        sets_per_session=22,
+        plateau_hints=[
+            {
+                "uebung": "Bankdrücken (Langhantel)",
+                "muskelgruppe": "Brust",
+                "status_label": "📈 Aktive Progression (PR-Pause)",
+            }
+        ],
+    )
+    assert "TRAININGS-FORTSCHRITT-KONTEXT" in prompt
+    assert "Bankdrücken (Langhantel)" in prompt
+
+
+def test_build_user_prompt_without_plateau_hints_omits_block():
+    """Ohne plateau_hints darf der Soft-Hint-Block NICHT im Prompt
+    erscheinen (kein leerer Block)."""
+    builder = PromptBuilder()
+    prompt = builder.build_user_prompt(
+        _analysis_data(freq=3.0),
+        ["Bankdrücken (Langhantel)", "Crunch"],
+        plan_type="3er-split",
+        sets_per_session=22,
+        plateau_hints=None,
+    )
+    assert "TRAININGS-FORTSCHRITT-KONTEXT" not in prompt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 30.4: Trainings-Kontext-Soft-Hints (Fatigue + Frequency + Push/Pull)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_build_training_context_block_returns_none_for_none_or_empty():
+    builder = PromptBuilder()
+    assert builder._build_training_context_block(None) is None
+    assert builder._build_training_context_block({}) is None
+    # Alle drei None → kein Block
+    assert (
+        builder._build_training_context_block(
+            {"fatigue_hint": None, "frequency_hint": None, "push_pull_hint": None}
+        )
+        is None
+    )
+
+
+def test_build_training_context_block_lists_only_present_hints():
+    """Phase 30.4: nur nicht-None-Felder werden in der Reihenfolge
+    Fatigue → Frequenz → Push/Pull aufgelistet."""
+    builder = PromptBuilder()
+    context = {
+        "fatigue_hint": None,
+        "frequency_hint": "Frequenz: 1.5x/Woche → Ganzkörper passender",
+        "push_pull_hint": "Push/Pull-Balance: Leicht Push-betont – Pull aufstocken",
+    }
+    block = builder._build_training_context_block(context)
+    assert block is not None
+    assert "TRAININGS-KONTEXT" in block
+    # Beide vorhandenen Hints sichtbar:
+    assert "Frequenz: 1.5x" in block
+    assert "Push-betont" in block
+    # Fatigue darf NICHT auftauchen, war None:
+    assert "Ermüdungs" not in block
+
+
+def test_build_user_prompt_inserts_context_block():
+    builder = PromptBuilder()
+    prompt = builder.build_user_prompt(
+        _analysis_data(freq=3.0),
+        ["Bankdrücken (Langhantel)", "Crunch"],
+        plan_type="3er-split",
+        sets_per_session=22,
+        training_context={
+            "fatigue_hint": "Ermüdungs-Index: 75/100 (Hoch). Deload empfohlen.",
+            "frequency_hint": None,
+            "push_pull_hint": None,
+        },
+    )
+    assert "TRAININGS-KONTEXT" in prompt
+    assert "Ermüdungs-Index" in prompt
+
+
+def test_build_user_prompt_without_training_context_omits_block():
+    builder = PromptBuilder()
+    prompt = builder.build_user_prompt(
+        _analysis_data(freq=3.0),
+        ["Bankdrücken (Langhantel)", "Crunch"],
+        plan_type="3er-split",
+        sets_per_session=22,
+        training_context=None,
+    )
+    assert "TRAININGS-KONTEXT (Adaptions" not in prompt
+
+
 def test_build_user_prompt_covers_frequency_and_periodization_branches(monkeypatch):
     builder = PromptBuilder()
     available = [

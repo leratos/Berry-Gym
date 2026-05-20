@@ -7215,3 +7215,197 @@ Fallback-Pfad) als auch für den Coverage-Check. Tests ergänzt:
 30.3 (Plateau-Status als Volumen-Hint) und 30.4 (Ermüdungs-/Konsistenz-
 Adaption) bleiben für später; die akuten Befunde aus dem 19.05.-Plan
 sind mit 30.0+30.1+30.2 alle adressiert.
+
+
+---
+
+## In Arbeit: 30.3 – Plateau-Status als Volumen-Hint (20.05.2026)
+
+**Branch:** `feature/phase-30-3-plateau-hint` (gestapelt auf 30.2)
+
+**Ziel:** Der Plan-Generator nutzt jetzt auch die Plateau-Klassifikation
+des Reports (`calculate_plateau_analysis` in `core/utils/advanced_stats.py`).
+Übungen in den Status `Konsolidierung`, `Aktive Progression (PR-Pause)`,
+`Plateau`, `Langzeit-Plateau` oder `Rückschritt` sollen vom LLM KEINE
+Volumen-Steigerung bekommen – das ist Stagnation, da hilft nicht mehr
+Volumen, sondern Frequenz-/Tempo-Variation oder eine Akzessoire-Übung.
+
+**Architektur (Soft-Hint, kein PFLICHT):**
+
+- Neue `PlanGenerator._compute_plateau_hints` – ruft
+  `calculate_plateau_analysis` mit den Top-Übungen des Users auf (selbe
+  Quelle wie der PDF-Report), filtert auf die fünf „kein-Volumen-Push"-
+  Status, liefert `{uebung, muskelgruppe, status_label}` pro betroffener
+  Übung. Bei Helfer-Fehler `[]` (pre-30.3 gab es keinen Hint, kein
+  Regressions-Risiko → kein Sentinel nötig).
+- Neuer optionaler `plateau_hints`-Parameter in `build_user_prompt` /
+  `build_messages`. Der dazugehörige Block ist ein **Soft-Hint** („kein
+  zusätzliches Volumen für diese Übungen"), KEIN Validator-Check – das
+  ist eine Empfehlung, kein Hard-Constraint.
+- Integration im `_generate_with_existing_django` zwischen dem
+  Untertrainiert-Block und der `build_messages`-Übergabe.
+
+**Akzeptanzkriterien:**
+
+- Übungen mit `consolidation` / `active_progression_paused` / `plateau` /
+  `long_plateau` / `regress` werden im Prompt als „kein Volumen-Push"
+  vermerkt.
+- Live-Verifikation: User-2-Hammer-Curls (`Konsolidierung (RPE sinkt)`)
+  und Bankdrücken (`Aktive Progression (PR-Pause)`) landen im Block.
+- Tests decken Helfer-Filter und Prompt-Integration ab.
+
+
+---
+
+## Abgeschlossen: 30.3 – Plateau-Status als Volumen-Hint (20.05.2026)
+
+**Branch:** `feature/phase-30-3-plateau-hint`
+
+**Implementiert:**
+
+- `PlanGenerator._compute_plateau_hints`: ruft die Single-Source-Funktion
+  `core.utils.advanced_stats.calculate_plateau_analysis` mit den
+  Top-Übungen des Users auf und filtert auf die Status-Keys
+  `active_progression_paused`, `consolidation`, `plateau`, `long_plateau`,
+  `regress` (Klassen-Konstante `_PLATEAU_NO_VOLUME_PUSH_STATUS`). Liefert
+  pro betroffener Übung `{uebung, muskelgruppe, status_label}`. Bei
+  Helfer-Fehler `[]` (pre-30.3 gab es keinen Hint – kein Sentinel nötig).
+- `prompt_builder._build_plateau_hint_block` + neuer `plateau_hints`-
+  Parameter in `build_user_prompt` / `build_messages`. Block sitzt
+  zwischen Übertraining-Cap und „Trainingsprogrammierung Defaults" als
+  „TRAININGS-FORTSCHRITT-KONTEXT (Soft-Hint, nicht Pflicht-Block)".
+- `_generate_with_existing_django`: `plateau_hints = ...` wird mit
+  `overtrained_caps` / `undertrained` an `build_messages` weitergereicht.
+
+**Live-Verifikation (User 2, Sonnet 4.6, im git-worktree):**
+
+| Aspekt | Ergebnis |
+|---|---|
+| Plateau-Hint-Filter | „Bankdrücken (Langhantel)" mit Status „Aktive Progression (PR-Pause)" ✓ |
+| Prompt-Block | sichtbar zwischen Cap und Defaults, korrekt mit Übungsname + MG + Label ✓ |
+| Sonnet-Verhalten | Brust bleibt bei 5 Sätzen (= 30.1-Cap, plus Plateau-Hint stützt es) ✓ |
+| Plan-Ergebnis | success=False – aber wegen 30.1-Trizeps-Cap (3-Sätze-Vorgabe sehr eng), NICHT wegen 30.3 |
+
+**Tests:** 333 ai_coach-Tests grün (326 + 7 neu):
+`TestComputePlateauHints` (3 – Filter, Exception-Fallback, leeres
+plateau), `test_build_plateau_hint_block_returns_none_for_empty`,
+`test_build_plateau_hint_block_lists_exercises_with_status`,
+`test_build_user_prompt_inserts_plateau_block`,
+`test_build_user_prompt_without_plateau_hints_omits_block`.
+
+**Review-Nachtrag (Codex-Bot, P1, 20.05.2026):** Die in 30.3 gewählten
+Filter-Strings `"long_plateau"` und `"regress"` entsprechen **nicht**
+den Status-Keys, die `classify_progression_status` in
+`core/utils/advanced_stats.py` tatsächlich emittiert (`plateau_long`
+und `regression`). Konsequenz: User in genau den Hochrisiko-Zuständen
+(Langzeit-Plateau, 1RM-Regression) wurden vom Filter stillschweigend
+ignoriert – also keinen Plateau-Hint erhalten, obwohl der Soft-Hint
+gerade dort den meisten Wert bringt. Der Test
+`test_filters_to_no_volume_push_statuses` hat den Bug nicht gefangen,
+weil Produktions-Code UND Test-Stub konsistent dieselben falschen
+Strings benutzt haben (klassischer „beide Seiten verwenden dieselbe
+falsche Konstante"-Fall). Fix:
+- `_PLATEAU_NO_VOLUME_PUSH_STATUS`: `long_plateau` → `plateau_long`,
+  `regress` → `regression`.
+- Parametrischer Test aktualisiert + Kommentar, der explizit auf die
+  Single-Source-of-Truth (Docstring von `classify_progression_status`)
+  verweist.
+- **Neuer Regression-Test** `test_no_volume_push_status_keys_are_canonical`:
+  Asserts, dass `_PLATEAU_NO_VOLUME_PUSH_STATUS` eine Teilmenge der
+  10 dokumentierten Status-Keys ist. Schützt diese Klasse von
+  Konsistenz-Bugs auch gegen zukünftige Verschiebungen.
+
+**Nächste Aktion:** 30.4 (Ermüdungs-/Konsistenz-Adaption) – letzter
+Baustein von Phase 30.
+
+
+---
+
+## Abgeschlossen: 30.4 – Ermüdungs-/Konsistenz-Adaption (20.05.2026)
+
+**Branch:** `feature/phase-30-4-fatigue-adaptation` (gestapelt auf 30.3)
+
+**Ziel:** Drei letzte Adaptions-Hinweise, die der Plan-Generator aus dem
+Report-Pfad ableitet:
+
+- **Ermüdungs-Index ≥ 60** (`calculate_fatigue_index`): „Plan in
+  Deload-/Recovery-Modus halten – weniger Volumen, längere Pausen,
+  Compound-Fokus, RPE max. 8."
+- **Trainings-Frequenz < 2x/Woche** & `plan_type != ganzkörper`: „Ein
+  Ganzkörper-Plan wäre passender als der gewählte Split – im Split
+  trifft jede Muskelgruppe in diesem Pensum nur 1× alle 1-2 Wochen."
+- **Push/Pull-Ratio aus `collect_push_pull`**: der bereits im Report
+  generierte `empfehlung`-Text (z.B. „Ratio 1.33:1 – Push-Volumen bereits
+  hoch (Brust im Übertraining-Bereich). Pull aufstocken …") wird direkt
+  als Hint übernommen, statt der schwächeren data_analyzer-Anzeige.
+
+**Architektur (alles Soft-Hint, kein PFLICHT):**
+
+- Neuer `PlanGenerator._compute_training_context` mit drei unabhängigen
+  Komponenten. Jede in ihrem eigenen `try/except` – Fehler in einer
+  Komponente lässt die anderen unberührt (`None`-Feld → kein Hint).
+- Neuer `prompt_builder._build_training_context_block` und neuer
+  `training_context`-Parameter in `build_user_prompt`/`build_messages`.
+  Block-Position: nach Plateau-Hint, vor „Trainingsprogrammierung
+  Defaults".
+
+**Akzeptanzkriterien:**
+
+- Bei User 2 ist Ermüdung 0 → kein Fatigue-Hint. Frequenz 2.8x → kein
+  Frequenz-Hint (≥ 2). Push/Pull-Ratio sollte einen Hint geben, wenn
+  die Bewertung nicht „Ausgewogen" lautet.
+- Tests decken alle drei Komponenten einzeln + Block-Aufbau ab.
+
+**Implementiert:**
+
+- `_FATIGUE_HINT_THRESHOLD = 60` (Klassenkonstante)
+- `PlanGenerator._compute_training_context` (~90 LOC) liefert
+  `{fatigue_hint, frequency_hint, push_pull_hint}`; jedes Feld separat
+  via eigenes `try/except` berechnet – partielle Ausfälle möglich.
+  Lazy-Imports von `calculate_fatigue_index` und `collect_push_pull`,
+  um Import-Zyklen zu vermeiden.
+- `PromptBuilder._build_training_context_block` rendert die nicht-leeren
+  Hints in einen `🧭 TRAININGS-KONTEXT (Adaptions-Hinweise, Soft)`-Block
+  zwischen Plateau-Hint und Defaults. `training_context` als Kwarg
+  durchgereicht (`build_user_prompt` & `build_messages`).
+- `generate()` ruft `_compute_training_context()` direkt nach den
+  Plateau-Hints und gibt eine zusammenfassende Info-Zeile aus, welche
+  Komponenten aktiv sind.
+- 9 neue Tests (`TestComputeTrainingContext` + 5 Block-Tests in
+  `test_prompt_builder.py`) – alle Komponenten einzeln, Kombination,
+  Ausfall-Fallback, Block-Reihenfolge.
+
+**Live-Verifikation (User 2, 20.05.2026, worktree-isoliert):**
+
+- A) Hints: `fatigue_hint=None` (Index < 60), `frequency_hint=None`
+  (2.8x/Woche ≥ 2), `push_pull_hint=` „Leicht Push-betont – Ratio
+  1.33:1 – Push-Volumen bereits hoch (Brust, Trizeps im Übertraining-
+  Bereich). Pull aufstocken, um die Imbalance zu adressieren."
+- B) Prompt-Block korrekt mit 🧭-Marker an erwarteter Position.
+- C) Live-Gen produzierte Plan (11498 Zeichen, 11667 Tokens, 1.39 ct).
+  Plan wurde durch **30.1-Hard-Fail** abgelehnt (Trizeps 7 > Cap 3) –
+  das ist exakt das gewünschte Schutzverhalten nach P1-Review-Fix.
+
+**Tests:** 344 ai_coach-Tests grün (von 335 vor 30.4 → +9).
+isort + black applied; eine plan_generator.py-Reformatierung.
+
+**Bedeutung – Phase 30 vollständig:**
+
+Mit 30.4 ist der adaptive Plan-Generator komplett:
+
+| Sub | Adaption | Quelle |
+|-----|----------|--------|
+| 30.0 | Stats-Threshold-Fix | Single Source of Truth |
+| 30.1 | Overtraining-Cap | hard-fail-validiert |
+| 30.2 | Undertrained-Targets | Stats-Collector |
+| 30.3 | Plateau-Status | Volumen-Soft-Hint |
+| 30.4 | Fatigue/Frequency/Push-Pull | Report-Pfad |
+
+Der Plan-Generator nutzt jetzt vollständig die im Report seit Phasen
+≤ 25 vorhandenen Analyse-Funktionen (`calculate_plateau_analysis`,
+`calculate_fatigue_index`, `collect_push_pull`, `collect_muscle_balance`)
+und übersetzt deren Befunde in **soft hints** im Prompt + **hard caps**
+in der Validierung. Die Plan-Generator-Trainingslogik ist jetzt mit
+der Report-Trainingslogik konsistent.
+
+**Nächste Aktion:** PR öffnet User selbst. Phase 30 damit komplett.

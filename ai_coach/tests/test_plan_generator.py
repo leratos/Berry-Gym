@@ -1775,6 +1775,294 @@ class TestUndertrainedTargetsToStrings:
         assert PlanGenerator._undertrained_targets_to_strings([]) == []
 
 
+# ---------------------------------------------------------------------------
+# Phase 30.3: Plateau-/Konsolidierungs-Hints
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestComputePlateauHints:
+    """``_compute_plateau_hints`` filtert die Plateau-Analyse auf jene
+    Status-Keys, bei denen Volumen-Steigerung kontraproduktiv ist."""
+
+    def _fake_plateau(self, *statuses):
+        return [
+            {
+                "uebung": f"Übung-{i}",
+                "muskelgruppe": f"MG-{i}",
+                "status": s,
+                "status_label": f"Label-{s}",
+            }
+            for i, s in enumerate(statuses)
+        ]
+
+    def test_filters_to_no_volume_push_statuses(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        # Status-Keys MÜSSEN exakt mit ``classify_progression_status``-Output
+        # übereinstimmen (advanced_stats.py Docstring). Tippfehler hier =
+        # Filter trifft in Produktion nie.
+        fake = self._fake_plateau(
+            "active_progression",  # gefiltert raus
+            "consolidation",  # behalten
+            "active_progression_paused",  # behalten
+            "observe",  # gefiltert raus
+            "plateau",  # behalten
+            "plateau_long",  # behalten
+            "regression",  # behalten
+            "pause",  # gefiltert raus
+        )
+        with patch(
+            "core.utils.advanced_stats.calculate_plateau_analysis",
+            return_value=fake,
+        ):
+            hints = gen._compute_plateau_hints()
+        kept = {h["status_label"] for h in hints}
+        assert len(hints) == 5
+        assert "Label-consolidation" in kept
+        assert "Label-active_progression_paused" in kept
+        assert "Label-plateau" in kept
+        assert "Label-plateau_long" in kept
+        assert "Label-regression" in kept
+        # Diese dürfen NICHT in der Liste sein:
+        assert "Label-active_progression" not in kept
+        assert "Label-observe" not in kept
+        assert "Label-pause" not in kept
+
+    def test_no_volume_push_status_keys_are_canonical(self):
+        """Schutz gegen die ursprüngliche 30.3-Bug-Klasse: alle Filter-Keys
+        müssen vom ``classify_progression_status``-Klassifikator tatsächlich
+        emittiert werden. Quelle: Docstring der Funktion (advanced_stats.py).
+        Ohne diesen Test bleiben Tippfehler unentdeckt, weil sowohl
+        Produktions-Code als auch parametrische Tests konsistent denselben
+        falschen String verwenden können.
+        """
+        canonical = frozenset(
+            {
+                "regression",
+                "active_progression",
+                "observe",
+                "pause",
+                "consolidation",
+                "active_progression_paused",
+                "plateau_light",
+                "plateau",
+                "plateau_long",
+                "no_data",
+            }
+        )
+        non_canonical = PlanGenerator._PLATEAU_NO_VOLUME_PUSH_STATUS - canonical
+        assert non_canonical == frozenset(), (
+            "_PLATEAU_NO_VOLUME_PUSH_STATUS enthält Keys, die "
+            "classify_progression_status nicht emittiert: "
+            f"{sorted(non_canonical)}"
+        )
+
+    def test_returns_empty_on_exception(self):
+        """Helfer-Fehler darf nicht hochpropagieren – pre-30.3 gab es
+        keinen Plateau-Hint, Ausfall fällt also auf pre-30.3 zurück."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        with patch(
+            "core.utils.advanced_stats.calculate_plateau_analysis",
+            side_effect=RuntimeError("simulated plateau failure"),
+        ):
+            assert gen._compute_plateau_hints() == []
+
+    def test_empty_plateau_analysis_returns_empty(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        with patch(
+            "core.utils.advanced_stats.calculate_plateau_analysis",
+            return_value=[],
+        ):
+            assert gen._compute_plateau_hints() == []
+
+
+# ---------------------------------------------------------------------------
+# Phase 30.4: Trainings-Kontext (Fatigue + Frequency + Push/Pull)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestComputeTrainingContext:
+    """``_compute_training_context`` liefert drei unabhängige Adaptions-
+    Hinweise. Jeder ist optional; Fehler in einer Komponente lässt die
+    anderen unberührt."""
+
+    def test_frequency_hint_emitted_below_two(self):
+        """Bei < 2 Sessions/Woche und Nicht-Ganzkörper-Plan → Frequenz-Hint."""
+        user = UserFactory()
+        # 4 Sessions in 30 Tagen → ~0.9/Woche → < 2 → Hint erwartet
+        for _ in range(4):
+            TrainingseinheitFactory(
+                user=user, datum=timezone.now() - timedelta(days=5), dauer_minuten=45
+            )
+
+        gen = PlanGenerator(user_id=user.id, plan_type="3er-split")
+        # Andere Komponenten neutralisieren, damit der Test fokussiert ist.
+        with (
+            patch(
+                "core.export.stats_collector.collect_muscle_balance",
+                return_value=[],
+            ),
+            patch(
+                "core.utils.advanced_stats.calculate_fatigue_index",
+                return_value={"fatigue_index": 0, "bewertung": "", "empfehlung": ""},
+            ),
+        ):
+            ctx = gen._compute_training_context()
+
+        assert ctx["frequency_hint"] is not None
+        assert "Ganzkörper" in ctx["frequency_hint"]
+
+    def test_frequency_hint_skipped_for_ganzkoerper_plan(self):
+        """Wenn der User bereits einen Ganzkörper-Plan generiert, ist
+        die niedrige Frequenz schon adressiert → kein Frequenz-Hint."""
+        user = UserFactory()
+        for _ in range(4):
+            TrainingseinheitFactory(
+                user=user, datum=timezone.now() - timedelta(days=5), dauer_minuten=45
+            )
+
+        gen = PlanGenerator(user_id=user.id, plan_type="ganzkörper")
+        with (
+            patch(
+                "core.export.stats_collector.collect_muscle_balance",
+                return_value=[],
+            ),
+            patch(
+                "core.utils.advanced_stats.calculate_fatigue_index",
+                return_value={"fatigue_index": 0, "bewertung": "", "empfehlung": ""},
+            ),
+        ):
+            ctx = gen._compute_training_context()
+
+        assert ctx["frequency_hint"] is None
+
+    def test_push_pull_hint_emitted_when_unbalanced(self):
+        """collect_push_pull liefert ``empfehlung`` für nicht-„Ausgewogen"-
+        Fälle – der wird 1:1 in den Hint übernommen."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        fake_balance = [
+            {"key": "BRUST", "name": "Brust", "saetze": 28, "status": "uebertrainiert"},
+            {"key": "RUECKEN_LAT", "name": "Lat", "saetze": 14, "status": "optimal"},
+        ]
+        with (
+            patch(
+                "core.export.stats_collector.collect_muscle_balance",
+                return_value=fake_balance,
+            ),
+            patch(
+                "core.utils.advanced_stats.calculate_fatigue_index",
+                return_value={"fatigue_index": 0, "bewertung": "", "empfehlung": ""},
+            ),
+        ):
+            ctx = gen._compute_training_context()
+
+        # Ratio 28/14 = 2.0 → "Leicht Push-betont" oder "Zu viel Push"
+        # je nach Schwelle in collect_push_pull. Hauptsache: Hint da.
+        assert ctx["push_pull_hint"] is not None
+        # Empfehlung sollte „Pull" enthalten (Aufstockungs-Hinweis)
+        assert "Pull" in ctx["push_pull_hint"]
+
+    def test_push_pull_hint_suppressed_when_balanced(self):
+        """„Ausgewogen" → kein Hint, der LLM hat nichts zu adressieren."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        fake_balance = [
+            {"key": "BRUST", "name": "Brust", "saetze": 12, "status": "optimal"},
+            {"key": "RUECKEN_LAT", "name": "Lat", "saetze": 12, "status": "optimal"},
+        ]
+        with (
+            patch(
+                "core.export.stats_collector.collect_muscle_balance",
+                return_value=fake_balance,
+            ),
+            patch(
+                "core.utils.advanced_stats.calculate_fatigue_index",
+                return_value={"fatigue_index": 0, "bewertung": "", "empfehlung": ""},
+            ),
+        ):
+            ctx = gen._compute_training_context()
+
+        assert ctx["push_pull_hint"] is None
+
+    def test_fatigue_hint_emitted_above_threshold(self):
+        """Ermüdungs-Index ≥ 60 → Fatigue-Hint mit empfehlung-Text."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        fake_fatigue = {
+            "fatigue_index": 75,
+            "bewertung": "Hoch",
+            "empfehlung": "Deload-Woche dringend empfohlen.",
+        }
+        with (
+            patch(
+                "core.export.stats_collector.collect_muscle_balance",
+                return_value=[],
+            ),
+            patch(
+                "core.utils.advanced_stats.calculate_fatigue_index",
+                return_value=fake_fatigue,
+            ),
+        ):
+            ctx = gen._compute_training_context()
+
+        assert ctx["fatigue_hint"] is not None
+        assert "75" in ctx["fatigue_hint"]
+        assert "Hoch" in ctx["fatigue_hint"]
+        assert "Deload" in ctx["fatigue_hint"]
+
+    def test_fatigue_hint_suppressed_below_threshold(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        with (
+            patch(
+                "core.export.stats_collector.collect_muscle_balance",
+                return_value=[],
+            ),
+            patch(
+                "core.utils.advanced_stats.calculate_fatigue_index",
+                return_value={
+                    "fatigue_index": 30,
+                    "bewertung": "Niedrig",
+                    "empfehlung": "Alles im grünen Bereich.",
+                },
+            ),
+        ):
+            ctx = gen._compute_training_context()
+
+        assert ctx["fatigue_hint"] is None
+
+    def test_components_are_independent(self):
+        """Schlägt eine Komponente fehl (RuntimeError), bleiben die
+        anderen unberührt – pro Komponente eigenes try/except."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        # Push/Pull lassen wir krachen; Frequenz und Fatigue sollen
+        # trotzdem berechnet werden.
+        with (
+            patch(
+                "core.export.stats_collector.collect_muscle_balance",
+                side_effect=RuntimeError("push/pull failure"),
+            ),
+            patch(
+                "core.utils.advanced_stats.calculate_fatigue_index",
+                return_value={
+                    "fatigue_index": 80,
+                    "bewertung": "Hoch",
+                    "empfehlung": "Pause.",
+                },
+            ),
+        ):
+            ctx = gen._compute_training_context()
+
+        assert ctx["push_pull_hint"] is None  # gescheitert
+        assert ctx["fatigue_hint"] is not None  # erfolgreich trotzdem
+
+
 class TestHumanizePlanName:
     """Tests für _humanize_muskelgruppe und _humanize_plan_name."""
 
