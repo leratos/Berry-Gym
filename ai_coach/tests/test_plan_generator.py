@@ -1799,14 +1799,17 @@ class TestComputePlateauHints:
     def test_filters_to_no_volume_push_statuses(self):
         user = UserFactory()
         gen = PlanGenerator(user_id=user.id)
+        # Status-Keys MÜSSEN exakt mit ``classify_progression_status``-Output
+        # übereinstimmen (advanced_stats.py Docstring). Tippfehler hier =
+        # Filter trifft in Produktion nie.
         fake = self._fake_plateau(
             "active_progression",  # gefiltert raus
             "consolidation",  # behalten
             "active_progression_paused",  # behalten
             "observe",  # gefiltert raus
             "plateau",  # behalten
-            "long_plateau",  # behalten
-            "regress",  # behalten
+            "plateau_long",  # behalten
+            "regression",  # behalten
             "pause",  # gefiltert raus
         )
         with patch(
@@ -1819,12 +1822,41 @@ class TestComputePlateauHints:
         assert "Label-consolidation" in kept
         assert "Label-active_progression_paused" in kept
         assert "Label-plateau" in kept
-        assert "Label-long_plateau" in kept
-        assert "Label-regress" in kept
+        assert "Label-plateau_long" in kept
+        assert "Label-regression" in kept
         # Diese dürfen NICHT in der Liste sein:
         assert "Label-active_progression" not in kept
         assert "Label-observe" not in kept
         assert "Label-pause" not in kept
+
+    def test_no_volume_push_status_keys_are_canonical(self):
+        """Schutz gegen die ursprüngliche 30.3-Bug-Klasse: alle Filter-Keys
+        müssen vom ``classify_progression_status``-Klassifikator tatsächlich
+        emittiert werden. Quelle: Docstring der Funktion (advanced_stats.py).
+        Ohne diesen Test bleiben Tippfehler unentdeckt, weil sowohl
+        Produktions-Code als auch parametrische Tests konsistent denselben
+        falschen String verwenden können.
+        """
+        canonical = frozenset(
+            {
+                "regression",
+                "active_progression",
+                "observe",
+                "pause",
+                "consolidation",
+                "active_progression_paused",
+                "plateau_light",
+                "plateau",
+                "plateau_long",
+                "no_data",
+            }
+        )
+        non_canonical = PlanGenerator._PLATEAU_NO_VOLUME_PUSH_STATUS - canonical
+        assert non_canonical == frozenset(), (
+            "_PLATEAU_NO_VOLUME_PUSH_STATUS enthält Keys, die "
+            "classify_progression_status nicht emittiert: "
+            f"{sorted(non_canonical)}"
+        )
 
     def test_returns_empty_on_exception(self):
         """Helfer-Fehler darf nicht hochpropagieren – pre-30.3 gab es
