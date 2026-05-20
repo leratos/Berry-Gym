@@ -249,6 +249,12 @@ class PlanGenerator:
 
         # Phase 30.1: Übertraining-Cap aus dem Stats-Collector (Report-Pfad)
         overtrained_caps = self._compute_overtrained_caps()
+        # Phase 30.2: Untertrainiert-Liste aus derselben Single-Source-Quelle
+        # statt der data_analyzer-Heuristik. data_analyzer.weaknesses bleibt
+        # in analysis_data für die informative „Schwachstellen"-Anzeige im
+        # Prompt-Header bestehen, ist aber nicht mehr die Pflicht-Quelle.
+        undertrained_targets = self._compute_undertrained_targets()
+        undertrained_strings = self._undertrained_targets_to_strings(undertrained_targets)
 
         messages = builder.build_messages(
             analysis_data=analysis_data,
@@ -259,6 +265,7 @@ class PlanGenerator:
             periodization=self.periodization,
             duration_weeks=self.duration_weeks,
             overtrained_caps=overtrained_caps,
+            undertrained=undertrained_strings,
         )
 
         print(f"✓ System Prompt: {len(messages[0]['content'])} Zeichen")
@@ -420,8 +427,10 @@ class PlanGenerator:
         # 5c. Schwachstellen-Coverage prüfen + Auto-Fix
         print("\n🎯 SCHRITT 5c: Schwachstellen-Coverage prüfen")
         print("-" * 60)
+        # Phase 30.2: Coverage-Check operiert jetzt auf der kanonischen
+        # Untertrainiert-Liste (gleiche Quelle wie der Prompt-Pflicht-Block).
         coverage_warnings = self._validate_weakness_coverage(
-            plan_json, analysis_data.get("weaknesses", []), available_exercises
+            plan_json, undertrained_strings, available_exercises
         )
         if coverage_warnings:
             print(f"   ⚠️ {len(coverage_warnings)} nicht abgedeckte Schwachstellen:")
@@ -1265,6 +1274,77 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
                 + ", ".join(f"{c['name']} (≤{c['weekly_cap']}/Wo.)" for c in caps)
             )
         return caps
+
+    def _compute_undertrained_targets(self) -> list[dict]:
+        """Phase 30.2: Liste der aktuell untertrainierten Muskelgruppen.
+
+        Spiegel zu ``_compute_overtrained_caps`` – speist sich aus derselben
+        ``collect_muscle_balance``-Quelle (Single Source of Truth mit dem
+        PDF-Report). Filtert auf ``status == "untertrainiert"`` und liefert
+        pro Gruppe ``{key, name, ist_sets, soll_min}``.
+
+        Ersetzt die alte data_analyzer-Heuristik (``eff_reps < 0.6 × Ø``) als
+        Pflicht-Quelle für den Weakness-Block; die data_analyzer-Liste bleibt
+        zwar in ``analysis_data["weaknesses"]`` erhalten, dient ab Phase 30.2
+        aber nur noch der informativen Anzeige im Prompt-Header.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        try:
+            from core.export.stats_collector import collect_muscle_balance
+            from core.models import Satz, Trainingseinheit
+
+            heute = timezone.now()
+            letzte_30_tage = (heute - timedelta(days=30)).date()
+            alle_saetze = Satz.objects.filter(
+                einheit__user_id=self.user_id,
+                ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
+            )
+            trainings_30 = Trainingseinheit.objects.filter(
+                user_id=self.user_id, datum__gte=letzte_30_tage
+            ).count()
+            balance = collect_muscle_balance(alle_saetze, letzte_30_tage, trainings_30)
+        except Exception as exc:  # noqa: BLE001
+            print(f"   ⚠️ Untertrainiert-Status nicht berechenbar: {exc}")
+            return []
+
+        targets: list[dict] = []
+        for mg in balance:
+            if mg.get("status") != "untertrainiert":
+                continue
+            targets.append(
+                {
+                    "key": mg["key"],
+                    "name": mg["name"],
+                    "ist_sets": mg["saetze"],
+                    "soll_min": mg.get("empfehlung_min", 12),
+                }
+            )
+        if targets:
+            print(
+                "   ℹ️ Untertrainiert (Volumen-basiert): "
+                + ", ".join(f"{t['name']} ({t['ist_sets']}/{t['soll_min']})" for t in targets)
+            )
+        return targets
+
+    @staticmethod
+    def _undertrained_targets_to_strings(targets: list[dict]) -> list[str]:
+        """Phase 30.2: Strukturierte Targets in das von ``_build_weakness_block``
+        und ``_validate_weakness_coverage`` erwartete String-Format überführen.
+
+        Das Format bleibt absichtlich kompatibel zur data_analyzer-Ausgabe
+        (``"<KEY>: Untertrainiert (...)"`` – `<KEY>` ist die DB-Konstante,
+        die seit Phase 29.3 vom Shared-Mapping erkannt wird), damit der
+        Parser unverändert bleiben kann.
+        """
+        return [
+            f"{t['key']}: Untertrainiert (aktuell {t['ist_sets']} Sätze, "
+            f"Ziel min {t['soll_min']})"
+            for t in targets
+        ]
 
     def _validate_overtraining_cap(
         self, plan_json: dict, overtrained_caps: list[dict]

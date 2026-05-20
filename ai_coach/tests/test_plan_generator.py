@@ -1617,6 +1617,84 @@ class TestValidateOvertrainingCap:
         assert warnings == []
 
 
+# ---------------------------------------------------------------------------
+# Phase 30.2: Untertrainiert-Quelle aus collect_muscle_balance
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestComputeUndertrainedTargets:
+    """``_compute_undertrained_targets`` liest die Untertrainiert-Liste aus
+    derselben ``collect_muscle_balance``-Quelle wie der PDF-Report.
+    """
+
+    def test_compute_returns_bauch_target(self):
+        """BAUCH ist mittel (10–18); 9 Sätze < 10 → Untertrainiert."""
+        uebung = UebungFactory(bezeichnung="Crunch", muskelgruppe="BAUCH")
+        user = UserFactory()
+        einheit = TrainingseinheitFactory(
+            user=user, datum=timezone.now() - timedelta(days=2), dauer_minuten=45
+        )
+        for _ in range(9):
+            SatzFactory(einheit=einheit, uebung=uebung, gewicht=0, rpe=8)
+
+        gen = PlanGenerator(user_id=user.id)
+        targets = gen._compute_undertrained_targets()
+        keys = [t["key"] for t in targets]
+        assert "BAUCH" in keys
+        bauch = next(t for t in targets if t["key"] == "BAUCH")
+        assert bauch["ist_sets"] == 9
+        assert bauch["soll_min"] == 10  # mittel-min
+
+    def test_compute_empty_when_all_in_range(self):
+        """Ohne Daten oder mit Sätzen im Optimum → leere Liste."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        assert gen._compute_undertrained_targets() == []
+
+    def test_hueftbeuger_not_flagged_at_9_sets(self):
+        """Phase 30.0-Konsequenz: HUEFTBEUGER ist `haltung` (6–12) – 9 Sätze
+        liegen im Optimum und werden NICHT mehr als untertrainiert geflaggt
+        (die alte Report-Default-Schwelle 12–20 hatte das fälschlich getan)."""
+        uebung = UebungFactory(bezeichnung="Knee Raises", muskelgruppe="HUEFTBEUGER")
+        user = UserFactory()
+        einheit = TrainingseinheitFactory(
+            user=user, datum=timezone.now() - timedelta(days=2), dauer_minuten=30
+        )
+        for _ in range(9):
+            SatzFactory(einheit=einheit, uebung=uebung, gewicht=0, rpe=7)
+
+        gen = PlanGenerator(user_id=user.id)
+        targets = gen._compute_undertrained_targets()
+        keys = [t["key"] for t in targets]
+        assert "HUEFTBEUGER" not in keys
+
+
+class TestUndertrainedTargetsToStrings:
+    """``_undertrained_targets_to_strings`` formatiert strukturierte Targets
+    in das von ``_build_weakness_block`` / ``_validate_weakness_coverage``
+    erwartete String-Format (DB-Konstante + 'Untertrainiert')."""
+
+    def test_format_contains_key_and_numbers(self):
+        targets = [
+            {"key": "BEINE_HAM", "name": "Hamstrings", "ist_sets": 9, "soll_min": 12},
+            {"key": "BAUCH", "name": "Bauch", "ist_sets": 9, "soll_min": 10},
+        ]
+        strings = PlanGenerator._undertrained_targets_to_strings(targets)
+        assert len(strings) == 2
+        # DB-Konstante als Präfix (resolve_weakness_keys versteht das seit 29.3)
+        assert strings[0].startswith("BEINE_HAM:")
+        assert strings[1].startswith("BAUCH:")
+        # "Untertrainiert" als Marker, Ist + Soll als Zahlen vorhanden
+        for s in strings:
+            assert "Untertrainiert" in s
+        assert "9" in strings[0] and "12" in strings[0]
+        assert "9" in strings[1] and "10" in strings[1]
+
+    def test_empty_input_returns_empty_list(self):
+        assert PlanGenerator._undertrained_targets_to_strings([]) == []
+
+
 class TestHumanizePlanName:
     """Tests für _humanize_muskelgruppe und _humanize_plan_name."""
 
