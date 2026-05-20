@@ -7293,5 +7293,27 @@ plateau), `test_build_plateau_hint_block_returns_none_for_empty`,
 `test_build_user_prompt_inserts_plateau_block`,
 `test_build_user_prompt_without_plateau_hints_omits_block`.
 
+**Review-Nachtrag (Codex-Bot, P1, 20.05.2026):** Die in 30.3 gewählten
+Filter-Strings `"long_plateau"` und `"regress"` entsprechen **nicht**
+den Status-Keys, die `classify_progression_status` in
+`core/utils/advanced_stats.py` tatsächlich emittiert (`plateau_long`
+und `regression`). Konsequenz: User in genau den Hochrisiko-Zuständen
+(Langzeit-Plateau, 1RM-Regression) wurden vom Filter stillschweigend
+ignoriert – also keinen Plateau-Hint erhalten, obwohl der Soft-Hint
+gerade dort den meisten Wert bringt. Der Test
+`test_filters_to_no_volume_push_statuses` hat den Bug nicht gefangen,
+weil Produktions-Code UND Test-Stub konsistent dieselben falschen
+Strings benutzt haben (klassischer „beide Seiten verwenden dieselbe
+falsche Konstante"-Fall). Fix:
+- `_PLATEAU_NO_VOLUME_PUSH_STATUS`: `long_plateau` → `plateau_long`,
+  `regress` → `regression`.
+- Parametrischer Test aktualisiert + Kommentar, der explizit auf die
+  Single-Source-of-Truth (Docstring von `classify_progression_status`)
+  verweist.
+- **Neuer Regression-Test** `test_no_volume_push_status_keys_are_canonical`:
+  Asserts, dass `_PLATEAU_NO_VOLUME_PUSH_STATUS` eine Teilmenge der
+  10 dokumentierten Status-Keys ist. Schützt diese Klasse von
+  Konsistenz-Bugs auch gegen zukünftige Verschiebungen.
+
 **Nächste Aktion:** 30.4 (Ermüdungs-/Konsistenz-Adaption) – letzter
 Baustein von Phase 30.

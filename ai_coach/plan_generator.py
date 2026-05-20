@@ -1396,8 +1396,8 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             "active_progression_paused",
             "consolidation",
             "plateau",
-            "long_plateau",
-            "regress",
+            "plateau_long",
+            "regression",
         }
     )
 
