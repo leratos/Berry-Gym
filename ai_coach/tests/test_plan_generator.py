@@ -9,16 +9,18 @@ Fokus:
 - LLM-Client: JSON-Mode und Reasoning-Off für Gemini 2.5 Flash
 """
 
+from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 
 import pytest
 
 from ai_coach.plan_generator import PlanGenerator
 from core.models import Plan, PlanUebung
-from core.tests.factories import UebungFactory, UserFactory
+from core.tests.factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
 
 
 def _make_plan_json(plan_name: str, sessions: list[dict]) -> dict:
@@ -1063,6 +1065,64 @@ class TestGenerateWithExistingDjangoPhase2:
         assert any("abgeschnitten" in err.lower() for err in result["errors"])
         mock_save.assert_not_called()
 
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_overtraining_cap_violation_returns_error_and_does_not_save(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Phase 30.1 (P1-Review): cap-Verletzung muss success=False ergeben
+        und ein save_to_db=True darf NICHT zum Speichern führen – sonst ist
+        die Cap nur eine kosmetische Warnung, keine Sicherheits-Regel.
+        """
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        llm_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "Cap-Verletzer",
+                "sessions": [{"day_name": "A", "exercises": []}],
+            },
+            "usage": {},
+            "cost": 0.01,
+        }
+        llm_client.validate_plan.return_value = (True, [])
+
+        fake_caps = [
+            {
+                "key": "BRUST",
+                "name": "Brust",
+                "ist_sets": 28,
+                "soll_max": 25,
+                "weekly_cap": 5,
+            }
+        ]
+        fake_warning = (
+            "⚠️ Übertraining-Cap überschritten: Brust hat im Plan 8 Sätze/Woche "
+            "(Cap: 5, aktuell 28/30 T, Soll-Max 25)"
+        )
+
+        gen = PlanGenerator(user_id=1, plan_type="3er-split")
+        with (
+            patch.object(gen, "_compute_overtrained_caps", return_value=fake_caps),
+            patch.object(gen, "_validate_weakness_coverage", return_value=[]),
+            patch.object(gen, "_validate_overtraining_cap", return_value=[fake_warning]),
+            patch.object(gen, "_save_plan_to_db") as mock_save,
+        ):
+            result = gen._generate_with_existing_django(save_to_db=True)
+
+        assert result["success"] is False
+        assert any("Cap überschritten" in err for err in result["errors"])
+        mock_save.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Phase 5.3 – Plan-Name Eindeutigkeit (inline-Logik in generate())
@@ -1412,6 +1472,149 @@ class TestValidateWeaknessCoverage:
         )
         assert len(warnings) >= 1
         assert any("Hilfsmuskel" in w for w in warnings)
+
+
+# ---------------------------------------------------------------------------
+# Phase 30.1: Übertraining-Cap (compute + validate)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestComputeOvertrainedCaps:
+    """``_compute_overtrained_caps`` liefert die Liste der überlasteten
+    Muskelgruppen mit wöchentlichem Cap, gespeist aus dem Stats-Collector.
+    """
+
+    def _seed_brust_overtrained(self, user):
+        """Hilfsmethode: legt 28 BRUST-Sätze in den letzten 30 Tagen an
+        (gross-max 25 → Übertraining)."""
+        uebung = UebungFactory(bezeichnung="Bankdrücken", muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(
+            user=user, datum=timezone.now() - timedelta(days=2), dauer_minuten=60
+        )
+        for _ in range(28):
+            SatzFactory(einheit=einheit, uebung=uebung, gewicht=80, rpe=8)
+
+    def test_compute_returns_brust_cap(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        self._seed_brust_overtrained(user)
+
+        caps = gen._compute_overtrained_caps()
+        keys = [c["key"] for c in caps]
+        assert "BRUST" in keys
+        brust = next(c for c in caps if c["key"] == "BRUST")
+        assert brust["ist_sets"] == 28
+        assert brust["soll_max"] == 25  # gross-Klasse
+        # Cap-Formel: max(2, 25 // 5) = 5
+        assert brust["weekly_cap"] == 5
+
+    def test_compute_empty_for_no_overtraining(self):
+        """User ohne Überlast → leere Liste, keine Exception."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        # Keine Sätze in der DB
+        caps = gen._compute_overtrained_caps()
+        assert caps == []
+
+    def test_compute_min_cap_floor_of_two(self):
+        """Cap fällt nie unter 2 Sätze – sonst wäre die Muskelgruppe nicht
+        mehr trainierbar."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        # haltung-Klasse (HUEFTBEUGER) hat soll_max 12 → 12//5 = 2 → floor greift
+        uebung = UebungFactory(bezeichnung="Knee Raises", muskelgruppe="HUEFTBEUGER")
+        einheit = TrainingseinheitFactory(
+            user=user, datum=timezone.now() - timedelta(days=2), dauer_minuten=45
+        )
+        for _ in range(15):
+            SatzFactory(einheit=einheit, uebung=uebung, gewicht=0, rpe=7)
+
+        caps = gen._compute_overtrained_caps()
+        hueft = next((c for c in caps if c["key"] == "HUEFTBEUGER"), None)
+        assert hueft is not None
+        # 12 // 5 = 2, max(2, 2) = 2
+        assert hueft["weekly_cap"] >= 2
+
+
+@pytest.mark.django_db
+class TestValidateOvertrainingCap:
+    """``_validate_overtraining_cap`` summiert Sätze pro Muskelgruppe im
+    Plan und warnt bei Cap-Überschreitung."""
+
+    def test_empty_caps_returns_empty(self):
+        gen = PlanGenerator(user_id=1)
+        plan_json = _make_plan_json("Test", [_make_session("A", [])])
+        assert gen._validate_overtraining_cap(plan_json, []) == []
+
+    def test_violation_triggers_warning(self):
+        UebungFactory(
+            bezeichnung="Bankdrücken",
+            muskelgruppe="BRUST",
+            gewichts_typ="GESAMT",
+        )
+        UebungFactory(
+            bezeichnung="Schrägbankdrücken",
+            muskelgruppe="BRUST",
+            gewichts_typ="GESAMT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        # Plan hat 4+4 = 8 Sätze Brust, Cap ist 5 → Verletzung
+        plan_json = _make_plan_json(
+            "Test",
+            [
+                _make_session(
+                    "Push",
+                    [
+                        _make_exercise("Bankdrücken", sets=4),
+                        _make_exercise("Schrägbankdrücken", sets=4),
+                    ],
+                )
+            ],
+        )
+        caps = [
+            {
+                "key": "BRUST",
+                "name": "Brust",
+                "ist_sets": 28,
+                "soll_max": 25,
+                "weekly_cap": 5,
+            }
+        ]
+
+        warnings = gen._validate_overtraining_cap(plan_json, caps)
+        assert len(warnings) == 1
+        assert "Brust" in warnings[0]
+        assert "Cap überschritten" in warnings[0]
+
+    def test_respected_cap_no_warning(self):
+        UebungFactory(
+            bezeichnung="Bankdrücken",
+            muskelgruppe="BRUST",
+            gewichts_typ="GESAMT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+
+        # Plan hat 4 Sätze Brust, Cap ist 5 → eingehalten
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Push", [_make_exercise("Bankdrücken", sets=4)])],
+        )
+        caps = [
+            {
+                "key": "BRUST",
+                "name": "Brust",
+                "ist_sets": 28,
+                "soll_max": 25,
+                "weekly_cap": 5,
+            }
+        ]
+
+        warnings = gen._validate_overtraining_cap(plan_json, caps)
+        assert warnings == []
 
 
 class TestHumanizePlanName:
