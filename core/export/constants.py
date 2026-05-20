@@ -1,23 +1,17 @@
 """
-Constants for PDF export: recommended sets per muscle group, push/pull groupings.
-"""
+Constants for PDF export: push/pull groupings.
 
-EMPFOHLENE_SAETZE: dict[str, tuple[int, int]] = {
-    "brust": (12, 20),
-    "ruecken_breiter": (15, 25),
-    "ruecken_unterer": (10, 18),
-    "schulter_vordere": (8, 15),
-    "schulter_seitliche": (12, 20),
-    "schulter_hintere": (12, 20),
-    "bizeps": (10, 18),
-    "trizeps": (10, 18),
-    "quadrizeps": (15, 25),
-    "hamstrings": (12, 20),
-    "glutaeus": (10, 18),
-    "waden": (12, 20),
-    "bauch": (12, 25),
-    "unterer_ruecken": (8, 15),
-}
+Hinweis (Phase 30.0): Die früher hier definierten ``EMPFOHLENE_SAETZE``-
+Schwellenwerte wurden entfernt. Die Tabelle hatte lowercase-deutsche Keys
+("brust", "quadrizeps"), während der Aufrufer in ``stats_collector`` die
+DB-Konstante als Key benutzt hat ("BRUST", "BEINE_QUAD") – der Lookup
+matchte nie und fiel universell auf einen Default-Tupel zurück.
+
+Single Source of Truth für Volumen-Schwellenwerte ist jetzt
+``core/utils/periodization.py`` (``get_volumen_schwellenwerte``). Sie wird
+sowohl vom Stats-Collector (PDF-Report) als auch vom Plan-Generator
+(``_save_weakness_snapshot``) gemeinsam genutzt.
+"""
 
 PUSH_GROUPS = ["BRUST", "SCHULTER_VORN", "SCHULTER_SEIT", "TRIZEPS"]
 PULL_GROUPS = [
