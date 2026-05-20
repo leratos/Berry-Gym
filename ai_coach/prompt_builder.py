@@ -259,6 +259,31 @@ Gruppen aufbauen – das Wochen-Volumen MUSS unter dem Cap bleiben, damit der
 ℹ️ Ziel: über 4 Plan-Wochen sinkt der 30-Tage-Wert wieder ins Optimum.
 """
 
+    def _build_training_context_block(
+        self, context: Optional[Dict[str, Optional[str]]]
+    ) -> Optional[str]:
+        """
+        Phase 30.4: Soft-Hint-Block für Ermüdung, Trainings-Frequenz und
+        Push/Pull-Balance. Jede Komponente ist optional – der Block wird
+        nur erzeugt, wenn mindestens eine Komponente einen Hint liefert.
+
+        ``context`` ist ein Dict mit den Schlüsseln ``fatigue_hint``,
+        ``frequency_hint``, ``push_pull_hint`` (jeweils ``str | None``).
+        """
+        if not context:
+            return None
+        # Reihenfolge: stärkster Hinweis zuerst (Ermüdung → Frequenz →
+        # Push/Pull-Balance). Leere/None-Felder einfach überspringen.
+        ordered_keys = ("fatigue_hint", "frequency_hint", "push_pull_hint")
+        bullets = [f"• {context[k]}" for k in ordered_keys if context.get(k)]
+        if not bullets:
+            return None
+        bullets_str = "\n".join(bullets)
+        return f"""🧭 TRAININGS-KONTEXT (Adaptions-Hinweise, Soft):
+
+{bullets_str}
+"""
+
     def _build_plateau_hint_block(self, plateau_hints: List[Dict[str, Any]]) -> Optional[str]:
         """
         Phase 30.3: Soft-Hint-Block für Top-Übungen mit Plateau-/
@@ -393,6 +418,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         overtrained_caps: Optional[List[Dict[str, Any]]] = None,
         undertrained: Optional[List[str]] = None,
         plateau_hints: Optional[List[Dict[str, Any]]] = None,
+        training_context: Optional[Dict[str, Optional[str]]] = None,
     ) -> str:
         # Plan-Type spezifische Anweisungen (Frontend-kompatible Keys)
         plan_instructions = {
@@ -465,6 +491,11 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
         # nur Hinweis „für diese Übungen kein Volumen-Push").
         plateau_block = self._build_plateau_hint_block(plateau_hints or [])
         plateau_section = (plateau_block + "\n\n") if plateau_block else ""
+
+        # Phase 30.4: Trainings-Kontext-Soft-Hints (Ermüdung, Frequenz,
+        # Push/Pull). Auch optional – Block nur, wenn mind. ein Hint da.
+        context_block = self._build_training_context_block(training_context)
+        context_section = (context_block + "\n\n") if context_block else ""
 
         # Schwachstellen für allgemeine Info-Anzeige (kompakt)
         weaknesses_str = "\n".join([f"  - {w}" for w in analysis_data["weaknesses"][:5]])
@@ -622,7 +653,7 @@ Du hast {len(available_exercises)} verfügbare Übungen.
 
 ═══════════════════════════════════════════════════════════
 
-{weakness_section}{overtrain_section}{plateau_section}**Trainingsprogrammierung Defaults:**
+{weakness_section}{overtrain_section}{plateau_section}{context_section}**Trainingsprogrammierung Defaults:**
 - Makrozyklus: {duration_weeks} Wochen, Periodisierung: {periodization_note}
 - Deload: Wochen {deload_weeks_str} → Volumen 80%, Intensität ~90% der Vorwoche
 - Zielprofil: {target_profile} → {profile_guides.get(target_profile, profile_guides['hypertrophie'])}
@@ -676,6 +707,7 @@ Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
         overtrained_caps: Optional[List[Dict[str, Any]]] = None,
         undertrained: Optional[List[str]] = None,
         plateau_hints: Optional[List[Dict[str, Any]]] = None,
+        training_context: Optional[Dict[str, Optional[str]]] = None,
     ) -> List[Dict[str, str]]:
         return [
             {"role": "system", "content": self.system_prompt},
@@ -692,6 +724,7 @@ Erstelle jetzt den optimalen Trainingsplan als JSON-Objekt:"""
                     overtrained_caps=overtrained_caps,
                     undertrained=undertrained,
                     plateau_hints=plateau_hints,
+                    training_context=training_context,
                 ),
             },
         ]
