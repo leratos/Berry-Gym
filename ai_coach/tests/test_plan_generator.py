@@ -1775,6 +1775,78 @@ class TestUndertrainedTargetsToStrings:
         assert PlanGenerator._undertrained_targets_to_strings([]) == []
 
 
+# ---------------------------------------------------------------------------
+# Phase 30.3: Plateau-/Konsolidierungs-Hints
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestComputePlateauHints:
+    """``_compute_plateau_hints`` filtert die Plateau-Analyse auf jene
+    Status-Keys, bei denen Volumen-Steigerung kontraproduktiv ist."""
+
+    def _fake_plateau(self, *statuses):
+        return [
+            {
+                "uebung": f"Übung-{i}",
+                "muskelgruppe": f"MG-{i}",
+                "status": s,
+                "status_label": f"Label-{s}",
+            }
+            for i, s in enumerate(statuses)
+        ]
+
+    def test_filters_to_no_volume_push_statuses(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        fake = self._fake_plateau(
+            "active_progression",  # gefiltert raus
+            "consolidation",  # behalten
+            "active_progression_paused",  # behalten
+            "observe",  # gefiltert raus
+            "plateau",  # behalten
+            "long_plateau",  # behalten
+            "regress",  # behalten
+            "pause",  # gefiltert raus
+        )
+        with patch(
+            "core.utils.advanced_stats.calculate_plateau_analysis",
+            return_value=fake,
+        ):
+            hints = gen._compute_plateau_hints()
+        kept = {h["status_label"] for h in hints}
+        assert len(hints) == 5
+        assert "Label-consolidation" in kept
+        assert "Label-active_progression_paused" in kept
+        assert "Label-plateau" in kept
+        assert "Label-long_plateau" in kept
+        assert "Label-regress" in kept
+        # Diese dürfen NICHT in der Liste sein:
+        assert "Label-active_progression" not in kept
+        assert "Label-observe" not in kept
+        assert "Label-pause" not in kept
+
+    def test_returns_empty_on_exception(self):
+        """Helfer-Fehler darf nicht hochpropagieren – pre-30.3 gab es
+        keinen Plateau-Hint, Ausfall fällt also auf pre-30.3 zurück."""
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        with patch(
+            "core.utils.advanced_stats.calculate_plateau_analysis",
+            side_effect=RuntimeError("simulated plateau failure"),
+        ):
+            assert gen._compute_plateau_hints() == []
+
+    def test_empty_plateau_analysis_returns_empty(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        with patch(
+            "core.utils.advanced_stats.calculate_plateau_analysis",
+            return_value=[],
+        ):
+            assert gen._compute_plateau_hints() == []
+
+
 class TestHumanizePlanName:
     """Tests für _humanize_muskelgruppe und _humanize_plan_name."""
 

@@ -272,6 +272,11 @@ class PlanGenerator:
             undertrained_strings = self._undertrained_targets_to_strings(undertrained_targets)
             weakness_input_for_validator = undertrained_strings
 
+        # Phase 30.3: Plateau-/Konsolidierungs-Übungen als Soft-Hint an den
+        # Prompt – kein Pflicht-Block, nur ein Hinweis „für diese Übungen
+        # KEIN zusätzliches Volumen, lieber Frequenz/Tempo/Akzessoire".
+        plateau_hints = self._compute_plateau_hints()
+
         messages = builder.build_messages(
             analysis_data=analysis_data,
             available_exercises=available_exercises,
@@ -282,6 +287,7 @@ class PlanGenerator:
             duration_weeks=self.duration_weeks,
             overtrained_caps=overtrained_caps,
             undertrained=undertrained_strings,
+            plateau_hints=plateau_hints,
         )
 
         print(f"✓ System Prompt: {len(messages[0]['content'])} Zeichen")
@@ -1381,6 +1387,72 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             f"Ziel min {t['soll_min']})"
             for t in targets
         ]
+
+    # Status-Keys aus ``classify_progression_status`` (advanced_stats.py),
+    # bei denen eine Volumen-Steigerung kontraproduktiv ist. Phase 30.3 nutzt
+    # diese als Filter für den Plateau-Soft-Hint im Prompt.
+    _PLATEAU_NO_VOLUME_PUSH_STATUS = frozenset(
+        {
+            "active_progression_paused",
+            "consolidation",
+            "plateau",
+            "long_plateau",
+            "regress",
+        }
+    )
+
+    def _compute_plateau_hints(self) -> list[dict]:
+        """Phase 30.3: Liste der Top-Übungen mit Plateau-/Konsolidierungs-
+        Status für den Prompt-Soft-Hint.
+
+        Quelle: ``core.utils.advanced_stats.calculate_plateau_analysis`` –
+        dieselbe Funktion, die auch der PDF-Report konsumiert (Single Source
+        of Truth). Wir filtern auf jene Status-Keys, bei denen ein Volumen-
+        Push nicht hilft (siehe ``_PLATEAU_NO_VOLUME_PUSH_STATUS``).
+
+        Im Fehlerfall wird ``[]`` zurückgegeben. Anders als beim
+        Untertrainiert-Block braucht es hier keinen Sentinel/Fallback: pre-
+        30.3 gab es überhaupt keinen Plateau-Hint, ein Helfer-Ausfall
+        fällt also auf den pre-30.3-Status zurück – keine Regression.
+
+        Returns:
+            Liste von ``{uebung, muskelgruppe, status_label}`` für
+            betroffene Übungen; leer, wenn nichts zu flaggen ist oder die
+            Berechnung fehlschlägt.
+        """
+        try:
+            from core.export.stats_collector import build_top_uebungen
+            from core.models import MUSKELGRUPPEN, Satz
+            from core.utils.advanced_stats import calculate_plateau_analysis
+
+            alle_saetze = Satz.objects.filter(
+                einheit__user_id=self.user_id,
+                ist_aufwaermsatz=False,
+                einheit__ist_deload=False,
+            )
+            muskelgruppen_dict = dict(MUSKELGRUPPEN)
+            top_uebungen = build_top_uebungen(alle_saetze, muskelgruppen_dict)
+            plateau = calculate_plateau_analysis(alle_saetze, top_uebungen)
+        except Exception as exc:  # noqa: BLE001
+            print(f"   ⚠️ Plateau-Status nicht berechenbar: {exc}")
+            return []
+
+        hints: list[dict] = []
+        for entry in plateau:
+            if entry.get("status") not in self._PLATEAU_NO_VOLUME_PUSH_STATUS:
+                continue
+            hints.append(
+                {
+                    "uebung": entry.get("uebung", ""),
+                    "muskelgruppe": entry.get("muskelgruppe", ""),
+                    "status_label": entry.get("status_label", ""),
+                }
+            )
+        if hints:
+            print(
+                "   ℹ️ Plateau-Hints (kein Volumen-Push): " + ", ".join(h["uebung"] for h in hints)
+            )
+        return hints
 
     def _validate_overtraining_cap(
         self, plan_json: dict, overtrained_caps: list[dict]

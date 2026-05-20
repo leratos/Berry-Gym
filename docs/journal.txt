@@ -7215,3 +7215,83 @@ Fallback-Pfad) als auch für den Coverage-Check. Tests ergänzt:
 30.3 (Plateau-Status als Volumen-Hint) und 30.4 (Ermüdungs-/Konsistenz-
 Adaption) bleiben für später; die akuten Befunde aus dem 19.05.-Plan
 sind mit 30.0+30.1+30.2 alle adressiert.
+
+
+---
+
+## In Arbeit: 30.3 – Plateau-Status als Volumen-Hint (20.05.2026)
+
+**Branch:** `feature/phase-30-3-plateau-hint` (gestapelt auf 30.2)
+
+**Ziel:** Der Plan-Generator nutzt jetzt auch die Plateau-Klassifikation
+des Reports (`calculate_plateau_analysis` in `core/utils/advanced_stats.py`).
+Übungen in den Status `Konsolidierung`, `Aktive Progression (PR-Pause)`,
+`Plateau`, `Langzeit-Plateau` oder `Rückschritt` sollen vom LLM KEINE
+Volumen-Steigerung bekommen – das ist Stagnation, da hilft nicht mehr
+Volumen, sondern Frequenz-/Tempo-Variation oder eine Akzessoire-Übung.
+
+**Architektur (Soft-Hint, kein PFLICHT):**
+
+- Neue `PlanGenerator._compute_plateau_hints` – ruft
+  `calculate_plateau_analysis` mit den Top-Übungen des Users auf (selbe
+  Quelle wie der PDF-Report), filtert auf die fünf „kein-Volumen-Push"-
+  Status, liefert `{uebung, muskelgruppe, status_label}` pro betroffener
+  Übung. Bei Helfer-Fehler `[]` (pre-30.3 gab es keinen Hint, kein
+  Regressions-Risiko → kein Sentinel nötig).
+- Neuer optionaler `plateau_hints`-Parameter in `build_user_prompt` /
+  `build_messages`. Der dazugehörige Block ist ein **Soft-Hint** („kein
+  zusätzliches Volumen für diese Übungen"), KEIN Validator-Check – das
+  ist eine Empfehlung, kein Hard-Constraint.
+- Integration im `_generate_with_existing_django` zwischen dem
+  Untertrainiert-Block und der `build_messages`-Übergabe.
+
+**Akzeptanzkriterien:**
+
+- Übungen mit `consolidation` / `active_progression_paused` / `plateau` /
+  `long_plateau` / `regress` werden im Prompt als „kein Volumen-Push"
+  vermerkt.
+- Live-Verifikation: User-2-Hammer-Curls (`Konsolidierung (RPE sinkt)`)
+  und Bankdrücken (`Aktive Progression (PR-Pause)`) landen im Block.
+- Tests decken Helfer-Filter und Prompt-Integration ab.
+
+
+---
+
+## Abgeschlossen: 30.3 – Plateau-Status als Volumen-Hint (20.05.2026)
+
+**Branch:** `feature/phase-30-3-plateau-hint`
+
+**Implementiert:**
+
+- `PlanGenerator._compute_plateau_hints`: ruft die Single-Source-Funktion
+  `core.utils.advanced_stats.calculate_plateau_analysis` mit den
+  Top-Übungen des Users auf und filtert auf die Status-Keys
+  `active_progression_paused`, `consolidation`, `plateau`, `long_plateau`,
+  `regress` (Klassen-Konstante `_PLATEAU_NO_VOLUME_PUSH_STATUS`). Liefert
+  pro betroffener Übung `{uebung, muskelgruppe, status_label}`. Bei
+  Helfer-Fehler `[]` (pre-30.3 gab es keinen Hint – kein Sentinel nötig).
+- `prompt_builder._build_plateau_hint_block` + neuer `plateau_hints`-
+  Parameter in `build_user_prompt` / `build_messages`. Block sitzt
+  zwischen Übertraining-Cap und „Trainingsprogrammierung Defaults" als
+  „TRAININGS-FORTSCHRITT-KONTEXT (Soft-Hint, nicht Pflicht-Block)".
+- `_generate_with_existing_django`: `plateau_hints = ...` wird mit
+  `overtrained_caps` / `undertrained` an `build_messages` weitergereicht.
+
+**Live-Verifikation (User 2, Sonnet 4.6, im git-worktree):**
+
+| Aspekt | Ergebnis |
+|---|---|
+| Plateau-Hint-Filter | „Bankdrücken (Langhantel)" mit Status „Aktive Progression (PR-Pause)" ✓ |
+| Prompt-Block | sichtbar zwischen Cap und Defaults, korrekt mit Übungsname + MG + Label ✓ |
+| Sonnet-Verhalten | Brust bleibt bei 5 Sätzen (= 30.1-Cap, plus Plateau-Hint stützt es) ✓ |
+| Plan-Ergebnis | success=False – aber wegen 30.1-Trizeps-Cap (3-Sätze-Vorgabe sehr eng), NICHT wegen 30.3 |
+
+**Tests:** 333 ai_coach-Tests grün (326 + 7 neu):
+`TestComputePlateauHints` (3 – Filter, Exception-Fallback, leeres
+plateau), `test_build_plateau_hint_block_returns_none_for_empty`,
+`test_build_plateau_hint_block_lists_exercises_with_status`,
+`test_build_user_prompt_inserts_plateau_block`,
+`test_build_user_prompt_without_plateau_hints_omits_block`.
+
+**Nächste Aktion:** 30.4 (Ermüdungs-/Konsistenz-Adaption) – letzter
+Baustein von Phase 30.
