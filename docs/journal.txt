@@ -7409,3 +7409,100 @@ in der Validierung. Die Plan-Generator-Trainingslogik ist jetzt mit
 der Report-Trainingslogik konsistent.
 
 **Nächste Aktion:** PR öffnet User selbst. Phase 30 damit komplett.
+
+---
+
+## Abgeschlossen: 31.2 – Diagnose Untertrainiert-Quelle (21.05.2026)
+
+**Branch:** `feature/phase-31-2-quellen-diagnose`
+
+**Ergebnis:** Reine Diagnose-Sub-Phase, **kein Code-Fix nötig**. Generator
+arbeitet korrekt. Die im Phase-31-Konzept vermutete Quellen-Diskrepanz
+zwischen Stats-Report und Plan-Generator existiert nicht (mehr) – sie
+wurde durch Phase 30.0 bereits geschlossen, der Befund kam aus einem
+veralteten PDF-Stand vom 19.05. (vor 30.0-Merge).
+
+**Anlass:** Plan-Generierung 21.05.2026 03:36 produzierte 4 Untertrainiert-
+Warnings (SCHULTER_VORN, SCHULTER_SEIT, BEINE_HAM, BAUCH). Diff zum
+Stats-Report vom 19.05.2026 22:27:
+- HUEFTBEUGER war im 19.05.-Report „Untertrainiert", im Generator „optimal"
+- SCHULTER_VORN/_SEIT waren im 19.05.-Report „Optimal" (12 Sätze), im
+  Generator „untertrainiert" (9 Sätze)
+- Hypothese: Stats-Collector liefert andere Werte als der Report.
+
+**Diagnostik:** Logging-Patch in `_compute_undertrained_targets`
+(temporär, jetzt entfernt) + verify312.py-Reproduktion der User-Konfig
+(analysis_days=60, sets_per_session=22) im server-worktree. Geloggt:
+History-Window, Cutoff, Trainings-Anzahl, komplette Klassifikations-
+Tabelle aller MGen mit Sätzen+Schwelle+Status, Datenstand-Drift gegen
+den Report-Stand vom 19.05.
+
+**Schlüsselbefunde (Live-Lauf gegen User 2 / 21.05.2026):**
+
+| Hypothese aus Konzept | Befund | Status |
+|---|---|---|
+| H2a (Stats-Collector-Fallback griff) | Stats-Collector lief sauber durch | ❌ |
+| H2b (HUEFTBEUGER aus Filter) | HUEFTBEUGER ist `optimal` (9 ≥ Schwelle 6), nicht `nicht_trainiert` – Filter macht alles richtig | ❌ |
+| H2c (Window-Verschiebung im Generator) | `_compute_undertrained_targets` rechnet hartkodiert auf 30 Tagen (Zeile 1344, `letzte_30_tage = heute - timedelta(days=30)`), unabhängig vom UI-`analysis_days`. Strukturell nicht möglich. | ❌ |
+| **H2d (Datenstand-Drift)** | **18 Sätze aus dem 30-T-Window gefallen** (19./20./21.04. raus, 0 neu rein). Erklärt exakt die Diff: Brust 28→21, Trizeps 20→15, SCHULTER_VORN 12→9, SCHULTER_SEIT 12→9. | ✅ Hauptursache |
+| **H2e (Schwellen-Klasse)** | HUEFTBEUGER hat Schwelle **(6, 12)** (haltung-Klasse aus periodization.py), nicht (12, 20). Bei 9 Sätzen → korrekt `optimal`. | ✅ Hauptursache HUEFTBEUGER-Diff |
+
+**Cross-Check mit frischem PDF (21.05.2026 05:03, post-30.0):** Der vom
+User unmittelbar nach der Diagnose generierte Report ist mit dem
+Stats-Collector-Output **deckungsgleich**:
+
+| MG | PDF 21.05. | Stats-Collector | Diff |
+|---|---|---|---|
+| BRUST | 21, optimal (12-25) | 21, optimal (12-25) | ✓ |
+| LAT / QUAD | 21, optimal (12-25) | 21, optimal (12-25) | ✓ |
+| SCHULTER_HINT | 18, optimal (10-18) | 18, optimal (10-18) | ✓ |
+| TRIZEPS / BIZEPS | 15, optimal | 15, optimal | ✓ |
+| SCHULTER_VORN / _SEIT | 9, Untertrainiert (10-18) | 9, untertrainiert (10-18) | ✓ |
+| BEINE_HAM | 9, Untertrainiert (12-25) | 9, untertrainiert (12-25) | ✓ |
+| **HUEFTBEUGER** | **9, Optimal (6-12)** | **9, optimal (6-12)** | ✓ |
+| BAUCH | 9, Untertrainiert (10-18) | 9, untertrainiert (10-18) | ✓ |
+
+Hüftbeuger steht im 21.05.-PDF jetzt unter „Deine Stärken" (war im
+19.05.-PDF: „Schwachstellen / Empfehlung 12-20"). Phase 30.0 wirkt
+voll bis in den PDF-Export.
+
+**Erklärung des ursprünglich beobachteten Bot-Befunds:**
+
+Der 19.05.-PDF wurde mit dem Pre-30.0-Code generiert (Phase 30.0 wurde
+am 20.05.2026 gemerged, einen Tag nach dem PDF). Pre-30.0 lieferte
+`EMPFOHLENE_SAETZE.get(key, (12, 20))` universal – alle Muskelgruppen
+bekamen dieselbe 12-20-Schwelle, auch die haltung-Klasse Hüftbeuger.
+Post-30.0 nutzt `periodization.get_volumen_schwellenwerte(key)` mit
+größenklassen-spezifischen Schwellen. Der Generator-Lauf vom 21.05.
+03:36 nutzte schon den Post-30.0-Code → die Diskrepanz war nicht
+Generator-vs.-Report, sondern Post-30.0-vs.-Pre-30.0-PDF.
+
+Die SCHULTER_VORN/_SEIT-Diff (12 im 19.05., 9 im 21.05.) ist reiner
+Datenstand-Drift über ~29 h: drei Sätze pro MG sind aus dem 30-T-
+Window gefallen, dank Brust-/Schulter-Trainings am 19./20./21.04.
+
+**Konsequenz für Phase 31:**
+
+- **31.2 wird als Diagnose-Sub-Phase abgeschlossen, kein Code-Fix.**
+  Der Diagnose-Eintrag ist das Produkt.
+- **31.1 (Untertrainiert-Hard-Fail) bleibt wichtig:** Der Generator
+  klassifiziert die Schwachstellen korrekt, aber das LLM hat die
+  ≥6-Sätze-Pflicht-Vorgabe gerissen (4 statt 6) und der Plan wurde
+  trotzdem gespeichert. Symmetrie zur 30.1-Cap-Hard-Fail ist die
+  eigentliche Verbesserung.
+- **31.3 (Description-Sanitizing) bleibt wichtig:** Plan-Description
+  sagte „alle Pflicht-Schwachstellen mit ≥6 Sätzen abgedeckt", obwohl
+  nur 4 vorhanden waren – unabhängig von der Quellen-Frage.
+- **H2b-Filter-Erweiterung (Konzept §3.2 Schritt 3 zweiter Punkt) ist
+  nicht nötig** – sowohl im aktuellen Befund als auch strukturell, weil
+  „nicht_trainiert" und „untertrainiert" im aktuellen Datenstand klar
+  unterscheidbar sind und der Filter „untertrainiert" das richtige
+  Verhalten liefert. Die Konzept-Notiz wird entsprechend aktualisiert.
+
+**Logging-Sauberkeit:** Alle [31.2 LOGGING]-Print-Statements aus
+`_compute_undertrained_targets` wieder entfernt (`git diff main --
+ai_coach/plan_generator.py` ist leer). Worktree `~/phase31_2_wt` auf
+last-strawberry gelöscht.
+
+**Nächste Aktion:** 31.1 (Untertrainiert-Coverage-Hard-Fail), trivialer
+Symmetrie-Switch.
