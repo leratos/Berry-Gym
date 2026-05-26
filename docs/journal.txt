@@ -7506,3 +7506,66 @@ last-strawberry gelöscht.
 
 **Nächste Aktion:** 31.1 (Untertrainiert-Coverage-Hard-Fail), trivialer
 Symmetrie-Switch.
+
+---
+
+## Abgeschlossen: 31.1 – Untertrainiert-Coverage als Hard-Fail (26.05.2026)
+
+**Branch:** `feature/phase-31-1-coverage-hardfail` (gestapelt auf 31.2)
+
+**Implementiert:**
+
+Symmetrie zur 30.1-Cap-Hard-Fail-Logik (P1-Review): wenn Pflicht-
+Schwachstellen nach Auto-Fix immer noch unter `MIN_SETS_PER_WEAKNESS`
+(= 6) bleiben, gilt das genauso als aktive Sicherheits-Regel wie eine
+Cap-Verletzung. „Plan ist trotzdem verwendbar" (vor 31.1) wurde von
+der UX als „passt schon" gelesen – genau in dem Fall, wo eine echte
+Schwäche ohne Volumen bleibt, das falsche Signal.
+
+- `_generate_with_existing_django` Schritt 5d (Cap-Check) verliert
+  seinen direkten `return success=False`-Pfad. Stattdessen sammelt
+  ein neuer Schritt **5e** Coverage- und Cap-Warnings in einer
+  `hard_fail_errors`-Liste und gibt sie zusammen als `success=False`
+  zurück (Konzept §5 F-31-4-Vorschlag: beide Fehlerklassen
+  gleichzeitig anzeigen, damit der User im Retry beide adressieren kann).
+- Reihenfolge der Errors: erst Coverage, dann Cap. Print-Output
+  benennt die zwei Klassen separat, damit der User unmittelbar sieht,
+  welche Achse(n) verletzt sind.
+
+**Tests:**
+
+- `test_success_path_with_coverage_warnings_and_save_to_db` ersetzt
+  durch `test_coverage_warnings_trigger_hard_fail_and_no_save`
+  (umgekehrtes Verhalten: jetzt success=False, kein Save).
+- Neuer Test `test_combined_coverage_and_cap_violations_both_in_errors`:
+  prüft F-31-4-Verhalten (beide Fehlerklassen in result["errors"],
+  Reihenfolge Coverage→Cap, save_to_db nicht aufgerufen).
+- Neuer Test `test_success_path_without_warnings_saves_and_humanizes_name`:
+  übernimmt die Naming-/Save-Pfad-Coverage, die der alte Test
+  zusammen mit den (jetzt entfernten) Coverage-Warnings prüfte.
+- 30.1-Cap-Hard-Fail-Test (`test_cap_violation_returns_error_and_does_not_save`)
+  bleibt unverändert grün – das alte Cap-Verhalten ist symmetrisch
+  beibehalten.
+
+**Tests gesamt:** 347 ai_coach-Tests grün (345 vor 31.1 → +2 netto).
+isort + black applied; eine plan_generator.py-Reformatierung.
+
+**Keine Live-Verifikation:** Symmetrie-Switch ist durch Tests
+vollständig abgedeckt, die nächste echte Plan-Generierung wird das
+Verhalten in Produktion zeigen. Bei der erwarteten ≥6-Sätze-Verletzung
+(wie im 21.05.-Befund) sieht der User künftig „Plan wird NICHT
+gespeichert – bitte erneut versuchen" statt „ist trotzdem verwendbar".
+
+**Bedeutung:**
+
+Nach 30.1+31.1 ist die Symmetrie zwischen Übertrainings-Schutz und
+Untertrainings-Adressierung wieder hergestellt:
+
+| Verletzung | Verhalten (vor 30.1/31.1) | Verhalten (nach 30.1/31.1) |
+|---|---|---|
+| Cap überschritten | Warning + Plan gespeichert | success=False + Plan nicht gespeichert |
+| Pflicht-MG unter Floor | Warning + Plan gespeichert | success=False + Plan nicht gespeichert |
+| Beides gleichzeitig | – | success=False + beide Klassen in errors |
+
+**Nächste Aktion:** 31.3 (Description-Sanitizing, A+B kombiniert),
+letzter offener 31er-Punkt.

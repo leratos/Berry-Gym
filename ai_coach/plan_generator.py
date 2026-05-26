@@ -475,25 +475,46 @@ class PlanGenerator:
         print("-" * 60)
         cap_warnings = self._validate_overtraining_cap(plan_json, overtrained_caps)
         if cap_warnings:
-            # Phase 30.1 (P1-Review): Cap-Verletzung ist KEINE bloße Warnung,
-            # sondern eine aktive Sicherheits-Regel – der Plan würde eine
-            # bereits überlastete Muskelgruppe weiter verschlimmern. Wir
-            # brechen hart ab (analog zum F2-Truncation-Detector in 29.2):
-            # success=False, kein Speichern, klare Fehlermeldung. Der User
-            # kann erneut generieren – Sonnet respektiert den Cap-Block
-            # üblicherweise (live verifiziert in der 30.1-Verifikation).
-            print("\n❌ Plan überschreitet einen oder mehrere Übertraining-Caps")
-            print("   Plan wird NICHT gespeichert – bitte erneut versuchen.")
-            return {
-                "success": False,
-                "errors": cap_warnings,
-                "plan_data": plan_json,
-                "analysis_data": analysis_data,
-            }
+            # Print-Block bleibt hier; der eigentliche Hard-Fail wird gleich
+            # zentral in 5e ausgewertet (zusammen mit dem Coverage-Check).
+            print(f"   ⚠️ {len(cap_warnings)} Cap-Verletzung(en) erkannt")
         elif overtrained_caps:
             print(f"   ✓ Alle {len(overtrained_caps)} Cap(s) eingehalten")
         else:
             print("   ℹ️ Keine Übertraining-Caps aktiv")
+
+        # 5e. Hard-Fail-Auswertung (Phase 30.1 + 31.1)
+        # ------------------------------------------------------------
+        # Symmetrie zur 30.1-Cap-Hard-Fail-Logik (P1-Review): wenn
+        # Pflicht-Schwachstellen nach Auto-Fix immer noch unter dem
+        # MIN_SETS_PER_WEAKNESS-Floor bleiben, gilt das genauso als
+        # aktive Sicherheits-Regel wie eine Cap-Verletzung. „Plan ist
+        # trotzdem verwendbar" (vor 31.1) wurde von der UX als „passt
+        # schon" gelesen – genau in dem Fall, wo eine echte Schwäche
+        # ohne Volumen bleibt, ist das das falsche Signal.
+        #
+        # Konzept §5 F-31-4 / Vorschlag: bei gleichzeitiger Verletzung
+        # auf Cap- UND Coverage-Seite werden beide Fehlerklassen
+        # zusammen zurückgegeben, damit der User in einem Retry beide
+        # Aspekte adressieren kann.
+        hard_fail_errors: list[str] = []
+        if coverage_warnings:
+            hard_fail_errors.extend(coverage_warnings)
+        if cap_warnings:
+            hard_fail_errors.extend(cap_warnings)
+        if hard_fail_errors:
+            print("\n❌ Plan kann nicht gespeichert werden:")
+            if coverage_warnings:
+                print(f"   - {len(coverage_warnings)} Pflicht-Schwachstelle(n) " f"unter Soll-Min")
+            if cap_warnings:
+                print(f"   - {len(cap_warnings)} Übertraining-Cap-Verletzung(en)")
+            print("   Plan wird NICHT gespeichert – bitte erneut versuchen.")
+            return {
+                "success": False,
+                "errors": hard_fail_errors,
+                "plan_data": plan_json,
+                "analysis_data": analysis_data,
+            }
 
         # 5e. Plan-Namen Fallback: generische Namen mit Datum ergänzen
         raw_name = plan_json.get("plan_name", "").strip()

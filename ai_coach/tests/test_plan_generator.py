@@ -984,10 +984,126 @@ class TestGenerateWithExistingDjangoPhase2:
     @patch("ai_coach.plan_generator.LLMClient")
     @patch("ai_coach.plan_generator.PromptBuilder")
     @patch("ai_coach.plan_generator.TrainingAnalyzer")
-    def test_success_path_with_coverage_warnings_and_save_to_db(
+    def test_coverage_warnings_trigger_hard_fail_and_no_save(
         self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
     ):
-        """Deckt Success-Pfad mit Coverage-Warnungen, generischem Namen und save_to_db=True ab."""
+        """Phase 31.1: Coverage-Verletzung führt zu success=False + kein Save.
+
+        Symmetrie zur 30.1-Cap-Hard-Fail-Logik. Vor 31.1 wurde der Plan
+        trotz Coverage-Warnings gespeichert (success=True, warnings
+        landeten in result["coverage_warnings"]). Das hat die UX-Lesart
+        „ist trotzdem verwendbar" produziert – genau in dem Fall, wo
+        eine echte Schwäche ohne Volumen bleibt, also das falsche Signal.
+        """
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": ["Bauch: Untertrainiert (0)"]}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        llm_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "trainingsplan",
+                "sessions": [{"day_name": "A", "exercises": []}],
+            },
+            "usage": {},
+            "cost": 0.01,
+        }
+        llm_client.validate_plan.return_value = (True, [])
+
+        coverage_warnings = [
+            "⚠️ Untertrainiert-Volumen zu niedrig: BAUCH hat nur 4 Sätze (Ziel: mind. 6)",
+            "⚠️ Untertrainiert-Volumen zu niedrig: BEINE_HAM hat nur 4 Sätze (Ziel: mind. 6)",
+        ]
+
+        gen = PlanGenerator(user_id=1, target_profile="hypertrophie", plan_type="3er-split")
+        with (
+            patch.object(gen, "_validate_weakness_coverage", return_value=coverage_warnings),
+            patch.object(gen, "_save_plan_to_db", return_value=[11]) as mock_save,
+            patch.object(gen, "_format_macrocycle_summary", return_value="summary"),
+        ):
+            result = gen._generate_with_existing_django(save_to_db=True)
+
+        assert result["success"] is False
+        assert result["errors"] == coverage_warnings
+        # Plan wird NICHT gespeichert – Symmetrie zur Cap-Verletzung.
+        mock_save.assert_not_called()
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_combined_coverage_and_cap_violations_both_in_errors(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Phase 31.1 / Konzept §5 F-31-4: bei gleichzeitiger Verletzung von
+        Coverage UND Cap werden BEIDE Fehlerklassen in result["errors"]
+        zurückgegeben, damit der User in einem Retry beide adressieren kann.
+        """
+        mock_analyzer = mock_analyzer_cls.return_value
+        mock_analyzer.analyze.return_value = {"weaknesses": []}
+
+        mock_builder = mock_builder_cls.return_value
+        mock_builder.get_available_exercises_for_user.return_value = ["Übung A"] * 12
+        mock_builder.build_messages.return_value = [
+            {"content": "system"},
+            {"content": "user"},
+        ]
+
+        llm_client = mock_llm_cls.return_value
+        llm_client.generate_training_plan.return_value = {
+            "response": {
+                "plan_name": "Kombi-Fehler-Plan",
+                "sessions": [{"day_name": "A", "exercises": []}],
+            },
+            "usage": {},
+            "cost": 0.01,
+        }
+        llm_client.validate_plan.return_value = (True, [])
+
+        coverage_warnings = [
+            "⚠️ Untertrainiert-Volumen zu niedrig: BAUCH hat nur 4 Sätze (Ziel: mind. 6)"
+        ]
+        cap_warnings = [
+            "⚠️ Übertraining-Cap überschritten: Brust hat im Plan 8 Sätze/Woche (Cap: 5)"
+        ]
+
+        gen = PlanGenerator(user_id=1, plan_type="3er-split")
+        with (
+            patch.object(gen, "_validate_weakness_coverage", return_value=coverage_warnings),
+            patch.object(gen, "_validate_overtraining_cap", return_value=cap_warnings),
+            patch.object(gen, "_save_plan_to_db") as mock_save,
+        ):
+            result = gen._generate_with_existing_django(save_to_db=True)
+
+        assert result["success"] is False
+        # Beide Fehlerklassen werden gleichzeitig zurückgegeben (F-31-4).
+        assert any("BAUCH" in err for err in result["errors"])
+        assert any("Cap überschritten" in err for err in result["errors"])
+        # Reihenfolge: erst Coverage, dann Cap.
+        assert result["errors"][0] == coverage_warnings[0]
+        assert result["errors"][-1] == cap_warnings[0]
+        mock_save.assert_not_called()
+
+    @patch("ai_coach.plan_generator.LLMClient")
+    @patch("ai_coach.plan_generator.PromptBuilder")
+    @patch("ai_coach.plan_generator.TrainingAnalyzer")
+    def test_success_path_without_warnings_saves_and_humanizes_name(
+        self, mock_analyzer_cls, mock_builder_cls, mock_llm_cls
+    ):
+        """Erfolgs-Pfad ohne Coverage-/Cap-Warnings: generischer LLM-Name wird
+        durch Profile/Split/Fokus ersetzt und der Plan landet in der DB.
+
+        Vor 31.1 deckte ``test_success_path_with_coverage_warnings_and_save_to_db``
+        diese Naming-Pfade in einem Test ab, der gleichzeitig Coverage-
+        Warnings simulierte und trotzdem Save erwartete. Nach dem Hard-Fail-
+        Switch ist beides nicht mehr kombinierbar – Naming + Save laufen
+        nur noch ohne Warnings durch.
+        """
         mock_analyzer = mock_analyzer_cls.return_value
         mock_analyzer.analyze.return_value = {"weaknesses": ["Bauch: Untertrainiert (0)"]}
 
@@ -1011,7 +1127,7 @@ class TestGenerateWithExistingDjangoPhase2:
 
         gen = PlanGenerator(user_id=1, target_profile="hypertrophie", plan_type="3er-split")
         with (
-            patch.object(gen, "_validate_weakness_coverage", return_value=["warn-1", "warn-2"]),
+            patch.object(gen, "_validate_weakness_coverage", return_value=[]),
             patch.object(gen, "_save_plan_to_db", return_value=[11]) as mock_save,
             patch.object(gen, "_format_macrocycle_summary", return_value="summary"),
         ):
