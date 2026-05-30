@@ -270,9 +270,12 @@ Berry-Gym/
 │       └── django.mo
 ├── deployment/                 # Production configs
 ├── docs/                       # Documentation
-│   ├── journal.txt             # Development journal
+│   ├── journal.txt             # Historical import source (active: Bramble MCP)
 │   ├── PROJECT_ROADMAP.md      # Milestone roadmap (current)
 │   └── DEPLOYMENT.md
+├── .mcp.json                   # Bramble MCP journal (project memory)
+├── AGENTS.md                   # Working instructions for coding agents
+├── CLAUDE.md                   # Claude Code pointer to AGENTS.md
 ├── README.md                   # German README
 └── README_EN.md                # This file
 ```
@@ -350,6 +353,28 @@ Current prioritization and implementation status are tracked in
 - Custom exercises are user-specific (no global sharing)
 
 **Last Updated:** 2026-03-26
+
+---
+
+## 🧠 Development Journal (Project Memory)
+
+Berry-Gym uses a central **Bramble MCP journal** as the active project memory
+for LLM-assisted development. It supersedes the former `docs/journal.txt`,
+which now serves only as a historical import source.
+
+- **Project key:** `berry-gym`
+- **Configuration:** [`.mcp.json`](.mcp.json) – HTTP MCP server, authentication
+  via the `BERRYGYM_TOKEN` environment variable
+- **Agent workflow:** see [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md)
+
+Coding agents read the curated context (`journal_context`) at the start of a
+session and write append-only entries (`journal_append`) once work is done.
+Allowed status values: `in_arbeit`, `abgeschlossen`, `notiz`, `bugfix`.
+Existing entries are never edited or deleted — corrections are made as a new
+entry that references the old one.
+
+> **Note:** Without a valid `BERRYGYM_TOKEN` the journal MCP tools are
+> unavailable. The application's core features are unaffected.
 
 ---
 
