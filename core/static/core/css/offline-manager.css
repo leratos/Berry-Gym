@@ -19,7 +19,7 @@
 }
 
 .connection-indicator.online {
-    background-color: #198754;
+    background-color: var(--bs-success);
     color: white;
     opacity: 0.3; /* Fast unsichtbar wenn online */
 }
@@ -29,7 +29,7 @@
 }
 
 .connection-indicator.offline {
-    background-color: #dc3545;
+    background-color: var(--bs-danger);
     color: white;
     animation: pulse 2s infinite;
     opacity: 1; /* Auffällig wenn offline */
@@ -111,23 +111,23 @@
 }
 
 .connection-toast.success {
-    background-color: #198754;
+    background-color: var(--bs-success);
     color: white;
 }
 
 .connection-toast.warning {
-    background-color: #ffc107;
+    background-color: var(--bs-warning);
     color: #000;
 }
 
 .connection-toast.error {
-    background-color: #dc3545;
+    background-color: var(--bs-danger);
     color: white;
 }
 
 .connection-toast.info {
-    background-color: #0dcaf0;
-    color: #000;
+    background-color: var(--bs-info);
+    color: #fff;
 }
 
 /* Offline Banner (falls Internet länger weg) */
@@ -136,7 +136,7 @@
     top: 0;
     left: 0;
     right: 0;
-    background-color: #dc3545;
+    background-color: var(--bs-danger);
     color: white;
     text-align: center;
     padding: 10px;
