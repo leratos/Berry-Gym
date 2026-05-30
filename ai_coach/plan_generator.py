@@ -64,6 +64,14 @@ def _humanize_plan_name(name: str) -> str:
     return name
 
 
+# Phase 31.3 (Schicht B): Ersatz-Satz, mit dem eine quantitative Coverage-
+# Behauptung in der ``plan_description`` ersetzt wird, wenn der strukturierte
+# Plan sie nicht deckt. Bewusst deutsch und generisch – der gesamte
+# Generierungs-Pfad ist deutsch (kein Locale-Parameter, kein gettext im
+# ai_coach-Modul), ein englischer Satz stünde inkonsistent im Fließtext.
+_DESCRIPTION_REPLACEMENT_SENTENCE = "Plan-Schwerpunkte: siehe Tagesübersicht."
+
+
 class PlanGenerator:
     """
     Generiert personalisierte Trainingspläne mit AI
@@ -515,6 +523,24 @@ class PlanGenerator:
                 "plan_data": plan_json,
                 "analysis_data": analysis_data,
             }
+
+        # 5f. Plan-Description-Sanitizing (Phase 31.3, Schicht B)
+        # ------------------------------------------------------------
+        # Das LLM behauptet im Freitext gelegentlich eine Coverage („alle
+        # Pflicht-Schwächen mit ≥6 Sätzen abgedeckt"), die der strukturierte
+        # Plan nicht hält (21.05.-Befund). Der User liest die Beschreibung vor
+        # dem Plan – durch den Plan widerlegte Mengen-Aussagen werden hier
+        # entfernt. Läuft nach Auto-Fix (5c) und vor dem Speichern (Schritt 6).
+        print("\n🧹 SCHRITT 5f: Plan-Description-Konsistenz prüfen")
+        print("-" * 60)
+        sanitized_count = self._sanitize_plan_description(plan_json, weakness_input_for_validator)
+        if sanitized_count:
+            print(
+                f"   🧹 {sanitized_count} nicht gedeckte Coverage-Aussage(n) "
+                f"in der Beschreibung ersetzt"
+            )
+        else:
+            print("   ✓ Plan-Description ohne widersprüchliche Coverage-Aussagen")
 
         # 5e. Plan-Namen Fallback: generische Namen mit Datum ergänzen
         raw_name = plan_json.get("plan_name", "").strip()
@@ -1263,6 +1289,154 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             print(f"   ⚠️ Coverage fehlt: {mg_display} (Keys: {target_keys})")
 
         return warnings
+
+    def _weakness_set_floor(self, plan_json: dict, weaknesses: list[str]) -> int | None:
+        """Phase 31.3: Niedrigstes Pflicht-Schwächen-Satzvolumen im Plan.
+
+        Spiegelt die primäre Satz-Zählung aus ``_validate_weakness_coverage``
+        (nur die *primäre* Muskelgruppe einer Übung zählt als Coverage) und
+        gibt das Minimum über alle Pflicht-Schwächen zurück. Das ist die
+        belastbare Untergrenze, gegen die eine ``≥N Sätze``-Behauptung in der
+        Plan-Beschreibung geprüft wird.
+
+        Returns:
+            Minimales Satz-Volumen über alle Pflicht-Schwächen, oder ``None``
+            wenn keine Pflicht-Schwäche vorliegt bzw. die Werte nicht
+            ermittelbar sind (dann ist keine ``≥N``-Behauptung belegbar).
+        """
+        if not weaknesses:
+            return None
+        try:
+            from core.models import Uebung
+
+            plan_exercises = list(
+                Uebung.objects.filter(
+                    bezeichnung__in={
+                        ex["exercise_name"]
+                        for session in plan_json.get("sessions", [])
+                        for ex in session.get("exercises", [])
+                    }
+                )
+            )
+            name_to_mg = {ex.bezeichnung: ex.muskelgruppe for ex in plan_exercises}
+            primary_sets_by_key: dict[str, int] = {}
+            for session in plan_json.get("sessions", []):
+                for ex in session.get("exercises", []):
+                    mg = name_to_mg.get(ex.get("exercise_name", ""))
+                    if mg:
+                        primary_sets_by_key[mg] = primary_sets_by_key.get(mg, 0) + ex.get("sets", 0)
+        except Exception as e:
+            print(f"   ⚠️ Description-Sanitizing DB-Fehler: {e}")
+            return None
+
+        floors: list[int] = []
+        for weakness in weaknesses:
+            if ":" not in weakness or "Untertrainiert" not in weakness:
+                continue
+            mg_display = weakness.split(":")[0].strip()
+            target_keys = resolve_weakness_keys(mg_display)
+            if not target_keys:
+                continue
+            floors.append(sum(primary_sets_by_key.get(k, 0) for k in target_keys))
+        if not floors:
+            return None
+        return min(floors)
+
+    def _sanitize_plan_description(self, plan_json: dict, weaknesses: list[str]) -> int:
+        """Phase 31.3 (Schicht B): Entfernt quantitative Coverage-Behauptungen
+        aus ``plan_description``, die der strukturierte Plan nicht deckt.
+
+        Anlass (21.05.-Befund): Das LLM behauptete im Freitext „alle Pflicht-
+        Schwachstellen … mit ≥6 Arbeitssätzen abgedeckt", obwohl jede der
+        vier Pflicht-Schwächen nur 4 Sätze hatte. Der User liest die
+        Beschreibung vor dem Plan und vertraut ihr – eine durch den eigenen
+        strukturierten Output widerlegte Zahl ist schädlicher als die Warning.
+
+        Vorgehen: Jeder Satz, der eine Mengen-Behauptung der Form
+        ``(≥|mind.|… abgedeckt) N (Sätze|Arbeitssätze|Sets)`` enthält, wird
+        gegen das tatsächlich niedrigste Pflicht-Schwächen-Volumen
+        (``_weakness_set_floor``) geprüft. Hält die behauptete Zahl dort nicht
+        stand (oder gibt es keine belegbare Untergrenze), wird der ganze Satz
+        durch einen generischen Hinweis ersetzt.
+
+        Läuft nach dem Auto-Fix (Schritt 5c) und vor dem Speichern (Schritt 6),
+        damit ``plan_description`` sowohl in der DB als auch in der Vorschau
+        bereinigt ist.
+
+        Returns:
+            Anzahl ersetzter Sätze (0 = nichts geändert).
+        """
+        import re
+
+        description = plan_json.get("plan_description", "") or ""
+        if not description.strip():
+            return 0
+
+        floor = self._weakness_set_floor(plan_json, weaknesses)
+
+        # Mengen-Token: Zahl direkt vor einer Satz-Einheit (DE + EN).
+        set_qty_re = re.compile(
+            r"(\d+)\s*(?:arbeitssätzen|arbeitssätze|sätzen|sätze|sets)",
+            re.IGNORECASE,
+        )
+        # Coverage-Kontext-Signal: nur Sätze mit Mengen-Token UND einem dieser
+        # Signale werden geprüft. So bleiben legitime nicht-coverage-bezogene
+        # Aussagen (z.B. „4 Sätze pro Hauptübung") unangetastet. ``\bmind``
+        # trifft „mind." / „mindestens", aber nicht „vermindert".
+        cue_re = re.compile(
+            r"≥|\bmind|abgedeckt|abdeck|gedeckt|schwäch|schwachstell|\bpflicht|untertrainiert",
+            re.IGNORECASE,
+        )
+
+        def _is_unsupported_claim(sentence: str) -> bool:
+            if not cue_re.search(sentence):
+                return False
+            claimed = [int(n) for n in set_qty_re.findall(sentence)]
+            if not claimed:
+                return False
+            if floor is None:
+                # Mengen-Coverage-Behauptung, aber keine belegbare Untergrenze
+                # (keine Pflicht-Schwäche / DB nicht lesbar) → nicht belegbar.
+                return True
+            return any(n > floor for n in claimed)
+
+        # Abkürzungs-Punkte maskieren, damit die Satz-Zerlegung unten nicht an
+        # „mind. 6 Sätze" o.ä. mitten im Satz trennt (sonst landen Zahl und
+        # Coverage-Signal in verschiedenen Fragmenten). Wird vor dem Rückgeben
+        # wieder zurückgesetzt.
+        sentinel = "\x00"
+        abbrev_re = re.compile(
+            r"\b(?:mind|max|ca|bzw|ggf|inkl|usw|etc|evtl|sog|vgl|z\.\s?B|d\.\s?h|u\.\s?a)\.",
+            re.IGNORECASE,
+        )
+        masked = abbrev_re.sub(lambda m: m.group(0).replace(".", sentinel), description)
+
+        # In Sätze + Trenner zerlegen, Trenner werden mitgeführt, damit die
+        # ursprüngliche Formatierung (Zeilenumbrüche etc.) erhalten bleibt.
+        tokens = re.split(r"(?<=[.!?])(\s+)", masked)
+        rebuilt: list[str] = []
+        replaced = 0
+        prev_was_replacement = False
+        i = 0
+        while i < len(tokens):
+            sentence = tokens[i]
+            sep = tokens[i + 1] if i + 1 < len(tokens) else ""
+            if sentence.strip() and _is_unsupported_claim(sentence):
+                replaced += 1
+                # Aufeinanderfolgende Ersetzungen zu einem Satz zusammenfassen.
+                if not prev_was_replacement:
+                    rebuilt.append(_DESCRIPTION_REPLACEMENT_SENTENCE)
+                    rebuilt.append(sep if sep else " ")
+                    prev_was_replacement = True
+            else:
+                rebuilt.append(sentence)
+                rebuilt.append(sep)
+                prev_was_replacement = False
+            i += 2
+
+        if replaced:
+            plan_json["plan_description"] = "".join(rebuilt).replace(sentinel, ".").strip()
+        return replaced
 
     def _compute_overtrained_caps(self) -> list[dict]:
         """Phase 30.1: Liste der aktuell überlasteten Muskelgruppen mit
