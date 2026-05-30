@@ -26,6 +26,14 @@ DIVERGENCE_THRESHOLD_PCT = 5.0
 # 0.5-Schwelle hat Hammer Curls korrekt als Konsolidierung erkannt; höhere
 # Schwellen würden zu wenig fangen, niedrigere wären Noise.
 CONSOLIDATION_RPE_DELTA = 0.5
+# Phase 26: Konsolidierung zeitlich begrenzen. Bei sinkendem RPE ohne neuen PR
+# kippt der Status nach einer Weile von "Konsolidierung" (alles gut) über
+# "Bereit für PR-Versuch" (Aufforderung) zu "ungewöhnlich lange" (Variation
+# oder PR-Versuch prüfen). Schwellen in Tagen seit letztem PR (Variante a aus
+# Konzept §2.2 – RPE-Sinken wird ohnehin im 4w-Fenster geprüft). Empirisch
+# justierbar; 28 T (4 W) / 56 T (8 W) gemäß Konzept-Stufenmodell.
+CONSOLIDATION_READY_DAYS = 28
+CONSOLIDATION_OVERLONG_DAYS = 56
 # >5% 1RM-Drop im current 4w gegenüber PR → Regression (vorher 10%).
 REGRESSION_WEIGHT_DROP_PCT = 5.0
 # < 2 Sätze in den letzten 4w → "Pause" statt "Plateau". Adressiert die im
@@ -166,7 +174,14 @@ def classify_progression_status(
         2. ``active_progression``          – PR ≤ 7 Tage alt
         3. ``observe``                     – PR 8–14 Tage alt
         4. ``pause``                       – < 2 Sätze in den letzten 4w
-        5. ``consolidation``               – RPE sinkt (≥ 0.5) first-half vs. second-half
+        5. ``consolidation``               – RPE sinkt (≥ 0.5) first-half vs. second-half,
+                                             ≤ ``CONSOLIDATION_READY_DAYS`` Tage seit PR
+        5a. ``consolidation_ready``        – Phase 26: RPE sinkt, aber
+                                             ``CONSOLIDATION_READY_DAYS`` < Tage-seit-PR ≤
+                                             ``CONSOLIDATION_OVERLONG_DAYS`` → "Bereit für PR-Versuch"
+        5b. ``consolidation_overlong``     – Phase 26: RPE sinkt, aber >
+                                             ``CONSOLIDATION_OVERLONG_DAYS`` Tage seit PR →
+                                             ungewöhnlich lange Konsolidierung
         6. ``active_progression_paused``   – Phase 24.5: lange Steigerungsrate ≥
                                              ``PROGRESSION_RATE_OVERRIDE_PCT`` % vom PR-1RM
                                              pro Monat → keine echte Stagnation
@@ -276,11 +291,29 @@ def classify_progression_status(
         result["rpe_second_half"] = round(second_half, 2)
         result["rpe_delta"] = round(delta, 2)
         if delta >= CONSOLIDATION_RPE_DELTA:
-            result.update(
-                status="consolidation",
-                status_label="💪 Konsolidierung (RPE sinkt)",
-                status_farbe="info",
-            )
+            # Phase 26: Konsolidierung zeitlich begrenzen. RPE sinkt – aber je
+            # länger ohne neuen PR, desto klarer wird das vom positiven
+            # "Konsolidierung" zur Aufforderung "jetzt einen PR versuchen".
+            if days_since_pr <= CONSOLIDATION_READY_DAYS:
+                result.update(
+                    status="consolidation",
+                    status_label="💪 Konsolidierung (RPE sinkt)",
+                    status_farbe="info",
+                )
+            elif days_since_pr <= CONSOLIDATION_OVERLONG_DAYS:
+                result.update(
+                    status="consolidation_ready",
+                    status_label="🎯 Bereit für PR-Versuch – RPE seit Wochen niedrig",
+                    status_farbe="info",
+                )
+            else:
+                result.update(
+                    status="consolidation_overlong",
+                    status_label=(
+                        "⏳ Konsolidierung ungewöhnlich lang – " "PR-Versuch oder Variation prüfen"
+                    ),
+                    status_farbe="warning",
+                )
             return result
 
     # Phase 24.5: Override – starke Steigerungsrate schlägt Plateau-Klassifikation.
