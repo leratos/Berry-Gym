@@ -17,56 +17,32 @@ auf diese Datei verweisen, statt ein zweites Regelwerk zu pflegen.
 
 ## Projektgedächtnis
 
-Projekt:
+Projekt: berry-gym
 
-```text
-berry-gym
-```
+Aktives Projektgedächtnis ist das Bramble-MCP-Journal
+(<https://journal.last-strawberry.com/mcp/>, projektgebundenes Token).
 
-Berry-Gym nutzt das Bramble-MCP-Journal als aktives Projektgedächtnis.
+Zu Beginn jeder Session:
 
-Zu Beginn einer Arbeitssitzung:
+1. `journal_guide()` aufrufen und befolgen — die kanonischen, geteilten
+   Journal-Konventionen (Status, Tags, Korrektur-/resolves-Modell,
+   Open-Item-Semantik, Session-Start/Ende, DoD). Diese Regeln hier NICHT
+   wiederholen.
+2. `journal_context(project="berry-gym", n_recent=10)` lesen
+   (Fallback: `journal_read(project="berry-gym", n=20)`).
 
-- Bevorzuge einen kuratierten Start mit
-  `journal_context(project="berry-gym", n_recent=10)`.
-- Fallback für Rohhistorie: `journal_read(project="berry-gym", n=20)`.
-- Wenn der Kontext unklar ist, suche gezielt mit
-  - `journal_search(project="berry-gym", query=..., limit=...)` oder
-    projektübergreifend mit
-  - `journal_search_all(query=..., limit=...)`.
+Dieses Dokument ergänzt den Guide nur um Projekt-Spezifika:
+
 - Lies zusätzlich relevante lokale Dokumente, wenn sie zum Arbeitsumfang
   gehören:
   - `docs/PROJECT_ROADMAP.md` für Planungs-/Scope-/Milestone-Fragen.
   - `README.md` für Feature-Überblick, Tech-Stack und Projektstruktur.
   - `docs/CODE_QUALITY.md`, `docs/RUNBOOK.md`, `docs/DEPLOYMENT.md`,
     `docs/CICD_GUIDE.md`, `docs/LOAD_TESTING.md` je nach Thema.
-
-Wichtig:
-
-- `docs/journal.txt` ist nur noch historische Importquelle. Schreibe dort
-  keine neuen Einträge.
-- Das Bramble-MCP-Journal ist die maßgebliche Quelle für laufenden Projektstand.
-- Bestehende Journal-Einträge werden nicht geändert oder gelöscht.
-- Korrekturen sind append-only: schreibe einen neuen `bugfix`- oder `notiz`-
-  Eintrag, der den alten Eintrag per id, Titel oder Datum referenziert.
-- Wenn die Bramble-MCP-Tools nicht verfügbar sind, sage das ausdrücklich.
-  Nutze dann nur als groben Fallback: `git log --oneline -30`, `CHANGELOG`
-  und `docs/PROJECT_ROADMAP.md`. Markiere den Stand als grobkörnig und rate
-  nicht.
-
-Während der Arbeit:
-
-- Behandle das Bramble-MCP-Journal als Projektgedächtnis.
-- Bei substantiellen Milestones oder längeren Arbeiten: nach Bestätigung einen
-  Start-Eintrag mit `journal_append(project="berry-gym", status="in_arbeit",
-  ...)` schreiben.
-- Nach abgeschlossener substantieller Arbeit: einen Abschluss-Eintrag mit
-  `journal_append(project="berry-gym", status="abgeschlossen", ...)` schreiben.
-- Erlaubte Statuswerte: `in_arbeit`, `abgeschlossen`, `notiz`, `bugfix`.
-- Tags (max. 5, lowercase-kebab) aus einem kleinen, stabilen Vokabular, z.B.:
-  `decision`, `security`, `test`, `docs`, `bug`, `ai`, `i18n`, `deployment`.
-- Erwähne im Journal wichtige Tests, Migrationen, Entscheidungen und offene
-  Folgearbeit.
+- `docs/journal.txt` ist nur historische Importquelle (kein neuer Eintrag).
+- Wenn die Bramble-MCP-Tools nicht verfügbar sind, sage das ausdrücklich und
+  nutze nur als groben Fallback `git log --oneline -30`, `CHANGELOG` und
+  `docs/PROJECT_ROADMAP.md`. Markiere den Stand als grobkörnig, rate nicht.
 
 ## Planung vor Ausführung
 
@@ -158,13 +134,13 @@ Während der Arbeit:
 
 ## Qualität (DoD)
 
-Ein Arbeitspaket gilt erst als sauber abgeschlossen, wenn:
+Die Definition of Done richtet sich nach `journal_guide()` (Session-Ende):
+committen, Tests/Smoke ausführen und im Eintrag nennen, append-only
+Journal-Eintrag, nächsten Schritt dokumentieren.
 
-1. Code/Config committed.
-2. Relevante Tests ausgeführt und genannt; CI/CD grün.
-3. Append-only Journal-Eintrag geschrieben.
-4. Nächster Schritt explizit dokumentiert.
+Projekt-Ergänzungen:
 
+- CI/CD (GitHub Actions) muss grün sein.
 - Melde fehlende Tests, Sicherheitslücken, Logiklücken und technische Schulden
   aktiv. Benenne den Preis riskanter Abkürzungen.
 - i18n: neue nutzer-sichtbare Strings DE/EN konsistent halten.
