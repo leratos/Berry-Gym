@@ -107,6 +107,7 @@ HomeGym is a Django-based web application that combines strength training tracki
 - Considers equipment, training history & frequency
 - Real-time progress display via Server-Sent Events (SSE streaming)
 - Context-based split type (2–3×/week → Fullbody, 4× → PPL, 5–6× → 4-day split)
+- **Adaptive to the training report (Phase 30/31)**: overtraining caps & undertrained coverage as hard fails (plan is not saved if violated), plateau-/consolidation-aware (no volume push on stagnating exercises), the plan description is checked for consistency against the structured plan
 
 #### 3. Automatic Plan Optimization (Hybrid: Rule-Based + AI)
 
@@ -271,7 +272,7 @@ Berry-Gym/
 ├── deployment/                 # Production configs
 ├── docs/                       # Documentation
 │   ├── journal.txt             # Historical import source (active: Bramble MCP)
-│   ├── PROJECT_ROADMAP.md      # Milestone roadmap (current)
+│   ├── PROJECT_ROADMAP.md      # Phase roadmap (status of phases 1–31)
 │   └── DEPLOYMENT.md
 ├── .mcp.json                   # Bramble MCP journal (project memory)
 ├── AGENTS.md                   # Working instructions for coding agents
@@ -298,7 +299,7 @@ Berry-Gym/
 | Testing | pytest, factory_boy, CI/CD |
 | ML | scikit-learn (local weight predictions) |
 
-### Project Statistics (Version 1.0, Feb 2026)
+### Project Statistics (Version 1.0, May 2026)
 
 | Metric | Value |
 |--------|-------|
@@ -316,7 +317,7 @@ Berry-Gym/
 
 Current prioritization and implementation status are tracked in
 **[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)**
-(milestone-based, updated 2026-02-24).
+(phase-based, updated 2026-05-30).
 
 ### Currently Available (v1.0)
 
@@ -338,13 +339,18 @@ Current prioritization and implementation status are tracked in
 - ✅ **CSV Export**, Cardio Lite, Video support, Custom exercises, Superset, PWA
 - ✅ **AI Plan Validation**: 5 programmatic post-validations (cross-session duplicates, forbidden combinations, anatomical mandatory groups, compound-before-isolation auto-fix, rest time auto-fix)
 - ✅ **Context-Sensitive Recommendations**: Training mode-dependent recommendation texts, muscle group-specific volume thresholds (large/medium/small/postural), rep range distribution analysis with stacked progress bar
+- ✅ **Time-Window Analyses (Phase 23)**: RPE/volume over 2-/4-week windows instead of all-time, effective volume (RPE 7–9 only)
+- ✅ **Report Consistency & Layout (Phase 24–25)**: single source of truth between PDF report and live statistics, report layout refactor
+- ✅ **Consolidation Stages (Phase 26)**: time-bounded consolidation – "ready for PR attempt" or "unusually long" instead of a blanket plateau
+- ✅ **Adaptive Plan Generation (Phase 29–31)**: overtraining caps & undertrained coverage as hard fails, plateau/consolidation hints (no volume push on stagnating exercises), fatigue/frequency/push-pull adaptation, plan-description consistency check
 
 ### Planned / Next Steps
 
-- 🔥 **M5 – Coverage Sprint C**: targeted test depth for charts/stats/helpers
-- 🧠 **M6 – AI Endpoint Contract Hardening**: consistent error contracts + edge-case tests
-- 🔐 **M7 – Security & Compliance Tightening**: security findings process and policy hardening
-- 🔜 Afterwards: operations maturity (M8) and incremental refactoring (M9)
+- 🎨 **Phase 27 – Style Overhaul**: unified color/typography/icon system for web & PDF (design decisions pending)
+- 📝 **Phase 28 – Documentation Update**: README, roadmap & concept docs brought up to date (in progress)
+- 🌐 **i18n follow-up**: migrate progression/plateau status labels to gettext (DE/EN)
+
+> Full phase status (1–31) in **[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)**.
 
 ### Known Limitations
 
@@ -352,7 +358,7 @@ Current prioritization and implementation status are tracked in
 - AI Coach requires OpenRouter API key (~€0.003/plan)
 - Custom exercises are user-specific (no global sharing)
 
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-05-30
 
 ---
 

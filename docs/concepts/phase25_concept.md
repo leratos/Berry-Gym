@@ -1,6 +1,6 @@
 # Phase 25 – Report-Layout-Refactor (Struktur & Technik)
 
-**Status:** 📋 Konzept (11.05.2026) · Offene Fragen F1–F7 entschieden (12.05.2026)
+**Status:** ✅ Abgeschlossen (18.05.2026, inkl. Sub-Phase 25.8)
 **Vorgänger:** Phase 24 (Report-Daten-Konsistenz) – ✅ inhaltlich abgeschlossen, 24.5b Hotfix noch offen
 **Nachfolger:** Phase 26 (Konsolidierungs-Logik), Phase 27 (Style-Overhaul), Phase 28 (Dokumentations-Aktualisierung)
 **Branch-Schema:** `feature/phase-25-X-kurzbeschreibung` pro Sub-Phase

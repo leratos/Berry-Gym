@@ -1,6 +1,6 @@
 # Phase 27 – Style-Overhaul
 
-**Status:** 📋 Konzept (11.05.2026)
+**Status:** ⏸️ Blockiert – Style-Decision mit User ausstehend (Design-Session in Claude.app, berry-gym#651)
 **Vorgänger:** Phase 26 (Konsolidierungs-Logik)
 **Nachfolger:** Phase 28 (Dokumentations-Aktualisierung)
 **Branch-Schema:** `feature/phase-27-X-kurzbeschreibung` pro Sub-Phase

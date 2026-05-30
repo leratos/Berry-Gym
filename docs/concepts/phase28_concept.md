@@ -1,6 +1,6 @@
 # Phase 28 – Dokumentations-Aktualisierung
 
-**Status:** 📋 Konzept (11.05.2026)
+**Status:** 🔄 In Arbeit (seit 30.05.2026) – 28.1–28.4 umgesetzt, 28.5 + finaler README-Pass nach Phase 27
 **Vorgänger:** Phase 27 (Style-Overhaul)
 **Nachfolger:** offen
 **Branch-Schema:** `feature/phase-28-X-kurzbeschreibung` pro Sub-Phase
@@ -115,9 +115,29 @@ Wenn die App perspektivisch nicht nur privat bleibt (User-Memory erwähnt Moneta
 
 ---
 
-## 5. Bestandsaufnahme (wird in 28.1 ausgefüllt)
+## 5. Bestandsaufnahme (28.1, Stand 2026-05-30)
 
-*(Tabelle aller `docs/`-Dateien mit Klassifikation – wird beim Start ergänzt.)*
+**In dieser Phase aktualisiert:**
+
+| Dokument | Vorher | Aktion (Sub-Phase) |
+|---|---|---|
+| `README.md` / `README_EN.md` | ⚠️ Last-Updated 2026-03-26, M5–M9-Tail, Features ≤ Phase 23 | ✅ 28.2: Features 23–31 ergänzt, M5–M9-Tail durch aktuellen Phasen-Status ersetzt, Last-Updated 2026-05-30 |
+| `docs/PROJECT_ROADMAP.md` | ❌ veraltet (nur Phasen 1–23, kein Last-Updated) | ✅ 28.3: kompakte Übersichtstabelle 1–31 + Konzept-Links, Header/Datum, Phasen-24–31-Bridge; Detail 1–23 erhalten |
+| `docs/concepts/phase23–31` | top-Header größtenteils noch „📋 Konzept" trotz Abschluss | ✅ 28.4: top-Status-Header aktualisiert (✅/⏸️/🔄) |
+| `docs/concepts/phase23_concept.md` | laut Konzept im `docs/`-Root vermutet | ✅ liegt bereits unter `docs/concepts/` – 28.4-Move war schon erledigt |
+
+**Noch offen (28.5, sinnvoll nach Phase 27):**
+
+| Dokument(e) | Klassifikation |
+|---|---|
+| `DEPLOYMENT.md`, `RUNBOOK.md`, `CICD_GUIDE.md`, `CODE_QUALITY.md` | ⚠️ operativ – Stichprobe in 28.5 |
+| `BETA_SYSTEM`, `DISCLAIMER_SYSTEM`, `PUSH_NOTIFICATIONS_SETUP`, `OPENROUTER_SETUP`, `SECRETS_SECURITY`, `LOGGING_GUIDE`, `LOAD_TESTING`, `LAUNCH_CHECKLIST`, `PDF_EXPORT_OPTIMIERUNG` | ❓ Stand unbekannt – in 28.5 sichten |
+| `AGENTS.md`, `CLAUDE.md` | ✅ aktuell (zuletzt mit Bramble-MCP-Umstellung gepflegt) |
+| `SECURITY.md`, `CONTRIBUTING.md`, `.github/*` | ❓ Stichprobe, niedrige Prio |
+| `ai_coach/README.md`, `core/tests/README.md`, `dev-scripts/*.md` | ❓ niedrige Prio |
+
+> Per-Sub-Phasen-Header **innerhalb** von `phase29`/`phase30` (Zeilen „📋 Konzept")
+> sind noch nicht einzeln nachgezogen – kosmetisch, in 28.5/Folge-Pass.
 
 ---
 
@@ -140,4 +160,13 @@ Wenn die App perspektivisch nicht nur privat bleibt (User-Memory erwähnt Moneta
 
 ## 8. Status-Updates
 
-*(Wird beim Start und Abschluss jeder Sub-Phase ergänzt.)*
+- **2026-05-30 (Start):** Phase 28 begonnen. Entscheidung mit User: style-
+  unabhängige Teile (28.1–28.4) sofort, da README/ROADMAP-Inhalt nicht vom
+  Phase-27-Style-Overhaul abhängt; 28.5-Tiefen-Rewrites + finaler README-Pass
+  nach Phase 27. ROADMAP-Tiefe: kompakt + Links.
+- **2026-05-30:** 28.1 Bestandsaufnahme (§5), 28.2 README DE+EN, 28.3
+  PROJECT_ROADMAP (Übersichtstabelle 1–31), 28.4 Konzept-Status-Header
+  umgesetzt. Offene Frage F1 (README-Sprache): bleibt **DE + EN** (beide
+  README-Dateien gepflegt). F2 (ROADMAP-Tiefe): **kompakt + Links**.
+- **Offen:** 28.5 (Sonstige Docs sichten) + finaler README-Pass nach
+  Phase 27 (Style-abhängige Report-Beschreibungen).

@@ -1,6 +1,6 @@
 # Phase 29 – Plan-Generator-Konsistenz & Qualität
 
-**Status:** 📋 Konzept (18.05.2026)
+**Status:** ✅ Abgeschlossen (19.–20.05.2026)
 **Vorgänger:** Phase 25 (Layout-Refactor, läuft – Sub-Phase 25.8 als PR offen)
 **Nachfolger:** Phase 26 (Konsolidierungs-Logik) – wurde nach 29 verschoben
 **Branch-Schema:** `feature/phase-29-X-kurzbeschreibung` pro Sub-Phase

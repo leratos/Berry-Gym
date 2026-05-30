@@ -108,6 +108,7 @@ HomeGym ist eine Django-basierte Web-Applikation, die Krafttraining-Tracking mit
 - Berücksichtigt Equipment, Trainingshistorie & Frequenz
 - Echtzeit-Fortschrittsanzeige via Server-Sent Events (SSE Streaming)
 - Kontextbasierter Split-Typ (2–3×/Woche → Fullbody, 4× → PPL, 5–6× → 4er-Split)
+- **Adaptiv am Trainings-Report (Phase 30/31)**: Übertrainings-Caps & Untertrainiert-Coverage als Hard-Fail (Plan wird nicht gespeichert, wenn verletzt), Plateau-/Konsolidierungs-aware (kein Volumen-Push auf stagnierende Übungen), Plan-Beschreibung wird gegen den strukturierten Plan auf Konsistenz geprüft
 
 #### 3. Automatische Plan-Optimierung (Hybrid: Regelbasiert + KI)
 
@@ -291,7 +292,7 @@ Berry-Gym/
 │   └── homegym.nginx           # Nginx Reverse Proxy
 ├── docs/                       # Dokumentation
 │   ├── journal.txt             # Historische Importquelle (aktiv: Bramble-MCP)
-│   ├── PROJECT_ROADMAP.md      # Milestone-Roadmap (aktuell)
+│   ├── PROJECT_ROADMAP.md      # Phasen-Roadmap (Status Phasen 1–31)
 │   ├── DEPLOYMENT.md           # Production Deployment Guide
 │   ├── RUNBOOK.md              # Incident Response & Operations
 │   ├── CICD_GUIDE.md           # CI/CD Pipeline Guide
@@ -336,7 +337,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 | Testing | pytest, factory_boy, CI/CD |
 | ML | scikit-learn (lokale Gewichtsvorhersagen) |
 
-### Projekt-Statistiken (Version 1.0, Stand Feb 2026)
+### Projekt-Statistiken (Version 1.0, Stand Mai 2026)
 
 | Metrik | Wert |
 |--------|------|
@@ -355,7 +356,7 @@ Siehe **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** für detaillierte Anweisungen.
 
 Aktuelle Priorisierung und Umsetzungsstatus stehen in
 **[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)**
-(Milestone-basiert, Stand 24.02.2026).
+(Phasen-basiert, Stand 2026-05-30).
 
 ### Aktuell verfügbar (v1.0)
 
@@ -379,13 +380,18 @@ Aktuelle Priorisierung und Umsetzungsstatus stehen in
 - ✅ **Einzelplan-Aktivierung**: Pläne ohne Gruppe können direkt als aktiver Plan gesetzt werden
 - ✅ **KI-Planvalidierung**: 5 programmatische Post-Validierungen (Cross-Session-Duplikate, verbotene Kombinationen, anatomische Pflichtgruppen, Compound-vor-Isolation Auto-Fix, Pausenzeiten Auto-Fix)
 - ✅ **Kontextsensitive Empfehlungen**: Trainingsmodus-abhängige Empfehlungstexte, gruppenspezifische Volumen-Schwellenwerte (gross/mittel/klein/haltung), Wiederholungsbereich-Analyse mit Stacked-Progress-Bar
+- ✅ **Zeitfenster-Analysen (Phase 23)**: RPE/Volumen über 2-/4-Wochen-Fenster statt All-Time, effektives Volumen (nur RPE 7–9)
+- ✅ **Report-Konsistenz & Layout (Phase 24–25)**: Single-Source-of-Truth zwischen PDF-Report und Live-Statistiken, Report-Layout-Refactor
+- ✅ **Konsolidierungs-Stufen (Phase 26)**: zeitlich begrenzte Konsolidierung – „Bereit für PR-Versuch" bzw. „ungewöhnlich lange" statt pauschalem Plateau
+- ✅ **Adaptive Plan-Generierung (Phase 29–31)**: Übertrainings-Caps & Untertrainiert-Coverage als Hard-Fail, Plateau-/Konsolidierungs-Hints (kein Volumen-Push auf stagnierende Übungen), Ermüdungs-/Frequenz-/Push-Pull-Adaption, Konsistenz-Check der Plan-Beschreibung
 
 ### In Planung / Nächste Schritte
 
-- 🔥 **M5 – Coverage Sprint C**: gezielte Testvertiefung für Charts/Stats/Helpers
-- 🧠 **M6 – AI Endpoint Contract Hardening**: konsistente Fehlerverträge + zusätzliche Edge-Case-Tests
-- 🔐 **M7 – Security & Compliance Tightening**: Security-Findings-Prozess und Policy-Schärfung
-- 🔜 Danach: Operations-Reife (M8) und inkrementelles Refactoring (M9)
+- 🎨 **Phase 27 – Style-Overhaul**: einheitliches Farb-/Typo-/Icon-System für Web & PDF (Design-Entscheidungen stehen aus)
+- 📝 **Phase 28 – Dokumentations-Aktualisierung**: README, Roadmap & Konzept-Docs auf aktuellen Stand (läuft)
+- 🌐 **i18n-Nachzug**: Progression-/Plateau-Status-Labels auf gettext (DE/EN) umstellen
+
+> Vollständiger Phasen-Status (1–31) in **[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)**.
 
 ### Bekannte Limitierungen
 
@@ -394,7 +400,7 @@ Aktuelle Priorisierung und Umsetzungsstatus stehen in
 - Custom Übungen sind user-spezifisch (kein globales Sharing)
 - GNU gettext nicht zwingend erforderlich (MO-Kompilierung via polib)
 
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-05-30
 
 ---
 
