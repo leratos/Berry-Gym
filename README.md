@@ -290,13 +290,16 @@ Berry-Gym/
 │   ├── homegym.service         # Systemd Service (Gunicorn)
 │   └── homegym.nginx           # Nginx Reverse Proxy
 ├── docs/                       # Dokumentation
-│   ├── journal.txt             # Entwicklungstagbuch (laufend gepflegt)
+│   ├── journal.txt             # Historische Importquelle (aktiv: Bramble-MCP)
 │   ├── PROJECT_ROADMAP.md      # Milestone-Roadmap (aktuell)
 │   ├── DEPLOYMENT.md           # Production Deployment Guide
 │   ├── RUNBOOK.md              # Incident Response & Operations
 │   ├── CICD_GUIDE.md           # CI/CD Pipeline Guide
 │   ├── CODE_QUALITY.md         # Code Quality Standards
 │   └── LOAD_TESTING.md         # Locust SLO-Dokumentation
+├── .mcp.json                   # Bramble-MCP-Journal (Projektgedächtnis)
+├── AGENTS.md                   # Arbeitsanweisung für Coding-Agents
+├── CLAUDE.md                   # Claude-Code-Verweis auf AGENTS.md
 ├── README.md                   # Diese Datei (DE)
 ├── README_EN.md                # English README
 └── requirements.txt
@@ -392,6 +395,28 @@ Aktuelle Priorisierung und Umsetzungsstatus stehen in
 - GNU gettext nicht zwingend erforderlich (MO-Kompilierung via polib)
 
 **Last Updated:** 2026-03-26
+
+---
+
+## 🧠 Entwicklungs-Journal (Projektgedächtnis)
+
+Berry-Gym nutzt ein zentrales **Bramble-MCP-Journal** als aktives
+Projektgedächtnis für die LLM-gestützte Entwicklung. Es löst die frühere
+`docs/journal.txt` ab, die nur noch als historische Importquelle dient.
+
+- **Projekt-Schlüssel:** `berry-gym`
+- **Konfiguration:** [`.mcp.json`](.mcp.json) – HTTP-MCP-Server, Authentifizierung
+  über die Umgebungsvariable `BERRYGYM_TOKEN`
+- **Agent-Workflow:** siehe [`AGENTS.md`](AGENTS.md) und [`CLAUDE.md`](CLAUDE.md)
+
+Coding-Agents lesen zu Sitzungsbeginn den kuratierten Kontext
+(`journal_context`) und schreiben nach abgeschlossener Arbeit append-only
+Einträge (`journal_append`). Erlaubte Status-Werte: `in_arbeit`,
+`abgeschlossen`, `notiz`, `bugfix`. Bestehende Einträge werden nie geändert
+oder gelöscht – Korrekturen erfolgen als neuer Eintrag mit Referenz.
+
+> **Hinweis:** Ohne gültiges `BERRYGYM_TOKEN` sind die Journal-MCP-Tools nicht
+> verfügbar. Die Core-Features der Anwendung bleiben davon unberührt.
 
 ---
 
