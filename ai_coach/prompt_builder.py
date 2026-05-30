@@ -346,7 +346,7 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 ```json
 {
   "plan_name": "Beschreibender Name (z.B. '3er-Split: Push/Pull/Legs - Woche 1-4')",
-  "plan_description": "Kurze Beschreibung und Ziele",
+  "plan_description": "Kurze Beschreibung des Plan-KONZEPTS (Split-Typ, Periodisierung, Fokus-Themen) – KEINE quantitativen Coverage-Aussagen wie 'X Sätze' oder '≥N Arbeitssätze'",
   "duration_weeks": 12,
   "periodization": "linear | wellenfoermig | block",
   "target_profile": "kraft | hypertrophie | definition",
@@ -404,7 +404,8 @@ Deine Antwort MUSS ein valides JSON-Objekt sein:
 
 **Weitere Anforderungen:**
 - Berücksichtige die Schwachstellen und Trainingsziele
-- Achte auf realistische Satz/Wdh-Vorgaben basierend auf Historie"""
+- Achte auf realistische Satz/Wdh-Vorgaben basierend auf Historie
+- ⚠️ plan_description: Beschreibe NUR das Plan-Konzept (Split-Typ, Periodisierung, Fokus-Themen). Mache dort KEINE quantitativen Behauptungen über Schwachstellen-Coverage (z.B. "alle Pflicht-Schwachstellen mit ≥6 Arbeitssätzen abgedeckt") – das tatsächliche Satz-Volumen steht im strukturierten Plan, nicht in der Beschreibung. Solche Aussagen werden serverseitig entfernt, wenn der Plan sie nicht deckt."""
 
     def build_user_prompt(
         self,

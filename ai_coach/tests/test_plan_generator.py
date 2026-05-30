@@ -18,7 +18,7 @@ from django.utils import timezone
 
 import pytest
 
-from ai_coach.plan_generator import PlanGenerator
+from ai_coach.plan_generator import _DESCRIPTION_REPLACEMENT_SENTENCE, PlanGenerator
 from core.models import Plan, PlanUebung
 from core.tests.factories import SatzFactory, TrainingseinheitFactory, UebungFactory, UserFactory
 
@@ -2478,3 +2478,171 @@ class TestMainCliEntry:
                 runpy.run_module("ai_coach.plan_generator", run_name="__main__")
 
         assert exc.value.code == 2
+
+
+@pytest.mark.django_db
+class TestSanitizePlanDescription:
+    """Phase 31.3 Schicht B: _sanitize_plan_description ersetzt quantitative
+    Coverage-Behauptungen in plan_description, die der strukturierte Plan
+    nicht deckt.
+
+    Set-up: eine Bauch-Übung (muskelgruppe=BAUCH) mit konfigurierbarem
+    Satz-Volumen + die Pflicht-Schwäche "Bauch: Untertrainiert ...". Das
+    niedrigste Pflicht-Schwächen-Volumen (``floor``) ist damit = Bauch-Sätze.
+    """
+
+    WEAKNESS = "Bauch: Untertrainiert (aktuell 4 Sätze, Ziel min 6)"
+
+    def _gen_with_plan(self, description: str, bauch_sets: int):
+        UebungFactory(
+            bezeichnung="Crunch",
+            muskelgruppe="BAUCH",
+            gewichts_typ="KOERPERGEWICHT",
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json(
+            "Test",
+            [_make_session("Core", [_make_exercise("Crunch", sets=bauch_sets)])],
+        )
+        plan_json["plan_description"] = description
+        return gen, plan_json
+
+    def test_geq_arbeitssaetze_claim_unsupported_is_replaced(self):
+        """Muster '≥6 Arbeitssätze' – Plan hat nur 4 Sätze → ersetzt."""
+        gen, plan = self._gen_with_plan(
+            "Push/Pull/Legs-Split mit linearer Periodisierung. "
+            "Alle Pflicht-Schwachstellen sind mit ≥6 Arbeitssätzen abgedeckt.",
+            bauch_sets=4,
+        )
+        count = gen._sanitize_plan_description(plan, [self.WEAKNESS])
+        assert count == 1
+        assert "≥6 Arbeitssätzen" not in plan["plan_description"]
+        assert _DESCRIPTION_REPLACEMENT_SENTENCE in plan["plan_description"]
+        # Der legitime Konzept-Satz davor bleibt erhalten.
+        assert "Push/Pull/Legs-Split mit linearer Periodisierung." in plan["plan_description"]
+
+    def test_mit_n_saetzen_abgedeckt_claim_unsupported_is_replaced(self):
+        """Muster 'mit 6 Sätzen abgedeckt' – Plan hat nur 4 Sätze → ersetzt."""
+        gen, plan = self._gen_with_plan(
+            "Bauch ist mit 6 Sätzen abgedeckt.",
+            bauch_sets=4,
+        )
+        count = gen._sanitize_plan_description(plan, [self.WEAKNESS])
+        assert count == 1
+        assert "6 Sätzen" not in plan["plan_description"]
+        assert plan["plan_description"] == _DESCRIPTION_REPLACEMENT_SENTENCE
+
+    def test_mind_n_saetze_claim_unsupported_is_replaced(self):
+        """Muster 'mind. 6 Sätze' – Plan hat nur 4 Sätze → ersetzt."""
+        gen, plan = self._gen_with_plan(
+            "Jede Schwachstelle erhält mind. 6 Sätze.",
+            bauch_sets=4,
+        )
+        count = gen._sanitize_plan_description(plan, [self.WEAKNESS])
+        assert count == 1
+        assert "mind. 6 Sätze" not in plan["plan_description"]
+        assert _DESCRIPTION_REPLACEMENT_SENTENCE in plan["plan_description"]
+
+    def test_supported_claim_is_kept(self):
+        """Pass-Through: Behauptung stimmt (Plan hat 6 ≥ 6 Sätze) → unverändert."""
+        gen, plan = self._gen_with_plan(
+            "Alle Pflicht-Schwachstellen sind mit ≥6 Arbeitssätzen abgedeckt.",
+            bauch_sets=6,
+        )
+        original = plan["plan_description"]
+        count = gen._sanitize_plan_description(plan, [self.WEAKNESS])
+        assert count == 0
+        assert plan["plan_description"] == original
+
+    def test_non_coverage_set_statement_is_kept(self):
+        """Kein Coverage-Signal ('8 Sätze pro Hauptübung') → unverändert, auch
+        wenn die Zahl über dem Floor liegt (kein False-Positive)."""
+        gen, plan = self._gen_with_plan(
+            "Der Plan nutzt 8 Sätze pro Hauptübung für progressive Overload.",
+            bauch_sets=4,
+        )
+        original = plan["plan_description"]
+        count = gen._sanitize_plan_description(plan, [self.WEAKNESS])
+        assert count == 0
+        assert plan["plan_description"] == original
+
+    def test_no_weaknesses_means_floor_none_strikes_coverage_claim(self):
+        """Ohne Pflicht-Schwäche gibt es keine belegbare Untergrenze →
+        eine ≥N-Coverage-Behauptung ist nicht belegbar → ersetzt."""
+        gen, plan = self._gen_with_plan(
+            "Alle Pflicht-Schwachstellen sind mit ≥6 Arbeitssätzen abgedeckt.",
+            bauch_sets=4,
+        )
+        count = gen._sanitize_plan_description(plan, [])
+        assert count == 1
+        assert _DESCRIPTION_REPLACEMENT_SENTENCE in plan["plan_description"]
+
+    def test_empty_description_is_noop(self):
+        gen, plan = self._gen_with_plan("", bauch_sets=4)
+        count = gen._sanitize_plan_description(plan, [self.WEAKNESS])
+        assert count == 0
+        assert plan["plan_description"] == ""
+
+    def test_consecutive_unsupported_claims_collapse_to_single(self):
+        """Zwei aufeinanderfolgende widerlegte Aussagen → ein Ersatz-Satz."""
+        gen, plan = self._gen_with_plan(
+            "Alle Schwachstellen sind mit ≥6 Sätzen abgedeckt. "
+            "Bauch ist mit 8 Sätzen abgedeckt.",
+            bauch_sets=4,
+        )
+        count = gen._sanitize_plan_description(plan, [self.WEAKNESS])
+        assert count == 2
+        assert plan["plan_description"].count(_DESCRIPTION_REPLACEMENT_SENTENCE) == 1
+
+
+@pytest.mark.django_db
+class TestWeaknessSetFloor:
+    """Phase 31.3: _weakness_set_floor liefert das minimale Pflicht-Schwächen-
+    Satzvolumen im Plan bzw. None."""
+
+    def test_returns_min_over_multiple_weaknesses(self):
+        UebungFactory(bezeichnung="Crunch", muskelgruppe="BAUCH", gewichts_typ="KOERPERGEWICHT")
+        UebungFactory(
+            bezeichnung="Beincurl", muskelgruppe="BEINE_HAM", gewichts_typ="KOERPERGEWICHT"
+        )
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json(
+            "Test",
+            [
+                _make_session(
+                    "A",
+                    [
+                        _make_exercise("Crunch", sets=4),
+                        _make_exercise("Beincurl", sets=8),
+                    ],
+                )
+            ],
+        )
+        floor = gen._weakness_set_floor(
+            plan_json,
+            [
+                "Bauch: Untertrainiert (aktuell 4 Sätze, Ziel min 6)",
+                "Hamstrings: Untertrainiert (aktuell 8 Sätze, Ziel min 12)",
+            ],
+        )
+        assert floor == 4
+
+    def test_returns_none_without_weaknesses(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json("Test", [_make_session("A", [])])
+        assert gen._weakness_set_floor(plan_json, []) is None
+
+    def test_db_error_returns_none(self):
+        user = UserFactory()
+        gen = PlanGenerator(user_id=user.id)
+        plan_json = _make_plan_json("Test", [_make_session("A", [_make_exercise("Crunch")])])
+        with patch("core.models.Uebung.objects.filter", side_effect=Exception("db down")):
+            assert (
+                gen._weakness_set_floor(
+                    plan_json, ["Bauch: Untertrainiert (aktuell 4 Sätze, Ziel min 6)"]
+                )
+                is None
+            )

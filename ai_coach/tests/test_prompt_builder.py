@@ -72,6 +72,15 @@ def test_system_prompt_initialization_contains_rules():
     assert "JSON" in builder.system_prompt
 
 
+def test_system_prompt_forbids_quantitative_coverage_claims_in_description():
+    """Phase 31.3 Schicht A: Der System-Prompt weist das LLM an, in der
+    plan_description keine quantitativen Schwachstellen-Coverage-Aussagen zu
+    machen (z.B. '≥6 Arbeitssätze')."""
+    builder = PromptBuilder()
+    assert "plan_description" in builder.system_prompt
+    assert "KEINE quantitativen Behauptungen über Schwachstellen-Coverage" in builder.system_prompt
+
+
 def test_get_exercises_for_keys_success_and_exception(monkeypatch):
     builder = PromptBuilder()
 
