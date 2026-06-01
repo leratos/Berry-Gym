@@ -18,7 +18,72 @@ from django.conf import settings
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import font_manager as _fm
 from PIL import Image, ImageDraw, ImageFont
+
+# -----------------------------
+# Phase 27.6: Marken-Palette + Chart-Defaults (Konzept §A.3 / §E)
+# -----------------------------
+
+# Self-hosted Fonts für matplotlib registrieren – nur falls vorhanden (sonst
+# greift der DejaVu-Sans-Fallback; kein harter Fehler ohne die TTFs).
+_FONT_DIR = Path(__file__).resolve().parent / "static" / "core" / "fonts"
+for _font_file in (
+    "SourceSans3-Regular.ttf",
+    "SourceSans3-SemiBold.ttf",
+    "SourceSerif4-SemiBold.ttf",
+    "SourceSerif4-Bold.ttf",
+):
+    _font_path = _FONT_DIR / _font_file
+    if _font_path.exists():
+        try:
+            _fm.fontManager.addfont(str(_font_path))
+        except Exception:
+            pass
+
+# Marken-Tokens (identisch zu theme-styles.css / PDF-<style>).
+PRIMARY = "#8A2B66"
+STATUS = {
+    "success": "#2F7D5B",
+    "warning": "#CF9116",
+    "danger": "#A82E22",
+    "info": "#2C6E9B",
+    "secondary": "#6B6660",
+}
+# Gedämpfte Marken-Reihe statt zufälligem Bootstrap-Regenbogen (zyklisch).
+CATEGORICAL = [
+    "#8A2B66",
+    "#B85C90",
+    "#2C6E9B",
+    "#5AA0CE",
+    "#2F7D5B",
+    "#6B8E4E",
+    "#CF9116",
+    "#6B6660",
+]
+# Sequentielle Rampe Neutral→Berry (S/W-tauglich, rein über Helligkeit).
+BERRY_SEQ = ["#ECE9E6", "#E2B9D0", "#C26A9C", "#8A2B66"]
+
+# Globale Defaults: weißer Grund, warm-neutrale Achsen/Gridlines, Spines aus.
+# axes.grid bewusst NICHT global erzwungen (Pies/Heatmaps sollen kein Grid
+# bekommen) – nur Farbe/Stärke gesetzt, Charts aktivieren Grid selbst.
+plt.rcParams.update(
+    {
+        "figure.facecolor": "#FFFFFF",
+        "axes.facecolor": "#FFFFFF",
+        "axes.edgecolor": "#E2DFDA",
+        "axes.linewidth": 0.8,
+        "grid.color": "#E2DFDA",
+        "grid.linewidth": 0.6,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "text.color": "#1F2226",
+        "axes.labelcolor": "#6B6660",
+        "xtick.color": "#6B6660",
+        "ytick.color": "#6B6660",
+        "font.family": ["Source Sans 3", "DejaVu Sans"],
+    }
+)
 
 # -----------------------------
 # Helpers
@@ -28,7 +93,7 @@ from PIL import Image, ImageDraw, ImageFont
 def _rgba_to_hex(color):
     """(r,g,b[,a]) -> '#RRGGBB'"""
     if color is None:
-        return "#D9D9D9"
+        return "#D6D3CE"
     r, g, b = color[0], color[1], color[2]
     return f"#{int(r):02X}{int(g):02X}{int(b):02X}"
 
@@ -36,12 +101,12 @@ def _rgba_to_hex(color):
 def _status_to_rgba(status: str):
     """Mapping: Status -> RGBA Farbe."""
     if status == "optimal":
-        return (40, 167, 69, 255)  # Grün
+        return (47, 125, 91, 255)  # success #2F7D5B
     if status == "untertrainiert":
-        return (255, 193, 7, 255)  # Gelb
+        return (207, 145, 22, 255)  # warning #CF9116
     if status == "uebertrainiert":
-        return (220, 53, 69, 255)  # Rot
-    return (217, 217, 217, 255)  # Grau
+        return (168, 46, 34, 255)  # danger #A82E22
+    return (214, 211, 206, 255)  # nicht trainiert #D6D3CE
 
 
 def _find_muscle_svg_path() -> Path | None:
@@ -190,7 +255,7 @@ def _render_svg_muscle_map_png_base64(muskelgruppen_stats):
                 # Jetzt fill setzen
                 el.set("fill", fill_hex)
                 # Optional: kräftigere Kontur
-                el.set("stroke", "#333333")
+                el.set("stroke", "#1F2226")
                 el.set("stroke-width", "3")
 
     # SVG wieder serialisieren
@@ -199,7 +264,7 @@ def _render_svg_muscle_map_png_base64(muskelgruppen_stats):
     # Render to PNG
     # background_color: leicht grau wie im alten PNG (sonst transparent)
     png_bytes = cairosvg.svg2png(
-        bytestring=svg_bytes, output_width=1100, output_height=1024, background_color="#F5F5F5"
+        bytestring=svg_bytes, output_width=1100, output_height=1024, background_color="#F7F6F4"
     )
 
     return base64.b64encode(png_bytes).decode("utf-8")
@@ -549,13 +614,13 @@ def generate_muscle_heatmap(muskelgruppen_stats):
 
         # Farbe basierend auf Status
         if mg["status"] == "optimal":
-            colors.append("#28a745")  # Grün
+            colors.append("#2F7D5B")  # Grün
         elif mg["status"] == "untertrainiert":
-            colors.append("#ffc107")  # Gelb
+            colors.append("#CF9116")  # Gelb
         elif mg["status"] == "uebertrainiert":
-            colors.append("#dc3545")  # Rot
+            colors.append("#A82E22")  # Rot
         else:
-            colors.append("#6c757d")  # Grau
+            colors.append("#6B6660")  # Grau
 
     # Chart erstellen
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -585,18 +650,18 @@ def generate_muscle_heatmap(muskelgruppen_stats):
 
     # Referenzlinien für optimalen Bereich (12-20 Sätze für die meisten Muskelgruppen)
     ax.axvline(
-        x=12, color="green", linestyle="--", linewidth=1, alpha=0.5, label="Min. Optimal (12)"
+        x=12, color="#2F7D5B", linestyle="--", linewidth=1, alpha=0.5, label="Min. Optimal (12)"
     )
     ax.axvline(
-        x=20, color="green", linestyle="--", linewidth=1, alpha=0.5, label="Max. Optimal (20)"
+        x=20, color="#2F7D5B", linestyle="--", linewidth=1, alpha=0.5, label="Max. Optimal (20)"
     )
 
     # Legende
     legend_elements = [
-        mpatches.Patch(color="#28a745", label="Optimal"),
-        mpatches.Patch(color="#ffc107", label="Untertrainiert"),
-        mpatches.Patch(color="#dc3545", label="Übertrainiert"),
-        mpatches.Patch(color="#6c757d", label="Nicht trainiert"),
+        mpatches.Patch(color="#2F7D5B", label="Optimal"),
+        mpatches.Patch(color="#CF9116", label="Untertrainiert"),
+        mpatches.Patch(color="#A82E22", label="Übertrainiert"),
+        mpatches.Patch(color="#6B6660", label="Nicht trainiert"),
     ]
     ax.legend(
         handles=legend_elements,
@@ -650,12 +715,12 @@ def generate_volume_chart(volumen_wochen):
         volumen,
         marker="o",
         linewidth=2,
-        color="#6c757d",
+        color="#6B6660",
         markersize=6,
         label="Tonnage gesamt",
         alpha=0.7,
     )
-    ax.fill_between(x, volumen, alpha=0.15, color="#6c757d")
+    ax.fill_between(x, volumen, alpha=0.15, color="#6B6660")
 
     # Phase 23.2: Effektives Volumen als Hauptlinie (kräftig blau)
     if any(effektiv):
@@ -664,7 +729,7 @@ def generate_volume_chart(volumen_wochen):
             effektiv,
             marker="s",
             linewidth=2.5,
-            color="#0d6efd",
+            color="#8A2B66",
             markersize=7,
             label="Effektives Volumen (RPE 7-9)",
         )
@@ -678,8 +743,8 @@ def generate_volume_chart(volumen_wochen):
             deload_y,
             marker="D",
             s=120,
-            color="#ffc107",
-            edgecolors="#333",
+            color="#CF9116",
+            edgecolors="#1F2226",
             linewidths=1.5,
             zorder=5,
             label="Deload",
@@ -694,7 +759,7 @@ def generate_volume_chart(volumen_wochen):
             list(ma_x),
             list(ma),
             linewidth=2,
-            color="#ff6b6b",
+            color="#B85C90",
             linestyle="--",
             label="Ø 4 Wochen",
             alpha=0.8,
@@ -718,7 +783,7 @@ def generate_volume_chart(volumen_wochen):
             va="bottom",
             fontsize=8,
             fontweight="bold",
-            color="#856404" if deload_flags[i] else "#333",
+            color="#1F2226" if deload_flags[i] else "#1F2226",
         )
 
     # Y-Achse: extra Platz oben für Labels (Fix: Beschriftung wird nicht abgeschnitten)
@@ -758,7 +823,7 @@ def generate_push_pull_pie(push_saetze, pull_saetze):
 
     labels = ["Push", "Pull"]
     sizes = [push_saetze, pull_saetze]
-    colors = ["#ff6b6b", "#4ecdc4"]
+    colors = ["#B85C90", "#2C6E9B"]
     explode = (0.05, 0.05)
 
     wedges, texts, autotexts = ax.pie(
@@ -835,14 +900,14 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
         gewicht,
         marker="o",
         linewidth=2,
-        color="#0d6efd",
+        color="#8A2B66",
         markersize=6,
         label="Gewicht (kg)",
         zorder=3,
     )
-    ax1.fill_between(x, gewicht, min(gewicht) - 1, alpha=0.1, color="#0d6efd")
-    ax1.set_ylabel("Gewicht (kg)", color="#0d6efd", fontsize=9)
-    ax1.tick_params(axis="y", labelcolor="#0d6efd")
+    ax1.fill_between(x, gewicht, min(gewicht) - 1, alpha=0.1, color="#8A2B66")
+    ax1.set_ylabel("Gewicht (kg)", color="#8A2B66", fontsize=9)
+    ax1.tick_params(axis="y", labelcolor="#8A2B66")
 
     # KFA % – rechte Achse
     kfa_x = [i for i, v in enumerate(kfa) if v is not None]
@@ -853,7 +918,7 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
             kfa_y,
             marker="s",
             linewidth=1.5,
-            color="#dc3545",
+            color="#A82E22",
             markersize=5,
             linestyle="--",
             label="KFA %",
@@ -869,7 +934,7 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
             muskel_y,
             marker="^",
             linewidth=1.5,
-            color="#198754",
+            color="#2F7D5B",
             markersize=5,
             linestyle="-.",
             label="Muskeln %",
@@ -961,7 +1026,7 @@ def generate_training_heatmap(training_dates: list[dict]) -> str | None:
     from matplotlib.colors import LinearSegmentedColormap
 
     cmap = LinearSegmentedColormap.from_list(
-        "training", ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"]
+        "training", ["#ECE9E6", "#E2B9D0", "#C26A9C", "#8A2B66"]
     )
 
     im = ax.imshow(grid, cmap=cmap, aspect="equal", vmin=0, vmax=1)
@@ -1020,9 +1085,9 @@ def generate_exercise_progression_chart(exercise_data: list[dict]) -> str | None
 
     x = range(len(dates))
     ax.plot(
-        x, max_weights, marker="o", linewidth=2, color="#0d6efd", markersize=5, label="Max Gewicht"
+        x, max_weights, marker="o", linewidth=2, color="#8A2B66", markersize=5, label="Max Gewicht"
     )
-    ax.fill_between(x, max_weights, min(max_weights) - 1, alpha=0.15, color="#0d6efd")
+    ax.fill_between(x, max_weights, min(max_weights) - 1, alpha=0.15, color="#8A2B66")
 
     # Trend line
     if len(max_weights) >= 3:
@@ -1032,7 +1097,7 @@ def generate_exercise_progression_chart(exercise_data: list[dict]) -> str | None
             list(x),
             [p(i) for i in x],
             "--",
-            color="#dc3545",
+            color="#A82E22",
             linewidth=1.5,
             alpha=0.7,
             label="Trend",
@@ -1076,9 +1141,9 @@ def generate_rpe_donut(rpe_verteilung: dict, avg_rpe: float = 0.0) -> str | None
     colors = []
 
     mapping = [
-        ("leicht", "Leicht (RPE 1-6)", "#28a745"),
-        ("mittel", "Mittel (RPE 7-8)", "#ffc107"),
-        ("schwer", "Schwer (RPE 9-10)", "#dc3545"),
+        ("leicht", "Leicht (RPE 1-6)", "#2F7D5B"),
+        ("mittel", "Mittel (RPE 7-8)", "#CF9116"),
+        ("schwer", "Schwer (RPE 9-10)", "#A82E22"),
     ]
 
     for key, label, color in mapping:
