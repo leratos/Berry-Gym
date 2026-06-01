@@ -333,7 +333,7 @@
                                     {% elif item.status == 'pause' %}
                                     title="{% trans 'Diese Übung wurde in den letzten 4 Wochen nicht trainiert' %}"
                                     {% endif %}>
-                                    {{ item.status_label }}
+                                    {% if item.status_icon %}<i class="bi {{ item.status_icon }}" aria-hidden="true"></i> {% endif %}{{ item.status_label }}
                                 </span>
                             </td>
                         </tr>

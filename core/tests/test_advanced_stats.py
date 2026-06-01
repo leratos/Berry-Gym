@@ -806,6 +806,22 @@ class TestProgressionClassification(StatsTestBase):
         result = classify_progression_status(self._alle_saetze(), None)
         self.assertEqual(result["status"], "no_data")
 
+    def test_status_icon_and_glyph_populated_and_no_emoji(self):
+        """Phase 27.4: Jeder Status liefert ein Bootstrap-Icon (live) + einen
+        Unicode-Glyph (PDF); status_label trägt kein Emoji mehr."""
+        nd = classify_progression_status(self._alle_saetze(), None)
+        self.assertTrue(nd["status_icon"].startswith("bi-"))
+        self.assertTrue(nd["status_glyph"])
+        self.assertEqual(nd["status_label"], "Keine Daten")
+
+        self._add_session(days_ago=20, gewicht=70)
+        self._add_session(days_ago=2, gewicht=80)  # frischer PR
+        res = self._classify()
+        self.assertEqual(res["status"], "active_progression")
+        self.assertEqual(res["status_icon"], "bi-graph-up-arrow")
+        self.assertEqual(res["status_glyph"], "▲")
+        self.assertEqual(res["status_label"], "Aktive Progression")
+
     def test_active_progression_when_recent_pr(self):
         """PR ≤ 7 Tage alt → active_progression."""
         self._add_session(days_ago=20, gewicht=70)  # älter, niedriger

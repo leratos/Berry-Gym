@@ -150,6 +150,52 @@ def compute_progression_rate(
     return rate, history_days
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 27.4: Status → Form (Single Source der §C-Zuordnung des Style-Konzepts).
+# Live nutzt Bootstrap-Icons, PDF Unicode-Geometrie. Emoji sind aus den Labels
+# entfernt; die FORM trägt das Icon/Glyph, die BEDEUTUNG das Textlabel daneben.
+# consolidation_ready/_overlong sind vorausschauend gemappt (Phase 26), damit
+# der Merge mit der Phase-26-Branch keine Lücke hinterlässt.
+# ─────────────────────────────────────────────────────────────────────────────
+_PROGRESSION_STATUS_ICON = {
+    "active_progression": "bi-graph-up-arrow",
+    "active_progression_paused": "bi-graph-up-arrow",
+    "observe": "bi-eye",
+    "pause": "bi-pause-circle",
+    "consolidation": "bi-arrow-left-right",
+    "consolidation_ready": "bi-arrow-up-circle",
+    "consolidation_overlong": "bi-hourglass-split",
+    "plateau_light": "bi-dash-circle",
+    "plateau": "bi-exclamation-triangle-fill",
+    "plateau_long": "bi-x-octagon-fill",
+    "regression": "bi-graph-down-arrow",
+    "no_data": "bi-question-circle",
+}
+_PROGRESSION_STATUS_GLYPH = {
+    "active_progression": "▲",
+    "active_progression_paused": "▲",
+    "observe": "○",
+    "pause": "‖",
+    "consolidation": "◇",
+    "consolidation_ready": "◆",
+    "consolidation_overlong": "◆",
+    "plateau_light": "◆",
+    "plateau": "■",
+    "plateau_long": "✕",
+    "regression": "▼",
+    "no_data": "·",
+}
+
+
+def _finalize_progression(result: dict) -> dict:
+    """Phase 27.4: ergänzt ``status_icon`` (Bootstrap-Icon, live) und
+    ``status_glyph`` (Unicode-Geometrie, PDF) anhand des Status-Keys."""
+    status = result.get("status", "no_data")
+    result["status_icon"] = _PROGRESSION_STATUS_ICON.get(status, "")
+    result["status_glyph"] = _PROGRESSION_STATUS_GLYPH.get(status, "")
+    return result
+
+
 def classify_progression_status(
     uebung_saetze,
     pr_satz,
@@ -206,7 +252,7 @@ def classify_progression_status(
 
     result = {
         "status": "no_data",
-        "status_label": "📊 Keine Daten",
+        "status_label": "Keine Daten",
         "status_farbe": "secondary",
         "days_since_pr": None,
         "rpe_first_half": None,
@@ -218,7 +264,7 @@ def classify_progression_status(
     }
 
     if not pr_satz or not pr_satz.gewicht or not getattr(pr_satz, "einheit", None):
-        return result
+        return _finalize_progression(result)
 
     pr_date = pr_satz.einheit.datum
     days_since_pr = (reference_date.date() - pr_date.date()).days
@@ -244,25 +290,25 @@ def classify_progression_status(
         result["weight_drop_pct"] is not None
         and result["weight_drop_pct"] > REGRESSION_WEIGHT_DROP_PCT
     ):
-        result.update(status="regression", status_label="⚠️ Rückschritt", status_farbe="danger")
-        return result
+        result.update(status="regression", status_label="Rückschritt", status_farbe="danger")
+        return _finalize_progression(result)
 
     # 2) Frischer PR
     if days_since_pr <= 7:
         result.update(
             status="active_progression",
-            status_label="✅ Aktive Progression",
+            status_label="Aktive Progression",
             status_farbe="success",
         )
-        return result
+        return _finalize_progression(result)
     if days_since_pr <= 14:
-        result.update(status="observe", status_label="👀 Beobachten", status_farbe="info")
-        return result
+        result.update(status="observe", status_label="Beobachten", status_farbe="info")
+        return _finalize_progression(result)
 
     # 3) Pause: zu wenig aktuelle Sätze, kein Regressions-Signal
     if result["cur_4w_n"] < PAUSE_MIN_CUR_SETS:
-        result.update(status="pause", status_label="⏸️ Pause", status_farbe="secondary")
-        return result
+        result.update(status="pause", status_label="Pause", status_farbe="secondary")
+        return _finalize_progression(result)
 
     # 4) Konsolidierung: RPE-Trend in den letzten 4w vergleichen.
     rpe_saetze = [s for s in cur_saetze if s.rpe is not None and s.gewicht]
@@ -278,10 +324,10 @@ def classify_progression_status(
         if delta >= CONSOLIDATION_RPE_DELTA:
             result.update(
                 status="consolidation",
-                status_label="💪 Konsolidierung (RPE sinkt)",
+                status_label="Konsolidierung (RPE sinkt)",
                 status_farbe="info",
             )
-            return result
+            return _finalize_progression(result)
 
     # Phase 24.5: Override – starke Steigerungsrate schlägt Plateau-Klassifikation.
     # Greift NACH Konsolidierung (RPE sinkt hat Vorrang) und VOR der reinen
@@ -303,27 +349,25 @@ def classify_progression_status(
         if rate_pct >= PROGRESSION_RATE_OVERRIDE_PCT:
             result.update(
                 status="active_progression_paused",
-                status_label="📈 Aktive Progression (PR-Pause)",
+                status_label="Aktive Progression (PR-Pause)",
                 status_farbe="success",
                 progression_rate_pct=rate_pct,
             )
-            return result
+            return _finalize_progression(result)
         result["progression_rate_pct"] = rate_pct
 
     # 5) Plateau nach Tagen seit PR
     if days_since_pr <= 42:
         result.update(
             status="plateau_light",
-            status_label="⚠️ Leichtes Plateau",
+            status_label="Leichtes Plateau",
             status_farbe="warning",
         )
     elif days_since_pr <= 84:
-        result.update(status="plateau", status_label="🔴 Plateau", status_farbe="danger")
+        result.update(status="plateau", status_label="Plateau", status_farbe="danger")
     else:
-        result.update(
-            status="plateau_long", status_label="❌ Langzeit-Plateau", status_farbe="danger"
-        )
-    return result
+        result.update(status="plateau_long", status_label="Langzeit-Plateau", status_farbe="danger")
+    return _finalize_progression(result)
 
 
 def calculate_plateau_analysis(alle_saetze, top_uebungen):
