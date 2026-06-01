@@ -2144,6 +2144,8 @@ def _calc_plateau_live(user) -> list[dict]:
                 "status": classification["status"],
                 "status_label": classification["status_label"],
                 "status_farbe": classification["status_farbe"],
+                "status_icon": classification["status_icon"],
+                "status_glyph": classification["status_glyph"],
                 # Backwards-Compat-Alias für ältere Templates (Phase 21.3):
                 "farbe": classification["status_farbe"],
                 "letzter_pr_datum": pr_datum.strftime("%d.%m.%Y"),

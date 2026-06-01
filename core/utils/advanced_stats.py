@@ -432,6 +432,8 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
                 "status": classification["status"],
                 "status_label": classification["status_label"],
                 "status_farbe": classification["status_farbe"],
+                "status_icon": classification["status_icon"],
+                "status_glyph": classification["status_glyph"],
                 "rpe_first_half": classification["rpe_first_half"],
                 "rpe_second_half": classification["rpe_second_half"],
                 "rpe_delta": classification["rpe_delta"],
