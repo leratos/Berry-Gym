@@ -7,6 +7,39 @@
    literale Hex im PDF-<style> (xhtml2pdf kann kein var()).
    Regel: keine neuen Farben erfinden – nur diese Tokens verwenden.
    ============================================================ */
+
+/* Phase 27.3 – Self-hosted Schriften (Source Serif 4 / Source Sans 3).
+   Dateien: core/static/core/fonts/ (siehe dortige README). Fehlen sie,
+   greift der Fallback-Stack (Georgia / Segoe UI) – font-display:swap. */
+@font-face {
+    font-family: 'Source Serif 4';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/SourceSerif4-SemiBold.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Source Serif 4';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/SourceSerif4-Bold.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/SourceSans3-Regular.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/SourceSans3-SemiBold.ttf') format('truetype');
+}
+
 :root {
     /* Marken-Rampe "Berry" */
     --berry-900: #4A1638;
@@ -38,6 +71,20 @@
     --border: #E2DFDA;
     --text: #1F2226;
     --text-muted: #6B6660;
+
+    /* Phase 27.3 – Schrift-Stacks (Self-host + Fallback) */
+    --font-heading: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Phase 27.5 – Spacing-/Radius-Skala (§D) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --radius-card: 10px;
+    --radius-control: 6px;
 }
 
 /* Light-Theme: warme Neutrale auch in Bootstraps eigene Body-Variablen
@@ -237,6 +284,41 @@
     filter: brightness(0.94);
 }
 
+/* ------------------------------------------------------------
+   Phase 27.3 – Typografie-Anwendung
+   Editoriale Serife für große Headings (premium), humanistische
+   Sans für Body/UI/Daten. Größen bleiben vorerst bei Bootstrap-
+   Defaults (nur Familie/Gewicht) – Feintuning der rem-Staffel nach
+   Visual-Check. Stat-Value zusätzlich mit tabellarischen Ziffern.
+   ------------------------------------------------------------ */
+body {
+    font-family: var(--font-body);
+}
+
+h1, h2, .h1, .h2,
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+    font-family: var(--font-heading);
+}
+
+h3, h4, h5, h6, .h3, .h4, .h5, .h6 {
+    font-family: var(--font-body);
+    font-weight: 600;
+}
+
+/* ------------------------------------------------------------
+   Phase 27.5 – Karten: subtiler Schatten (live), Radius-Token.
+   (PDF nutzt stattdessen 1px-Border – kein box-shadow in xhtml2pdf.)
+   ------------------------------------------------------------ */
+.card,
+.card-stat {
+    border-radius: var(--radius-card);
+    box-shadow: 0 1px 3px rgba(20, 15, 18, 0.10);
+}
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .card-stat {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
+}
+
 /* Card Stats - Theme-aware */
 .card-stat {
     border: none;
@@ -296,8 +378,10 @@
 }
 
 .stat-value {
-    font-size: 1.5rem;
-    font-weight: bold;
+    font-family: var(--font-body);
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
 
 /* List Group Items - Theme-aware */
