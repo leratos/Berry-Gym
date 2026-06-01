@@ -11,6 +11,8 @@ Abdeckung:
 """
 
 import base64
+from datetime import date
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
@@ -19,6 +21,8 @@ from core.chart_generator import (
     _rgba_to_hex,
     _status_to_rgba,
     generate_body_map_with_data,
+    generate_body_trend_chart,
+    generate_exercise_progression_chart,
     generate_muscle_heatmap,
     generate_push_pull_pie,
     generate_volume_chart,
@@ -27,7 +31,8 @@ from core.chart_generator import (
 
 class TestRgbaToHex(TestCase):
     def test_none_gibt_grau(self):
-        self.assertEqual(_rgba_to_hex(None), "#D9D9D9")
+        # Phase 27.6: warm-neutrales "nicht trainiert"-Grau (#D6D3CE) statt #D9D9D9
+        self.assertEqual(_rgba_to_hex(None), "#D6D3CE")
 
     def test_rot(self):
         self.assertEqual(_rgba_to_hex((255, 0, 0)), "#FF0000")
@@ -52,12 +57,13 @@ class TestStatusToRgba(TestCase):
         self.assertGreater(g, r)
         self.assertGreater(g, b)
 
-    def test_untertrainiert_ist_gelb(self):
+    def test_untertrainiert_ist_warning_amber(self):
         r, g, b, a = _status_to_rgba("untertrainiert")
-        # Gelb = hoher R + G, niedriges B
-        self.assertGreater(r, 200)
-        self.assertGreater(g, 150)
-        self.assertLess(b, 50)
+        # Phase 27.6: Warning-Amber (#CF9116 = 207,145,22) statt Bootstrap-Gelb
+        self.assertGreater(r, g)  # warm: R > G
+        self.assertGreater(g, b)  # G > B
+        self.assertGreater(r, 150)
+        self.assertLess(b, 60)
 
     def test_uebertrainiert_ist_rot(self):
         r, g, b, a = _status_to_rgba("uebertrainiert")
@@ -269,4 +275,76 @@ class TestGeneratePushPullPie(TestCase):
 
     def test_gleich_viel_push_und_pull(self):
         result = generate_push_pull_pie(push_saetze=15, pull_saetze=15)
+        self.assertIsNotNone(result)
+
+
+class TestGenerateBodyTrendChart(TestCase):
+    """Phase 27.6: Körperwerte-Trend-Chart (Berry-Primary für Gewichtskurve)."""
+
+    def _werte(self, n=3):
+        # KoerperWerte-ähnliche Objekte: .datum, .gewicht, .koerperfett_prozent, .muskelmasse_prozent
+        return [
+            SimpleNamespace(
+                datum=date(2026, 1, 1 + i),
+                gewicht=80.0 - i,
+                koerperfett_prozent=18.0 - i * 0.1,
+                muskelmasse_prozent=40.0 + i * 0.1,
+            )
+            for i in range(n)
+        ]
+
+    def test_zu_wenig_daten_gibt_none(self):
+        self.assertIsNone(generate_body_trend_chart([]))
+        self.assertIsNone(generate_body_trend_chart(self._werte(1)))
+
+    def test_gibt_base64_png_zurueck(self):
+        result = generate_body_trend_chart(self._werte(3))
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, str)
+        decoded = base64.b64decode(result)
+        self.assertEqual(decoded[:4], b"\x89PNG")
+
+    def test_ohne_kfa_und_muskel(self):
+        # KFA/Muskel None → nur Gewichtskurve (linke Achse) wird gezeichnet
+        werte = [
+            SimpleNamespace(
+                datum=date(2026, 1, 1),
+                gewicht=80.0,
+                koerperfett_prozent=None,
+                muskelmasse_prozent=None,
+            ),
+            SimpleNamespace(
+                datum=date(2026, 1, 8),
+                gewicht=79.0,
+                koerperfett_prozent=None,
+                muskelmasse_prozent=None,
+            ),
+        ]
+        result = generate_body_trend_chart(werte)
+        self.assertIsNotNone(result)
+
+
+class TestGenerateExerciseProgressionChart(TestCase):
+    """Phase 27.6: Übungs-Progressions-Chart (Berry-Primary + Trend in Danger)."""
+
+    DATA = [
+        {"datum": "01.01.26", "gewicht": 100.0, "max_gewicht": 100.0},
+        {"datum": "08.01.26", "gewicht": 102.5, "max_gewicht": 102.5},
+        {"datum": "15.01.26", "gewicht": 105.0, "max_gewicht": 105.0},
+    ]
+
+    def test_zu_wenig_daten_gibt_none(self):
+        self.assertIsNone(generate_exercise_progression_chart([]))
+        self.assertIsNone(generate_exercise_progression_chart(self.DATA[:1]))
+
+    def test_gibt_base64_png_zurueck(self):
+        result = generate_exercise_progression_chart(self.DATA)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, str)
+        decoded = base64.b64decode(result)
+        self.assertEqual(decoded[:4], b"\x89PNG")
+
+    def test_zwei_punkte_ohne_trendlinie(self):
+        # < 3 Punkte → keine Trendlinie, aber valides PNG
+        result = generate_exercise_progression_chart(self.DATA[:2])
         self.assertIsNotNone(result)

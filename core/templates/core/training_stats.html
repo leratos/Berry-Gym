@@ -145,9 +145,9 @@
                 </h6>
                 <canvas id="volumenChart" style="max-height: 300px;"></canvas>
                 <div class="d-flex align-items-center gap-2 mt-2">
-                    <span style="width:12px;height:12px;border-radius:50%;background:#198754;display:inline-block;"></span>
+                    <span style="width:12px;height:12px;border-radius:50%;background:#4FB286;display:inline-block;"></span>
                     <small class="text-muted">{% trans "Normal" %}</small>
-                    <span style="width:12px;height:12px;border-radius:50%;background:#ffc107;display:inline-block;margin-left:8px;"></span>
+                    <span style="width:12px;height:12px;border-radius:50%;background:#E0A93D;display:inline-block;margin-left:8px;"></span>
                     <small class="text-muted">{% trans "Deload" %}</small>
                 </div>
             </div>
@@ -240,7 +240,7 @@
                         <div id="svgBalanceWrapper" style="max-width: 100%; height: 400px; overflow: hidden;"></div>
                         <div class="text-center mt-2">
                             <small class="text-muted">
-                                <span style="display: inline-block; width: 40px; height: 12px; background: linear-gradient(to right, #d9d9d9, #ff0000); border: 1px solid #666; border-radius: 2px; vertical-align: middle;"></span>
+                                <span style="display: inline-block; width: 40px; height: 12px; background: linear-gradient(to right, #D6D3CE, #ff0000); border: 1px solid #666; border-radius: 2px; vertical-align: middle;"></span>
                                 <span class="ms-2">{% trans "Niedrig → Hoch" %}</span>
                             </small>
                         </div>
@@ -257,7 +257,7 @@
                 </h6>
                 <canvas id="muskelSollChart" style="max-height: 400px;"></canvas>
                 <div class="d-flex align-items-center gap-3 mt-2">
-                    <span style="width:12px;height:12px;background:#0d6efd;display:inline-block;border-radius:2px;"></span>
+                    <span style="width:12px;height:12px;background:#8A2B66;display:inline-block;border-radius:2px;"></span>
                     <small class="text-muted">{% trans "Ist-Sätze" %}</small>
                     <span style="width:12px;height:12px;background:rgba(25,135,84,0.25);display:inline-block;border-radius:2px;margin-left:8px;"></span>
                     <small class="text-muted">{% trans "Soll-Bereich" %}</small>
@@ -333,7 +333,7 @@
                                     {% elif item.status == 'pause' %}
                                     title="{% trans 'Diese Übung wurde in den letzten 4 Wochen nicht trainiert' %}"
                                     {% endif %}>
-                                    {{ item.status_label }}
+                                    {% if item.status_icon %}<i class="bi {{ item.status_icon }}" aria-hidden="true"></i> {% endif %}{{ item.status_label }}
                                 </span>
                             </td>
                         </tr>
@@ -396,9 +396,9 @@
                 <div id="heatmap" style="min-height: 150px;"></div>
                 <small class="text-muted d-block mt-2 text-center">
                     <i class="bi bi-square-fill text-secondary me-1" style="font-size: 0.6rem;"></i> {% trans "Kein Training" %}
-                    <i class="bi bi-square-fill ms-3" style="color: rgba(25, 135, 84, 0.3); font-size: 0.6rem;"></i> {% trans "1 Training" %}
-                    <i class="bi bi-square-fill" style="color: rgba(25, 135, 84, 0.6); font-size: 0.6rem;"></i> {% trans "2 Trainings" %}
-                    <i class="bi bi-square-fill" style="color: rgba(25, 135, 84, 1); font-size: 0.6rem;"></i> {% trans "3+ Trainings" %}
+                    <i class="bi bi-square-fill ms-3" style="color: rgba(79, 178, 134, 0.3); font-size: 0.6rem;"></i> {% trans "1 Training" %}
+                    <i class="bi bi-square-fill" style="color: rgba(79, 178, 134, 0.6); font-size: 0.6rem;"></i> {% trans "2 Trainings" %}
+                    <i class="bi bi-square-fill" style="color: rgba(79, 178, 134, 1); font-size: 0.6rem;"></i> {% trans "3+ Trainings" %}
                 </small>
             </div>
         </div>
@@ -464,16 +464,16 @@
     const chartDefaults = {
         responsive: true,
         maintainAspectRatio: true,
-        plugins: { legend: { display: true, labels: { color: '#adb5bd' } } },
+        plugins: { legend: { display: true, labels: { color: '#A8A29A' } } },
         scales: {
-            x: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' } },
-            y: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' }, beginAtZero: true }
+            x: { ticks: { color: '#A8A29A' }, grid: { color: '#3A4047' } },
+            y: { ticks: { color: '#A8A29A' }, grid: { color: '#3A4047' }, beginAtZero: true }
         }
     };
 
     const deloadFlags = {{ deload_flags_json|safe }};
-    const pointColors = deloadFlags.map(d => d ? '#ffc107' : '#198754');
-    const pointBorders = deloadFlags.map(d => d ? '#ffc107' : '#198754');
+    const pointColors = deloadFlags.map(d => d ? '#E0A93D' : '#4FB286');
+    const pointBorders = deloadFlags.map(d => d ? '#E0A93D' : '#4FB286');
     const pointRadii = deloadFlags.map(d => d ? 6 : 4);
 
     new Chart(document.getElementById('volumenChart'), {
@@ -483,15 +483,15 @@
             datasets: [{
                 label: '{% trans "Volumen (kg)" %}',
                 data: {{ volumen_data_json|safe }},
-                borderColor: '#198754',
-                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                borderColor: '#4FB286',
+                backgroundColor: 'rgba(79, 178, 134, 0.1)',
                 tension: 0.3, fill: true,
                 pointRadius: pointRadii,
                 pointHoverRadius: 8,
                 pointBackgroundColor: pointColors,
                 pointBorderColor: pointBorders,
                 segment: {
-                    borderColor: ctx => deloadFlags[ctx.p0DataIndex] || deloadFlags[ctx.p1DataIndex] ? '#ffc10766' : '#198754',
+                    borderColor: ctx => deloadFlags[ctx.p0DataIndex] || deloadFlags[ctx.p1DataIndex] ? '#E0A93D66' : '#4FB286',
                     borderDash: ctx => deloadFlags[ctx.p0DataIndex] || deloadFlags[ctx.p1DataIndex] ? [5, 5] : [],
                 }
             }]
@@ -504,10 +504,10 @@
     const weeklyEffectiveData = {{ weekly_effective_data_json|safe }};
     const aktuelleKw = "{{ aktuelle_kw }}";
     const weeklyColors = weeklyLabels.map(label =>
-        label === aktuelleKw ? 'rgba(13, 202, 240, 0.35)' : '#0dcaf0'
+        label === aktuelleKw ? 'rgba(90, 160, 206, 0.35)' : '#5AA0CE'
     );
     const weeklyBorderColors = weeklyLabels.map(label =>
-        label === aktuelleKw ? 'rgba(13, 202, 240, 0.6)' : '#0dcaf0'
+        label === aktuelleKw ? 'rgba(90, 160, 206, 0.6)' : '#5AA0CE'
     );
 
     new Chart(document.getElementById('weeklyChart'), {
@@ -529,11 +529,11 @@
                     type: 'line',
                     label: '{% trans "Effektives Volumen (RPE 7-9)" %}',
                     data: weeklyEffectiveData,
-                    borderColor: '#fd7e14',
-                    backgroundColor: 'rgba(253, 126, 20, 0.15)',
+                    borderColor: '#6B8E4E',
+                    backgroundColor: 'rgba(107, 142, 78, 0.15)',
                     borderWidth: 2,
                     pointRadius: 3,
-                    pointBackgroundColor: '#fd7e14',
+                    pointBackgroundColor: '#6B8E4E',
                     tension: 0.25,
                     fill: false,
                     order: 1
@@ -543,7 +543,7 @@
         options: {
             ...chartDefaults,
             plugins: {
-                legend: { display: true, labels: { color: '#adb5bd', font: { size: 11 } } },
+                legend: { display: true, labels: { color: '#A8A29A', font: { size: 11 } } },
                 tooltip: {
                     callbacks: {
                         afterBody: function(items) {
@@ -570,9 +570,9 @@
                 label: '{% trans "Effektive Wiederholungen" %}',
                 data: {{ mg_data_json|safe }},
                 backgroundColor: [
-                    '#0d6efd','#6610f2','#6f42c1','#d63384',
-                    '#dc3545','#fd7e14','#ffc107','#198754',
-                    '#20c997','#0dcaf0','#6c757d','#adb5bd'
+                    '#8A2B66','#B85C90','#2C6E9B','#5AA0CE',
+                    '#2F7D5B','#6B8E4E','#CF9116','#6B6660',
+                    '#8A2B66','#B85C90','#2C6E9B','#5AA0CE'
                 ],
                 borderWidth: 0
             }]
@@ -581,8 +581,8 @@
             responsive: true, maintainAspectRatio: true, indexAxis: 'y',
             plugins: { legend: { display: false } },
             scales: {
-                x: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' }, beginAtZero: true },
-                y: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' } }
+                x: { ticks: { color: '#A8A29A' }, grid: { color: '#3A4047' }, beginAtZero: true },
+                y: { ticks: { color: '#A8A29A' }, grid: { color: '#3A4047' } }
             }
         }
     });
@@ -595,9 +595,9 @@
         const sollMin = muskelSollData.map(d => d.soll_min);
         const sollMax = muskelSollData.map(d => d.soll_max);
         const barColors = muskelSollData.map(d => {
-            if (d.status === 'unter') return '#dc3545';
-            if (d.status === 'ueber') return '#ffc107';
-            return '#0d6efd';
+            if (d.status === 'unter') return '#E0685C';
+            if (d.status === 'ueber') return '#E0A93D';
+            return '#8A2B66';
         });
 
         new Chart(document.getElementById('muskelSollChart'), {
@@ -608,8 +608,8 @@
                     {
                         label: '{% trans "Soll-Bereich" %}',
                         data: sollMax,
-                        backgroundColor: 'rgba(25, 135, 84, 0.15)',
-                        borderColor: 'rgba(25, 135, 84, 0.4)',
+                        backgroundColor: 'rgba(79, 178, 134, 0.15)',
+                        borderColor: 'rgba(79, 178, 134, 0.4)',
                         borderWidth: 1,
                         borderRadius: 4,
                         barPercentage: 0.9,
@@ -631,7 +631,7 @@
             options: {
                 responsive: true, maintainAspectRatio: true, indexAxis: 'y',
                 plugins: {
-                    legend: { display: true, labels: { color: '#adb5bd' } },
+                    legend: { display: true, labels: { color: '#A8A29A' } },
                     tooltip: {
                         callbacks: {
                             afterLabel: function(ctx) {
@@ -642,9 +642,9 @@
                     }
                 },
                 scales: {
-                    x: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' }, beginAtZero: true,
-                         title: { display: true, text: '{% trans "Sätze / 30 Tage" %}', color: '#adb5bd' } },
-                    y: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' } }
+                    x: { ticks: { color: '#A8A29A' }, grid: { color: '#3A4047' }, beginAtZero: true,
+                         title: { display: true, text: '{% trans "Sätze / 30 Tage" %}', color: '#A8A29A' } },
+                    y: { ticks: { color: '#A8A29A' }, grid: { color: '#3A4047' } }
                 }
             }
         });
@@ -653,15 +653,15 @@
     // Phase 21.2: Push/Pull-Ratio Donut
     {% if push_pull %}
     const ppData = {{ push_pull_json|safe }};
-    const ppColor = ppData.farbe === 'success' ? '#198754' : ppData.farbe === 'warning' ? '#ffc107' : '#dc3545';
+    const ppColor = ppData.farbe === 'success' ? '#4FB286' : ppData.farbe === 'warning' ? '#E0A93D' : '#E0685C';
     new Chart(document.getElementById('pushPullChart'), {
         type: 'doughnut',
         data: {
             labels: ['Push', 'Pull'],
             datasets: [{
                 data: [ppData.push, ppData.pull],
-                backgroundColor: ['#0d6efd', '#0dcaf0'],
-                borderColor: ['#0d6efd', '#0dcaf0'],
+                backgroundColor: ['#8A2B66', '#5AA0CE'],
+                borderColor: ['#8A2B66', '#5AA0CE'],
                 borderWidth: 1
             }]
         },
@@ -669,7 +669,7 @@
             responsive: true, maintainAspectRatio: true,
             cutout: '65%',
             plugins: {
-                legend: { display: true, position: 'bottom', labels: { color: '#adb5bd' } },
+                legend: { display: true, position: 'bottom', labels: { color: '#A8A29A' } },
                 tooltip: {
                     callbacks: {
                         label: function(ctx) {
@@ -711,10 +711,10 @@
         d.setDate(startDate.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
         const count = dateMap[dateStr] || 0;
-        let color = 'rgba(108, 117, 125, 0.3)';
-        if (count === 1) color = 'rgba(25, 135, 84, 0.3)';
-        else if (count === 2) color = 'rgba(25, 135, 84, 0.6)';
-        else if (count >= 3) color = 'rgba(25, 135, 84, 1)';
+        let color = 'rgba(214, 211, 206, 0.3)';
+        if (count === 1) color = 'rgba(79, 178, 134, 0.3)';
+        else if (count === 2) color = 'rgba(79, 178, 134, 0.6)';
+        else if (count >= 3) color = 'rgba(79, 178, 134, 1)';
         html += `<div style="aspect-ratio:1;background-color:${color};border:1px solid rgba(255,255,255,0.1);border-radius:3px;cursor:pointer;transition:all 0.2s;" title="${dateStr}: ${count} Training${count!==1?'s':''}" onmouseover="this.style.transform='scale(1.3)';this.style.zIndex='10';" onmouseout="this.style.transform='scale(1)';this.style.zIndex='1';"></div>`;
     }
     html += '</div>';
@@ -734,9 +734,10 @@
                     const el = svg.getElementById(muscleId);
                     if (el) {
                         const intensity = svgMuscleData[muscleId];
-                        const r = Math.round(217 + (255-217)*intensity);
-                        const g = Math.round(217 + (0-217)*intensity);
-                        const b = Math.round(217 + (0-217)*intensity);
+                        // Phase 27.6: Neutral (#ECE9E6) -> Berry (#8A2B66) statt Grau->Rot
+                        const r = Math.round(236 + (138-236)*intensity);
+                        const g = Math.round(233 + (43-233)*intensity);
+                        const b = Math.round(230 + (102-230)*intensity);
                         const color = `rgb(${r},${g},${b})`;
                         el.style.fill = color; el.style.stroke = color;
                         el.style.strokeWidth = intensity > 0.3 ? '3' : '2';
@@ -745,7 +746,7 @@
                 });
                 svg.querySelectorAll('.muscle').forEach(el => {
                     if (!svgMuscleData[el.id]) {
-                        el.style.fill = '#d9d9d9'; el.style.stroke = '#d9d9d9'; el.style.opacity = '0.3';
+                        el.style.fill = '#D6D3CE'; el.style.stroke = '#D6D3CE'; el.style.opacity = '0.3';
                     }
                 });
             }
@@ -761,7 +762,7 @@
                 {
                     label: '{% trans "Gewicht (kg)" %}',
                     data: {{ body_gewicht_json|safe }},
-                    borderColor: '#0dcaf0',
+                    borderColor: '#5AA0CE',
                     borderWidth: 2,
                     tension: 0.3,
                     yAxisID: 'y'
@@ -769,7 +770,7 @@
                 {
                     label: '{% trans "Muskelmasse (kg)" %}',
                     data: {{ body_muskel_json|safe }},
-                    borderColor: '#0d6efd',
+                    borderColor: '#8A2B66',
                     borderWidth: 2,
                     tension: 0.3,
                     yAxisID: 'y'
@@ -777,7 +778,7 @@
                 {
                     label: '{% trans "KFA (%)" %}',
                     data: {{ body_kfa_json|safe }},
-                    borderColor: '#dc3545',
+                    borderColor: '#E0685C',
                     borderWidth: 2,
                     tension: 0.3,
                     yAxisID: 'y1'
@@ -785,7 +786,7 @@
                 {
                     label: 'BMI',
                     data: {{ body_bmi_json|safe }},
-                    borderColor: '#ffc107',
+                    borderColor: '#E0A93D',
                     borderWidth: 2,
                     tension: 0.3,
                     yAxisID: 'y1'
@@ -793,7 +794,7 @@
                 {
                     label: 'FFMI',
                     data: {{ body_ffmi_json|safe }},
-                    borderColor: '#198754',
+                    borderColor: '#4FB286',
                     borderWidth: 2,
                     tension: 0.3,
                     yAxisID: 'y1'
@@ -807,7 +808,7 @@
             plugins: {
                 legend: {
                     display: true,
-                    labels: { color: '#adb5bd', usePointStyle: true, pointStyle: 'line' }
+                    labels: { color: '#A8A29A', usePointStyle: true, pointStyle: 'line' }
                 },
                 tooltip: {
                     callbacks: {
@@ -820,16 +821,16 @@
                 }
             },
             scales: {
-                x: { ticks: { color: '#adb5bd' }, grid: { color: '#404448' } },
+                x: { ticks: { color: '#A8A29A' }, grid: { color: '#3A4047' } },
                 y: {
                     type: 'linear', position: 'left',
-                    title: { display: true, text: 'kg', color: '#adb5bd' },
-                    ticks: { color: '#adb5bd' }, grid: { color: '#404448' }
+                    title: { display: true, text: 'kg', color: '#A8A29A' },
+                    ticks: { color: '#A8A29A' }, grid: { color: '#3A4047' }
                 },
                 y1: {
                     type: 'linear', position: 'right',
-                    title: { display: true, text: '% / Index', color: '#adb5bd' },
-                    ticks: { color: '#adb5bd' }, grid: { drawOnChartArea: false }
+                    title: { display: true, text: '% / Index', color: '#A8A29A' },
+                    ticks: { color: '#A8A29A' }, grid: { drawOnChartArea: false }
                 }
             }
         }

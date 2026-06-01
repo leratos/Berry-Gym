@@ -97,13 +97,13 @@
 }
 
 [data-bs-theme="dark"] .navbar-theme {
-    background-color: #1a1d21;
-    border-bottom-color: #30363d !important;
+    background-color: var(--app-bg);
+    border-bottom-color: var(--border) !important;
 }
 
 [data-bs-theme="light"] .navbar-theme {
-    background-color: #ffffff;
-    border-bottom-color: #dee2e6 !important;
+    background-color: var(--surface);
+    border-bottom-color: var(--border) !important;
 }
 
 .btn-theme {
@@ -116,11 +116,11 @@
 }
 
 [data-bs-theme="dark"] .btn-theme {
-    color: #e9ecef;
+    color: var(--text);
 }
 
 [data-bs-theme="light"] .btn-theme {
-    color: #212529;
+    color: var(--text);
 }
 
 .dropdown-menu-theme {
@@ -129,13 +129,13 @@
 }
 
 [data-bs-theme="dark"] .dropdown-menu-theme {
-    background-color: #1a1d21;
-    border-color: #30363d;
+    background-color: var(--app-bg);
+    border-color: var(--border);
 }
 
 [data-bs-theme="light"] .dropdown-menu-theme {
-    background-color: #ffffff;
-    border-color: #dee2e6;
+    background-color: var(--surface);
+    border-color: var(--border);
 }
 
 .dropdown-menu-theme .dropdown-item {
@@ -147,11 +147,11 @@
 }
 
 [data-bs-theme="dark"] .dropdown-menu-theme .dropdown-item:hover {
-    background-color: #30363d;
+    background-color: var(--border);
 }
 
 [data-bs-theme="light"] .dropdown-menu-theme .dropdown-item:hover {
-    background-color: #f8f9fa;
+    background-color: var(--border);
 }
 
 .dropdown-menu-theme .dropdown-divider {
@@ -159,17 +159,17 @@
 }
 
 [data-bs-theme="dark"] .dropdown-menu-theme .dropdown-divider {
-    border-color: #30363d;
+    border-color: var(--border);
 }
 
 [data-bs-theme="light"] .dropdown-menu-theme .dropdown-divider {
-    border-color: #dee2e6;
+    border-color: var(--border);
 }
 
 .user-avatar {
     width: 32px;
     height: 32px;
-    background: linear-gradient(135deg, #0d6efd, #6610f2);
+    background: linear-gradient(135deg, var(--berry-600), var(--berry-700));
     border-radius: 50%;
     display: flex;
     align-items: center;
