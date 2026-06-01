@@ -121,7 +121,7 @@ BERRY_SEQ = ["#ECE9E6", "#E2B9D0", "#C26A9C", "#8A2B66"]
 - **Status-Balken-Charts** (`muskelSollChart` etc.): in matplotlib `hatch=` pro Status; in Chart.js zusätzlich `borderColor`/`borderWidth` als Form-Hilfe.
 - Luminanz-Staffel (A.2) sorgt dafür, dass selbst ohne Hatch Grün/Amber/Rot in Graustufen unterscheidbar bleiben.
 
----
+### A.5 S/W-Druck-Strategie
 
 ## B) Typografie
 
