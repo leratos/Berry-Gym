@@ -27,7 +27,8 @@ from core.chart_generator import (
 
 class TestRgbaToHex(TestCase):
     def test_none_gibt_grau(self):
-        self.assertEqual(_rgba_to_hex(None), "#D9D9D9")
+        # Phase 27.6: warm-neutrales "nicht trainiert"-Grau (#D6D3CE) statt #D9D9D9
+        self.assertEqual(_rgba_to_hex(None), "#D6D3CE")
 
     def test_rot(self):
         self.assertEqual(_rgba_to_hex((255, 0, 0)), "#FF0000")
@@ -52,12 +53,13 @@ class TestStatusToRgba(TestCase):
         self.assertGreater(g, r)
         self.assertGreater(g, b)
 
-    def test_untertrainiert_ist_gelb(self):
+    def test_untertrainiert_ist_warning_amber(self):
         r, g, b, a = _status_to_rgba("untertrainiert")
-        # Gelb = hoher R + G, niedriges B
-        self.assertGreater(r, 200)
-        self.assertGreater(g, 150)
-        self.assertLess(b, 50)
+        # Phase 27.6: Warning-Amber (#CF9116 = 207,145,22) statt Bootstrap-Gelb
+        self.assertGreater(r, g)  # warm: R > G
+        self.assertGreater(g, b)  # G > B
+        self.assertGreater(r, 150)
+        self.assertLess(b, 60)
 
     def test_uebertrainiert_ist_rot(self):
         r, g, b, a = _status_to_rgba("uebertrainiert")
