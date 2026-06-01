@@ -124,11 +124,11 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     Returns:
         HttpResponse: PDF file download with training report
     """
-    if not pisa:
-        messages.error(request, "PDF Export nicht verfügbar - xhtml2pdf fehlt")
-        logger.error("xhtml2pdf import failed")
-        return redirect("training_stats")
-
+    # Engine-Verfügbarkeit + Fallback liegen zentral im Renderer
+    # (render_training_pdf_response → _render_pdf_bytes): WeasyPrint primär bei
+    # PDF_ENGINE=weasyprint, sonst bzw. bei Fehler xhtml2pdf. Eine harte
+    # xhtml2pdf-Vorabprüfung hier würde den WeasyPrint-only-Betrieb (ohne
+    # installiertes xhtml2pdf) fälschlich blockieren.
     heute = timezone.now()
     letzte_30_tage = heute - timedelta(days=30)
     stats = collect_pdf_stats(request.user, letzte_30_tage, heute)
@@ -185,6 +185,8 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         "status",
         "status_label",
         "status_farbe",
+        "status_icon",
+        "status_glyph",
         "rpe_first_half",
         "rpe_second_half",
         "rpe_delta",
