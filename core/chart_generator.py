@@ -38,7 +38,7 @@ for _font_file in (
     if _font_path.exists():
         try:
             _fm.fontManager.addfont(str(_font_path))
-        except Exception:
+        except Exception:  # pragma: no cover -- Font-Registrierung ist Best-Effort
             pass
 
 # Marken-Tokens (identisch zu theme-styles.css / PDF-<style>).

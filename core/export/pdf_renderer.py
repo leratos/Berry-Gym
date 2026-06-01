@@ -30,7 +30,7 @@ except ImportError:
 
 try:
     import weasyprint
-except Exception:  # ImportError ODER fehlende native Libs (Pango/GLib)
+except Exception:  # pragma: no cover -- ImportError o. fehlende native Libs (Pango/GLib)
     weasyprint = None
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def _weasyprint_url_fetcher(url: str):
                     fs = candidate
             if fs and os.path.exists(fs):
                 return default_url_fetcher(Path(fs).as_uri())
-    except Exception:
+    except Exception:  # pragma: no cover -- defensiver Catch, Fallback auf Default-Fetcher
         pass
     return default_url_fetcher(url)
 

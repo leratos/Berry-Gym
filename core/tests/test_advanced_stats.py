@@ -138,6 +138,19 @@ class TestRpeQualityAnalysis(StatsTestBase):
         result = calculate_rpe_quality_analysis(self._alle_saetze())
         self.assertEqual(result["gesamt_saetze"], 5)
 
+    def test_bewertung_gut_bei_optimaler_intensitaet_mit_etwas_junk(self):
+        # optimal=70% (7×RPE7.5), junk=20% (2×RPE5), failure=10% (1×RPE10):
+        # junk>10 schließt "Exzellent" aus → fällt auf "Gut".
+        session = self._make_session()
+        for _ in range(7):
+            self._add_satz(session, rpe=7.5)
+        for _ in range(2):
+            self._add_satz(session, rpe=5.0)
+        self._add_satz(session, rpe=10.0)
+        result = calculate_rpe_quality_analysis(self._alle_saetze())
+        self.assertEqual(result["bewertung"], "Gut")
+        self.assertEqual(result["bewertung_farbe"], "success")
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # calculate_consistency_metrics
@@ -235,6 +248,22 @@ class TestConsistencyMetrics(StatsTestBase):
         result = calculate_consistency_metrics(self._alle_trainings())
         self.assertEqual(result["avg_pause_tage"], 0)
 
+    def test_bewertung_sehr_gut_bei_acht_wochen_streak(self):
+        # 8 aufeinanderfolgende Wochen, volle Adherence → Streak 8 (≥8, <12)
+        # → "Sehr gut" (Exzellent erst ab Streak ≥12).
+        for i in range(8):
+            self._make_session(days_ago=i * 7)
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["bewertung"], "Sehr gut")
+
+    def test_bewertung_exzellent_bei_zwoelf_wochen_streak(self):
+        # 12 aufeinanderfolgende Wochen, volle Adherence → Streak ≥12 & ≥85%
+        # → "Exzellent".
+        for i in range(12):
+            self._make_session(days_ago=i * 7)
+        result = calculate_consistency_metrics(self._alle_trainings())
+        self.assertEqual(result["bewertung"], "Exzellent")
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # calculate_fatigue_index
@@ -317,6 +346,16 @@ class TestFatigueIndex(StatsTestBase):
     def test_warnungen_sind_liste(self):
         result = calculate_fatigue_index([], self._get_rpe_saetze(), self._alle_trainings())
         self.assertIsInstance(result["warnungen"], list)
+
+    def test_bewertung_niedrig_bei_moderater_frequenz(self):
+        # 6 Trainings in den letzten 7 Tagen → Frequenz-Fatigue 30, sonst nichts
+        # (kein Volumen-Spike, keine RPE-Daten, kein Cardio) → Index 30 → "Niedrig".
+        for i in range(6):
+            self._make_session(days_ago=i)
+        result = calculate_fatigue_index([], self._get_rpe_saetze(), self._alle_trainings())
+        self.assertGreaterEqual(result["fatigue_index"], 20)
+        self.assertLess(result["fatigue_index"], 40)
+        self.assertEqual(result["bewertung"], "Niedrig")
 
     def test_bewertung_und_empfehlung_vorhanden(self):
         result = calculate_fatigue_index([], self._get_rpe_saetze(), self._alle_trainings())
