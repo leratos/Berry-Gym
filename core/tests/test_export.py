@@ -12,6 +12,7 @@ import csv
 import io
 from datetime import date
 
+from django.test import override_settings
 from django.urls import reverse
 
 import pytest
@@ -133,6 +134,25 @@ class TestTrainingPDFExport:
 
         # PDF sollte nicht leer sein
         assert len(response.content) > 1000  # Mindestgröße
+
+    @override_settings(PDF_ENGINE="weasyprint")
+    def test_export_training_pdf_weasyprint_engine(self, client):
+        """PDF rendert auch mit PDF_ENGINE='weasyprint' (inkl. @font-face +
+        Status-Glyphen). Ist WeasyPrint / dessen native Libs nicht ladbar,
+        greift der Auto-Fallback auf xhtml2pdf – in beiden Fällen ein valides
+        PDF, kein Crash."""
+        user = UserFactory()
+        client.force_login(user)
+        training = TrainingseinheitFactory(user=user)
+        uebung = UebungFactory(bezeichnung="Kniebeugen")
+        SatzFactory(einheit=training, uebung=uebung, gewicht=100.0)
+
+        response = client.get(reverse("export_training_pdf"))
+
+        assert response.status_code == 200
+        assert response["Content-Type"] == "application/pdf"
+        assert response.content[:5] == b"%PDF-"
+        assert len(response.content) > 1000
 
     def test_export_training_pdf_with_data(self, client):
         """PDF enthält Trainingsdaten."""

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,6 +8,28 @@
         @page {
             margin: 2cm 1.5cm 2.5cm 1.5cm;
         }
+
+        {% if pdf_engine == 'weasyprint' %}
+        /* WeasyPrint-only: echtes @font-face (xhtml2pdf crasht am Font-Laden). */
+        @font-face {
+            font-family: 'Source Sans 3';
+            src: url('{% static 'core/fonts/SourceSans3-Regular.ttf' %}');
+        }
+        @font-face {
+            font-family: 'Source Sans 3';
+            font-weight: bold;
+            src: url('{% static 'core/fonts/SourceSans3-SemiBold.ttf' %}');
+        }
+        @font-face {
+            font-family: 'Source Serif 4';
+            src: url('{% static 'core/fonts/SourceSerif4-SemiBold.ttf' %}');
+        }
+        @font-face {
+            font-family: 'Source Serif 4';
+            font-weight: bold;
+            src: url('{% static 'core/fonts/SourceSerif4-Bold.ttf' %}');
+        }
+        {% endif %}
 
         #page-footer {
             position: fixed;
@@ -19,7 +42,7 @@
         }
 
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Source Sans 3', Arial, Helvetica, sans-serif;
             color: #1F2226;
             font-size: 10px;
             line-height: 1.5;
@@ -32,6 +55,7 @@
         }
 
         .cover-title {
+            font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
             font-size: 36px;
             font-weight: bold;
             color: #8A2B66;
@@ -52,6 +76,7 @@
 
         /* Überschriften */
         h1 {
+            font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
             color: #8A2B66;
             border-bottom: 3px solid #8A2B66;
             padding-bottom: 6px;
@@ -63,6 +88,7 @@
         }
 
         h2 {
+            font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
             color: #6B6660;
             border-bottom: 2px solid #E2DFDA;
             padding-bottom: 4px;
@@ -903,15 +929,15 @@
                 <td>
                     {% if prog.status_label %}
                         {% if prog.status_farbe == 'success' %}
-                        <span class="badge badge-success">{{ prog.status_label }}</span>
+                        <span class="badge badge-success">{% if pdf_engine == 'weasyprint' %}{{ prog.status_glyph }} {% endif %}{{ prog.status_label }}</span>
                         {% elif prog.status_farbe == 'warning' %}
-                        <span class="badge badge-warning">{{ prog.status_label }}</span>
+                        <span class="badge badge-warning">{% if pdf_engine == 'weasyprint' %}{{ prog.status_glyph }} {% endif %}{{ prog.status_label }}</span>
                         {% elif prog.status_farbe == 'info' %}
-                        <span class="badge badge-info">{{ prog.status_label }}</span>
+                        <span class="badge badge-info">{% if pdf_engine == 'weasyprint' %}{{ prog.status_glyph }} {% endif %}{{ prog.status_label }}</span>
                         {% elif prog.status_farbe == 'secondary' %}
-                        <span class="badge badge-secondary">{{ prog.status_label }}</span>
+                        <span class="badge badge-secondary">{% if pdf_engine == 'weasyprint' %}{{ prog.status_glyph }} {% endif %}{{ prog.status_label }}</span>
                         {% else %}
-                        <span class="badge badge-danger">{{ prog.status_label }}</span>
+                        <span class="badge badge-danger">{% if pdf_engine == 'weasyprint' %}{{ prog.status_glyph }} {% endif %}{{ prog.status_label }}</span>
                         {% endif %}
                     {% else %}–{% endif %}
                 </td>
