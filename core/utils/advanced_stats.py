@@ -39,7 +39,7 @@ PROGRESSION_RPE_MIN_SETS = 4
 # Wenn die historische Steigerungsrate (kg/Monat) ≥ X % des aktuellen PR-1RM
 # beträgt UND die Trainingshistorie der Übung lang genug ist, wird die reine
 # Tage-seit-PR-Diagnose ("Plateau") überschrieben mit
-# ``active_progression_paused`` ("📈 Aktive Progression (PR-Pause)").
+# ``active_progression_paused`` ("Aktive Progression (PR-Pause)").
 # Konservativ gewählt: 2 % pro Monat = ein Jahr lang stetiger Aufbau, das ist
 # klare Progression. RDL-Fall (+26.5 kg/Monat bei ~73 kg 1RM ≙ 36 %) wird
 # damit eindeutig nicht mehr als Plateau klassifiziert; eine echte 1 %/Monat-
@@ -534,19 +534,19 @@ def calculate_consistency_metrics(alle_trainings):
 
     # Bewertung
     if aktueller_streak >= 12 and adherence_rate >= 85:
-        bewertung = "🏆 Exzellent"
+        bewertung = "Exzellent"
         bewertung_farbe = "success"
     elif aktueller_streak >= 8 and adherence_rate >= 70:
-        bewertung = "✅ Sehr gut"
+        bewertung = "Sehr gut"
         bewertung_farbe = "success"
     elif aktueller_streak >= 4 and adherence_rate >= 60:
-        bewertung = "👍 Gut"
+        bewertung = "Gut"
         bewertung_farbe = "info"
     elif adherence_rate >= 40:
-        bewertung = "⚠️ Ausbaufähig"
+        bewertung = "Ausbaufähig"
         bewertung_farbe = "warning"
     else:
-        bewertung = "🔴 Inkonsistent"
+        bewertung = "Inkonsistent"
         bewertung_farbe = "danger"
 
     return {
@@ -638,19 +638,19 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     naechste_deload = heute + timedelta(weeks=6)
 
     if fatigue_index >= 60:
-        bewertung = "🚨 Hoch"
+        bewertung = "Hoch"
         bewertung_farbe = "danger"
         empfehlung = "Deload-Woche empfohlen! Reduziere Volumen um 40-50%."
     elif fatigue_index >= 40:
-        bewertung = "⚠️ Moderat"
+        bewertung = "Moderat"
         bewertung_farbe = "warning"
         empfehlung = "Achte auf ausreichend Regeneration."
     elif fatigue_index >= 20:
-        bewertung = "ℹ️ Niedrig"
+        bewertung = "Niedrig"
         bewertung_farbe = "info"
         empfehlung = "Gute Balance zwischen Training und Erholung."
     else:
-        bewertung = "✅ Sehr niedrig"
+        bewertung = "Sehr niedrig"
         bewertung_farbe = "success"
         # Phase 23.x: vorher "Du kannst noch mehr trainieren!" – missverständlich,
         # klang nach Aufforderung zu mehr Volumen statt nach Belastbarkeits-Status.
@@ -912,34 +912,34 @@ def calculate_rpe_quality_analysis(alle_saetze):
 
     if junk_volume_rate > 20:
         empfehlungen.append(
-            f'⚠️ Zu viel "Junk Volume" ({junk_volume_rate}%) - Reduziere Aufwärmsätze oder erhöhe Intensität'
+            f'Zu viel "Junk Volume" ({junk_volume_rate}%) - Reduziere Aufwärmsätze oder erhöhe Intensität'
         )
 
     if optimal_intensity_rate < 50:
         empfehlungen.append(
-            f"⚠️ Zu wenig intensive Sätze ({optimal_intensity_rate}%) - Trainiere näher ans Versagen (RPE 7-9)"
+            f"Zu wenig intensive Sätze ({optimal_intensity_rate}%) - Trainiere näher ans Versagen (RPE 7-9)"
         )
 
     if failure_rate > 10:
         empfehlungen.append(
-            f"⚠️ Zu oft bis zum Versagen ({failure_rate}%) - Risiko für Übertraining. Ziel: <5%"
+            f"Zu oft bis zum Versagen ({failure_rate}%) - Risiko für Übertraining. Ziel: <5%"
         )
 
     if optimal_intensity_rate >= 60 and failure_rate <= 5 and junk_volume_rate <= 15:
-        empfehlungen.append("✅ Optimale Trainingsintensität! Weiter so.")
+        empfehlungen.append("Optimale Trainingsintensität! Weiter so.")
 
     # Bewertung
     if optimal_intensity_rate >= 70 and junk_volume_rate <= 10 and failure_rate <= 5:
-        bewertung = "🏆 Exzellent"
+        bewertung = "Exzellent"
         bewertung_farbe = "success"
     elif optimal_intensity_rate >= 60 and junk_volume_rate <= 20 and failure_rate <= 10:
-        bewertung = "✅ Gut"
+        bewertung = "Gut"
         bewertung_farbe = "success"
     elif optimal_intensity_rate >= 40:
-        bewertung = "⚠️ Ausbaufähig"
+        bewertung = "Ausbaufähig"
         bewertung_farbe = "warning"
     else:
-        bewertung = "🔴 Verbesserung nötig"
+        bewertung = "Verbesserung nötig"
         bewertung_farbe = "danger"
 
     return {
