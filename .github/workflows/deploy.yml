@@ -78,7 +78,13 @@ jobs:
           ls -t backup_*.json 2>/dev/null | tail -n +6 | xargs rm -f
 
           echo "=== [3/7] Code aktualisieren ==="
-          git pull origin main
+          # Deploy-Ziel spiegelt origin/main (kein Merge), statt zu pullen.
+          # Verhindert "abweichende Branches"-Abbrueche, wenn der Server-main
+          # durch einen frueheren Rollback (git reset --hard) oder lokale Commits
+          # von origin/main divergiert. Untracked-Dateien (z.B. backup_*.json)
+          # bleiben erhalten.
+          git fetch origin main
+          git reset --hard origin/main
 
           echo "=== [4/7] Dependencies installieren ==="
           $PIP install -r requirements.txt --quiet
