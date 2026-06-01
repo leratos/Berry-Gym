@@ -1,5 +1,5 @@
 # Berry-Gym – Projekt-Roadmap (Phasen 1–31)
-**Erstellt:** 2026-03-12 · **Letzte Aktualisierung:** 2026-05-30 (Phase 28)
+**Erstellt:** 2026-03-12 · **Letzte Aktualisierung:** 2026-06-01 (Phase 28 Abschluss)
 **Ziel:** Professionelles, tägliches Trainings-Tool für private Nutzung mit Freunden
 **Strategie:** Bugs & UX zuerst, dann Features – kein neues Feature ohne Polish des Bestehenden
 
@@ -39,14 +39,15 @@
 | 24 | Report-Daten-Konsistenz | ✅ 2026-05 | [Konzept](concepts/phase24_concept.md) |
 | 25 | Report-Layout-Refactor (Struktur & Technik) | ✅ 2026-05-18 | [Konzept](concepts/phase25_concept.md) |
 | 26 | Konsolidierungs-Logik zeitlich begrenzen | ✅ 2026-05-30 | [Konzept](concepts/phase26_concept.md) |
-| 27 | Style-Overhaul | ⏸️ blockiert (Design-Decision) | [Konzept](concepts/phase27_concept.md) |
-| 28 | Dokumentations-Aktualisierung | 🔄 in Arbeit | [Konzept](concepts/phase28_concept.md) |
+| 27 | Style-Overhaul | ✅ 2026-06-01 (PDF-Fonts deferred) | [Konzept](concepts/phase27_concept.md) |
+| 28 | Dokumentations-Aktualisierung | ✅ 2026-06-01 | [Konzept](concepts/phase28_concept.md) |
 | 29 | Plan-Generator-Konsistenz & Qualität | ✅ 2026-05-19 | [Konzept](concepts/phase29_concept.md) |
 | 30 | Adaptive Plan Generation | ✅ 2026-05-20 | [Konzept](concepts/phase30_concept.md) |
 | 31 | Untertrainiert-Coverage-Hard-Fail + Quellen-Konsistenz | ✅ 2026-05-30 | [Konzept](concepts/phase31_concept.md) |
 
-**Aktiv:** Phase 28 (Doku-Aktualisierung). **Blockiert:** Phase 27 (Style –
-wartet auf Design-Entscheidungen mit dem User).
+**Aktiv:** – (Phasen 1–31 umgesetzt). **Deferred:** PDF-Report-Engine-Wechsel
+zu WeasyPrint für PDF-Custom-Fonts/Status-Glyphen – mit xhtml2pdf nicht
+umsetzbar (siehe `concepts/phase27_concept.md` §J).
 **Offene Folgearbeit:** i18n-Nachzug der Progression-/Plateau-Status-Labels
 (gettext DE/EN) – Journal-Notiz `berry-gym#649`.
 **Konventionen:** Branch `feature/phase-XX-kurzbeschreibung` pro (Sub-)Phase;
@@ -597,8 +598,8 @@ Kompakt – Volltext jeweils im verlinkten Konzept:
 - **Phase 24 – Report-Daten-Konsistenz** ✅ — Single-Source-of-Truth zwischen PDF-Report und Live-Statistiken (Set-Attribution, Schwellenwerte). [Konzept](concepts/phase24_concept.md), [Audit 24.4](concepts/phase24-04-audit-bericht.md)
 - **Phase 25 – Report-Layout-Refactor (Struktur & Technik)** ✅ — Reihenfolge, Pagebreaks, ToC, Charts des PDF-Reports; Style bewusst ausgeklammert → Phase 27. [Konzept](concepts/phase25_concept.md)
 - **Phase 26 – Konsolidierungs-Logik zeitlich begrenzen** ✅ — Konsolidierung stuft nach Tagen-seit-PR: ≤4 W „Konsolidierung", 4–8 W „Bereit für PR-Versuch", >8 W „ungewöhnlich lange". [Konzept](concepts/phase26_concept.md)
-- **Phase 27 – Style-Overhaul** ⏸️ blockiert — Farben/Typo/Icons/Charts für Web & PDF; Design-Entscheidungen mit dem User ausstehend. [Konzept](concepts/phase27_concept.md)
-- **Phase 28 – Dokumentations-Aktualisierung** 🔄 in Arbeit — README, Roadmap, Konzept-Docs auf Stand bringen. [Konzept](concepts/phase28_concept.md)
+- **Phase 27 – Style-Overhaul** ✅ 2026-06-01 — Berry-Marken-Style: Tokens + Bootstrap-Override, Typografie (Source Serif/Sans), Status-Icons, Karten, Charts (live + matplotlib). PDF-Custom-Fonts/Glyphen via WeasyPrint deferred (§J). [Konzept](concepts/phase27_concept.md)
+- **Phase 28 – Dokumentations-Aktualisierung** ✅ 2026-06-01 — README/Roadmap/Konzept-Docs auf Stand (28.1–28.4 + finaler Pass nach Phase 27); 28.5 operative Docs spot-gecheckt. [Konzept](concepts/phase28_concept.md)
 - **Phase 29 – Plan-Generator-Konsistenz & Qualität** ✅ — F1 Volumen-Steuerung, F2 Tag-Anzahl-Bruch, F3 Untertrainiert-Liste als Generator-Input. [Diagnose 29.1](concepts/phase29-diagnose.md), [Konzept](concepts/phase29_concept.md)
 - **Phase 30 – Adaptive Plan Generation** ✅ — Report-Output als Generator-Input: Übertrainings-Cap, Untertrainiert-Quelle, Plateau-/Push-Pull-/Ermüdungs-Hints. [Konzept](concepts/phase30_concept.md)
 - **Phase 31 – Untertrainiert-Coverage-Hard-Fail + Quellen-Konsistenz** ✅ — symmetrischer Hard-Fail (31.1), Quellen-Diagnose (31.2), Plan-Description-Sanitizing (31.3). [Konzept](concepts/phase31_concept.md)

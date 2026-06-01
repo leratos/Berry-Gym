@@ -384,11 +384,11 @@ Aktuelle Priorisierung und Umsetzungsstatus stehen in
 - ✅ **Report-Konsistenz & Layout (Phase 24–25)**: Single-Source-of-Truth zwischen PDF-Report und Live-Statistiken, Report-Layout-Refactor
 - ✅ **Konsolidierungs-Stufen (Phase 26)**: zeitlich begrenzte Konsolidierung – „Bereit für PR-Versuch" bzw. „ungewöhnlich lange" statt pauschalem Plateau
 - ✅ **Adaptive Plan-Generierung (Phase 29–31)**: Übertrainings-Caps & Untertrainiert-Coverage als Hard-Fail, Plateau-/Konsolidierungs-Hints (kein Volumen-Push auf stagnierende Übungen), Ermüdungs-/Frequenz-/Push-Pull-Adaption, Konsistenz-Check der Plan-Beschreibung
+- ✅ **Marken-Style / Berry-Theme (Phase 27)**: dark-first Live-UI + matplotlib-Charts auf einheitlicher Berry-Palette, Typografie (Source Serif 4 / Source Sans 3), Status-Icons; PDF-Report farb-migriert
 
 ### In Planung / Nächste Schritte
 
-- 🎨 **Phase 27 – Style-Overhaul**: einheitliches Farb-/Typo-/Icon-System für Web & PDF (Design-Entscheidungen stehen aus)
-- 📝 **Phase 28 – Dokumentations-Aktualisierung**: README, Roadmap & Konzept-Docs auf aktuellen Stand (läuft)
+- 🖨️ **PDF-Report-Engine**: Wechsel zu WeasyPrint (echtes `@font-face`) für Custom-Fonts & Status-Glyphen im PDF – mit xhtml2pdf nicht umsetzbar
 - 🌐 **i18n-Nachzug**: Progression-/Plateau-Status-Labels auf gettext (DE/EN) umstellen
 
 > Vollständiger Phasen-Status (1–31) in **[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)**.
@@ -400,7 +400,7 @@ Aktuelle Priorisierung und Umsetzungsstatus stehen in
 - Custom Übungen sind user-spezifisch (kein globales Sharing)
 - GNU gettext nicht zwingend erforderlich (MO-Kompilierung via polib)
 
-**Last Updated:** 2026-05-30
+**Last Updated:** 2026-06-01
 
 ---
 

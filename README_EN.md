@@ -343,11 +343,11 @@ Current prioritization and implementation status are tracked in
 - ✅ **Report Consistency & Layout (Phase 24–25)**: single source of truth between PDF report and live statistics, report layout refactor
 - ✅ **Consolidation Stages (Phase 26)**: time-bounded consolidation – "ready for PR attempt" or "unusually long" instead of a blanket plateau
 - ✅ **Adaptive Plan Generation (Phase 29–31)**: overtraining caps & undertrained coverage as hard fails, plateau/consolidation hints (no volume push on stagnating exercises), fatigue/frequency/push-pull adaptation, plan-description consistency check
+- ✅ **Brand Style / Berry Theme (Phase 27)**: dark-first live UI + matplotlib charts on a unified Berry palette, typography (Source Serif 4 / Source Sans 3), status icons; PDF report color-migrated
 
 ### Planned / Next Steps
 
-- 🎨 **Phase 27 – Style Overhaul**: unified color/typography/icon system for web & PDF (design decisions pending)
-- 📝 **Phase 28 – Documentation Update**: README, roadmap & concept docs brought up to date (in progress)
+- 🖨️ **PDF report engine**: switch to WeasyPrint (real `@font-face`) for custom fonts & status glyphs in the PDF – not feasible with xhtml2pdf
 - 🌐 **i18n follow-up**: migrate progression/plateau status labels to gettext (DE/EN)
 
 > Full phase status (1–31) in **[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)**.
@@ -358,7 +358,7 @@ Current prioritization and implementation status are tracked in
 - AI Coach requires OpenRouter API key (~€0.003/plan)
 - Custom exercises are user-specific (no global sharing)
 
-**Last Updated:** 2026-05-30
+**Last Updated:** 2026-06-01
 
 ---
 

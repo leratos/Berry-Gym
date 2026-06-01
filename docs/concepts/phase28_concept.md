@@ -1,6 +1,6 @@
 # Phase 28 – Dokumentations-Aktualisierung
 
-**Status:** 🔄 In Arbeit (seit 30.05.2026) – 28.1–28.4 umgesetzt, 28.5 + finaler README-Pass nach Phase 27
+**Status:** ✅ Abgeschlossen (01.06.2026) – 28.1–28.5 + finaler README/ROADMAP-Pass nach Phase 27
 **Vorgänger:** Phase 27 (Style-Overhaul)
 **Nachfolger:** offen
 **Branch-Schema:** `feature/phase-28-X-kurzbeschreibung` pro Sub-Phase
@@ -168,5 +168,10 @@ Wenn die App perspektivisch nicht nur privat bleibt (User-Memory erwähnt Moneta
   PROJECT_ROADMAP (Übersichtstabelle 1–31), 28.4 Konzept-Status-Header
   umgesetzt. Offene Frage F1 (README-Sprache): bleibt **DE + EN** (beide
   README-Dateien gepflegt). F2 (ROADMAP-Tiefe): **kompakt + Links**.
-- **Offen:** 28.5 (Sonstige Docs sichten) + finaler README-Pass nach
-  Phase 27 (Style-abhängige Report-Beschreibungen).
+- **2026-06-01 (Abschluss):** Phase 27 abgeschlossen → finaler README/ROADMAP-
+  Pass: Phase 27 + 28 auf ✅, README „In Planung" auf den PDF-Engine-
+  Folgeschritt (WeasyPrint) umgestellt, „Marken-Style (Phase 27)" als Feature
+  ergänzt, Last-Updated 2026-06-01. **28.5:** operative Docs (DEPLOYMENT/
+  RUNBOOK/CICD/CODE_QUALITY/…) spot-gecheckt – keine Date-Stamps, keine
+  blockierende Staleness; Tiefen-Review niedrig-prio zurückgestellt.
+  **Phase 28 abgeschlossen.**
