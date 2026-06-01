@@ -301,3 +301,38 @@ matplotlib-`rcParams` + Status-/Kategorie-/Sequenz-Paletten + Hatch (S/W); Chart
 3. ✅ **Body-Map S/W:** selektives Hatching — nur `übertrainiert ///` + `untertrainiert ...`; gute/inaktive Status bleiben clean. Doppelter Nutzen: S/W-eindeutig *und* Blick-Lenkung auf Handlungs-Bereiche.
 
 **→ Doc ist freigegeben. Claude Code kann mit Sub-Phase 27.2 starten.**
+
+---
+
+## J) Umsetzungs-Ergebnis (Claude Code, 01.06.2026)
+
+Branch `feature/phase-27-style-overhaul`, 10 Commits (27.1–27.6 + Emoji-Sweep).
+Verifikation jeweils via `pytest` (test_export/test_training_stats/
+test_advanced_stats) + flake8/black; **visuelle Abnahme durch den User**.
+
+**Umgesetzt:**
+- **27.2** Farb-Tokens + `--bs-*`-Override – inkl. expliziter Button-Variablen
+  (Bootstrap-CDN kompiliert `.btn-*` literal, liest NICHT `--bs-primary`) +
+  warme Neutrale; `theme-color`, Header-Chrome, Offline-Toasts.
+- **27.3** Typografie self-hosted (Source Serif 4 / Source Sans 3, 4 OFL-TTFs
+  im Repo) – **live + matplotlib aktiv**.
+- **27.4** Status-Icons live (Bootstrap-Icons), Emoji aus `status_label` raus.
+- **27.5** Karten (Schatten live / Border PDF) + **vollständige PDF-Palette-
+  Migration** (literale Hex, da xhtml2pdf kein `var()`).
+- **27.6a/b** matplotlib- + Chart.js-Charts auf Marken-Palette, Body-Map
+  Neutral→Berry.
+- **Emoji-Sweep** der Report-Bewertungs-Strings → AK „keine Emoji im PDF".
+
+**NICHT umgesetzt / DEFERRED (mit Begründung):**
+- **PDF-Custom-Fonts + Geometrie-Status-Glyphen:** mit **xhtml2pdf nicht
+  machbar** – `@font-face`/Font-Laden crasht den Export (`urlopen
+  unknown url type: c` + Temp-`PermissionError`). PDF bleibt auf
+  Arial/Helvetica + Klartext-Labels (emoji-frei). Die §B/§C-Annahme
+  „Glyphen/Fonts rendern in xhtml2pdf" hält mit dieser Engine **nicht**.
+  → **Empfehlung: Engine-Wechsel zu WeasyPrint** (echtes `@font-face`) als
+  eigene Phase – Architektur-/Claude.app-Entscheidung.
+- **Body-Map-Hatching** (§A.5, S/W übertrainiert `///`/untertrainiert `...`)
+  noch offen.
+- **Heatmap:** live grün (GitHub-Metapher) vs. PDF berry (§A.3) – bewusst,
+  ggf. vereinheitlichen.
+- OFL-`LICENSE` zu den TTFs ergänzen (Lizenz-Hygiene).
