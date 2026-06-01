@@ -75,6 +75,16 @@
     /* Phase 27.3 – Schrift-Stacks (Self-host + Fallback) */
     --font-heading: 'Source Serif 4', Georgia, 'Times New Roman', serif;
     --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Phase 27.5 – Spacing-/Radius-Skala (§D) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --radius-card: 10px;
+    --radius-control: 6px;
 }
 
 /* Light-Theme: warme Neutrale auch in Bootstraps eigene Body-Variablen
@@ -293,6 +303,20 @@ h1, h2, .h1, .h2,
 h3, h4, h5, h6, .h3, .h4, .h5, .h6 {
     font-family: var(--font-body);
     font-weight: 600;
+}
+
+/* ------------------------------------------------------------
+   Phase 27.5 – Karten: subtiler Schatten (live), Radius-Token.
+   (PDF nutzt stattdessen 1px-Border – kein box-shadow in xhtml2pdf.)
+   ------------------------------------------------------------ */
+.card,
+.card-stat {
+    border-radius: var(--radius-card);
+    box-shadow: 0 1px 3px rgba(20, 15, 18, 0.10);
+}
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .card-stat {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
 }
 
 /* Card Stats - Theme-aware */
