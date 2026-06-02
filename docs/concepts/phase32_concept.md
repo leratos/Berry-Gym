@@ -24,7 +24,8 @@ nur ohne unterdrückendes Flag).
 - 32.2 CRUD-UI (rückwirkend eintragbar, Datums-Range, i18n).
 - 32.3 Klassifikations-Awareness (`ist_ausfall` / `teilweise_ausfall`, leere
   Wochen als gelabelte Lücke, `select_comparable_weeks` ausschließen).
-- 32.4 Fatigue-Index: Comeback-Spike-Suppression über die Pause hinweg.
+- 32.4 Volumen-Vergleiche pause-aware (Comeback-Spike): **alle** Pfade –
+  Fatigue (Dashboard+PDF), Form-Index, Stats-Warnungen.
 - 32.5 Streak: dokumentierte Pause pausiert den Streak.
 
 **Explizit NICHT in Scope (→ spätere eigene Phase, „Stufe 3"):**
@@ -123,43 +124,47 @@ invalidieren `dashboard_computed_<user>`.
 *Andockpunkt:* `core/utils/week_classification.py` (seit 24.1c SoT der
 Wochen-Flags).
 
-1. Helper, der für eine ISO-Woche + die Pausen-Ranges eines Users **drei
-   entkoppelte** Aspekte bestimmt – nach Abdeckung *und* Pausen-Intervall, nicht
-   nach „irgendein Overlap" (Codex-Review PR #200, ⑤ + ⑥):
-   - **0 Sessions + Pause deckt die *komplette* ISO-Woche (Mo–So) ab** →
-     `ist_ausfall=True` (echter Vollausfall, primär fürs Lücken-Label; impliziert
-     `ist_pausen_grenze` und damit Streak-Bridge, §32.5).
-   - **Partieller Overlap** (Pause deckt nur einen Teil der Woche ab) →
-     `teilweise_ausfall=True`, unabhängig von der Session-Zahl. Volumen bleibt
-     erhalten, Woche bleibt normal klassifiziert, ist aber kein Trend-Anker.
-     *Wichtig:* ein 1-Tages-Urlaub in einer ohnehin session-losen Woche wird so
-     **nicht** zum Vollausfall – er verbirgt die Woche nicht aus den Ankern und
-     schützt den Streak nicht.
-   - **`ist_pausen_grenze=True`** für jede **session-lose** Woche, die ein
-     dokumentiertes Pausen-Intervall von **≥ Mindestdauer** berührt –
-     **unabhängig** von der ISO-Wochen-Abdeckung (voll vs. partiell). Mindestdauer
-     als Konstante, **inklusiv** gezählt: `dauer_tage = (end − start).days + 1`,
-     Default `PAUSE_BOUNDARY_MIN_DAYS = 5`. Die Schwelle ist bewusst ≤ 6, damit
-     das Di–So-Beispiel (= **6 inklusive Tage**) sie erreicht – sonst widerspräche
-     der Default dem eigenen Beispiel (Codex-Review PR #200, ⑪); sie trennt eine
-     „echte Trainingslücke" vom verlängerten Wochenende. Das ist sowohl die
-     **Trend-Vergleichs-Grenze** (§32.4) **als auch** die Streak-Bridge-Bedingung
-     (§32.5) und bewusst vom Abdeckungs-Flag getrennt: reale Pausen liegen selten
-     auf Mo–So-Grenzen (Codex-Review PR #200, ⑥). Beispiel: Krankheit Di–So
-     (6 inkl. Tage ≥ 5) + Comeback am Montag erzeugt **keine** voll abgedeckte
-     Woche, setzt aber `ist_pausen_grenze` und bricht so den Spike-Vergleich.
+1. Helper, der für eine ISO-Woche + die Pausen-Ranges eines Users **zwei
+   orthogonale Achsen** bestimmt – (a) Label/Abdeckung, (b) Vergleichs-Grenze –
+   nicht „irgendein Overlap" (Codex-Review PR #200, ⑤/⑥/⑭/⑯):
+   - **`ist_ausfall=True`** ⇔ Pause deckt die *komplette* ISO-Woche (Mo–So) ab
+     **und** 0 Sessions. Echter Vollausfall, primär fürs Lücken-Label; impliziert
+     `ist_pausen_grenze` (→ Streak-Bridge, §32.5).
+   - **`teilweise_ausfall=True`** ⇔ Woche überlappt eine Pause, ist aber **nicht**
+     `ist_ausfall`. Deckt damit *alle* übrigen pause-berührten Wochen ab:
+     partieller Overlap (mit/ohne Sessions) **und** Voll-Overlap *mit* einer
+     trotzdem geloggten Session (Codex-Review PR #200, ⑯ – sonst fiele dieser
+     Fall durch beide Zweige und bliebe normaler Trend-Anker). Volumen bleibt
+     erhalten, Woche ist aber **kein** Trend-Anker. Ein 1-Tages-Urlaub in einer
+     session-losen Woche wird so nicht zum Vollausfall (⑤): er verbirgt die Woche
+     nicht und schützt den Streak nicht.
+   - **`ist_pausen_grenze=True`** ⇔ Woche überlappt ein dokumentiertes
+     Pausen-Intervall von **≥ Mindestdauer** – **unabhängig von Abdeckung *und*
+     Session-Zahl** (Codex-Review PR #200, ⑭: das Grenz-Flag darf **nicht** auf
+     session-lose Wochen gegated sein – sonst erzeugt z. B. eine Do–Di-Pause mit
+     Training vor *und* nach der Pause *keine* Grenze, und der Vergleich überquert
+     sie weiter). Mindestdauer **inklusiv** gezählt:
+     `dauer_tage = (end − start).days + 1`, Default `PAUSE_BOUNDARY_MIN_DAYS = 5`
+     (bewusst ≤ 6, damit das Di–So-Beispiel = 6 inkl. Tage sie erreicht, ⑪;
+     trennt echte Trainingslücke vom verlängerten Wochenende). Das ist die
+     **Trend-Vergleichs-Grenze** (§32.4) und – für session-lose Wochen – die
+     **Streak-Bridge** (§32.5). Beispiel: Krankheit Di–So (6 ≥ 5) + Comeback am
+     Montag setzt `ist_pausen_grenze` und bricht den Spike-Vergleich.
 2. **Strukturelle Änderung (riskantester Teil):** Die Wochenliste muss aus
    `union(Wochen-mit-Sessions, Wochen-mit-Pausen-Overlap)` emittiert werden,
    damit eine komplett leere Krankheitswoche **als gelabelte Lücke erscheint**
    statt im Chart zu fehlen. *Hypothese: der Join-/Emissions-Punkt liegt in
    `core/export/stats_collector.py` und/oder dem Live-Helfer in
    `core/views/training_stats.py` – vor der Implementierung lokalisieren.*
-   - **Offene Pause begrenzen (Codex-Review PR #200, ⑦):** weil §32.1
-     `end_datum=None` (laufende Pause) erlaubt, muss die Overlap-/Emissions-Logik
-     die Pause für die Analyse clampen: `effektives_ende = end_datum or heute`,
-     begrenzt auf die **aktuelle ISO-Woche** (kein unbegrenzter Zukunfts-Range,
-     keine `None`-Datumsvergleiche). Eine laufende Pause erscheint so als
-     gelabelte **aktuelle** Lücke.
+   - **Jede Pause auf ≤ heute clampen (Codex-Review PR #200, ⑦ + ⑰):**
+     Analyse-Range = `[start, min(end_datum or heute, heute)]`, begrenzt auf die
+     **aktuelle ISO-Woche**. Das gilt **nicht nur** für offene Pausen
+     (`end_datum=None`), sondern auch für **geschlossene Zukunfts-Ranges** – sonst
+     emittiert die union zukünftige Null-Volumen-Wochen ins Chart und pausiert die
+     Trend-Diagnose verfrüht (⑰). Zukunftsdatierte Pausen entweder verbieten oder
+     rein als „geplant" speichern, ohne Analyse-Wochen zu emittieren. Keine
+     `None`-Datumsvergleiche. Eine laufende Pause erscheint als gelabelte
+     **aktuelle** Lücke.
 3. `select_comparable_weeks` liegt in `core/utils/week_classification.py`
    (**nicht** in `stats_collector.py` – seit 24.1c ist `week_classification`
    die SoT; `stats_collector` konsumiert nur `build_weekly_volume_overview`;
@@ -173,16 +178,17 @@ Wochen-Flags).
    Grenz-Flag werden weiterhin nur per `continue` übersprungen (Volumen erhalten,
    aber kein Anker).
 
-`tests`: voll abgedeckte Woche → `ist_ausfall`; partielle → `teilweise_ausfall`
-+ Volumen erhalten, aber nicht als comparable; 1-Tages-Pause in session-loser
-Woche → **kein** `ist_ausfall`; Pause ≥ Mindestdauer setzt `ist_pausen_grenze`
-auch bei Di–So-Pause ohne volle Wochenabdeckung; offene Pause erscheint als
-gelabelte aktuelle Lücke; leere Krankheitswoche wird emittiert;
-`select_comparable_weeks` bricht an `ist_pausen_grenze` (`break`) und überspringt
-kurze `teilweise_ausfall` (`continue`) – keine Vor-Pause-Woche landet hinter der
-Pause in der Vergleichsliste.
+`tests`: `ist_ausfall` ⇔ Vollabdeckung **+ 0 Sessions**; Voll-Overlap **mit**
+Session → `teilweise_ausfall` (⑯), nicht Anker; partielle Pause mit/ohne Session
+→ `teilweise_ausfall`; 1-Tages-Pause → **kein** `ist_ausfall`; Pause ≥ Mindestdauer
+setzt `ist_pausen_grenze` auch wenn **beide Teilwochen Sessions** haben (Do–Di, ⑭)
+und bei Di–So ohne volle Wochenabdeckung (⑥); geschlossene **Zukunfts**-Pause
+emittiert **keine** Zukunfts-Wochen (⑰); offene Pause = aktuelle Lücke; leere
+Krankheitswoche wird emittiert; `select_comparable_weeks` bricht an
+`ist_pausen_grenze` (`break`) und überspringt kurze `teilweise_ausfall`
+(`continue`) – keine Vor-Pause-Woche landet hinter der Pause in der Vergleichsliste.
 
-### 32.4 – Fatigue-Index: Comeback-Spike-Suppression
+### 32.4 – Volumen-Vergleiche pause-aware (Fatigue-Spike, Form-Index, Warnungen)
 
 `calculate_fatigue_index` (in `core/utils/advanced_stats.py`) routet die
 Volumen-Spike-Komponente über `select_comparable_weeks` (Lazy-Import, seit
@@ -199,26 +205,33 @@ der Pause sind nur Post-Pause-Wochen vergleichbar; die erste Comeback-Woche
 allein ergibt `len < 2` → „Trend pausiert", bis eine zweite Post-Pause-Woche
 existiert. Kein Vergleich überquert die Pause.
 
-**Zwei Fatigue-Pfade – beide fixen (Codex-Review PR #200, ⑧):** Der obige Fix
-greift **nur im Export/PDF-Pfad** (`advanced_stats.calculate_fatigue_index`).
-Das **Dashboard** berechnet sein Fatigue-Kärtchen über einen *eigenen* Pfad, der
-`select_comparable_weeks` **nicht** benutzt:
-`core/views/training_stats.py::_calculate_fatigue_index` →
-`_get_volume_spike_fatigue`, gespeist aus `_calculate_weekly_volumes` (rohe
-letzte 4 Wochen, ohne Pausen-Flags). Würde nur der Export gefixt, zeigte das
-Dashboard den falschen Comeback-Spike weiter. Fix gemäß Leitprinzip „bestehende
-Pfade wiederverwenden, keine Parallelstruktur": `_calculate_weekly_volumes` trägt
-die neuen Flags (`teilweise_ausfall` / `ist_pausen_grenze`), und der
-Live-Spike-Vergleich wendet dieselbe Grenz-/Skip-Logik wie
-`select_comparable_weeks` an (idealerweise denselben Helfer). Damit ist die
-§10-Hypothese beantwortet: `select_comparable_weeks` ist **nicht** der einzige
-Chokepoint – live + PDF müssen explizit beide abgedeckt werden.
+**Nicht nur ein Pfad – VIER Volumen-Vergleiche pause-aware machen (Codex-Review
+PR #200, ⑧ + ⑮ + ⑱):** `select_comparable_weeks` ist **nicht** der einzige
+Chokepoint. Im Code vergleichen mindestens **vier** Stellen aufeinanderfolgende/
+benachbarte Wochen-Volumina, von denen bisher nur **eine** pause-aware ist:
 
-`tests`: Wiedereinstiegs-Woche nach Pause erzeugt **keine** „Sehr starker
-Volumen-Anstieg"-Warnung – **in beiden Pfaden** (Dashboard
-`_calculate_fatigue_index` **und** Export `calculate_fatigue_index`); auch bei
-einer Di–So-Pause ohne volle Wochenabdeckung (Reproduktion des erwarteten
-Fehlverhaltens + Fix).
+| # | Pfad | Funktion | nutzt `select_comparable_weeks`? |
+|---|------|----------|-------------------------------|
+| 1 | Export/PDF Fatigue-Spike | `advanced_stats.calculate_fatigue_index` | ✅ ja |
+| 2 | Dashboard Fatigue-Spike | `_calculate_fatigue_index` → `_get_volume_spike_fatigue` ← `_calculate_weekly_volumes` (rohe 4 Wo.) | ❌ (⑧) |
+| 3 | Dashboard Form-Index Volumen-Trend | `_calculate_form_index` → `_get_volume_trend_score` (letzte Nicht-Null-Wochen) | ❌ (⑮) |
+| 4 | Stats-Seite Volumen-Warnungen | `_detect_volume_warnings` (benachbarte Nicht-Null-Wochen) | ❌ (⑱) |
+
+Pfade 2–4 würden nach einer Pause weiterhin die Comeback-Woche direkt gegen die
+Vor-Pause-Woche vergleichen (Form-Index belohnt/bestraft „Volumen-Trend",
+Stats-Seite zeigt „Anstieg"-Warnung), selbst wenn der Fatigue-Spike (1) gefixt
+ist. **Konsequenz gemäß Leitprinzip „keine Parallelstruktur":** *einen*
+gemeinsamen pause-aware Comparable-Weeks-Helfer schaffen (bzw.
+`select_comparable_weeks` + die Flags als geteilte Quelle), den **alle vier**
+Pfade konsumieren – `_calculate_weekly_volumes`/`_get_volume_trend_score`/
+`_detect_volume_warnings` tragen dafür die neuen Flags. Plus **Audit/Guard-Test**,
+der alle benachbarten Wochen-Volumen-Vergleiche aufzählt, damit kein fünfter
+Pfad still vorbeiläuft.
+
+`tests`: Wiedereinstiegs-Woche nach Pause erzeugt **keine** falsche
+Volumen-Anstiegs-Warnung/-Bewertung in **allen vier Pfaden** (Fatigue Dashboard +
+PDF, Form-Index, Stats-Warnungen); auch bei einer Di–So-Pause ohne volle
+Wochenabdeckung (Reproduktion des erwarteten Fehlverhaltens + Fix).
 
 ### 32.5 – Streak: Pause pausiert
 
@@ -279,13 +292,17 @@ Konzept-Doc selbst nach `docs/concepts/phase32_concept.md` tragen und mit-commit
 - `core/utils/advanced_stats.py` – **Export/PDF**-Fatigue-Spike-Fluss
   (`calculate_fatigue_index` via `select_comparable_weeks`) + zweite
   Streak-Schleife in `calculate_consistency_metrics` (PDF-Streak, §32.5).
-- `core/views/training_stats.py` – **Dashboard**-Pfade, die `select_comparable_weeks`
-  *umgehen* und ebenfalls pause-aware werden müssen: Fatigue
+- `core/views/training_stats.py` – **Dashboard/Stats**-Pfade, die `select_comparable_weeks`
+  *umgehen* und ebenfalls pause-aware werden müssen (§32.4): Fatigue
   `_calculate_fatigue_index` + `_calculate_weekly_volumes` + `_get_volume_spike_fatigue`
-  (§32.4, ⑧) und Streak `_calculate_streak` (§32.5).
+  (⑧); Form-Index `_calculate_form_index` + `_get_volume_trend_score` (⑮);
+  Stats-Warnungen `_detect_volume_warnings` (⑱); Streak `_calculate_streak` (§32.5).
 - `core/chart_generator.py` – Lücken-Darstellung im matplotlib-Volumen-Chart.
 - `core/admin.py` – `TrainingsPause` registrieren.
-- `locale/de`, `locale/en` – `.po` für `grund`-Labels + UI.
+- `locale/en/LC_MESSAGES/django.po` **+ kompiliertes `django.mo`** – Deutsch ist
+  Quell-Sprache (msgid), **kein** `locale/de`-Katalog im Repo; nur Englisch wird
+  übersetzt. Neue Strings ins `.po` **und** `compilemessages` ausführen, sonst
+  nutzt die EN-UI das alte `.mo` (⑲; `test_i18n` verlangt die `.mo`).
 - Tests in `core/tests/…`.
 
 ## 7. i18n (DE/EN)
@@ -299,6 +316,14 @@ class Grund(models.TextChoices):
 ```
 Stabiler deutscher Key in der DB; Übersetzung via `gettext_lazy` **nur beim
 Rendern**. Niemals den übersetzten String persistieren.
+
+**Katalog-Realität (⑲):** Deutsch ist die **Quell-Sprache** (msgid) – es gibt
+**keinen** `locale/de`-Katalog. Nur Englisch wird übersetzt
+(`locale/en/LC_MESSAGES/django.po`). Neue UI-/`grund`-Strings müssen ins
+englische `.po` **und** danach mit `django-admin compilemessages` ins
+`django.mo` kompiliert werden – sonst rendert die EN-UI den alten Stand und
+`core/tests/test_i18n.py` (verlangt die `.mo`) schlägt fehl. Das kompilierte
+`.mo` mit-committen.
 
 ## 8. Risiken
 
@@ -323,27 +348,31 @@ Rendern**. Niemals den übersetzten String persistieren.
 2. 2-Wochen-Krankheit mit 0 Sessions erscheint als **gelabelte Lücke** (nicht
    stumm fehlend) in Live **und** PDF.
 3. Wiedereinstiegs-Woche nach Pause erzeugt **keine** falsche
-   Volumen-Anstiegs-Warnung im Fatigue-Index – in **Dashboard und PDF** (⑧),
-   auch bei nicht auf Mo–So ausgerichteten Pausen (⑥).
+   Volumen-Anstiegs-Warnung/-Bewertung – in **allen vier Vergleichspfaden**
+   (Fatigue Dashboard + PDF, Form-Index, Stats-Warnungen; ⑧/⑮/⑱), auch bei nicht
+   auf Mo–So ausgerichteten Pausen (⑥) inkl. Sessions in beiden Teilwochen (⑭).
 4. Dokumentierte Pause ≥ Mindestdauer **resettet den Streak nicht** – auch bei
    nicht auf Mo–So ausgerichteten Pausen (⑨), in Dashboard **und** PDF.
 5. Teil-Overlap-Woche behält ihr echtes Volumen, ist aber als Trend-Anker
-   ausgeschlossen.
-6. `grund`-Labels DE/EN korrekt.
+   ausgeschlossen (auch Voll-Overlap *mit* Session, ⑯).
+6. `grund`-Labels DE/EN korrekt; englisches `.mo` kompiliert, `test_i18n` grün (⑲).
 7. Anlegen/Ändern/**Löschen** einer Pause wirkt **sofort** im Dashboard
    (`dashboard_computed_<user>` invalidiert, nicht erst nach TTL) (⑬).
-8. Gesamte Testsuite grün, inkl. `test_chart_generator`.
+8. Zukunftsdatierte Pause emittiert **keine** Zukunfts-Wochen ins Chart (⑰).
+9. Gesamte Testsuite grün, inkl. `test_chart_generator` **und** `test_i18n`.
 
 ## 10. Vor Implementierung am Code zu klärende Hypothesen
 
 - Exakte Streak-Definition + **beide** Orte (Dashboard `_calculate_streak`
   **und** PDF `calculate_consistency_metrics`, §32.5).
 - Join-/Emissions-Punkt der Wochenliste (`stats_collector` vs.
-  `training_stats`-Helfer) **inkl. Clamping offener Pausen** auf `heute`/aktuelle
-  ISO-Woche (§32.3.2, ⑦).
+  `training_stats`-Helfer) **inkl. Clamping JEDER Pause** (offen *und*
+  geschlossene Zukunfts-Ranges) auf `heute`/aktuelle ISO-Woche (§32.3.2, ⑦ + ⑰).
 - `select_comparable_weeks` ist **nicht** der einzige Chokepoint (beantwortet,
-  ⑧): der Dashboard-Fatigue-Pfad (`_calculate_weekly_volumes` /
-  `_get_volume_spike_fatigue`) umgeht ihn – beide Pfade pause-aware machen.
+  ⑧/⑮/⑱): **vier** Pfade vergleichen Wochen-Volumina (Fatigue Dashboard+PDF,
+  Form-Index `_get_volume_trend_score`, Stats-Warnungen `_detect_volume_warnings`)
+  – einen **gemeinsamen** pause-aware Helfer schaffen, den alle konsumieren, +
+  Audit-Test gegen vergessene fünfte Stelle.
 - Mindestdauer (`PAUSE_BOUNDARY_MIN_DAYS`, inklusiv gezählt, Default 5) so
   festlegen, dass das Di–So-Beispiel sie erreicht (§32.3, ⑥ + ⑪) – **geteilte**
   Schwelle für Trend-Grenze (§32.4) **und** Streak-Bridge (§32.5, ⑨).
