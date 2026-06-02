@@ -1,9 +1,62 @@
-# Berry-Gym – Erweiterungs-Roadmap
-**Erstellt:** 2026-03-12
+# Berry-Gym – Projekt-Roadmap (Phasen 1–31)
+**Erstellt:** 2026-03-12 · **Letzte Aktualisierung:** 2026-06-01 (Phase 28 Abschluss)
 **Ziel:** Professionelles, tägliches Trainings-Tool für private Nutzung mit Freunden
 **Strategie:** Bugs & UX zuerst, dann Features – kein neues Feature ohne Polish des Bestehenden
 
+> Single-Source-of-Truth für den Phasen-Status. Die Übersicht unten verlinkt auf
+> die Detail-Konzepte unter `docs/concepts/`. Die ausführlichen Beschreibungen der
+> Phasen 1–23 stehen weiter unten (historisch); die Phasen 24–31 sind in den
+> Konzept-Docs dokumentiert. Laufendes Projektgedächtnis: Bramble-MCP-Journal
+> (`project="berry-gym"`), siehe `AGENTS.md`.
+
+## Phasen-Übersicht (1–31)
+
+| Phase | Titel | Status | Konzept |
+|---|---|---|---|
+| 1 | Bugs & Navigation | ✅ 2026-03-12 | Detail unten |
+| 2 | PR-System | ✅ 2026-03-13 | Detail unten |
+| 3 | Trainingsblock-Konzept | ✅ 2026-03-23 | Detail unten |
+| 4 | Dashboard-Hierarchie | ✅ 2026-03-23 | Detail unten |
+| 5 | Trainingsabschluss aufwerten | ✅ 2026-03-23 | Detail unten |
+| 6 | Trainingshistorie aufwerten | ✅ 2026-03 | Detail unten |
+| 7 | Statistiken vertiefen | ✅ 2026-03 | Detail unten |
+| 8 | Prognose & Forecasting | ✅ 2026-03-23 | Detail unten |
+| 9 | Datenqualität & Metriken-Hygiene | ✅ 2026-03-26 | Detail unten |
+| 10 | Periodisierungs-Intelligence | ✅ 2026-03-26 | Detail unten |
+| 11 | KI-Planvalidierung | ✅ 2026-03-26 | Detail unten |
+| 12 | Kontextsensitive Empfehlungen | ✅ 2026-03-26 | Detail unten |
+| 13 | LLM-Planqualität & Dynamische Periodisierung | ✅ 2026-03-27 | Detail unten |
+| 14 | Körpergewicht-Übungen: Gegengewicht & Hist. Gewicht | ✅ 2026-03-27 | Detail unten |
+| 15 | Mindest-Satz-Budget Validierung & Auto-Fix | ✅ 2026-03-28 | Detail unten |
+| 16 | Push/Pull-Validierung im Plangenerator | ✅ 2026-04-02 | Detail unten |
+| 17 | Plandauer als Plan-Input | ✅ 2026-04-02 | Detail unten |
+| 18 | Startgewicht-Empfehlung beim Planwechsel | ✅ 2026-04-02 | Detail unten |
+| 19 | Session-RPE-Trend | ✅ 2026-04-02 | Detail unten |
+| 20 | Schwachstellen-Tracker / Feedback-Loop | ✅ 2026-04 | Detail unten |
+| 21 | Statistik-Seite erweitern | ✅ 2026-04-02 | Detail unten |
+| 22 | Aktiver-Plan-Filter (Statistiken) | ✅ 2026-05 | Detail unten |
+| 23 | Zeitfenster-basierte Trainingsanalysen | ✅ 2026-05-07 | [Konzept](concepts/phase23_concept.md) |
+| 24 | Report-Daten-Konsistenz | ✅ 2026-05 | [Konzept](concepts/phase24_concept.md) |
+| 25 | Report-Layout-Refactor (Struktur & Technik) | ✅ 2026-05-18 | [Konzept](concepts/phase25_concept.md) |
+| 26 | Konsolidierungs-Logik zeitlich begrenzen | ✅ 2026-05-30 | [Konzept](concepts/phase26_concept.md) |
+| 27 | Style-Overhaul | ✅ 2026-06-01 (PDF-Fonts deferred) | [Konzept](concepts/phase27_concept.md) |
+| 28 | Dokumentations-Aktualisierung | ✅ 2026-06-01 | [Konzept](concepts/phase28_concept.md) |
+| 29 | Plan-Generator-Konsistenz & Qualität | ✅ 2026-05-19 | [Konzept](concepts/phase29_concept.md) |
+| 30 | Adaptive Plan Generation | ✅ 2026-05-20 | [Konzept](concepts/phase30_concept.md) |
+| 31 | Untertrainiert-Coverage-Hard-Fail + Quellen-Konsistenz | ✅ 2026-05-30 | [Konzept](concepts/phase31_concept.md) |
+
+**Aktiv:** – (Phasen 1–31 umgesetzt). **Deferred:** PDF-Report-Engine-Wechsel
+zu WeasyPrint für PDF-Custom-Fonts/Status-Glyphen – mit xhtml2pdf nicht
+umsetzbar (siehe `concepts/phase27_concept.md` §J).
+**Offene Folgearbeit:** i18n-Nachzug der Progression-/Plateau-Status-Labels
+(gettext DE/EN) – Journal-Notiz `berry-gym#649`.
+**Konventionen:** Branch `feature/phase-XX-kurzbeschreibung` pro (Sub-)Phase;
+Konzept-Doc je Phase unter `docs/concepts/`; Journal-Workflow append-only
+(`in_arbeit`/`abgeschlossen`/`notiz`/`bugfix`, siehe `AGENTS.md`).
+
 ---
+
+## Detail: Phasen 1–23 (historisch)
 
 ## Phase 1 – Bugs & Navigation *(klein, sofort spürbar)*
 **Branch:** `feature/phase1-ux-fixes`
@@ -535,6 +588,21 @@ Drei zusammenhängende Korrekturen mit gemeinsamer Grundidee: **Zeitfenster expl
 - KEINE Änderung der Schwellenwerte (12–20 Sätze, RPE 7–9 etc.) – nur Berechnungs-Zeitraum
 - All-Time-Werte bleiben sichtbar, nicht ersatzlos gestrichen
 - 23.5 (PDF-Konsistenz) optional – falls Scope zu groß, in 23.x ausgliedern
+
+---
+
+## Phasen 24–31 (Detail in den Konzept-Docs)
+
+Kompakt – Volltext jeweils im verlinkten Konzept:
+
+- **Phase 24 – Report-Daten-Konsistenz** ✅ — Single-Source-of-Truth zwischen PDF-Report und Live-Statistiken (Set-Attribution, Schwellenwerte). [Konzept](concepts/phase24_concept.md), [Audit 24.4](concepts/phase24-04-audit-bericht.md)
+- **Phase 25 – Report-Layout-Refactor (Struktur & Technik)** ✅ — Reihenfolge, Pagebreaks, ToC, Charts des PDF-Reports; Style bewusst ausgeklammert → Phase 27. [Konzept](concepts/phase25_concept.md)
+- **Phase 26 – Konsolidierungs-Logik zeitlich begrenzen** ✅ — Konsolidierung stuft nach Tagen-seit-PR: ≤4 W „Konsolidierung", 4–8 W „Bereit für PR-Versuch", >8 W „ungewöhnlich lange". [Konzept](concepts/phase26_concept.md)
+- **Phase 27 – Style-Overhaul** ✅ 2026-06-01 — Berry-Marken-Style: Tokens + Bootstrap-Override, Typografie (Source Serif/Sans), Status-Icons, Karten, Charts (live + matplotlib). PDF-Custom-Fonts/Glyphen via WeasyPrint deferred (§J). [Konzept](concepts/phase27_concept.md)
+- **Phase 28 – Dokumentations-Aktualisierung** ✅ 2026-06-01 — README/Roadmap/Konzept-Docs auf Stand (28.1–28.4 + finaler Pass nach Phase 27); 28.5 operative Docs spot-gecheckt. [Konzept](concepts/phase28_concept.md)
+- **Phase 29 – Plan-Generator-Konsistenz & Qualität** ✅ — F1 Volumen-Steuerung, F2 Tag-Anzahl-Bruch, F3 Untertrainiert-Liste als Generator-Input. [Diagnose 29.1](concepts/phase29-diagnose.md), [Konzept](concepts/phase29_concept.md)
+- **Phase 30 – Adaptive Plan Generation** ✅ — Report-Output als Generator-Input: Übertrainings-Cap, Untertrainiert-Quelle, Plateau-/Push-Pull-/Ermüdungs-Hints. [Konzept](concepts/phase30_concept.md)
+- **Phase 31 – Untertrainiert-Coverage-Hard-Fail + Quellen-Konsistenz** ✅ — symmetrischer Hard-Fail (31.1), Quellen-Diagnose (31.2), Plan-Description-Sanitizing (31.3). [Konzept](concepts/phase31_concept.md)
 
 ---
 

@@ -47,7 +47,7 @@ PROGRESSION_RPE_MIN_SETS = 4
 # Wenn die historische Steigerungsrate (kg/Monat) ≥ X % des aktuellen PR-1RM
 # beträgt UND die Trainingshistorie der Übung lang genug ist, wird die reine
 # Tage-seit-PR-Diagnose ("Plateau") überschrieben mit
-# ``active_progression_paused`` ("📈 Aktive Progression (PR-Pause)").
+# ``active_progression_paused`` ("Aktive Progression (PR-Pause)").
 # Konservativ gewählt: 2 % pro Monat = ein Jahr lang stetiger Aufbau, das ist
 # klare Progression. RDL-Fall (+26.5 kg/Monat bei ~73 kg 1RM ≙ 36 %) wird
 # damit eindeutig nicht mehr als Plateau klassifiziert; eine echte 1 %/Monat-
@@ -158,6 +158,52 @@ def compute_progression_rate(
     return rate, history_days
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 27.4: Status → Form (Single Source der §C-Zuordnung des Style-Konzepts).
+# Live nutzt Bootstrap-Icons, PDF Unicode-Geometrie. Emoji sind aus den Labels
+# entfernt; die FORM trägt das Icon/Glyph, die BEDEUTUNG das Textlabel daneben.
+# consolidation_ready/_overlong sind vorausschauend gemappt (Phase 26), damit
+# der Merge mit der Phase-26-Branch keine Lücke hinterlässt.
+# ─────────────────────────────────────────────────────────────────────────────
+_PROGRESSION_STATUS_ICON = {
+    "active_progression": "bi-graph-up-arrow",
+    "active_progression_paused": "bi-graph-up-arrow",
+    "observe": "bi-eye",
+    "pause": "bi-pause-circle",
+    "consolidation": "bi-arrow-left-right",
+    "consolidation_ready": "bi-arrow-up-circle",
+    "consolidation_overlong": "bi-hourglass-split",
+    "plateau_light": "bi-dash-circle",
+    "plateau": "bi-exclamation-triangle-fill",
+    "plateau_long": "bi-x-octagon-fill",
+    "regression": "bi-graph-down-arrow",
+    "no_data": "bi-question-circle",
+}
+_PROGRESSION_STATUS_GLYPH = {
+    "active_progression": "▲",
+    "active_progression_paused": "▲",
+    "observe": "○",
+    "pause": "‖",
+    "consolidation": "◇",
+    "consolidation_ready": "◆",
+    "consolidation_overlong": "◆",
+    "plateau_light": "◆",
+    "plateau": "■",
+    "plateau_long": "✕",
+    "regression": "▼",
+    "no_data": "·",
+}
+
+
+def _finalize_progression(result: dict) -> dict:
+    """Phase 27.4: ergänzt ``status_icon`` (Bootstrap-Icon, live) und
+    ``status_glyph`` (Unicode-Geometrie, PDF) anhand des Status-Keys."""
+    status = result.get("status", "no_data")
+    result["status_icon"] = _PROGRESSION_STATUS_ICON.get(status, "")
+    result["status_glyph"] = _PROGRESSION_STATUS_GLYPH.get(status, "")
+    return result
+
+
 def classify_progression_status(
     uebung_saetze,
     pr_satz,
@@ -221,7 +267,7 @@ def classify_progression_status(
 
     result = {
         "status": "no_data",
-        "status_label": "📊 Keine Daten",
+        "status_label": "Keine Daten",
         "status_farbe": "secondary",
         "days_since_pr": None,
         "rpe_first_half": None,
@@ -233,7 +279,7 @@ def classify_progression_status(
     }
 
     if not pr_satz or not pr_satz.gewicht or not getattr(pr_satz, "einheit", None):
-        return result
+        return _finalize_progression(result)
 
     pr_date = pr_satz.einheit.datum
     days_since_pr = (reference_date.date() - pr_date.date()).days
@@ -259,25 +305,25 @@ def classify_progression_status(
         result["weight_drop_pct"] is not None
         and result["weight_drop_pct"] > REGRESSION_WEIGHT_DROP_PCT
     ):
-        result.update(status="regression", status_label="⚠️ Rückschritt", status_farbe="danger")
-        return result
+        result.update(status="regression", status_label="Rückschritt", status_farbe="danger")
+        return _finalize_progression(result)
 
     # 2) Frischer PR
     if days_since_pr <= 7:
         result.update(
             status="active_progression",
-            status_label="✅ Aktive Progression",
+            status_label="Aktive Progression",
             status_farbe="success",
         )
-        return result
+        return _finalize_progression(result)
     if days_since_pr <= 14:
-        result.update(status="observe", status_label="👀 Beobachten", status_farbe="info")
-        return result
+        result.update(status="observe", status_label="Beobachten", status_farbe="info")
+        return _finalize_progression(result)
 
     # 3) Pause: zu wenig aktuelle Sätze, kein Regressions-Signal
     if result["cur_4w_n"] < PAUSE_MIN_CUR_SETS:
-        result.update(status="pause", status_label="⏸️ Pause", status_farbe="secondary")
-        return result
+        result.update(status="pause", status_label="Pause", status_farbe="secondary")
+        return _finalize_progression(result)
 
     # 4) Konsolidierung: RPE-Trend in den letzten 4w vergleichen.
     rpe_saetze = [s for s in cur_saetze if s.rpe is not None and s.gewicht]
@@ -336,27 +382,25 @@ def classify_progression_status(
         if rate_pct >= PROGRESSION_RATE_OVERRIDE_PCT:
             result.update(
                 status="active_progression_paused",
-                status_label="📈 Aktive Progression (PR-Pause)",
+                status_label="Aktive Progression (PR-Pause)",
                 status_farbe="success",
                 progression_rate_pct=rate_pct,
             )
-            return result
+            return _finalize_progression(result)
         result["progression_rate_pct"] = rate_pct
 
     # 5) Plateau nach Tagen seit PR
     if days_since_pr <= 42:
         result.update(
             status="plateau_light",
-            status_label="⚠️ Leichtes Plateau",
+            status_label="Leichtes Plateau",
             status_farbe="warning",
         )
     elif days_since_pr <= 84:
-        result.update(status="plateau", status_label="🔴 Plateau", status_farbe="danger")
+        result.update(status="plateau", status_label="Plateau", status_farbe="danger")
     else:
-        result.update(
-            status="plateau_long", status_label="❌ Langzeit-Plateau", status_farbe="danger"
-        )
-    return result
+        result.update(status="plateau_long", status_label="Langzeit-Plateau", status_farbe="danger")
+    return _finalize_progression(result)
 
 
 def calculate_plateau_analysis(alle_saetze, top_uebungen):
@@ -421,6 +465,8 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
                 "status": classification["status"],
                 "status_label": classification["status_label"],
                 "status_farbe": classification["status_farbe"],
+                "status_icon": classification["status_icon"],
+                "status_glyph": classification["status_glyph"],
                 "rpe_first_half": classification["rpe_first_half"],
                 "rpe_second_half": classification["rpe_second_half"],
                 "rpe_delta": classification["rpe_delta"],
@@ -521,19 +567,19 @@ def calculate_consistency_metrics(alle_trainings):
 
     # Bewertung
     if aktueller_streak >= 12 and adherence_rate >= 85:
-        bewertung = "🏆 Exzellent"
+        bewertung = "Exzellent"
         bewertung_farbe = "success"
     elif aktueller_streak >= 8 and adherence_rate >= 70:
-        bewertung = "✅ Sehr gut"
+        bewertung = "Sehr gut"
         bewertung_farbe = "success"
     elif aktueller_streak >= 4 and adherence_rate >= 60:
-        bewertung = "👍 Gut"
+        bewertung = "Gut"
         bewertung_farbe = "info"
     elif adherence_rate >= 40:
-        bewertung = "⚠️ Ausbaufähig"
+        bewertung = "Ausbaufähig"
         bewertung_farbe = "warning"
     else:
-        bewertung = "🔴 Inkonsistent"
+        bewertung = "Inkonsistent"
         bewertung_farbe = "danger"
 
     return {
@@ -625,19 +671,19 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     naechste_deload = heute + timedelta(weeks=6)
 
     if fatigue_index >= 60:
-        bewertung = "🚨 Hoch"
+        bewertung = "Hoch"
         bewertung_farbe = "danger"
         empfehlung = "Deload-Woche empfohlen! Reduziere Volumen um 40-50%."
     elif fatigue_index >= 40:
-        bewertung = "⚠️ Moderat"
+        bewertung = "Moderat"
         bewertung_farbe = "warning"
         empfehlung = "Achte auf ausreichend Regeneration."
     elif fatigue_index >= 20:
-        bewertung = "ℹ️ Niedrig"
+        bewertung = "Niedrig"
         bewertung_farbe = "info"
         empfehlung = "Gute Balance zwischen Training und Erholung."
     else:
-        bewertung = "✅ Sehr niedrig"
+        bewertung = "Sehr niedrig"
         bewertung_farbe = "success"
         # Phase 23.x: vorher "Du kannst noch mehr trainieren!" – missverständlich,
         # klang nach Aufforderung zu mehr Volumen statt nach Belastbarkeits-Status.
@@ -899,34 +945,34 @@ def calculate_rpe_quality_analysis(alle_saetze):
 
     if junk_volume_rate > 20:
         empfehlungen.append(
-            f'⚠️ Zu viel "Junk Volume" ({junk_volume_rate}%) - Reduziere Aufwärmsätze oder erhöhe Intensität'
+            f'Zu viel "Junk Volume" ({junk_volume_rate}%) - Reduziere Aufwärmsätze oder erhöhe Intensität'
         )
 
     if optimal_intensity_rate < 50:
         empfehlungen.append(
-            f"⚠️ Zu wenig intensive Sätze ({optimal_intensity_rate}%) - Trainiere näher ans Versagen (RPE 7-9)"
+            f"Zu wenig intensive Sätze ({optimal_intensity_rate}%) - Trainiere näher ans Versagen (RPE 7-9)"
         )
 
     if failure_rate > 10:
         empfehlungen.append(
-            f"⚠️ Zu oft bis zum Versagen ({failure_rate}%) - Risiko für Übertraining. Ziel: <5%"
+            f"Zu oft bis zum Versagen ({failure_rate}%) - Risiko für Übertraining. Ziel: <5%"
         )
 
     if optimal_intensity_rate >= 60 and failure_rate <= 5 and junk_volume_rate <= 15:
-        empfehlungen.append("✅ Optimale Trainingsintensität! Weiter so.")
+        empfehlungen.append("Optimale Trainingsintensität! Weiter so.")
 
     # Bewertung
     if optimal_intensity_rate >= 70 and junk_volume_rate <= 10 and failure_rate <= 5:
-        bewertung = "🏆 Exzellent"
+        bewertung = "Exzellent"
         bewertung_farbe = "success"
     elif optimal_intensity_rate >= 60 and junk_volume_rate <= 20 and failure_rate <= 10:
-        bewertung = "✅ Gut"
+        bewertung = "Gut"
         bewertung_farbe = "success"
     elif optimal_intensity_rate >= 40:
-        bewertung = "⚠️ Ausbaufähig"
+        bewertung = "Ausbaufähig"
         bewertung_farbe = "warning"
     else:
-        bewertung = "🔴 Verbesserung nötig"
+        bewertung = "Verbesserung nötig"
         bewertung_farbe = "danger"
 
     return {

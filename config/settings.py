@@ -208,6 +208,12 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = os.getenv("STATIC_ROOT", BASE_DIR / "staticfiles")
 
+# PDF-Report-Engine: "xhtml2pdf" (Default, Bestand) oder "weasyprint"
+# (CSS-Engine mit echtem @font-face → Source-Fonts + Status-Glyphen im PDF).
+# WeasyPrint braucht native Libs (Pango/GLib); ist es nicht ladbar oder
+# scheitert das Rendern, fällt der Renderer automatisch auf xhtml2pdf zurück.
+PDF_ENGINE = os.getenv("PDF_ENGINE", "xhtml2pdf")
+
 # Media files (User uploads)
 MEDIA_URL = "media/"
 MEDIA_ROOT = os.getenv("MEDIA_ROOT", BASE_DIR / "media")

@@ -11,11 +11,17 @@ Testet:
 import csv
 import io
 from datetime import date
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+from django.conf import settings
+from django.contrib.messages.storage.fallback import FallbackStorage
+from django.test import RequestFactory, override_settings
 from django.urls import reverse
 
 import pytest
 
+from core.export import pdf_renderer
 from core.tests.factories import (
     PlanFactory,
     PlanUebungFactory,
@@ -133,6 +139,25 @@ class TestTrainingPDFExport:
 
         # PDF sollte nicht leer sein
         assert len(response.content) > 1000  # Mindestgröße
+
+    @override_settings(PDF_ENGINE="weasyprint")
+    def test_export_training_pdf_weasyprint_engine(self, client):
+        """PDF rendert auch mit PDF_ENGINE='weasyprint' (inkl. @font-face +
+        Status-Glyphen). Ist WeasyPrint / dessen native Libs nicht ladbar,
+        greift der Auto-Fallback auf xhtml2pdf – in beiden Fällen ein valides
+        PDF, kein Crash."""
+        user = UserFactory()
+        client.force_login(user)
+        training = TrainingseinheitFactory(user=user)
+        uebung = UebungFactory(bezeichnung="Kniebeugen")
+        SatzFactory(einheit=training, uebung=uebung, gewicht=100.0)
+
+        response = client.get(reverse("export_training_pdf"))
+
+        assert response.status_code == 200
+        assert response["Content-Type"] == "application/pdf"
+        assert response.content[:5] == b"%PDF-"
+        assert len(response.content) > 1000
 
     def test_export_training_pdf_with_data(self, client):
         """PDF enthält Trainingsdaten."""
@@ -342,3 +367,90 @@ class TestAnalyzeWeightLossContext:
         }
         result = _analyze_weight_loss_context(stats)
         assert any("sinkt" in f for f in result["faktoren_dafuer"])
+
+
+# ---------------------------------------------------------------------------
+# Engine-Logik des PDF-Renderers (core/export/pdf_renderer.py)
+# ---------------------------------------------------------------------------
+
+_TINY_HTML = "<html><body><p>Test</p></body></html>"
+# core/static enthält die Font-TTFs – als STATIC_ROOT für den Fetcher-Test.
+_FONTS_STATIC_ROOT = str(Path(settings.BASE_DIR) / "core" / "static")
+
+
+class TestPdfRendererEngine:
+    """Engine-Auswahl, Fallback und Hilfsfunktionen des PDF-Renderers.
+
+    Deckt die Fehler-/Fallback-Pfade ab, die im Normalbetrieb nicht ausgelöst
+    werden: WeasyPrint-Render-Fehler → xhtml2pdf-Fallback, fehlende Engine,
+    pisa-Fehler, STATIC_ROOT-Auflösung im URL-Fetcher, Dateiname ohne Zeitraum.
+    """
+
+    def _request(self):
+        return RequestFactory().get("/")
+
+    @override_settings(PDF_ENGINE="weasyprint")
+    def test_weasyprint_fehler_faellt_auf_xhtml2pdf_zurueck(self):
+        if pdf_renderer.weasyprint is None:
+            pytest.skip("WeasyPrint nicht importierbar")
+        req = self._request()
+        with (
+            patch.object(pdf_renderer, "render_to_string", return_value=_TINY_HTML),
+            patch.object(pdf_renderer.weasyprint, "HTML", side_effect=RuntimeError("kein Pango")),
+        ):
+            pdf = pdf_renderer._render_pdf_bytes(req, {})
+        # WeasyPrint-Fehler → Auto-Fallback liefert trotzdem ein valides PDF
+        assert pdf[:5] == b"%PDF-"
+
+    @override_settings(PDF_ENGINE="xhtml2pdf")
+    def test_keine_engine_verfuegbar_wirft(self):
+        req = self._request()
+        with patch.object(pdf_renderer, "pisa", None):
+            with pytest.raises(RuntimeError):
+                pdf_renderer._render_pdf_bytes(req, {})
+
+    @override_settings(PDF_ENGINE="xhtml2pdf")
+    def test_pisa_fehler_wirft(self):
+        req = self._request()
+        fake_pdf = MagicMock()
+        fake_pdf.err = 3
+        with (
+            patch.object(pdf_renderer, "render_to_string", return_value=_TINY_HTML),
+            patch.object(pdf_renderer.pisa, "pisaDocument", return_value=fake_pdf),
+        ):
+            with pytest.raises(RuntimeError):
+                pdf_renderer._render_pdf_bytes(req, {})
+
+    def test_render_response_faengt_engine_fehler_und_leitet_um(self):
+        req = self._request()
+        req.session = {}
+        setattr(req, "_messages", FallbackStorage(req))
+        with patch.object(pdf_renderer, "_render_pdf_bytes", side_effect=RuntimeError("boom")):
+            response = pdf_renderer.render_training_pdf_response(req, {}, date(2026, 6, 1))
+        assert response.status_code == 302
+
+    def test_dateiname_ohne_zeitraum_nutzt_heute(self):
+        req = self._request()
+        req.user = MagicMock(username="tester")
+        with patch.object(pdf_renderer, "_render_pdf_bytes", return_value=b"%PDF-1.4 fake"):
+            response = pdf_renderer.render_training_pdf_response(req, {}, date(2026, 6, 1))
+        assert response.status_code == 200
+        assert "TrainingReport_tester_20260601.pdf" in response["Content-Disposition"]
+
+    @override_settings(STATIC_ROOT=_FONTS_STATIC_ROOT)
+    def test_url_fetcher_static_root_fallback(self):
+        if pdf_renderer.weasyprint is None:
+            pytest.skip("WeasyPrint nicht importierbar")
+        url = "/static/core/fonts/SourceSans3-Regular.ttf"
+        # finders.find liefert im Test None → der STATIC_ROOT-Zweig muss greifen
+        with patch.object(pdf_renderer.finders, "find", return_value=None):
+            result = pdf_renderer._weasyprint_url_fetcher(url)
+        # WeasyPrint liefert je nach Version dict oder URLFetcherResponse – Hauptsache aufgelöst
+        assert result is not None
+
+    def test_url_fetcher_data_uri_passthrough(self):
+        if pdf_renderer.weasyprint is None:
+            pytest.skip("WeasyPrint nicht importierbar")
+        # data:-URI ohne "static/"-Marker → unverändert an den Default-Fetcher
+        result = pdf_renderer._weasyprint_url_fetcher("data:text/plain;base64,aGk=")
+        assert result is not None

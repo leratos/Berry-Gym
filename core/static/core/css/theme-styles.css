@@ -1,5 +1,324 @@
 /* Global Theme-Aware Styles for HomeGym App */
 
+/* ============================================================
+   Phase 27.2 – Style-Tokens & Bootstrap-Override
+   Single Source of Truth: docs/concepts/phase27_concept.md (A.2/A.4)
+   Live = dark-first + Light-Toggle. Die PDF-Pipeline nutzt eigene
+   literale Hex im PDF-<style> (xhtml2pdf kann kein var()).
+   Regel: keine neuen Farben erfinden – nur diese Tokens verwenden.
+   ============================================================ */
+
+/* Phase 27.3 – Self-hosted Schriften (Source Serif 4 / Source Sans 3).
+   Dateien: core/static/core/fonts/ (siehe dortige README). Fehlen sie,
+   greift der Fallback-Stack (Georgia / Segoe UI) – font-display:swap. */
+@font-face {
+    font-family: 'Source Serif 4';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/SourceSerif4-SemiBold.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Source Serif 4';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/SourceSerif4-Bold.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/SourceSans3-Regular.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/SourceSans3-SemiBold.ttf') format('truetype');
+}
+
+:root {
+    /* Marken-Rampe "Berry" */
+    --berry-900: #4A1638;
+    --berry-700: #6D2150;
+    --berry-600: #8A2B66; /* PRIMARY */
+    --berry-400: #B85C90;
+    --berry-300: #D981B0;
+    --berry-100: #F0D6E5;
+    --berry-050: #F9EDF4;
+
+    /* Bootstrap-Semantik-Override (Kern-Hex – Light/PDF-gleich).
+       Hex UND -rgb müssen gesetzt sein, sonst greifen die Utilities nicht. */
+    --bs-primary: #8A2B66;
+    --bs-primary-rgb: 138, 43, 102;
+    --bs-success: #2F7D5B;
+    --bs-success-rgb: 47, 125, 91;
+    --bs-warning: #CF9116;
+    --bs-warning-rgb: 207, 145, 22;
+    --bs-danger: #A82E22;
+    --bs-danger-rgb: 168, 46, 34;
+    --bs-info: #2C6E9B;
+    --bs-info-rgb: 44, 110, 155;
+    --bs-secondary: #6B6660;
+    --bs-secondary-rgb: 107, 102, 96;
+
+    /* App-Chrome-Tokens (Light/Default = warm-neutral statt Kaltgrau) */
+    --app-bg: #F7F6F4;
+    --surface: #FFFFFF;
+    --border: #E2DFDA;
+    --text: #1F2226;
+    --text-muted: #6B6660;
+
+    /* Phase 27.3 – Schrift-Stacks (Self-host + Fallback) */
+    --font-heading: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Phase 27.5 – Spacing-/Radius-Skala (§D) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --radius-card: 10px;
+    --radius-control: 6px;
+}
+
+/* Light-Theme: warme Neutrale auch in Bootstraps eigene Body-Variablen
+   spiegeln, damit das gesamte Chrome warm wirkt (nicht nur Custom-Regeln). */
+[data-bs-theme="light"] {
+    --bs-body-bg: #F7F6F4;
+    --bs-body-color: #1F2226;
+    --bs-border-color: #E2DFDA;
+    --bs-secondary-color: #6B6660;
+    --bs-link-color: #6D2150;
+    --bs-link-color-rgb: 109, 33, 80;
+    --bs-link-hover-color: #8A2B66;
+
+    --app-bg: #F7F6F4;
+    --surface: #FFFFFF;
+    --border: #E2DFDA;
+    --text: #1F2226;
+    --text-muted: #6B6660;
+}
+
+/* Dark-Theme: warme Neutrale + auf Dunkel angehobene Akzent-/Status-Töne
+   (On-Dark-Hex aus A.2, AA-fest auf #1A1D21). */
+[data-bs-theme="dark"] {
+    --bs-body-bg: #1A1D21;
+    --bs-body-color: #F2F2F0;
+    --bs-border-color: #3A4047;
+    --bs-secondary-color: #A8A29A;
+
+    --bs-primary: #B85C90;
+    --bs-primary-rgb: 184, 92, 144;
+    --bs-success: #4FB286;
+    --bs-success-rgb: 79, 178, 134;
+    --bs-warning: #E0A93D;
+    --bs-warning-rgb: 224, 169, 61;
+    --bs-danger: #E0685C;
+    --bs-danger-rgb: 224, 104, 92;
+    --bs-info: #5AA0CE;
+    --bs-info-rgb: 90, 160, 206;
+    --bs-secondary: #A39C93;
+    --bs-secondary-rgb: 163, 156, 147;
+    --bs-link-color: #D981B0;
+    --bs-link-color-rgb: 217, 129, 176;
+    --bs-link-hover-color: #E7A9C8;
+
+    --app-bg: #1A1D21;
+    --surface: #2B3035;
+    --border: #3A4047;
+    --text: #F2F2F0;
+    --text-muted: #A8A29A;
+}
+
+/* Warning-Fill braucht dunkle Schrift (Amber) – A.2-Ausnahme.
+   bg-{{ status_farbe }} nutzt .bg-warning (ohne Auto-Textfarbe). */
+.badge.bg-warning,
+.badge.text-bg-warning {
+    color: #1F2226 !important;
+}
+
+/* ------------------------------------------------------------
+   Buttons: Bootstrap kompiliert .btn-{variant} mit LITERALEN
+   --bs-btn-*-Werten – diese lesen NICHT --bs-primary/--bs-*-rgb.
+   Im CDN-Setup (ohne SCSS-Build) müssen wir die Button-Variablen
+   pro Variante explizit auf die Tokens mappen, sonst bleiben
+   Buttons Bootstrap-blau. Hover/Active: filter brightness statt
+   neuer Farb-Tokens ("keine neuen Farben").
+   ------------------------------------------------------------ */
+.btn-primary {
+    --bs-btn-bg: var(--bs-primary);
+    --bs-btn-border-color: var(--bs-primary);
+    --bs-btn-hover-bg: var(--bs-primary);
+    --bs-btn-hover-border-color: var(--bs-primary);
+    --bs-btn-active-bg: var(--bs-primary);
+    --bs-btn-active-border-color: var(--bs-primary);
+    --bs-btn-disabled-bg: var(--bs-primary);
+    --bs-btn-disabled-border-color: var(--bs-primary);
+}
+.btn-success {
+    --bs-btn-bg: var(--bs-success);
+    --bs-btn-border-color: var(--bs-success);
+    --bs-btn-hover-bg: var(--bs-success);
+    --bs-btn-hover-border-color: var(--bs-success);
+    --bs-btn-active-bg: var(--bs-success);
+    --bs-btn-active-border-color: var(--bs-success);
+    --bs-btn-disabled-bg: var(--bs-success);
+    --bs-btn-disabled-border-color: var(--bs-success);
+}
+.btn-danger {
+    --bs-btn-bg: var(--bs-danger);
+    --bs-btn-border-color: var(--bs-danger);
+    --bs-btn-hover-bg: var(--bs-danger);
+    --bs-btn-hover-border-color: var(--bs-danger);
+    --bs-btn-active-bg: var(--bs-danger);
+    --bs-btn-active-border-color: var(--bs-danger);
+    --bs-btn-disabled-bg: var(--bs-danger);
+    --bs-btn-disabled-border-color: var(--bs-danger);
+}
+.btn-info {
+    --bs-btn-bg: var(--bs-info);
+    --bs-btn-border-color: var(--bs-info);
+    --bs-btn-hover-bg: var(--bs-info);
+    --bs-btn-hover-border-color: var(--bs-info);
+    --bs-btn-active-bg: var(--bs-info);
+    --bs-btn-active-border-color: var(--bs-info);
+    --bs-btn-disabled-bg: var(--bs-info);
+    --bs-btn-disabled-border-color: var(--bs-info);
+    --bs-btn-color: #FFFFFF;
+    --bs-btn-hover-color: #FFFFFF;
+    --bs-btn-active-color: #FFFFFF;
+}
+.btn-secondary {
+    --bs-btn-bg: var(--bs-secondary);
+    --bs-btn-border-color: var(--bs-secondary);
+    --bs-btn-hover-bg: var(--bs-secondary);
+    --bs-btn-hover-border-color: var(--bs-secondary);
+    --bs-btn-active-bg: var(--bs-secondary);
+    --bs-btn-active-border-color: var(--bs-secondary);
+    --bs-btn-disabled-bg: var(--bs-secondary);
+    --bs-btn-disabled-border-color: var(--bs-secondary);
+}
+.btn-warning {
+    --bs-btn-bg: var(--bs-warning);
+    --bs-btn-border-color: var(--bs-warning);
+    --bs-btn-hover-bg: var(--bs-warning);
+    --bs-btn-hover-border-color: var(--bs-warning);
+    --bs-btn-active-bg: var(--bs-warning);
+    --bs-btn-active-border-color: var(--bs-warning);
+    --bs-btn-disabled-bg: var(--bs-warning);
+    --bs-btn-disabled-border-color: var(--bs-warning);
+    /* Amber → dunkle Schrift (A.2-Ausnahme) */
+    --bs-btn-color: #1F2226;
+    --bs-btn-hover-color: #1F2226;
+    --bs-btn-active-color: #1F2226;
+    --bs-btn-disabled-color: #1F2226;
+}
+
+/* Outline-Buttons */
+.btn-outline-primary {
+    --bs-btn-color: var(--bs-primary);
+    --bs-btn-border-color: var(--bs-primary);
+    --bs-btn-hover-bg: var(--bs-primary);
+    --bs-btn-hover-border-color: var(--bs-primary);
+    --bs-btn-active-bg: var(--bs-primary);
+    --bs-btn-active-border-color: var(--bs-primary);
+}
+.btn-outline-success {
+    --bs-btn-color: var(--bs-success);
+    --bs-btn-border-color: var(--bs-success);
+    --bs-btn-hover-bg: var(--bs-success);
+    --bs-btn-hover-border-color: var(--bs-success);
+    --bs-btn-active-bg: var(--bs-success);
+    --bs-btn-active-border-color: var(--bs-success);
+}
+.btn-outline-danger {
+    --bs-btn-color: var(--bs-danger);
+    --bs-btn-border-color: var(--bs-danger);
+    --bs-btn-hover-bg: var(--bs-danger);
+    --bs-btn-hover-border-color: var(--bs-danger);
+    --bs-btn-active-bg: var(--bs-danger);
+    --bs-btn-active-border-color: var(--bs-danger);
+}
+.btn-outline-info {
+    --bs-btn-color: var(--bs-info);
+    --bs-btn-border-color: var(--bs-info);
+    --bs-btn-hover-bg: var(--bs-info);
+    --bs-btn-hover-border-color: var(--bs-info);
+    --bs-btn-active-bg: var(--bs-info);
+    --bs-btn-active-border-color: var(--bs-info);
+}
+.btn-outline-secondary {
+    --bs-btn-color: var(--bs-secondary);
+    --bs-btn-border-color: var(--bs-secondary);
+    --bs-btn-hover-bg: var(--bs-secondary);
+    --bs-btn-hover-border-color: var(--bs-secondary);
+    --bs-btn-active-bg: var(--bs-secondary);
+    --bs-btn-active-border-color: var(--bs-secondary);
+}
+.btn-outline-warning {
+    --bs-btn-color: var(--bs-warning);
+    --bs-btn-border-color: var(--bs-warning);
+    --bs-btn-hover-bg: var(--bs-warning);
+    --bs-btn-hover-border-color: var(--bs-warning);
+    --bs-btn-hover-color: #1F2226;
+    --bs-btn-active-bg: var(--bs-warning);
+    --bs-btn-active-border-color: var(--bs-warning);
+    --bs-btn-active-color: #1F2226;
+}
+
+/* Hover/Active-Feedback ohne neue Farb-Tokens (gilt für solide + outline) */
+.btn-primary:hover, .btn-primary:active, .btn-primary.active,
+.btn-success:hover, .btn-success:active, .btn-success.active,
+.btn-danger:hover, .btn-danger:active, .btn-danger.active,
+.btn-warning:hover, .btn-warning:active, .btn-warning.active,
+.btn-info:hover, .btn-info:active, .btn-info.active,
+.btn-secondary:hover, .btn-secondary:active, .btn-secondary.active,
+.btn-outline-primary:hover, .btn-outline-success:hover, .btn-outline-danger:hover,
+.btn-outline-warning:hover, .btn-outline-info:hover, .btn-outline-secondary:hover {
+    filter: brightness(0.94);
+}
+
+/* ------------------------------------------------------------
+   Phase 27.3 – Typografie-Anwendung
+   Editoriale Serife für große Headings (premium), humanistische
+   Sans für Body/UI/Daten. Größen bleiben vorerst bei Bootstrap-
+   Defaults (nur Familie/Gewicht) – Feintuning der rem-Staffel nach
+   Visual-Check. Stat-Value zusätzlich mit tabellarischen Ziffern.
+   ------------------------------------------------------------ */
+body {
+    font-family: var(--font-body);
+}
+
+h1, h2, .h1, .h2,
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+    font-family: var(--font-heading);
+}
+
+h3, h4, h5, h6, .h3, .h4, .h5, .h6 {
+    font-family: var(--font-body);
+    font-weight: 600;
+}
+
+/* ------------------------------------------------------------
+   Phase 27.5 – Karten: subtiler Schatten (live), Radius-Token.
+   (PDF nutzt stattdessen 1px-Border – kein box-shadow in xhtml2pdf.)
+   ------------------------------------------------------------ */
+.card,
+.card-stat {
+    border-radius: var(--radius-card);
+    box-shadow: 0 1px 3px rgba(20, 15, 18, 0.10);
+}
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .card-stat {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
+}
+
 /* Card Stats - Theme-aware */
 .card-stat {
     border: none;
@@ -13,43 +332,43 @@
 
 /* Dark Theme */
 [data-bs-theme="dark"] .card-stat {
-    background-color: #2b3035;
-    color: #fff;
+    background-color: var(--surface);
+    color: var(--text);
 }
 [data-bs-theme="dark"] .stat-label {
-    color: #adb5bd;
+    color: var(--text-muted);
 }
 [data-bs-theme="dark"] .card {
-    background-color: #2b3035;
-    color: #fff;
+    background-color: var(--surface);
+    color: var(--text);
 }
 [data-bs-theme="dark"] .list-group-item {
-    background-color: #2b3035;
-    color: #fff;
+    background-color: var(--surface);
+    color: var(--text);
 }
 
 /* Light Theme */
 [data-bs-theme="light"] .card-stat {
-    background-color: #ffffff;
-    color: #212529;
-    border: 1px solid #dee2e6;
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
 }
 [data-bs-theme="light"] .stat-label {
-    color: #6c757d;
+    color: var(--text-muted);
 }
 [data-bs-theme="light"] .card {
-    background-color: #ffffff;
-    color: #212529;
-    border: 1px solid #dee2e6;
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
 }
 [data-bs-theme="light"] .list-group-item {
-    background-color: #ffffff;
-    color: #212529;
+    background-color: var(--surface);
+    color: var(--text);
 }
 
 /* Override text-white in light mode */
 [data-bs-theme="light"] .text-white {
-    color: #212529 !important;
+    color: var(--text) !important;
 }
 
 .stat-label {
@@ -59,30 +378,32 @@
 }
 
 .stat-value {
-    font-size: 1.5rem;
-    font-weight: bold;
+    font-family: var(--font-body);
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
 
 /* List Group Items - Theme-aware */
 [data-bs-theme="dark"] .list-group-item.bg-transparent {
-    color: #fff;
+    color: var(--text);
 }
 [data-bs-theme="light"] .list-group-item.bg-transparent {
-    color: #212529;
+    color: var(--text);
 }
 [data-bs-theme="light"] .list-group-item.border-secondary {
-    border-color: #dee2e6 !important;
+    border-color: var(--border) !important;
 }
 
 /* Body background */
 [data-bs-theme="light"] body {
-    background-color: #f8f9fa;
+    background-color: var(--app-bg);
 }
 
 /* Tables - Theme-aware */
 [data-bs-theme="dark"] .table {
-    color: #fff;
-    background-color: #2b3035;
+    color: var(--text);
+    background-color: var(--surface);
 }
 [data-bs-theme="dark"] .table tbody tr {
     border-color: rgba(255, 255, 255, 0.1);
@@ -92,40 +413,40 @@
 }
 
 [data-bs-theme="light"] .table {
-    color: #212529;
-    background-color: #fff;
+    color: var(--text);
+    background-color: var(--surface);
 }
 [data-bs-theme="light"] .table tbody tr {
-    border-color: #dee2e6;
+    border-color: var(--border);
 }
 [data-bs-theme="light"] .table thead th {
-    border-color: #dee2e6;
+    border-color: var(--border);
 }
 
 /* Badge adjustments for light mode */
 [data-bs-theme="light"] .badge.bg-dark {
-    background-color: #6c757d !important;
+    background-color: var(--text-muted) !important;
     color: #fff !important;
 }
 
 /* Modal content */
 [data-bs-theme="light"] .modal-content {
-    background-color: #fff;
-    color: #212529;
+    background-color: var(--surface);
+    color: var(--text);
 }
 
 /* Form controls - Theme-aware */
 [data-bs-theme="light"] .form-control,
 [data-bs-theme="light"] .form-select {
-    background-color: #fff;
-    color: #212529;
-    border-color: #ced4da;
+    background-color: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
 }
 
 [data-bs-theme="light"] .form-control:focus,
 [data-bs-theme="light"] .form-select:focus {
-    background-color: #fff;
-    color: #212529;
+    background-color: var(--surface);
+    color: var(--text);
 }
 
 /* ========== Theme-aware Navbar Styles ========== */
@@ -137,13 +458,13 @@
 }
 
 [data-bs-theme="dark"] .navbar-page {
-    background-color: #1a1d21;
-    border-bottom-color: #30363d !important;
+    background-color: var(--app-bg);
+    border-bottom-color: var(--border) !important;
 }
 
 [data-bs-theme="light"] .navbar-page {
-    background-color: #f8f9fa;
-    border-bottom-color: #dee2e6 !important;
+    background-color: var(--app-bg);
+    border-bottom-color: var(--border) !important;
 }
 
 /* Navbar text colors */
@@ -154,12 +475,12 @@
 
 [data-bs-theme="dark"] .navbar-page .navbar-text,
 [data-bs-theme="dark"] .navbar-page .page-title {
-    color: #e9ecef;
+    color: var(--text);
 }
 
 [data-bs-theme="light"] .navbar-page .navbar-text,
 [data-bs-theme="light"] .navbar-page .page-title {
-    color: #212529;
+    color: var(--text);
 }
 
 /* Theme-aware Dropdown Menu */
@@ -169,13 +490,13 @@
 }
 
 [data-bs-theme="dark"] .dropdown-menu-theme {
-    background-color: #1a1d21;
-    border-color: #30363d;
+    background-color: var(--app-bg);
+    border-color: var(--border);
 }
 
 [data-bs-theme="light"] .dropdown-menu-theme {
-    background-color: #ffffff;
-    border-color: #dee2e6;
+    background-color: var(--surface);
+    border-color: var(--border);
 }
 
 .dropdown-menu-theme .dropdown-item {
@@ -187,11 +508,11 @@
 }
 
 [data-bs-theme="dark"] .dropdown-menu-theme .dropdown-item:hover {
-    background-color: #30363d;
+    background-color: var(--border);
 }
 
 [data-bs-theme="light"] .dropdown-menu-theme .dropdown-item:hover {
-    background-color: #e9ecef;
+    background-color: var(--border);
 }
 
 .dropdown-menu-theme .dropdown-divider {
