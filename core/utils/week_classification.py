@@ -142,6 +142,31 @@ def _classify_week_pause(
     return ist_ausfall, teilweise_ausfall, ist_pausen_grenze
 
 
+def letzte_iso_wochen_keys(heute_date: date, anzahl: int) -> list[str]:
+    """Die letzten ``anzahl`` ISO-Wochen-Keys, endend in der Woche von heute."""
+    montag = heute_date - timedelta(days=heute_date.weekday())
+    keys = [_iso_key(montag - timedelta(days=7 * i)) for i in range(anzahl)]
+    return list(reversed(keys))
+
+
+def pausen_grenze_keys(pausen, heute_date: date, iso_keys) -> set[str]:
+    """Teilmenge von ``iso_keys`` mit einer Pausen-Grenze (Pause ≥ Mindestdauer).
+
+    GETEILTE Quelle (§32.4): ALLE benachbarten Wochen-Volumen-Vergleichspfade
+    konsultieren dieselbe SoT-Klassifikation (``_classify_week_pause``) statt
+    eigener Pausen-Logik. Eine Vergleichsstelle unterdrückt den Vergleich, sobald
+    er eine dieser Wochen berührt/überquert → kein falscher Comeback-Spike.
+    """
+    pausen_clamped = _clamp_pausen(pausen, heute_date)
+    if not pausen_clamped:
+        return set()
+    out: set[str] = set()
+    for k in iso_keys:
+        if _classify_week_pause(k, pausen_clamped, hat_sessions=False)[2]:
+            out.add(k)
+    return out
+
+
 def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict, set]:
     """Return (deload_weeks, deload_majority_weeks, routines_per_week) from sessions.
 

@@ -434,7 +434,18 @@ def calc_volume_trend_weekly(volumen_wochen: list[dict], heute=None) -> dict | N
     aktuelle_kw = f"KW{heute.isocalendar()[1]:02d}"
 
     # Laufende Woche aus dem Vergleich ausschließen
-    kandidaten = [w for w in volumen_wochen if w["woche"] != aktuelle_kw]
+    vorab = [w for w in volumen_wochen if w["woche"] != aktuelle_kw and not w.get("ist_laufend")]
+    # §32.4 (⑳): nicht über eine dokumentierte Pausen-/Plan-Grenze hinweg
+    # vergleichen; pausenbetroffene Wochen sind kein Anker. Über ``.get()`` bleiben
+    # Aufrufe mit rohen {woche, volumen}-Dicts (ohne Flags) unverändert.
+    kandidaten: list[dict] = []
+    for w in reversed(vorab):
+        if w.get("ist_pausen_grenze") or w.get("ist_plan_wechsel"):
+            break
+        if w.get("ist_ausfall") or w.get("teilweise_ausfall"):
+            continue
+        kandidaten.append(w)
+    kandidaten.reverse()
     if len(kandidaten) < 2:
         return None
 
