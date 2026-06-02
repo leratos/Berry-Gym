@@ -164,7 +164,18 @@ def _calculate_streak(user, heute) -> int:
     The current calendar week is treated as neutral: if the user has not yet
     trained this week, that does not break the streak – we keep counting back
     from the last completed week.
+
+    §32.5: Eine session-lose Woche, die von einer dokumentierten Pause
+    ≥ Mindestdauer berührt wird (``ist_pausen_grenze``), **bridged** den Streak
+    (kein Bruch) – ehrliches Dokumentieren wird nicht bestraft. Ein
+    un-dokumentierter Gap bricht weiterhin. Eine 1-Tages-Pause (< Mindestdauer)
+    bridged nicht (⑨/⑤).
     """
+    grenze = pausen_grenze_keys(
+        TrainingsPause.objects.filter(user=user),
+        heute.date(),
+        letzte_iso_wochen_keys(heute.date(), 53),
+    )
     streak = 0
     check_date = heute
     iterations = 0
@@ -178,6 +189,9 @@ def _calculate_streak(user, heute) -> int:
             streak += 1
         elif iterations == 0:
             # Laufende Woche neutral – nicht streak-brechend.
+            pass
+        elif _iso_week_key(week_start) in grenze:
+            # Dokumentierte Pause überbrückt die Lücke (neutral, kein Bruch).
             pass
         else:
             break

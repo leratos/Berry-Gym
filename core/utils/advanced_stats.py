@@ -501,6 +501,22 @@ def calculate_consistency_metrics(alle_trainings):
 
     heute = timezone.now()
 
+    # §32.5: dokumentierte Pausen-Grenzen (≥ Mindestdauer) für Streak-Bridge UND
+    # adherence_rate-Bereinigung. Lazy-Import: week_classification importiert aus
+    # advanced_stats (Zyklus vermeiden).
+    from core.models import TrainingsPause
+    from core.utils.week_classification import letzte_iso_wochen_keys, pausen_grenze_keys
+
+    _user = alle_trainings.first().user
+    _pausen = TrainingsPause.objects.filter(user=_user) if _user else TrainingsPause.objects.none()
+
+    def _wk(d) -> str:
+        return f"{d.isocalendar()[0]}-W{d.isocalendar()[1]:02d}"
+
+    streak_grenze_keys = pausen_grenze_keys(
+        _pausen, heute.date(), letzte_iso_wochen_keys(heute.date(), 105)
+    )
+
     # Streak berechnen (aufeinanderfolgende Wochen mit mindestens 1 Training)
     aktueller_streak = 0
     laengster_streak = 0
@@ -530,6 +546,10 @@ def calculate_consistency_metrics(alle_trainings):
             # Laufende Woche ohne Training ist neutral – sie darf den Streak
             # nicht brechen, weil der User noch Zeit hat zu trainieren.
             pass
+        elif _wk(week_start) in streak_grenze_keys:
+            # §32.5: dokumentierte Pause ≥ Mindestdauer überbrückt die Lücke
+            # (kein Bruch, kein Reset) – Live/PDF-Parität zu _calculate_streak.
+            pass
         else:
             # Streak unterbrochen
             if aktueller_streak_aktiv:
@@ -556,6 +576,17 @@ def calculate_consistency_metrics(alle_trainings):
         # Anzahl Kalenderwochen inklusiv Start- und Endwoche
         wochen_gesamt = max(1, ((heute_woche_montag - erste_woche_montag).days // 7) + 1)
         wochen_mit_training = alle_trainings.dates("datum", "week").count()
+        # §32.5 (㉒): dokumentierte Pausenwochen OHNE Training aus dem Nenner
+        # nehmen – eine begründete Lücke soll die Konsistenz-Bewertung nicht
+        # zusätzlich senken (konsistent zum Feature-Ziel; Streak ist bereits
+        # gebridged). Nur Wochen ohne Training zählen (Trainings-Wochen stehen im
+        # Zähler und dürfen den Nenner nicht verlieren).
+        training_week_keys = {_wk(d) for d in alle_trainings.values_list("datum", flat=True)}
+        adherence_grenze = pausen_grenze_keys(
+            _pausen, heute.date(), letzte_iso_wochen_keys(heute.date(), wochen_gesamt)
+        )
+        pausierte_ohne_training = adherence_grenze - training_week_keys
+        wochen_gesamt = max(1, wochen_gesamt - len(pausierte_ohne_training))
         # min(100.0) als Sicherheitsnetz (darf nie über 100% liegen)
         adherence_rate = min(100.0, round((wochen_mit_training / wochen_gesamt) * 100, 1))
     else:
