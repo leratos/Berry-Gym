@@ -3758,3 +3758,86 @@ msgstr "..."
 #: .\core\templates\core\dashboard.html:230
 msgid "Plan-Details ansehen"
 msgstr "View Plan Details"
+
+# Phase 32 – Trainingspausen / Ausfallzeiten
+
+msgid "Krankheit"
+msgstr "Illness"
+
+msgid "Verletzung"
+msgstr "Injury"
+
+msgid "Urlaub"
+msgstr "Vacation"
+
+msgid "Sonstiges"
+msgstr "Other"
+
+msgid "Startdatum"
+msgstr "Start date"
+
+msgid "Enddatum"
+msgstr "End date"
+
+msgid "Grund"
+msgstr "Reason"
+
+msgid "Notiz"
+msgstr "Note"
+
+msgid "Trainingspause"
+msgstr "Training break"
+
+msgid "Trainingspausen"
+msgstr "Training breaks"
+
+msgid "Leer lassen für eine noch laufende Pause."
+msgstr "Leave empty for an ongoing break."
+
+msgid "Das Enddatum darf nicht vor dem Startdatum liegen."
+msgstr "The end date must not be before the start date."
+
+msgid "Dieser Zeitraum überschneidet sich mit einer bereits eingetragenen Pause."
+msgstr "This period overlaps with a break that already exists."
+
+msgid "Hinweis: In diesem Zeitraum sind bereits Trainings erfasst. Die Pause wurde trotzdem gespeichert."
+msgstr "Note: workouts are already logged in this period. The break was saved anyway."
+
+msgid "Bitte ein Startdatum angeben."
+msgstr "Please enter a start date."
+
+msgid "Pause gespeichert."
+msgstr "Break saved."
+
+msgid "Pause aktualisiert."
+msgstr "Break updated."
+
+msgid "Pause gelöscht."
+msgstr "Break deleted."
+
+msgid "laufend"
+msgstr "ongoing"
+
+msgid "Pause wirklich löschen?"
+msgstr "Really delete this break?"
+
+msgid "Noch keine Trainingspausen erfasst."
+msgstr "No training breaks recorded yet."
+
+msgid "Erste Pause eintragen"
+msgstr "Add your first break"
+
+msgid "Eine dokumentierte Pause (Krankheit, Verletzung, Urlaub) wird in den Statistiken als begründete Lücke behandelt: Der Streak läuft weiter und der Wiedereinstieg löst keine falsche Volumen-Warnung aus. Pausen können rückwirkend eingetragen werden."
+msgstr "A documented break (illness, injury, vacation) is treated as a justified gap in your statistics: the streak continues and your comeback does not trigger a false volume warning. Breaks can be added retroactively."
+
+msgid "Pause bearbeiten"
+msgstr "Edit break"
+
+msgid "Pause hinzufügen"
+msgstr "Add break"
+
+msgid "z.B. Grippe, Knie-OP, Urlaub auf Mallorca"
+msgstr "e.g. flu, knee surgery, vacation in Mallorca"
+
+msgid "Pausen"
+msgstr "Breaks"
