@@ -1650,6 +1650,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
                 {
                     "uebung": entry.get("uebung", ""),
                     "muskelgruppe": entry.get("muskelgruppe", ""),
+                    "status": entry.get("status", ""),
                     "status_label": entry.get("status_label", ""),
                 }
             )

@@ -252,7 +252,8 @@ def classify_progression_status(
     Returns:
         dict mit:
             - ``status``: einer der oben gelisteten Schlüssel
-            - ``status_label``: Lesbarer Label-String (mit Emoji)
+            - ``status_label``: Lesbarer Label-String (ohne Emoji; Form trägt
+              das Icon/Glyph, siehe Phase 27.4)
             - ``status_farbe``: Bootstrap-Color-Class
             - ``days_since_pr``: int oder None
             - ``rpe_first_half``, ``rpe_second_half``, ``rpe_delta``: float oder None
@@ -343,24 +344,24 @@ def classify_progression_status(
             if days_since_pr <= CONSOLIDATION_READY_DAYS:
                 result.update(
                     status="consolidation",
-                    status_label="💪 Konsolidierung (RPE sinkt)",
+                    status_label="Konsolidierung (RPE sinkt)",
                     status_farbe="info",
                 )
             elif days_since_pr <= CONSOLIDATION_OVERLONG_DAYS:
                 result.update(
                     status="consolidation_ready",
-                    status_label="🎯 Bereit für PR-Versuch – RPE seit Wochen niedrig",
+                    status_label="Bereit für PR-Versuch – RPE seit Wochen niedrig",
                     status_farbe="info",
                 )
             else:
                 result.update(
                     status="consolidation_overlong",
                     status_label=(
-                        "⏳ Konsolidierung ungewöhnlich lang – " "PR-Versuch oder Variation prüfen"
+                        "Konsolidierung ungewöhnlich lang – " "PR-Versuch oder Variation prüfen"
                     ),
                     status_farbe="warning",
                 )
-            return result
+            return _finalize_progression(result)
 
     # Phase 24.5: Override – starke Steigerungsrate schlägt Plateau-Klassifikation.
     # Greift NACH Konsolidierung (RPE sinkt hat Vorrang) und VOR der reinen
