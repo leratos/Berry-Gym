@@ -211,3 +211,22 @@ class TrainingsblockFactory(DjangoModelFactory):
     start_datum = factory.LazyFunction(lambda: (datetime.now() - timedelta(weeks=4)).date())
     end_datum = None
     name = factory.Sequence(lambda n: f"Block {n}")
+
+
+class TrainingsPauseFactory(DjangoModelFactory):
+    """Factory für Trainingspausen.
+
+    ACHTUNG: Factories rufen `Manager.create()` → `save()` auf und umgehen damit
+    `full_clean()`/`clean()`. Overlap-/Validierungs-Tests laufen deshalb bewusst
+    über das Model-`clean()` bzw. den Service, NICHT über diese Factory
+    (Konzept §32.1).
+    """
+
+    class Meta:
+        model = "core.TrainingsPause"
+
+    user = factory.SubFactory(UserFactory)
+    grund = "krankheit"
+    notiz = ""
+    start_datum = factory.LazyFunction(lambda: (datetime.now() - timedelta(days=14)).date())
+    end_datum = factory.LazyFunction(lambda: (datetime.now() - timedelta(days=7)).date())

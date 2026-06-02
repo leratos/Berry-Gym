@@ -23,6 +23,7 @@ from .models import (
     Trainingsblock,
     Trainingseinheit,
     TrainingSource,
+    TrainingsPause,
     Uebung,
     UebungTag,
     UserProfile,
@@ -938,3 +939,23 @@ class TrainingsblockAdmin(admin.ModelAdmin):
     @admin.display(boolean=True, description="Aktiv")
     def is_active_display(self, obj):
         return obj.is_active
+
+
+# --- TRAININGSPAUSE ---
+@admin.register(TrainingsPause)
+class TrainingsPauseAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "grund",
+        "start_datum",
+        "end_datum",
+        "ist_laufend_display",
+    )
+    list_filter = ("grund", "user")
+    search_fields = ("user__username", "notiz")
+    ordering = ("-start_datum",)
+    raw_id_fields = ("user",)
+
+    @admin.display(boolean=True, description="Laufend")
+    def ist_laufend_display(self, obj):
+        return obj.ist_laufend
