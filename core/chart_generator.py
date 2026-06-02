@@ -704,6 +704,8 @@ def generate_volume_chart(volumen_wochen):
     # Phase 23.2: Effektives Volumen (RPE 7-9), optional pro Woche
     effektiv = [w.get("effektives_volumen", 0) for w in volumen_wochen]
     deload_flags = [w.get("ist_deload", False) for w in volumen_wochen]
+    # Phase 32: dokumentierte Pausen-/Ausfallwochen → gelabelte Lücke im Chart
+    pause_flags = [bool(w.get("ist_ausfall") or w.get("teilweise_ausfall")) for w in volumen_wochen]
 
     fig, ax = plt.subplots(figsize=(10, 4))
 
@@ -750,6 +752,22 @@ def generate_volume_chart(volumen_wochen):
             label="Deload",
         )
 
+    # Phase 32: Pausen-/Ausfallwochen hervorheben (gelabelte Lücke statt stilles 0)
+    pause_x = [i for i, p in enumerate(pause_flags) if p]
+    pause_y = [volumen[i] for i in pause_x]
+    if pause_x:
+        ax.scatter(
+            pause_x,
+            pause_y,
+            marker="P",
+            s=130,
+            color="#5AA0CE",
+            edgecolors="#1F2226",
+            linewidths=1.5,
+            zorder=6,
+            label="Pause",
+        )
+
     # Gleitender 4-Wochen-Durchschnitt
     if len(volumen) >= 4:
         vol_arr = np.array(volumen, dtype=float)
@@ -774,7 +792,12 @@ def generate_volume_chart(volumen_wochen):
     # Werte auf Punkten anzeigen
     max_vol = max(volumen) if volumen else 1
     for i, vol in enumerate(volumen):
-        label = "Deload" if deload_flags[i] and vol == 0 else f"{int(vol)}kg"
+        if deload_flags[i] and vol == 0:
+            label = "Deload"
+        elif pause_flags[i] and vol == 0:
+            label = "Pause"
+        else:
+            label = f"{int(vol)}kg"
         ax.text(
             i,
             vol + max_vol * 0.03,

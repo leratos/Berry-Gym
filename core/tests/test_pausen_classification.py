@@ -233,3 +233,38 @@ class TestBuildOverviewEmission:
         w23 = next(w for w in weeks if w["_iso_key"] == _key(_monday(2026, 23)))
         assert w23["ist_laufend"] is True
         assert w23["teilweise_ausfall"] or w23["ist_ausfall"]
+
+
+@pytest.mark.django_db
+class TestDashboardGapLabel:
+    """§9.2/㉔: Dashboard-Karte markiert dokumentierte Pausenwochen."""
+
+    def test_calculate_weekly_volumes_markiert_pause(self):
+        from core.tests.factories import TrainingsPauseFactory, UserFactory
+        from core.views.training_stats import _calculate_weekly_volumes
+
+        user = UserFactory()
+        heute = timezone.make_aware(
+            datetime.combine(_monday(2026, 23) + timedelta(days=2), datetime.min.time())
+        )
+        # Pause über die ganze Vorwoche W22 (Mo–So) → 7 Tage ≥ Mindestdauer = Grenze
+        TrainingsPauseFactory(user=user, start_datum=_monday(2026, 22), end_datum=_sunday(2026, 22))
+        weeks = _calculate_weekly_volumes(user, heute)
+        w_letzte = next(w for w in weeks if w["week_num"] == 1)  # W22
+        w_diese = next(w for w in weeks if w["week_num"] == 0)  # W23
+        assert w_letzte["ist_pause"] is True
+        assert w_diese["ist_pause"] is False
+
+
+def test_generate_volume_chart_mit_pause_smoke():
+    """generate_volume_chart verträgt Pausen-Flags (gelabelte Lücke)."""
+    from core.chart_generator import generate_volume_chart
+
+    wochen = [
+        {"woche": "KW20", "volumen": 2000, "effektives_volumen": 1500},
+        {"woche": "KW21", "volumen": 0, "ist_ausfall": True},
+        {"woche": "KW22", "volumen": 0, "ist_ausfall": True},
+        {"woche": "KW23", "volumen": 2500, "effektives_volumen": 2000},
+    ]
+    img = generate_volume_chart(wochen)
+    assert isinstance(img, str) and len(img) > 0

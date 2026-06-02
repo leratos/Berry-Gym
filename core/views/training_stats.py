@@ -224,6 +224,12 @@ def _get_rpe_score(user, heute) -> tuple[int, float | None]:
     return 10, avg_rpe
 
 
+def _iso_week_key(d) -> str:
+    """ISO-Wochen-Key 'YYYY-Www' für ein date/datetime."""
+    iso = d.isocalendar()
+    return f"{iso[0]}-W{iso[1]:02d}"
+
+
 def _pause_blockiert_volumenvergleich(user, heute, fenster_wochen: int = 4) -> bool:
     """§32.4: True, wenn in den letzten ``fenster_wochen`` ISO-Wochen eine
     dokumentierte Pausen-Grenze (≥ Mindestdauer) liegt.
@@ -311,6 +317,13 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
     """
     block_start_date = active_block.start_datum if active_block else None
 
+    # §32.4/§9.2 (㉔): Pausen-Grenzen (≥ Mindestdauer) der betrachteten Wochen –
+    # markiert die Dashboard-Karte sonst unbeschriftete Null-Wochen als Lücke.
+    woche_keys = [_iso_week_key(_get_week_start(heute - timedelta(days=i * 7))) for i in range(4)]
+    pause_grenze_keys = pausen_grenze_keys(
+        TrainingsPause.objects.filter(user=user), heute.date(), woche_keys
+    )
+
     weekly_volumes = []
     for i in range(4):
         week_start = _get_week_start(heute - timedelta(days=i * 7))
@@ -364,6 +377,7 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
                 "week_num": i,
                 "ist_deload": hat_deload,
                 "before_block": before_block,
+                "ist_pause": _iso_week_key(week_start) in pause_grenze_keys,
             }
         )
     return weekly_volumes
