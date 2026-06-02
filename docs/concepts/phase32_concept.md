@@ -1,6 +1,6 @@
 # Phase 32 – Trainingspausen / Ausfallzeiten (Stufe 1+2)
 
-> Status: Konzept (claude.app, 2026-06-02). Journal-Ref: berry-gym #678.
+> Status: Konzept (claude.app, 2026-06-02; rev. nach Codex-Review PR #200). Journal-Ref: berry-gym #678.
 > Implementierung: Claude Code / VSCode. **Dieses Dokument enthält Hypothesen,
 > die am Code zu verifizieren sind** – als solche markiert. Nicht blind umsetzen.
 
@@ -66,10 +66,19 @@ Felder:
 
 Constraints / Validierung:
 - `CheckConstraint`: `end_datum IS NULL OR end_datum >= start_datum`.
-- **Overlap-Schutz nur auf App-Ebene** in `Model.clean()` + Form-`clean()`:
-  keine zwei sich überlappenden Pausen pro User. *MariaDB hat keine
-  Exclusion-Constraints (anders als Postgres) – DB-seitig nicht erzwingbar.*
-  (Annahme verifizieren, ist aber Stand der Technik für MariaDB.)
+- **Overlap-Schutz auf App-Ebene** in `Model.clean()`: keine zwei sich
+  überlappenden Pausen pro User. *MariaDB hat keine Exclusion-Constraints
+  (anders als Postgres) – DB-seitig nicht erzwingbar.* (Annahme verifizieren,
+  ist aber Stand der Technik für MariaDB.)
+- **Validierung außerhalb von Forms erzwingen (Codex-Review PR #200, ③):**
+  Django ruft `clean()` **nicht** automatisch in `save()` auf – Form-`clean()`
+  allein schützt `Manager.create()`, `bulk_create`, Fixtures/`loaddata`,
+  factory_boy (s. Testplan unten!) und künftigen Service-Code nicht; über diese
+  Pfade ließen sich überlappende Pausen weiterhin persistieren. Daher: `save()`
+  ruft `self.full_clean()` auf **oder** alle Schreibpfade laufen über eine
+  Service-/Manager-Methode mit transaktionalem `select_for_update` +
+  Overlap-Check. Mindestens muss der Overlap-Test bewusst über `clean`/Form
+  laufen, nicht über die Factory (die `clean()` umgeht).
 - Multi-User-Isolation: alle Queries `filter(user=request.user)`.
 
 Migration: reine Schema-Migration in `core/migrations/`, keine Datenmigration.
@@ -100,31 +109,61 @@ erscheint, blockt aber nicht; offene Pause anlegbar.
 *Andockpunkt:* `core/utils/week_classification.py` (seit 24.1c SoT der
 Wochen-Flags).
 
-1. Helper, der für eine ISO-Woche + die Pausen-Ranges eines Users bestimmt:
-   - **0 Sessions in der Woche + Overlap mit Pause** → `ist_ausfall=True`.
-   - **Sessions vorhanden + partieller Overlap** → `teilweise_ausfall=True`
-     (Woche bleibt normal klassifiziert, Volumen bleibt erhalten).
+1. Helper, der für eine ISO-Woche + die Pausen-Ranges eines Users bestimmt –
+   Klassifikation nach **Wochen-Abdeckung**, nicht nach „irgendein Overlap"
+   (Codex-Review PR #200, ⑤):
+   - **0 Sessions + Pause deckt die *komplette* ISO-Woche (Mo–So) ab** →
+     `ist_ausfall=True` (echter Vollausfall, zählt als Streak-Pause, §32.5).
+   - **Partieller Overlap** (Pause deckt nur einen Teil der Woche ab) →
+     `teilweise_ausfall=True`, unabhängig von der Session-Zahl. Volumen bleibt
+     erhalten, Woche bleibt normal klassifiziert, ist aber kein Trend-Anker.
+     *Wichtig:* ein 1-Tages-Urlaub in einer ohnehin session-losen Woche wird so
+     **nicht** zum Vollausfall – er verbirgt die Woche nicht aus den Ankern und
+     schützt den Streak nicht.
 2. **Strukturelle Änderung (riskantester Teil):** Die Wochenliste muss aus
    `union(Wochen-mit-Sessions, Wochen-mit-Pausen-Overlap)` emittiert werden,
    damit eine komplett leere Krankheitswoche **als gelabelte Lücke erscheint**
    statt im Chart zu fehlen. *Hypothese: der Join-/Emissions-Punkt liegt in
    `core/export/stats_collector.py` und/oder dem Live-Helfer in
    `core/views/training_stats.py` – vor der Implementierung lokalisieren.*
-3. `select_comparable_weeks` (in `stats_collector.py`) überspringt zusätzlich
-   `ist_ausfall` **und** `teilweise_ausfall` als Trend-Anker (analog
-   `ist_laufend` / `ist_deload_majority` / `ist_plan_wechsel`).
+3. `select_comparable_weeks` liegt in `core/utils/week_classification.py`
+   (**nicht** in `stats_collector.py` – seit 24.1c ist `week_classification`
+   die SoT; `stats_collector` konsumiert nur `build_weekly_volume_overview`;
+   Codex-Review PR #200, ①). Dort wird eine **abgeschlossene Pause als
+   Epoch-Grenze** behandelt (`break`, analog `ist_plan_wechsel`), nicht nur als
+   überspringbarer Anker. Die Funktion läuft von der neuesten zur ältesten Woche
+   und bricht bei `ist_plan_wechsel` bereits ab; eine `ist_ausfall`-Woche analog
+   als harte Grenze zu behandeln stellt sicher, dass **kein** Vergleich über die
+   Pause hinweg passiert (Begründung in §32.4). `teilweise_ausfall` wird
+   zusätzlich per `continue` übersprungen (Volumen erhalten, aber kein Anker).
 
 `tests`: voll abgedeckte Woche → `ist_ausfall`; partielle → `teilweise_ausfall`
-+ Volumen erhalten, aber nicht als comparable; leere Krankheitswoche wird als
-Lücke emittiert; `select_comparable_weeks` überspringt beide neuen Flags.
++ Volumen erhalten, aber nicht als comparable; 1-Tages-Pause in session-loser
+Woche → **kein** `ist_ausfall`; leere Krankheitswoche wird als Lücke emittiert;
+`select_comparable_weeks` überspringt `teilweise_ausfall` (`continue`) und
+behandelt `ist_ausfall` als Epoch-Grenze (`break`) – keine Vor-Pause-Woche
+landet hinter der Pause in der Vergleichsliste.
 
 ### 32.4 – Fatigue-Index: Comeback-Spike-Suppression
 
 `calculate_fatigue_index` (in `core/utils/advanced_stats.py`) routet die
-Volumen-Spike-Komponente bereits über `select_comparable_weeks` (Lazy-Import,
-seit 24.1b). **Wenn 32.3 dort `ist_ausfall`/`teilweise_ausfall` korrekt
-ausschließt, wird der Comeback-Spike automatisch unterdrückt.** Verifizieren,
-dass der Fluss wirklich darüber läuft; sonst explizit nachziehen.
+Volumen-Spike-Komponente über `select_comparable_weeks` (Lazy-Import, seit
+24.1b) und vergleicht dort `comparable_weeks[-1]` mit `comparable_weeks[-2]`.
+
+**Korrektur (Codex-Review PR #200, ④):** Das bloße *Ausschließen* der
+`ist_ausfall`-Wochen als Anker genügt **nicht**. Werden die Ausfallwochen nur
+übersprungen (`continue`), rückt die Comeback-Woche direkt neben die letzte
+Vor-Pause-Woche – der Vergleich überquert weiterhin die Pause und der Spike
+entsteht (genau das Fehlverhalten aus Abnahmekriterium 3). Deshalb sitzt der Fix
+in §32.3: die Pause wird in `select_comparable_weeks` als **Epoch-Grenze**
+behandelt (`break`). Folge: nach der Pause sind nur Post-Pause-Wochen
+vergleichbar; die erste Comeback-Woche allein ergibt `len < 2` → „Trend
+pausiert", bis eine zweite Post-Pause-Woche existiert. Kein Vergleich überquert
+die Pause.
+
+Damit ist der Spike strukturell unterdrückt, ohne Sonderfall im Fatigue-Code –
+derselbe Chokepoint wie 24.1b. Verifizieren, dass kein zweiter Volumen-Vergleich
+an `select_comparable_weeks` vorbeiläuft.
 
 `tests`: Wiedereinstiegs-Woche nach Pause erzeugt **keine** „Sehr starker
 Volumen-Anstieg"-Warnung (Reproduktion des erwarteten Fehlverhaltens + Fix).
@@ -132,12 +171,27 @@ Volumen-Anstieg"-Warnung (Reproduktion des erwarteten Fehlverhaltens + Fix).
 ### 32.5 – Streak: Pause pausiert
 
 Dokumentierte Pause → Streak läuft über die Lücke weiter (kein Reset, keine
-Bestrafung). **Un-dokumentierter** Gap verhält sich unverändert.
+Bestrafung). **Un-dokumentierter** Gap verhält sich unverändert. Eine Woche
+zählt als „pausiert", wenn sie `ist_ausfall` ist (volle Wochen-Abdeckung,
+§32.3) – nicht schon bei einer 1-Tages-Pause (sonst würde ⑤ den Streak
+fälschlich schützen).
 
-*Hypothese, die zwingend vor Umsetzung am Code zu klären ist:* exakte
-Streak-Definition und -Ort (vermutlich `core/views/training_stats.py`; aus #475
-ist „Aktueller Streak" wahrscheinlich wochenbasiert). Prinzip steht fest, die
-Einhängung hängt von der Definition ab.
+**Zwei Streak-Implementierungen – beide müssen pausieren (Codex-Review PR #200,
+②):** Die Streak-Logik existiert doppelt; wird nur eine gepatcht, entsteht
+Live/PDF-Divergenz (§8):
+- **Dashboard:** `_calculate_streak` in `core/views/training_stats.py`.
+- **PDF/Export:** die separate Streak-Schleife in `calculate_consistency_metrics`
+  (`core/utils/advanced_stats.py`), die via `stats_collector`
+  (`consistency_metrics`) in `training_pdf_simple.html` als `aktueller_streak`
+  gerendert wird.
+
+Beide sind wochenbasiert (laufende Woche neutral). Idealerweise vor 32.5 die
+Duplikat-Logik konsolidieren oder zumindest eine gemeinsame
+„ist-diese-Woche-pausiert?"-Hilfsfunktion teilen, statt zweimal dieselbe
+Pausen-Awareness einzubauen.
+
+*Vor Umsetzung am Code klären:* exakte Streak-Definition (aus #475
+wochenbasiert) und ob beide Schleifen auf dieselbe Pausen-Quelle zugreifen.
 
 `tests`: dokumentierte Pause erhält den Streak; un-dokumentierter Gap wie bisher.
 
@@ -157,10 +211,13 @@ Konzept-Doc selbst nach `docs/concepts/phase32_concept.md` tragen und mit-commit
 - `core/views/…` – CRUD-Views (+ ggf. neues Modul) + URLs in `core/urls`.
 - `core/templates/core/…` – Pausen-Liste/-Formular; Lücken-Label in
   `training_stats.html` **und** `training_pdf_simple.html` (Live/PDF-Parität!).
-- `core/utils/week_classification.py` – `ist_ausfall` / `teilweise_ausfall`.
-- `core/export/stats_collector.py` – Wochen-Emission (union) +
-  `select_comparable_weeks`.
-- `core/utils/advanced_stats.py` – Verifikation Fatigue-Spike-Fluss.
+- `core/utils/week_classification.py` – `ist_ausfall` / `teilweise_ausfall`
+  **und** `select_comparable_weeks` (Pause als Epoch-Grenze, §32.3/§32.4).
+- `core/export/stats_collector.py` – Wochen-Emission (union); konsumiert
+  `build_weekly_volume_overview` (**nicht** `select_comparable_weeks`).
+- `core/utils/advanced_stats.py` – Verifikation Fatigue-Spike-Fluss + zweite
+  Streak-Schleife in `calculate_consistency_metrics` (PDF-Streak, §32.5).
+- `core/views/training_stats.py` – Dashboard-Streak `_calculate_streak` (§32.5).
 - `core/chart_generator.py` – Lücken-Darstellung im matplotlib-Volumen-Chart.
 - `core/admin.py` – `TrainingsPause` registrieren.
 - `locale/de`, `locale/en` – `.po` für `grund`-Labels + UI.
@@ -208,9 +265,11 @@ Rendern**. Niemals den übersetzten String persistieren.
 
 ## 10. Vor Implementierung am Code zu klärende Hypothesen
 
-- Exakte Streak-Definition + Ort.
+- Exakte Streak-Definition + **beide** Orte (Dashboard `_calculate_streak`
+  **und** PDF `calculate_consistency_metrics`, §32.5).
 - Join-/Emissions-Punkt der Wochenliste (`stats_collector` vs.
   `training_stats`-Helfer).
 - Ist `select_comparable_weeks` der einzige Chokepoint für live + PDF + Fatigue?
 - Ziel-Submodul für das Model in `core/models/`.
-- MariaDB-Exclusion-Constraint-Annahme (App-Level-Overlap-Guard).
+- MariaDB-Exclusion-Constraint-Annahme + Erzwingung außerhalb von Forms
+  (`save()`/Service-`full_clean()`, §32.1).
