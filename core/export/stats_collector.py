@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from core.export.constants import PULL_GROUPS, PUSH_GROUPS
 from core.helpers.volume import calc_volume, get_user_kg
-from core.models import MUSKELGRUPPEN, KoerperWerte, Satz, Trainingseinheit
+from core.models import MUSKELGRUPPEN, KoerperWerte, Satz, Trainingseinheit, TrainingsPause
 from core.utils.advanced_stats import (
     calculate_1rm_standards,
     calculate_consistency_metrics,
@@ -624,7 +624,11 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         ist_aufwaermsatz=False,
     )
     volumen_wochen = build_weekly_volume_overview(
-        alle_saetze_inkl_deload, alle_trainings, user_kg, heute=heute
+        alle_saetze_inkl_deload,
+        alle_trainings,
+        user_kg,
+        heute=heute,
+        pausen=TrainingsPause.objects.filter(user=user),
     )
     fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
 

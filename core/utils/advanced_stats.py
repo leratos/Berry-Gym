@@ -75,6 +75,12 @@ VOLUME_TREND_STABLE_PCT = 5.0
 # Wenn ≥50 % der Sessions einer Woche `ist_deload=True` haben, gilt die
 # Woche als Deload-Woche und der "Regression"-Hinweis wird unterdrückt.
 DELOAD_WEEK_MAJORITY_PCT = 50.0
+# Phase 32: Mindestdauer (inklusiv gezählt: (end-start).days+1) einer
+# dokumentierten Trainingspause, ab der sie als Trend-Vergleichs-Grenze
+# (``ist_pausen_grenze``, §32.4) UND als Streak-Bridge (§32.5) wirkt. Bewusst
+# ≤6, damit eine Di–So-Pause (6 inkl. Tage) sie erreicht und vom verlängerten
+# Wochenende (≤4 Tage) getrennt bleibt. GETEILTE Schwelle für beide Achsen.
+PAUSE_BOUNDARY_MIN_DAYS = 5
 
 
 def _find_best_1rm_satz(uebung_saetze):

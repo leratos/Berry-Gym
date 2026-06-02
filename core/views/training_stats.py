@@ -37,6 +37,7 @@ from ..models import (
     Satz,
     Trainingsblock,
     Trainingseinheit,
+    TrainingsPause,
     Uebung,
     UserProfile,
 )
@@ -2323,7 +2324,11 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         einheit__user=request.user, ist_aufwaermsatz=False
     )
     weekly_overview = build_weekly_volume_overview(
-        alle_saetze_inkl_deload, trainings, user_kg=user_kg, heute=timezone.now()
+        alle_saetze_inkl_deload,
+        trainings,
+        user_kg=user_kg,
+        heute=timezone.now(),
+        pausen=TrainingsPause.objects.filter(user=request.user),
     )
     volume_diagnosis = weekly_overview[-1].get("diagnose") if weekly_overview else None
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(
