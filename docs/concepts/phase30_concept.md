@@ -1,6 +1,6 @@
 # Phase 30 – Adaptive Plan Generation (Report-Output als Generator-Input)
 
-**Status:** 📋 Konzept (20.05.2026)
+**Status:** ✅ Abgeschlossen (20.05.2026)
 **Vorgänger:** Phase 29 (Plan-Generator-Konsistenz – akute Bugs F1/F2/F3)
 **Branch-Schema:** `feature/phase-30-X-kurzbeschreibung` pro Sub-Phase
 

@@ -1,6 +1,6 @@
 # Phase 26 – Konsolidierungs-Logik zeitlich begrenzen
 
-**Status:** 📋 Konzept (11.05.2026)
+**Status:** ✅ Abgeschlossen (30.05.2026, berry-gym#650)
 **Vorgänger:** Phase 25 (Layout-Refactor)
 **Nachfolger:** Phase 27 (Style-Overhaul)
 **Branch-Schema:** `feature/phase-26-X-kurzbeschreibung` pro Sub-Phase

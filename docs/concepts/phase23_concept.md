@@ -1,6 +1,6 @@
 # Phase 23 – Detail-Fahrplan
 
-**Status:** 📋 Konzept (06.05.2026)
+**Status:** ✅ Abgeschlossen (07.05.2026)
 **Roadmap-Eintrag:** [`PROJECT_ROADMAP.md`](PROJECT_ROADMAP.md) – Phase 23
 **Branch (bei Start):** `feature/phase23-time-windowed-stats`
 

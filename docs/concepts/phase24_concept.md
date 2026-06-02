@@ -1,6 +1,6 @@
 # Phase 24 – Report-Daten-Konsistenz
 
-**Status:** 📋 Konzept (07.05.2026)
+**Status:** ✅ Abgeschlossen (Mai 2026)
 **Vorgänger:** Phase 23 (Time-windowed Stats) – ✅ abgeschlossen am 07.05.2026
 **Nachfolger:** Phase 25 (Report-Layout-Refactor) – startet erst nach Phase 24
 **Branch-Schema:** `feature/phase-24-X-kurzbeschreibung` pro Sub-Phase (Implementierungs-Branches werden in VSCode/Claude Code beim Start jeder Sub-Phase angelegt)
