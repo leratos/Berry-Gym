@@ -1,6 +1,6 @@
 # Phase 32 – Trainingspausen / Ausfallzeiten (Stufe 1+2)
 
-> Status: Konzept (claude.app, 2026-06-02; rev. nach Codex-Review PR #200). Journal-Ref: berry-gym #678.
+> Status: **Eingefroren / implementierungsreif** (claude.app, 2026-06-02; nach 5 Codex-Review-Runden, s. §11). Journal-Ref: berry-gym #678.
 > Implementierung: Claude Code / VSCode. **Dieses Dokument enthält Hypothesen,
 > die am Code zu verifizieren sind** – als solche markiert. Nicht blind umsetzen.
 
@@ -75,6 +75,12 @@ Constraints / Validierung:
   überlappenden Pausen pro User. *MariaDB hat keine Exclusion-Constraints
   (anders als Postgres) – DB-seitig nicht erzwingbar.* (Annahme verifizieren,
   ist aber Stand der Technik für MariaDB.)
+- **Overlap-Predikat muss offenes Ende (`NULL`) als unbegrenzt behandeln
+  (Codex-Review PR #200, ㉓):** `end_datum=None` = laufende Pause = +∞. Das
+  Standard-Predikat `existing.start ≤ new_end AND existing.end ≥ new_start`
+  crasht/schlägt fehl bei `NULL` (SQL-Vergleiche mit `NULL` sind nicht `TRUE`).
+  Explizite Zweige + Tests für **offen-vs-offen** und **offen-vs-begrenzt**
+  (offenes Ende → `COALESCE(end, '9999-12-31')` o. ä. bzw. Python-`None`-Branch).
 - **Validierung außerhalb von Forms erzwingen (Codex-Review PR #200, ③ + ⑩):**
   Django ruft `clean()` **nicht** automatisch in `save()` auf – Form-`clean()`
   allein schützt Nicht-Form-Schreibpfade nicht. **Wichtige Abstufung:** ein
@@ -82,10 +88,18 @@ Constraints / Validierung:
   ab, **nicht** `bulk_create` (umgeht `save()` komplett, keine Signale) und
   **nicht** Fixtures/`loaddata`/raw saves. `save()`+`full_clean()` ist also
   **keine** vollständige Absicherung. Sicher ist nur: **alle Schreibpfade über
-  eine Service-/Manager-Methode** mit transaktionalem `select_for_update` +
-  Overlap-Check; `bulk_create`/raw-Loads für dieses Model **explizit vermeiden**
-  und das in einem Test absichern. Der Overlap-Test läuft bewusst über
-  `clean`/Service, nicht über die Factory (die `clean()` umgeht).
+  eine Service-/Manager-Methode** mit transaktionalem Overlap-Check;
+  `bulk_create`/raw-Loads für dieses Model **explizit vermeiden** und das in
+  einem Test absichern. Der Overlap-Test läuft bewusst über `clean`/Service,
+  nicht über die Factory (die `clean()` umgeht).
+- **Concurrency: stabile Zeile sperren, nicht die Overlap-Kandidaten
+  (Codex-Review PR #200, ㉑):** `select_for_update()` auf die Overlap-Treffer
+  reicht **nicht** – bei der ersten/keiner überlappenden Pause gibt es **keine
+  Zeile zu sperren**, zwei gleichzeitige Requests bestehen beide den Check und
+  fügen beide ein (MariaDB hat keinen Exclusion-Constraint als Fallback). Daher
+  vor dem Check eine **stabile User-Zeile** sperren (z. B. `User`-Row bzw. alle
+  bestehenden Pausen des Users `SELECT … FOR UPDATE`) → serialisiert alle
+  Pausen-Writes pro User. Test mit zwei konkurrierenden Creates.
 - Multi-User-Isolation: alle Queries `filter(user=request.user)`.
 
 Migration: reine Schema-Migration in `core/migrations/`, keine Datenmigration.
@@ -205,9 +219,9 @@ der Pause sind nur Post-Pause-Wochen vergleichbar; die erste Comeback-Woche
 allein ergibt `len < 2` → „Trend pausiert", bis eine zweite Post-Pause-Woche
 existiert. Kein Vergleich überquert die Pause.
 
-**Nicht nur ein Pfad – VIER Volumen-Vergleiche pause-aware machen (Codex-Review
-PR #200, ⑧ + ⑮ + ⑱):** `select_comparable_weeks` ist **nicht** der einzige
-Chokepoint. Im Code vergleichen mindestens **vier** Stellen aufeinanderfolgende/
+**Nicht nur ein Pfad – ALLE Volumen-Vergleiche pause-aware machen (Codex-Review
+PR #200, ⑧ + ⑮ + ⑱ + ⑳):** `select_comparable_weeks` ist **nicht** der einzige
+Chokepoint. Im Code vergleichen mindestens **fünf** Stellen aufeinanderfolgende/
 benachbarte Wochen-Volumina, von denen bisher nur **eine** pause-aware ist:
 
 | # | Pfad | Funktion | nutzt `select_comparable_weeks`? |
@@ -216,22 +230,25 @@ benachbarte Wochen-Volumina, von denen bisher nur **eine** pause-aware ist:
 | 2 | Dashboard Fatigue-Spike | `_calculate_fatigue_index` → `_get_volume_spike_fatigue` ← `_calculate_weekly_volumes` (rohe 4 Wo.) | ❌ (⑧) |
 | 3 | Dashboard Form-Index Volumen-Trend | `_calculate_form_index` → `_get_volume_trend_score` (letzte Nicht-Null-Wochen) | ❌ (⑮) |
 | 4 | Stats-Seite Volumen-Warnungen | `_detect_volume_warnings` (benachbarte Nicht-Null-Wochen) | ❌ (⑱) |
+| 5 | Export Volumen-Trend (Abnehm-Kontext) | `stats_collector.calc_volume_trend_weekly` → `export.py` → `weight_analysis` | ❌ (⑳) |
 
-Pfade 2–4 würden nach einer Pause weiterhin die Comeback-Woche direkt gegen die
-Vor-Pause-Woche vergleichen (Form-Index belohnt/bestraft „Volumen-Trend",
-Stats-Seite zeigt „Anstieg"-Warnung), selbst wenn der Fatigue-Spike (1) gefixt
-ist. **Konsequenz gemäß Leitprinzip „keine Parallelstruktur":** *einen*
+Pfade 2–5 würden nach einer Pause weiterhin die Comeback-Woche direkt gegen die
+Vor-Pause-Woche vergleichen (Form-Index „Volumen-Trend", Stats-„Anstieg"-Warnung,
+PDF-Abnehmkontext „Trainingsvolumen steigt/fällt"), selbst wenn der Fatigue-Spike
+(1) gefixt ist. **Konsequenz gemäß Leitprinzip „keine Parallelstruktur":** *einen*
 gemeinsamen pause-aware Comparable-Weeks-Helfer schaffen (bzw.
-`select_comparable_weeks` + die Flags als geteilte Quelle), den **alle vier**
-Pfade konsumieren – `_calculate_weekly_volumes`/`_get_volume_trend_score`/
-`_detect_volume_warnings` tragen dafür die neuen Flags. Plus **Audit/Guard-Test**,
-der alle benachbarten Wochen-Volumen-Vergleiche aufzählt, damit kein fünfter
-Pfad still vorbeiläuft.
+`select_comparable_weeks` + die Flags als geteilte Quelle), den **alle** Pfade
+konsumieren. **Wichtig: diese Liste ist als *unvollständig* zu behandeln** – der
+**Audit/Guard-Test**, der jede benachbarte Wochen-Volumen-Vergleichsstelle
+aufzählt, ist das eigentliche Sicherheitsnetz (Pfad #5 wurde genau so gefunden);
+weitere Pfade während der Umsetzung darüber abfangen, nicht über weitere
+Konzept-Runden.
 
 `tests`: Wiedereinstiegs-Woche nach Pause erzeugt **keine** falsche
-Volumen-Anstiegs-Warnung/-Bewertung in **allen vier Pfaden** (Fatigue Dashboard +
-PDF, Form-Index, Stats-Warnungen); auch bei einer Di–So-Pause ohne volle
-Wochenabdeckung (Reproduktion des erwarteten Fehlverhaltens + Fix).
+Volumen-Anstiegs-Warnung/-Bewertung in **allen fünf Pfaden** (Fatigue Dashboard +
+PDF, Form-Index, Stats-Warnungen, Export-Abnehmkontext); auch bei einer
+Di–So-Pause ohne volle Wochenabdeckung; **Audit-Test** zählt alle
+Vergleichsstellen auf (Reproduktion des erwarteten Fehlverhaltens + Fix).
 
 ### 32.5 – Streak: Pause pausiert
 
@@ -259,6 +276,17 @@ Duplikat-Logik konsolidieren oder zumindest eine gemeinsame
 „ist-diese-Woche-pausiert?"-Hilfsfunktion teilen, statt zweimal dieselbe
 Pausen-Awareness einzubauen.
 
+**Nicht nur der Streak – `adherence_rate`/`bewertung` (Codex-Review PR #200,
+㉒):** `calculate_consistency_metrics` berechnet zusätzlich
+`adherence_rate` = Wochen-mit-Training / alle Kalenderwochen und leitet daraus
+`bewertung` ab. Eine dokumentierte 2-Wochen-Pause senkt also die PDF-Konsistenz-
+Bewertung weiter, selbst wenn der Streak gebridged ist. **Scope-Entscheidung
+(zu treffen, nicht offen lassen):** entweder `adherence_rate`/`bewertung`
+pause-aware machen (pausierte Wochen aus dem Nenner nehmen) **oder** explizit
+dokumentieren + testen, dass bewusst **nur** der Streak geschützt ist und der
+Konsistenz-Score weiterhin „bestraft". Empfehlung: konsistent zum Feature-Ziel
+(„dokumentierte Pause = begründete Lücke") den Nenner pausenbereinigen.
+
 *Vor Umsetzung am Code klären:* exakte Streak-Definition (aus #475
 wochenbasiert) und ob beide Schleifen auf dieselbe Pausen-Quelle zugreifen.
 
@@ -284,11 +312,17 @@ Konzept-Doc selbst nach `docs/concepts/phase32_concept.md` tragen und mit-commit
 - `core/signals.py` – Cache-Invalidierung `dashboard_computed_<user>` für
   `TrainingsPause` (`post_save` **und** `post_delete`, ⑬).
 - `core/templates/core/…` – Pausen-Liste/-Formular; Lücken-Label in
-  `training_stats.html` **und** `training_pdf_simple.html` (Live/PDF-Parität!).
+  `training_stats.html`, `training_pdf_simple.html` **und** `dashboard.html`
+  (eigene `weekly_volumes`-Karte, ㉔ – sonst zeigt das Dashboard eine
+  unbeschriftete Null-Woche). Live/Dashboard/PDF-Parität!
 - `core/utils/week_classification.py` – `ist_ausfall` / `teilweise_ausfall`
   **und** `select_comparable_weeks` (Pause als Epoch-Grenze, §32.3/§32.4).
 - `core/export/stats_collector.py` – Wochen-Emission (union); konsumiert
-  `build_weekly_volume_overview` (**nicht** `select_comparable_weeks`).
+  `build_weekly_volume_overview` (**nicht** `select_comparable_weeks`); **plus
+  `calc_volume_trend_weekly` pause-aware** (Pfad #5, ⑳).
+- `core/views/export.py` + `core/export/weight_analysis.py` – konsumieren
+  `volumen_trend_weekly`; mit-prüfen, dass der Abnehmkontext nicht über die Pause
+  vergleicht (⑳).
 - `core/utils/advanced_stats.py` – **Export/PDF**-Fatigue-Spike-Fluss
   (`calculate_fatigue_index` via `select_comparable_weeks`) + zweite
   Streak-Schleife in `calculate_consistency_metrics` (PDF-Streak, §32.5).
@@ -344,15 +378,20 @@ englische `.po` **und** danach mit `django-admin compilemessages` ins
 
 1. Pause anlegen/ändern/löschen, rückwirkend; offene (laufende) Pause möglich
    und als **gelabelte aktuelle Lücke** sichtbar (auf `heute` geclamped, ⑦);
-   strikt user-isoliert. Overlap-Schutz greift auch außerhalb von Forms (③).
+   strikt user-isoliert. Overlap-Schutz greift auch außerhalb von Forms (③),
+   serialisiert bei gleichzeitigen Creates (㉑) und behandelt offenes Ende als
+   unbegrenzt (offen-vs-offen / offen-vs-begrenzt, ㉓).
 2. 2-Wochen-Krankheit mit 0 Sessions erscheint als **gelabelte Lücke** (nicht
-   stumm fehlend) in Live **und** PDF.
+   stumm fehlend) in Live, **Dashboard-Karte** (㉔) **und** PDF.
 3. Wiedereinstiegs-Woche nach Pause erzeugt **keine** falsche
-   Volumen-Anstiegs-Warnung/-Bewertung – in **allen vier Vergleichspfaden**
-   (Fatigue Dashboard + PDF, Form-Index, Stats-Warnungen; ⑧/⑮/⑱), auch bei nicht
-   auf Mo–So ausgerichteten Pausen (⑥) inkl. Sessions in beiden Teilwochen (⑭).
+   Volumen-Anstiegs-Warnung/-Bewertung – in **allen fünf Vergleichspfaden**
+   (Fatigue Dashboard + PDF, Form-Index, Stats-Warnungen, Export-Abnehmkontext;
+   ⑧/⑮/⑱/⑳), auch bei nicht auf Mo–So ausgerichteten Pausen (⑥) inkl. Sessions
+   in beiden Teilwochen (⑭).
 4. Dokumentierte Pause ≥ Mindestdauer **resettet den Streak nicht** – auch bei
-   nicht auf Mo–So ausgerichteten Pausen (⑨), in Dashboard **und** PDF.
+   nicht auf Mo–So ausgerichteten Pausen (⑨), in Dashboard **und** PDF; für
+   `adherence_rate`/`bewertung` ist die Pause-Behandlung entschieden + getestet
+   (㉒: pausenbereinigt **oder** dokumentiert streak-only, §32.5).
 5. Teil-Overlap-Woche behält ihr echtes Volumen, ist aber als Trend-Anker
    ausgeschlossen (auch Voll-Overlap *mit* Session, ⑯).
 6. `grund`-Labels DE/EN korrekt; englisches `.mo` kompiliert, `test_i18n` grün (⑲).
@@ -369,17 +408,44 @@ englische `.po` **und** danach mit `django-admin compilemessages` ins
   `training_stats`-Helfer) **inkl. Clamping JEDER Pause** (offen *und*
   geschlossene Zukunfts-Ranges) auf `heute`/aktuelle ISO-Woche (§32.3.2, ⑦ + ⑰).
 - `select_comparable_weeks` ist **nicht** der einzige Chokepoint (beantwortet,
-  ⑧/⑮/⑱): **vier** Pfade vergleichen Wochen-Volumina (Fatigue Dashboard+PDF,
-  Form-Index `_get_volume_trend_score`, Stats-Warnungen `_detect_volume_warnings`)
-  – einen **gemeinsamen** pause-aware Helfer schaffen, den alle konsumieren, +
-  Audit-Test gegen vergessene fünfte Stelle.
+  ⑧/⑮/⑱/⑳): **fünf** Pfade vergleichen Wochen-Volumina (Fatigue Dashboard+PDF,
+  Form-Index `_get_volume_trend_score`, Stats-Warnungen `_detect_volume_warnings`,
+  Export `calc_volume_trend_weekly`) – einen **gemeinsamen** pause-aware Helfer
+  schaffen, den alle konsumieren; **Liste als unvollständig behandeln**, der
+  Audit-Test ist das Sicherheitsnetz.
 - Mindestdauer (`PAUSE_BOUNDARY_MIN_DAYS`, inklusiv gezählt, Default 5) so
   festlegen, dass das Di–So-Beispiel sie erreicht (§32.3, ⑥ + ⑪) – **geteilte**
   Schwelle für Trend-Grenze (§32.4) **und** Streak-Bridge (§32.5, ⑨).
+- `adherence_rate`/`bewertung` pause-aware **oder** bewusst streak-only
+  (entscheiden + testen, §32.5, ㉒).
 - Ziel-Submodul für das Model in `core/models/` **+ Re-Export in
   `core/models/__init__.py`** (⑫).
-- Overlap-Erzwingung außerhalb von Forms: Service-/Manager-only-Schreibpfad,
-  da `save()`+`full_clean()` `bulk_create`/Fixtures **nicht** abdeckt (§32.1,
+- Overlap-Erzwingung außerhalb von Forms: Service-/Manager-only-Schreibpfad
+  mit **User-Level-Lock** (㉑) und **`NULL`-Ende-Branch** (㉓), da
+  `save()`+`full_clean()` `bulk_create`/Fixtures **nicht** abdeckt (§32.1,
   ③ + ⑩); MariaDB-Exclusion-Constraint-Annahme verifizieren.
 - Dashboard-Cache-Invalidierung: `TrainingsPause`-Signale (`post_save` +
   `post_delete`) auf `dashboard_computed_<user>` (`core/signals.py`, §32.2, ⑬).
+
+## 11. Konzept-Status: eingefroren für Umsetzung
+
+**Stand nach 5 Codex-Review-Runden (24 Anmerkungen, alle eingearbeitet): das
+Konzept ist *festgemacht* / implementierungsreif.** Die Review-Funde haben sich
+verschoben – von echten Design-Lücken (Runde 1–3) zu (a) *weiteren parallelen
+Implementierungspfaden* derselben, bereits entschiedenen Logik und (b)
+*Umsetzungs-Härtung* (Concurrency-Lock, `NULL`-Overlap). Beide Klassen sind durch
+Prinzipien abgedeckt, die hier festgeschrieben sind:
+
+1. **Ein** gemeinsamer pause-aware Comparable-Weeks-Helfer für **alle**
+   Volumen-Vergleiche + **Audit-Test** als Sicherheitsnetz (§32.4) – jeder
+   weitere Pfad wird *bei der Umsetzung* darüber gefunden, nicht in weiteren
+   Konzept-Runden (Pfad #5 wurde genau so entdeckt).
+2. Abdeckungs-Flags ⟂ Dauer/Grenz-Flags (§32.3).
+3. Parallel-Pfade für Streak/Konsistenz/Cache/i18n/Templates explizit gelistet.
+4. Service-Level-Overlap-Enforcement mit User-Lock + `NULL`-Branch (§32.1).
+
+**Stopp-Regel:** keine weiteren Konzept-Review-Runden zur Pfad-Inventur – die
+Restentdeckung ist Implementierungsarbeit, abgesichert durch den Audit-Test und
+die Abnahmekriterien (§9). Neue Codex-Anmerkungen ab hier nur dann ins Konzept
+zurückspielen, wenn sie ein **Prinzip** ändern (nicht: „noch ein Call-Site").
+Umsetzung startet auf `feature/phase-32-trainingspausen` in der Reihenfolge §5.
