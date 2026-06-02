@@ -3841,3 +3841,8 @@ msgstr "e.g. flu, knee surgery, vacation in Mallorca"
 
 msgid "Pausen"
 msgstr "Breaks"
+
+# Phase 32.4/32.5 – Pausen-Nachtrag
+
+msgid "Dokumentierte Trainingspause"
+msgstr "Documented training break"
