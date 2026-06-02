@@ -291,28 +291,55 @@ Gruppen aufbauen – das Wochen-Volumen MUSS unter dem Cap bleiben, damit der
         Übertraining-Block ist das KEIN PFLICHT-Constraint – nur eine
         Empfehlung, für diese Übungen kein zusätzliches Volumen anzusetzen.
 
+        Phase 26: ``consolidation_ready`` ("Bereit für PR-Versuch") wird vom
+        generischen "kein Volumen → Variation"-Rat getrennt. Beide Gruppen
+        teilen die Botschaft "keine zusätzlichen Sätze", aber die empfohlene
+        Alternative unterscheidet sich: Variation bei Konsolidierung/Plateau,
+        Intensität bzw. PR-Versuch bei ``consolidation_ready``. Sonst bekäme
+        der LLM für eine PR-reife Übung ein gegenläufiges Variations-Signal.
+
         Gibt None zurück, wenn keine Übung den „kein Volumen-Push"-Status
         hat.
         """
         if not plateau_hints:
             return None
 
-        items = []
-        for hint in plateau_hints:
+        def _line(hint: Dict[str, Any]) -> str:
             mg = hint.get("muskelgruppe", "")
             mg_suffix = f" ({mg})" if mg else ""
-            items.append(f"- {hint['uebung']}{mg_suffix} – {hint['status_label']}")
-        items_str = "\n".join(items)
+            return f"- {hint['uebung']}{mg_suffix} – {hint['status_label']}"
+
+        variation_items = []
+        pr_attempt_items = []
+        for hint in plateau_hints:
+            if hint.get("status") == "consolidation_ready":
+                pr_attempt_items.append(_line(hint))
+            else:
+                variation_items.append(_line(hint))
+
+        sections = []
+        if variation_items:
+            sections.append(
+                "Folgende deiner Top-Übungen sind aktuell in einer Phase, in der eine\n"
+                "Volumen-Steigerung KONTRAPRODUKTIV wäre (Konsolidierung, PR-Pause oder\n"
+                "Plateau). Für diese Übungen im neuen Plan KEINE zusätzlichen Sätze\n"
+                "ansetzen – stattdessen Frequenz-/Tempo-Variation, kürzere/längere Pausen,\n"
+                "oder eine Akzessoire-Übung mit anderem Bewegungswinkel ergänzen.\n\n"
+                + "\n".join(variation_items)
+            )
+        if pr_attempt_items:
+            sections.append(
+                "Folgende Übungen konsolidieren seit Wochen bei sinkendem RPE und sind\n"
+                "BEREIT FÜR EINEN PR-VERSUCH. Auch hier KEINE zusätzlichen Sätze – aber\n"
+                "statt Variation die Intensität leicht erhöhen bzw. einen PR-Versuch\n"
+                "einplanen (z.B. schwereres Top-Set bei gleichem Volumen).\n\n"
+                + "\n".join(pr_attempt_items)
+            )
+        body = "\n\n".join(sections)
 
         return f"""ℹ️ TRAININGS-FORTSCHRITT-KONTEXT (Soft-Hint, nicht Pflicht-Block):
 
-Folgende deiner Top-Übungen sind aktuell in einer Phase, in der eine
-Volumen-Steigerung KONTRAPRODUKTIV wäre (Konsolidierung, PR-Pause oder
-Plateau). Für diese Übungen im neuen Plan KEINE zusätzlichen Sätze
-ansetzen – stattdessen Frequenz-/Tempo-Variation, kürzere/längere Pausen,
-oder eine Akzessoire-Übung mit anderem Bewegungswinkel ergänzen.
-
-{items_str}
+{body}
 """
 
     def _build_system_prompt(self) -> str:

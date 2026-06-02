@@ -1960,6 +1960,8 @@ class TestComputePlateauHints:
                 "observe",
                 "pause",
                 "consolidation",
+                "consolidation_ready",
+                "consolidation_overlong",
                 "active_progression_paused",
                 "plateau_light",
                 "plateau",

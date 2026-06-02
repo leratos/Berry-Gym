@@ -892,6 +892,45 @@ class TestProgressionClassification(StatsTestBase):
         # Konsolidierung schlägt zu, kein Regression-Trigger (Drop < 5%)
         self.assertEqual(result["status"], "consolidation")
 
+    # ── Phase 26: Konsolidierung zeitlich begrenzen ──────────────────────────
+    def test_consolidation_ready_for_pr_after_4_weeks(self):
+        """Phase 26: RPE sinkt, aber PR liegt 29–56 Tage zurück →
+        ``consolidation_ready`` ('Bereit für PR-Versuch')."""
+        # PR vor 40 Tagen (82 kg, höchstes 1RM), danach RPE-sinkend bei 80 kg.
+        self._add_session(days_ago=40, gewicht=82, rpe=9.0)
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=rpe)
+        result = self._classify()
+        self.assertEqual(result["status"], "consolidation_ready")
+        self.assertGreaterEqual(result["rpe_delta"], 0.5)
+
+    def test_consolidation_overlong_after_8_weeks_trizeps_oh_case(self):
+        """Phase 26 (Live-Fall Trizeps OH, 63 Tage seit PR): RPE sinkt, PR
+        liegt > 56 Tage zurück → ``consolidation_overlong``."""
+        self._add_session(days_ago=63, gewicht=82, rpe=9.0)
+        for days_ago, rpe in [(25, 9.5), (18, 9.0), (10, 8.5), (3, 8.0)]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=rpe)
+        result = self._classify()
+        self.assertEqual(result["status"], "consolidation_overlong")
+
+    def test_consolidation_stays_within_4_weeks(self):
+        """Phase 26: PR ≤ 28 Tage alt bei sinkendem RPE bleibt ``consolidation``
+        (frisch konsolidierende Übung, kein Aufforderungs-Signal)."""
+        self._add_session(days_ago=26, gewicht=82, rpe=9.0)
+        for days_ago, rpe in [(20, 9.5), (14, 9.0), (8, 8.5), (2, 8.0)]:
+            self._add_session(days_ago=days_ago, gewicht=80, rpe=rpe)
+        result = self._classify()
+        self.assertEqual(result["status"], "consolidation")
+
+    def test_overlong_consolidation_resets_to_active_progression_on_fresh_pr(self):
+        """Phase 26: Nach langer Konsolidierung kein 'Hängenbleiben' – ein
+        frischer PR (≤ 7 Tage) kippt den Status zurück auf
+        ``active_progression``."""
+        self._add_session(days_ago=63, gewicht=80, rpe=8.0)
+        self._add_session(days_ago=2, gewicht=95, rpe=8.0)  # neuer PR
+        result = self._classify()
+        self.assertEqual(result["status"], "active_progression")
+
     def test_plateau_light_when_weight_stable_rpe_stable(self):
         """15-42 Tage seit PR, RPE stabil → plateau_light."""
         for days_ago, rpe in [(25, 9.0), (18, 9.0), (10, 9.0), (3, 9.0)]:

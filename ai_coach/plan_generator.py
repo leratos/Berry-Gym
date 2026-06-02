@@ -1595,6 +1595,11 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
         {
             "active_progression_paused",
             "consolidation",
+            # Phase 26: zeitlich begrenzte Konsolidierungs-Folgezustände. Auch
+            # hier hilft kein zusätzliches Volumen – „Bereit für PR-Versuch"
+            # ruft nach Intensität/PR-Versuch, „überlang" nach Variation.
+            "consolidation_ready",
+            "consolidation_overlong",
             "plateau",
             "plateau_long",
             "regression",
@@ -1645,6 +1650,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
                 {
                     "uebung": entry.get("uebung", ""),
                     "muskelgruppe": entry.get("muskelgruppe", ""),
+                    "status": entry.get("status", ""),
                     "status_label": entry.get("status_label", ""),
                 }
             )

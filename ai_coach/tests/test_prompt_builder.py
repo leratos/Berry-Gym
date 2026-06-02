@@ -344,6 +344,55 @@ def test_build_plateau_hint_block_lists_exercises_with_status():
     assert "Soft-Hint" in block or "nicht Pflicht-Block" in block
 
 
+def test_build_plateau_hint_block_consolidation_ready_recommends_pr_attempt():
+    """Phase 26: ``consolidation_ready`` darf nicht im generischen
+    Variations-Rat landen – die Übung ist PR-reif, der Hint muss
+    Intensität/PR-Versuch (nicht Variation) empfehlen."""
+    builder = PromptBuilder()
+    hints = [
+        {
+            "uebung": "Trizeps OH (Kurzhantel)",
+            "muskelgruppe": "Trizeps",
+            "status": "consolidation_ready",
+            "status_label": "Bereit für PR-Versuch – RPE seit Wochen niedrig",
+        }
+    ]
+    block = builder._build_plateau_hint_block(hints)
+    assert block is not None
+    assert "Trizeps OH (Kurzhantel)" in block
+    assert "PR-VERSUCH" in block
+    # Reine consolidation_ready-Liste darf NICHT den Variations-Rat tragen.
+    assert "Frequenz-/Tempo-Variation" not in block
+    # Kern-Botschaft "keine zusätzlichen Sätze" bleibt erhalten.
+    assert "KEINE zusätzlichen Sätze" in block
+
+
+def test_build_plateau_hint_block_splits_pr_attempt_from_variation():
+    """Mischfall: consolidation_ready bekommt den PR-Block, der Rest den
+    Variations-Block – beide erscheinen mit ihren Übungen."""
+    builder = PromptBuilder()
+    hints = [
+        {
+            "uebung": "Bankdrücken (Langhantel)",
+            "muskelgruppe": "Brust",
+            "status": "plateau",
+            "status_label": "Plateau",
+        },
+        {
+            "uebung": "Trizeps OH (Kurzhantel)",
+            "muskelgruppe": "Trizeps",
+            "status": "consolidation_ready",
+            "status_label": "Bereit für PR-Versuch – RPE seit Wochen niedrig",
+        },
+    ]
+    block = builder._build_plateau_hint_block(hints)
+    assert block is not None
+    assert "Frequenz-/Tempo-Variation" in block  # Plateau-Übung
+    assert "PR-VERSUCH" in block  # consolidation_ready-Übung
+    assert "Bankdrücken (Langhantel)" in block
+    assert "Trizeps OH (Kurzhantel)" in block
+
+
 def test_build_user_prompt_inserts_plateau_block():
     """Phase 30.3: wird ``plateau_hints`` übergeben, taucht der
     Soft-Hint-Block im Prompt auf."""
