@@ -54,7 +54,11 @@ nur ohne unterdrückendes Flag).
 ### 32.1 – Datenmodell `TrainingsPause`
 
 *Hypothese (Submodul am Code bestätigen):* neue Datei oder bestehendes
-Submodul unter `core/models/`.
+Submodul unter `core/models/`. **`core/models/__init__.py` ist das einzige
+Interface nach außen und re-exportiert alle Models** – `TrainingsPause` dort
+ergänzen, sonst schlägt `from core.models import TrainingsPause`
+(Admin/Views/Tests) fehl und Django entdeckt das Model evtl. nicht zuverlässig
+(Codex-Review PR #200, ⑫).
 
 Felder:
 - `user` – FK auf Auth-User, `on_delete=CASCADE`, `db_index=True`.
@@ -70,15 +74,17 @@ Constraints / Validierung:
   überlappenden Pausen pro User. *MariaDB hat keine Exclusion-Constraints
   (anders als Postgres) – DB-seitig nicht erzwingbar.* (Annahme verifizieren,
   ist aber Stand der Technik für MariaDB.)
-- **Validierung außerhalb von Forms erzwingen (Codex-Review PR #200, ③):**
+- **Validierung außerhalb von Forms erzwingen (Codex-Review PR #200, ③ + ⑩):**
   Django ruft `clean()` **nicht** automatisch in `save()` auf – Form-`clean()`
-  allein schützt `Manager.create()`, `bulk_create`, Fixtures/`loaddata`,
-  factory_boy (s. Testplan unten!) und künftigen Service-Code nicht; über diese
-  Pfade ließen sich überlappende Pausen weiterhin persistieren. Daher: `save()`
-  ruft `self.full_clean()` auf **oder** alle Schreibpfade laufen über eine
-  Service-/Manager-Methode mit transaktionalem `select_for_update` +
-  Overlap-Check. Mindestens muss der Overlap-Test bewusst über `clean`/Form
-  laufen, nicht über die Factory (die `clean()` umgeht).
+  allein schützt Nicht-Form-Schreibpfade nicht. **Wichtige Abstufung:** ein
+  `save()`→`self.full_clean()` deckt nur `Manager.create()` / Instanz-`save()`
+  ab, **nicht** `bulk_create` (umgeht `save()` komplett, keine Signale) und
+  **nicht** Fixtures/`loaddata`/raw saves. `save()`+`full_clean()` ist also
+  **keine** vollständige Absicherung. Sicher ist nur: **alle Schreibpfade über
+  eine Service-/Manager-Methode** mit transaktionalem `select_for_update` +
+  Overlap-Check; `bulk_create`/raw-Loads für dieses Model **explizit vermeiden**
+  und das in einem Test absichern. Der Overlap-Test läuft bewusst über
+  `clean`/Service, nicht über die Factory (die `clean()` umgeht).
 - Multi-User-Isolation: alle Queries `filter(user=request.user)`.
 
 Migration: reine Schema-Migration in `core/migrations/`, keine Datenmigration.
@@ -100,9 +106,17 @@ Mehrfachpausen zulässig.
   hart blocken** (legitimer Teilwochen-Fall, §32.3 Q3).
 - Einstiegspunkt verlinken (Dashboard / Stats-Seite).
 - i18n: alle UI-Strings via `{% trans %}` / `gettext`, DE/EN `.po` aktualisieren.
+- **Dashboard-Cache invalidieren (Codex-Review PR #200, ⑬):** der Dashboard-Block
+  (Streak/Volumen/Fatigue) wird unter `dashboard_computed_<user>` gecacht
+  (`core/views/training_stats.py`, TTL); `core/signals.py` invalidiert bisher
+  **nur** bei `Trainingseinheit`-`post_save`. Anlegen/Ändern/**Löschen** einer
+  `TrainingsPause` muss denselben Key löschen → Signal für `post_save` **und**
+  `post_delete` auf `TrainingsPause` ergänzen, sonst zeigt das jetzt
+  pause-bewusste Dashboard bis zum TTL den alten Streak/Fatigue-Stand.
 
 `tests`: Auth erzwungen; User-Isolation; rückwirkendes Anlegen; Overlap-Warnung
-erscheint, blockt aber nicht; offene Pause anlegbar.
+erscheint, blockt aber nicht; offene Pause anlegbar; Pause-Save **und** -Delete
+invalidieren `dashboard_computed_<user>`.
 
 ### 32.3 – Klassifikations-Awareness (Kern)
 
@@ -113,21 +127,27 @@ Wochen-Flags).
    entkoppelte** Aspekte bestimmt – nach Abdeckung *und* Pausen-Intervall, nicht
    nach „irgendein Overlap" (Codex-Review PR #200, ⑤ + ⑥):
    - **0 Sessions + Pause deckt die *komplette* ISO-Woche (Mo–So) ab** →
-     `ist_ausfall=True` (echter Vollausfall, zählt als **Streak-Pause**, §32.5).
+     `ist_ausfall=True` (echter Vollausfall, primär fürs Lücken-Label; impliziert
+     `ist_pausen_grenze` und damit Streak-Bridge, §32.5).
    - **Partieller Overlap** (Pause deckt nur einen Teil der Woche ab) →
      `teilweise_ausfall=True`, unabhängig von der Session-Zahl. Volumen bleibt
      erhalten, Woche bleibt normal klassifiziert, ist aber kein Trend-Anker.
      *Wichtig:* ein 1-Tages-Urlaub in einer ohnehin session-losen Woche wird so
      **nicht** zum Vollausfall – er verbirgt die Woche nicht aus den Ankern und
      schützt den Streak nicht.
-   - **`ist_pausen_grenze=True`** für jede Woche, die ein dokumentiertes
-     Pausen-Intervall von **≥ Mindestdauer** (Konstante, z. B.
-     `PAUSE_BOUNDARY_MIN_DAYS = 7`) berührt – **unabhängig** von der
-     Wochen-Abdeckung. Das ist die **Trend-Vergleichs-Grenze** (§32.4) und ist
-     bewusst vom Abdeckungs-Flag getrennt: reale Pausen liegen selten auf
-     Mo–So-Grenzen (Codex-Review PR #200, ⑥). Beispiel: Krankheit Di–So +
-     Comeback am Montag erzeugt **keine** voll abgedeckte Woche, soll den
-     Spike-Vergleich aber trotzdem brechen.
+   - **`ist_pausen_grenze=True`** für jede **session-lose** Woche, die ein
+     dokumentiertes Pausen-Intervall von **≥ Mindestdauer** berührt –
+     **unabhängig** von der ISO-Wochen-Abdeckung (voll vs. partiell). Mindestdauer
+     als Konstante, **inklusiv** gezählt: `dauer_tage = (end − start).days + 1`,
+     Default `PAUSE_BOUNDARY_MIN_DAYS = 5`. Die Schwelle ist bewusst ≤ 6, damit
+     das Di–So-Beispiel (= **6 inklusive Tage**) sie erreicht – sonst widerspräche
+     der Default dem eigenen Beispiel (Codex-Review PR #200, ⑪); sie trennt eine
+     „echte Trainingslücke" vom verlängerten Wochenende. Das ist sowohl die
+     **Trend-Vergleichs-Grenze** (§32.4) **als auch** die Streak-Bridge-Bedingung
+     (§32.5) und bewusst vom Abdeckungs-Flag getrennt: reale Pausen liegen selten
+     auf Mo–So-Grenzen (Codex-Review PR #200, ⑥). Beispiel: Krankheit Di–So
+     (6 inkl. Tage ≥ 5) + Comeback am Montag erzeugt **keine** voll abgedeckte
+     Woche, setzt aber `ist_pausen_grenze` und bricht so den Spike-Vergleich.
 2. **Strukturelle Änderung (riskantester Teil):** Die Wochenliste muss aus
    `union(Wochen-mit-Sessions, Wochen-mit-Pausen-Overlap)` emittiert werden,
    damit eine komplett leere Krankheitswoche **als gelabelte Lücke erscheint**
@@ -203,10 +223,14 @@ Fehlverhaltens + Fix).
 ### 32.5 – Streak: Pause pausiert
 
 Dokumentierte Pause → Streak läuft über die Lücke weiter (kein Reset, keine
-Bestrafung). **Un-dokumentierter** Gap verhält sich unverändert. Eine Woche
-zählt als „pausiert", wenn sie `ist_ausfall` ist (volle Wochen-Abdeckung,
-§32.3) – nicht schon bei einer 1-Tages-Pause (sonst würde ⑤ den Streak
-fälschlich schützen).
+Bestrafung). **Un-dokumentierter** Gap verhält sich unverändert. Eine
+session-lose Woche **bridged** den Streak (kein Bruch), wenn sie
+`ist_pausen_grenze` ist – also von einer dokumentierten Pause **≥ Mindestdauer**
+berührt wird (dieselbe Schwelle wie die Trend-Grenze, §32.3). **Bewusst *nicht*
+nur an `ist_ausfall` (volle Mo–So-Abdeckung) gekoppelt** (Codex-Review PR #200,
+⑨): sonst bräche eine reale, aber nicht auf Wochengrenzen liegende Lücke
+(Krankheit Di–So + Comeback Montag) den Streak und verletzte Abnahmekriterium 4.
+Eine 1-Tages-Pause (< Mindestdauer) bridged **nicht** – ⑤ bleibt gewahrt.
 
 **Zwei Streak-Implementierungen – beide müssen pausieren (Codex-Review PR #200,
 ②):** Die Streak-Logik existiert doppelt; wird nur eine gepatcht, entsteht
@@ -225,7 +249,9 @@ Pausen-Awareness einzubauen.
 *Vor Umsetzung am Code klären:* exakte Streak-Definition (aus #475
 wochenbasiert) und ob beide Schleifen auf dieselbe Pausen-Quelle zugreifen.
 
-`tests`: dokumentierte Pause erhält den Streak; un-dokumentierter Gap wie bisher.
+`tests`: dokumentierte Pause ≥ Mindestdauer erhält den Streak – **auch** bei
+Di–So-Pause ohne volle Wochenabdeckung (⑨), in **beiden** Implementierungen;
+1-Tages-Pause bridged nicht; un-dokumentierter Gap wie bisher.
 
 ## 5. Reihenfolge & Branch
 
@@ -239,8 +265,11 @@ Konzept-Doc selbst nach `docs/concepts/phase32_concept.md` tragen und mit-commit
 
 ## 6. Betroffene Dateien (Hypothesen – am Code verifizieren)
 
-- `core/models/…` – neues Model `TrainingsPause` + Migration.
+- `core/models/…` – neues Model `TrainingsPause` + Migration; **`core/models/__init__.py`
+  re-export ergänzen** (⑫).
 - `core/views/…` – CRUD-Views (+ ggf. neues Modul) + URLs in `core/urls`.
+- `core/signals.py` – Cache-Invalidierung `dashboard_computed_<user>` für
+  `TrainingsPause` (`post_save` **und** `post_delete`, ⑬).
 - `core/templates/core/…` – Pausen-Liste/-Formular; Lücken-Label in
   `training_stats.html` **und** `training_pdf_simple.html` (Live/PDF-Parität!).
 - `core/utils/week_classification.py` – `ist_ausfall` / `teilweise_ausfall`
@@ -296,11 +325,14 @@ Rendern**. Niemals den übersetzten String persistieren.
 3. Wiedereinstiegs-Woche nach Pause erzeugt **keine** falsche
    Volumen-Anstiegs-Warnung im Fatigue-Index – in **Dashboard und PDF** (⑧),
    auch bei nicht auf Mo–So ausgerichteten Pausen (⑥).
-4. Dokumentierte Pause **resettet den Streak nicht**.
+4. Dokumentierte Pause ≥ Mindestdauer **resettet den Streak nicht** – auch bei
+   nicht auf Mo–So ausgerichteten Pausen (⑨), in Dashboard **und** PDF.
 5. Teil-Overlap-Woche behält ihr echtes Volumen, ist aber als Trend-Anker
    ausgeschlossen.
 6. `grund`-Labels DE/EN korrekt.
-7. Gesamte Testsuite grün, inkl. `test_chart_generator`.
+7. Anlegen/Ändern/**Löschen** einer Pause wirkt **sofort** im Dashboard
+   (`dashboard_computed_<user>` invalidiert, nicht erst nach TTL) (⑬).
+8. Gesamte Testsuite grün, inkl. `test_chart_generator`.
 
 ## 10. Vor Implementierung am Code zu klärende Hypothesen
 
@@ -312,8 +344,13 @@ Rendern**. Niemals den übersetzten String persistieren.
 - `select_comparable_weeks` ist **nicht** der einzige Chokepoint (beantwortet,
   ⑧): der Dashboard-Fatigue-Pfad (`_calculate_weekly_volumes` /
   `_get_volume_spike_fatigue`) umgeht ihn – beide Pfade pause-aware machen.
-- Mindestdauer für die Pausen-Vergleichsgrenze festlegen
-  (`PAUSE_BOUNDARY_MIN_DAYS`, §32.3, ⑥) – getrennt von der Streak-Pause-Regel.
-- Ziel-Submodul für das Model in `core/models/`.
-- MariaDB-Exclusion-Constraint-Annahme + Erzwingung außerhalb von Forms
-  (`save()`/Service-`full_clean()`, §32.1).
+- Mindestdauer (`PAUSE_BOUNDARY_MIN_DAYS`, inklusiv gezählt, Default 5) so
+  festlegen, dass das Di–So-Beispiel sie erreicht (§32.3, ⑥ + ⑪) – **geteilte**
+  Schwelle für Trend-Grenze (§32.4) **und** Streak-Bridge (§32.5, ⑨).
+- Ziel-Submodul für das Model in `core/models/` **+ Re-Export in
+  `core/models/__init__.py`** (⑫).
+- Overlap-Erzwingung außerhalb von Forms: Service-/Manager-only-Schreibpfad,
+  da `save()`+`full_clean()` `bulk_create`/Fixtures **nicht** abdeckt (§32.1,
+  ③ + ⑩); MariaDB-Exclusion-Constraint-Annahme verifizieren.
+- Dashboard-Cache-Invalidierung: `TrainingsPause`-Signale (`post_save` +
+  `post_delete`) auf `dashboard_computed_<user>` (`core/signals.py`, §32.2, ⑬).
