@@ -20,7 +20,7 @@ Wochen fälschlich als „Echte Regression" werten konnte.
 """
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 
 from django.utils import timezone
 
@@ -29,6 +29,7 @@ from core.utils.advanced_stats import (
     DELOAD_WEEK_MAJORITY_PCT,
     EFFECTIVE_VOLUME_RPE_MAX,
     EFFECTIVE_VOLUME_RPE_MIN,
+    PAUSE_BOUNDARY_MIN_DAYS,
     diagnose_volume_trend,
 )
 
@@ -52,7 +53,121 @@ def _aggregate_weekly_volume(saetze_qs, user_kg: float) -> tuple[dict, dict]:
     return weekly_volume, weekly_effective
 
 
-def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict]:
+def _iso_key(d: date) -> str:
+    """ISO-Wochen-Key 'YYYY-Www' für ein Datum."""
+    iso_year, iso_week, _ = d.isocalendar()
+    return f"{iso_year}-W{iso_week:02d}"
+
+
+def _clamp_pausen(pausen, heute_date: date) -> list[tuple[date, date, int]]:
+    """Analyse-Repräsentation der Pausen: ``[(start, end_clamped, dauer_tage), ...]``.
+
+    Phase 32.3 (§32.3.2, ⑦+⑰): jede Pause wird auf ``heute`` geclamped –
+    ``end_clamped = min(end_datum or heute, heute)``. Das gilt **nicht nur** für
+    offene Pausen (``end_datum=None``), sondern auch für geschlossene
+    Zukunfts-Ranges; sonst emittiert die Wochen-union Zukunfts-Null-Wochen.
+    Vollständig in der Zukunft liegende Pausen (``start > heute``) werden
+    verworfen. ``dauer_tage`` ist **inklusiv** ((end-start).days + 1).
+    """
+    result: list[tuple[date, date, int]] = []
+    if not pausen:
+        return result
+    for p in pausen:
+        start = p.start_datum
+        if start is None or start > heute_date:
+            continue
+        end = p.end_datum if p.end_datum is not None else heute_date
+        end = min(end, heute_date)
+        if end < start:
+            continue
+        dauer_tage = (end - start).days + 1
+        result.append((start, end, dauer_tage))
+    return result
+
+
+def _pausen_wochen_keys(pausen_clamped: list[tuple[date, date, int]]) -> set[str]:
+    """Menge aller ISO-Wochen-Keys, die von einer geclampten Pause berührt werden.
+
+    Schreitet vom Montag der Start-Woche wochenweise bis ``end`` – trifft so jede
+    berührte ISO-Woche genau einmal (keine ausgelassene Woche, kein Tag-für-Tag).
+    """
+    keys: set[str] = set()
+    for start, end, _ in pausen_clamped:
+        montag = start - timedelta(days=start.weekday())  # weekday(): Mo=0
+        cur = montag
+        while cur <= end:
+            keys.add(_iso_key(cur))
+            cur += timedelta(days=7)
+    return keys
+
+
+def _classify_week_pause(
+    iso_key: str,
+    pausen_clamped: list[tuple[date, date, int]],
+    hat_sessions: bool,
+    min_boundary_days: int = PAUSE_BOUNDARY_MIN_DAYS,
+) -> tuple[bool, bool, bool]:
+    """Zwei orthogonale Achsen für eine ISO-Woche (§32.3.1, ⑤/⑥/⑭/⑯).
+
+    Achse 1 (Label/Abdeckung):
+    - ``ist_ausfall``  ⇔ eine Pause deckt die **komplette** ISO-Woche (Mo–So) ab
+      **und** die Woche hat **0 Sessions**. Impliziert ``ist_pausen_grenze``.
+    - ``teilweise_ausfall`` ⇔ Woche überlappt eine Pause, ist aber **nicht**
+      ``ist_ausfall``. Deckt damit partiellen Overlap (mit/ohne Sessions) **und**
+      Voll-Overlap *mit* trotzdem geloggter Session ab (⑯).
+
+    Achse 2 (Dauer/Grenze):
+    - ``ist_pausen_grenze`` ⇔ Woche überlappt eine Pause **≥ min_boundary_days**
+      – **unabhängig** von Abdeckung **und** Session-Zahl (⑭: NICHT auf 0-Sessions
+      gaten).
+    """
+    iso_year, iso_week = int(iso_key.split("-W")[0]), int(iso_key.split("-W")[1])
+    montag = date.fromisocalendar(iso_year, iso_week, 1)
+    sonntag = date.fromisocalendar(iso_year, iso_week, 7)
+
+    overlaps = False
+    voll_abdeckung = False
+    grenze = False
+    for start, end, dauer in pausen_clamped:
+        if start <= sonntag and end >= montag:  # Overlap [start,end] ∩ [Mo,So]
+            overlaps = True
+            if start <= montag and end >= sonntag:
+                voll_abdeckung = True
+            if dauer >= min_boundary_days:
+                grenze = True
+
+    ist_ausfall = voll_abdeckung and not hat_sessions
+    teilweise_ausfall = overlaps and not ist_ausfall
+    ist_pausen_grenze = grenze or ist_ausfall  # ist_ausfall impliziert die Grenze
+    return ist_ausfall, teilweise_ausfall, ist_pausen_grenze
+
+
+def letzte_iso_wochen_keys(heute_date: date, anzahl: int) -> list[str]:
+    """Die letzten ``anzahl`` ISO-Wochen-Keys, endend in der Woche von heute."""
+    montag = heute_date - timedelta(days=heute_date.weekday())
+    keys = [_iso_key(montag - timedelta(days=7 * i)) for i in range(anzahl)]
+    return list(reversed(keys))
+
+
+def pausen_grenze_keys(pausen, heute_date: date, iso_keys) -> set[str]:
+    """Teilmenge von ``iso_keys`` mit einer Pausen-Grenze (Pause ≥ Mindestdauer).
+
+    GETEILTE Quelle (§32.4): ALLE benachbarten Wochen-Volumen-Vergleichspfade
+    konsultieren dieselbe SoT-Klassifikation (``_classify_week_pause``) statt
+    eigener Pausen-Logik. Eine Vergleichsstelle unterdrückt den Vergleich, sobald
+    er eine dieser Wochen berührt/überquert → kein falscher Comeback-Spike.
+    """
+    pausen_clamped = _clamp_pausen(pausen, heute_date)
+    if not pausen_clamped:
+        return set()
+    out: set[str] = set()
+    for k in iso_keys:
+        if _classify_week_pause(k, pausen_clamped, hat_sessions=False)[2]:
+            out.add(k)
+    return out
+
+
+def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict, set]:
     """Return (deload_weeks, deload_majority_weeks, routines_per_week) from sessions.
 
     Phase 25.8: ``routines_per_week`` maps each ISO-week-key to the set of
@@ -70,7 +185,7 @@ def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict]:
     deload_majority_weeks: set[str] = set()
     routines_per_week: dict[str, set] = defaultdict(set)
     if alle_trainings is None:
-        return deload_weeks, deload_majority_weeks, routines_per_week
+        return deload_weeks, deload_majority_weeks, routines_per_week, set()
     sessions_per_week: dict[str, dict] = defaultdict(lambda: {"total": 0, "deload": 0})
     # ``select_related("plan")`` joins the routine's ``gruppe_id`` into the same
     # query – avoids an N+1 on ``t.plan`` while keeping the query count flat.
@@ -91,12 +206,20 @@ def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict]:
             and (counts["deload"] / counts["total"]) * 100 >= DELOAD_WEEK_MAJORITY_PCT
         ):
             deload_majority_weeks.add(key)
-    return deload_weeks, deload_majority_weeks, routines_per_week
+    # ``sessions_per_week`` enthält jeden Key mit ≥1 Session – die Quelle für
+    # ``hat_sessions`` in der Pausen-Klassifikation (ist_ausfall nur bei 0 Sessions).
+    sessions_week_keys = set(sessions_per_week.keys())
+    return deload_weeks, deload_majority_weeks, routines_per_week, sessions_week_keys
 
 
-def _fill_iso_week_range(weekly_volume: dict) -> list[str]:
-    """Fill all ISO weeks between first and last seen week, return last 12."""
-    all_keys = sorted(weekly_volume.keys())
+def _fill_iso_week_range(seed_keys) -> list[str]:
+    """Fill all ISO weeks between first and last seed week, return last 12.
+
+    Phase 32.3: ``seed_keys`` ist die **union** aus Wochen-mit-Volumen UND
+    Wochen-mit-Pausen-Overlap (auf heute geclamped). Dadurch erscheint eine
+    komplett leere Krankheitswoche als gelabelte Lücke im Chart statt zu fehlen.
+    """
+    all_keys = sorted(seed_keys)
     first_key, last_key = all_keys[0], all_keys[-1]
     fy, fw = int(first_key.split("-W")[0]), int(first_key.split("-W")[1])
     ly, lw = int(last_key.split("-W")[0]), int(last_key.split("-W")[1])
@@ -130,10 +253,20 @@ def select_comparable_weeks(weeks: list[dict]) -> list[dict]:
     """
     comparable: list[dict] = []
     for w in reversed(weeks):
-        if w.get("ist_plan_wechsel"):
-            # Plan-Epoch-Grenze – stop. Diese Woche und alles davor zählen nicht.
+        if w.get("ist_plan_wechsel") or w.get("ist_pausen_grenze"):
+            # Epoch-Grenze (Plan-Wechsel ODER dokumentierte Pause ≥ Mindestdauer,
+            # Phase 32.4, ⑥): stop. Diese Woche und alles davor zählen nicht – so
+            # überquert KEIN Vergleich die Pause (kein falscher Comeback-Spike).
             break
-        if w.get("ist_laufend") or w.get("ist_deload_majority") or w.get("volumen", 0) <= 0:
+        if (
+            w.get("ist_laufend")
+            or w.get("ist_deload_majority")
+            or w.get("ist_ausfall")
+            or w.get("teilweise_ausfall")
+            or w.get("volumen", 0) <= 0
+        ):
+            # Kurze teilweise_ausfall-Wochen (ohne Grenz-Flag): Volumen bleibt
+            # erhalten, aber kein Trend-Anker (§32.3.3) – nur continue, kein break.
             continue
         comparable.append(w)
     comparable.reverse()
@@ -169,6 +302,12 @@ def _build_week_diagnose(weeks: list[dict]) -> dict | None:
         reasons.append("Deload-Woche")
     if last_week["ist_plan_wechsel"]:
         reasons.append("Trainingsplan-Wechsel")
+    if (
+        last_week.get("ist_pausen_grenze")
+        or last_week.get("ist_ausfall")
+        or last_week.get("teilweise_ausfall")
+    ):
+        reasons.append("Trainingspause")
     reason_text = ", ".join(reasons) if reasons else "Zu wenig vergleichbare Wochen"
     return {
         "key": "inconclusive",
@@ -187,7 +326,7 @@ def _build_week_diagnose(weeks: list[dict]) -> dict | None:
 
 
 def build_weekly_volume_overview(
-    alle_saetze, alle_trainings=None, user_kg: float = 0.0, heute=None
+    alle_saetze, alle_trainings=None, user_kg: float = 0.0, heute=None, pausen=None
 ) -> list[dict]:
     """Build weekly volume progression (last 12 weeks) inkl. Diagnose.
 
@@ -216,6 +355,14 @@ def build_weekly_volume_overview(
     ermittelt und als ``ist_plan_wechsel`` markiert – nicht mehr über rohe
     Plan-IDs. Sonst sieht jede noch nicht vollständig geloggte Splitwoche
     (z.B. erst Push geloggt, Pull/Legs offen) wie ein Plan-Wechsel aus.
+
+    Phase 32.3: ``pausen`` (Iterable von ``TrainingsPause``) macht die Übersicht
+    pause-bewusst. Die Wochenliste wird aus ``union(Wochen-mit-Sessions,
+    Wochen-mit-Pausen-Overlap)`` emittiert (jede Pause auf ``heute`` geclamped),
+    damit eine komplett leere Krankheitswoche als gelabelte Lücke erscheint statt
+    zu fehlen (#481). Jede Woche erhält ``ist_ausfall`` / ``teilweise_ausfall``
+    (Abdeckung) und ``ist_pausen_grenze`` (Dauer-Grenze) – siehe
+    ``_classify_week_pause``. Ohne ``pausen`` ist das Verhalten unverändert.
     """
     # ``einheit`` muss mit-gejoined werden, weil ``_aggregate_weekly_volume``
     # pro Satz auf ``satz.einheit.datum`` zugreift – sonst eine Query pro Satz.
@@ -224,8 +371,8 @@ def build_weekly_volume_overview(
     if not weekly_volume:
         return []
 
-    deload_weeks, deload_majority_weeks, routines_per_week = _classify_weeks_from_sessions(
-        alle_trainings
+    deload_weeks, deload_majority_weeks, routines_per_week, sessions_week_keys = (
+        _classify_weeks_from_sessions(alle_trainings)
     )
 
     if heute is None:
@@ -233,7 +380,12 @@ def build_weekly_volume_overview(
     iy_now, iw_now, _ = heute.isocalendar()
     aktuelle_woche_key = f"{iy_now}-W{iw_now:02d}"
 
-    labels = _fill_iso_week_range(weekly_volume)
+    # Phase 32.3: Pausen auf heute clampen + ihre ISO-Wochen in die Emission-union.
+    heute_date = heute.date() if hasattr(heute, "date") else heute
+    pausen_clamped = _clamp_pausen(pausen, heute_date)
+    seed_keys = set(weekly_volume.keys()) | _pausen_wochen_keys(pausen_clamped)
+
+    labels = _fill_iso_week_range(seed_keys)
     weeks: list[dict] = []
     prev_routines: set | None = None
     for label in labels:
@@ -249,6 +401,11 @@ def build_weekly_volume_overview(
             and prev_routines
             and cur_routines != prev_routines
         )
+        ist_ausfall, teilweise_ausfall, ist_pausen_grenze = _classify_week_pause(
+            label,
+            pausen_clamped,
+            hat_sessions=label in sessions_week_keys,
+        )
         weeks.append(
             {
                 "woche": f"KW{label.split('-W')[1]}",
@@ -259,6 +416,9 @@ def build_weekly_volume_overview(
                 "ist_deload_majority": label in deload_majority_weeks,
                 "ist_laufend": label == aktuelle_woche_key,
                 "ist_plan_wechsel": ist_plan_wechsel,
+                "ist_ausfall": ist_ausfall,
+                "teilweise_ausfall": teilweise_ausfall,
+                "ist_pausen_grenze": ist_pausen_grenze,
             }
         )
         if cur_routines:

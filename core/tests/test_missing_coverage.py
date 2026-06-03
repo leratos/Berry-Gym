@@ -18,8 +18,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -29,7 +28,6 @@ from core.models import CardioEinheit, Feedback, PushSubscription, SiteSettings,
 from core.tests.factories import (
     CardioEinheitFactory,
     SatzFactory,
-    TrainingsblockFactory,
     TrainingseinheitFactory,
     UebungFactory,
     UserFactory,
@@ -578,7 +576,10 @@ class TestCardioAddView:
         assert resp.status_code == 302
         eintrag = CardioEinheit.objects.filter(user=self.user).first()
         assert eintrag is not None
-        assert eintrag.datum == date.today()
+        # App-Zeitzone (timezone.localdate), nicht OS-lokal (date.today): cardio_add
+        # nutzt timezone.now().date(); an der UTC-vs-Lokal-Mitternachtsgrenze wich
+        # date.today() ab und ließ den Test flaken.
+        assert eintrag.datum == timezone.localdate()
 
     def test_post_ohne_datum_nutzt_heute(self):
         """POST ohne Datum-Feld → nutzt Tagesdatum."""
@@ -589,7 +590,10 @@ class TestCardioAddView:
         assert resp.status_code == 302
         eintrag = CardioEinheit.objects.filter(user=self.user).first()
         assert eintrag is not None
-        assert eintrag.datum == date.today()
+        # App-Zeitzone (timezone.localdate), nicht OS-lokal (date.today): cardio_add
+        # nutzt timezone.now().date(); an der UTC-vs-Lokal-Mitternachtsgrenze wich
+        # date.today() ab und ließ den Test flaken.
+        assert eintrag.datum == timezone.localdate()
 
     def test_login_required(self):
         """Nicht eingeloggt → Redirect."""
@@ -892,9 +896,13 @@ class TestPushNotificationViews:
         assert resp.status_code == 200
         assert resp.json()["success"] is True
 
+    @override_settings(VAPID_PUBLIC_KEY=None)
     def test_vapid_key_nicht_konfiguriert_gibt_503(self):
-        """Fehlender VAPID-Key → 503."""
-        # Im Test-Environment ist VAPID_PUBLIC_KEY=None (keine .pem Datei)
+        """Fehlender VAPID-Key → 503.
+
+        VAPID_PUBLIC_KEY explizit auf None overriden, statt anzunehmen das lokale
+        Env habe keinen Key (bei gesetztem Key kam sonst 200 statt 503 – Flaky-Fix).
+        """
         resp = self.client.get(reverse("get_vapid_public_key"))
         assert resp.status_code == 503
 

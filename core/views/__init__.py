@@ -106,6 +106,9 @@ from .offline import sync_offline_data
 # Onboarding views
 from .onboarding import mark_onboarding_complete, restart_onboarding
 
+# Trainingspausen views
+from .pausen import pausen_add, pausen_delete, pausen_edit, pausen_list
+
 # Plan management views
 from .plan_management import (
     copy_group,
@@ -238,6 +241,11 @@ __all__ = [
     "cardio_list",
     "cardio_add",
     "cardio_delete",
+    # Trainingspausen
+    "pausen_list",
+    "pausen_add",
+    "pausen_edit",
+    "pausen_delete",
     # Notifications
     "subscribe_push",
     "unsubscribe_push",

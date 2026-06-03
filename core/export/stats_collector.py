@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from core.export.constants import PULL_GROUPS, PUSH_GROUPS
 from core.helpers.volume import calc_volume, get_user_kg
-from core.models import MUSKELGRUPPEN, KoerperWerte, Satz, Trainingseinheit
+from core.models import MUSKELGRUPPEN, KoerperWerte, Satz, Trainingseinheit, TrainingsPause
 from core.utils.advanced_stats import (
     calculate_1rm_standards,
     calculate_consistency_metrics,
@@ -434,7 +434,18 @@ def calc_volume_trend_weekly(volumen_wochen: list[dict], heute=None) -> dict | N
     aktuelle_kw = f"KW{heute.isocalendar()[1]:02d}"
 
     # Laufende Woche aus dem Vergleich ausschließen
-    kandidaten = [w for w in volumen_wochen if w["woche"] != aktuelle_kw]
+    vorab = [w for w in volumen_wochen if w["woche"] != aktuelle_kw and not w.get("ist_laufend")]
+    # §32.4 (⑳): nicht über eine dokumentierte Pausen-/Plan-Grenze hinweg
+    # vergleichen; pausenbetroffene Wochen sind kein Anker. Über ``.get()`` bleiben
+    # Aufrufe mit rohen {woche, volumen}-Dicts (ohne Flags) unverändert.
+    kandidaten: list[dict] = []
+    for w in reversed(vorab):
+        if w.get("ist_pausen_grenze") or w.get("ist_plan_wechsel"):
+            break
+        if w.get("ist_ausfall") or w.get("teilweise_ausfall"):
+            continue
+        kandidaten.append(w)
+    kandidaten.reverse()
     if len(kandidaten) < 2:
         return None
 
@@ -624,7 +635,11 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
         ist_aufwaermsatz=False,
     )
     volumen_wochen = build_weekly_volume_overview(
-        alle_saetze_inkl_deload, alle_trainings, user_kg, heute=heute
+        alle_saetze_inkl_deload,
+        alle_trainings,
+        user_kg,
+        heute=heute,
+        pausen=TrainingsPause.objects.filter(user=user),
     )
     fatigue_analysis = calculate_fatigue_index(volumen_wochen, rpe_saetze, alle_trainings)
 

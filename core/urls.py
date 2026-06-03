@@ -162,6 +162,11 @@ urlpatterns = [
     path("cardio/", views.cardio_list, name="cardio_list"),
     path("cardio/add/", views.cardio_add, name="cardio_add"),
     path("cardio/<int:cardio_id>/delete/", views.cardio_delete, name="cardio_delete"),
+    # Trainingspausen / Ausfallzeiten
+    path("pausen/", views.pausen_list, name="pausen_list"),
+    path("pausen/add/", views.pausen_add, name="pausen_add"),
+    path("pausen/<int:pause_id>/edit/", views.pausen_edit, name="pausen_edit"),
+    path("pausen/<int:pause_id>/delete/", views.pausen_delete, name="pausen_delete"),
     # Push Notifications
     path("api/push/subscribe/", views.subscribe_push, name="subscribe_push"),
     path("api/push/unsubscribe/", views.unsubscribe_push, name="unsubscribe_push"),

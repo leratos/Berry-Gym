@@ -37,6 +37,7 @@ from ..models import (
     Satz,
     Trainingsblock,
     Trainingseinheit,
+    TrainingsPause,
     Uebung,
     UserProfile,
 )
@@ -54,7 +55,11 @@ from ..utils.plan_helpers import (
     get_active_plan_start_date,
     is_active_plan_too_new,
 )
-from ..utils.week_classification import build_weekly_volume_overview
+from ..utils.week_classification import (
+    build_weekly_volume_overview,
+    letzte_iso_wochen_keys,
+    pausen_grenze_keys,
+)
 from .body_tracking import _prepare_body_chart_data
 
 logger = logging.getLogger(__name__)
@@ -159,7 +164,18 @@ def _calculate_streak(user, heute) -> int:
     The current calendar week is treated as neutral: if the user has not yet
     trained this week, that does not break the streak – we keep counting back
     from the last completed week.
+
+    §32.5: Eine session-lose Woche, die von einer dokumentierten Pause
+    ≥ Mindestdauer berührt wird (``ist_pausen_grenze``), **bridged** den Streak
+    (kein Bruch) – ehrliches Dokumentieren wird nicht bestraft. Ein
+    un-dokumentierter Gap bricht weiterhin. Eine 1-Tages-Pause (< Mindestdauer)
+    bridged nicht (⑨/⑤).
     """
+    grenze = pausen_grenze_keys(
+        TrainingsPause.objects.filter(user=user),
+        heute.date(),
+        letzte_iso_wochen_keys(heute.date(), 53),
+    )
     streak = 0
     check_date = heute
     iterations = 0
@@ -173,6 +189,9 @@ def _calculate_streak(user, heute) -> int:
             streak += 1
         elif iterations == 0:
             # Laufende Woche neutral – nicht streak-brechend.
+            pass
+        elif _iso_week_key(week_start) in grenze:
+            # Dokumentierte Pause überbrückt die Lücke (neutral, kein Bruch).
             pass
         else:
             break
@@ -219,8 +238,39 @@ def _get_rpe_score(user, heute) -> tuple[int, float | None]:
     return 10, avg_rpe
 
 
+def _iso_week_key(d) -> str:
+    """ISO-Wochen-Key 'YYYY-Www' für ein date/datetime."""
+    iso = d.isocalendar()
+    return f"{iso[0]}-W{iso[1]:02d}"
+
+
+def _pause_blockiert_volumenvergleich(user, heute, fenster_wochen: int = 2) -> bool:
+    """§32.4: True, wenn in den letzten ``fenster_wochen`` ISO-Wochen eine
+    dokumentierte Pausen-Grenze (≥ Mindestdauer) liegt.
+
+    Geteilte Quelle für die Dashboard-Volumen-Vergleichspfade (Fatigue-Spike,
+    Form-Volumen-Trend): konsumiert ``pausen_grenze_keys`` (SoT-Klassifikation),
+    keine Parallelstruktur. Ein Wochen-zu-Wochen-Volumenvergleich, der eine
+    solche Woche berührt, wird unterdrückt (sonst falscher Comeback-Spike).
+
+    Fenster = **2** (laufende + Vorwoche), weil die Dashboard-Pfade nur
+    *current vs. previous* vergleichen. Eine Pause, die nur 3–4 Wochen zurück
+    liegt, während die letzten beiden Wochen normal trainiert wurden, darf einen
+    echten aktuellen Spike NICHT unterdrücken (Codex PR #201, P2: Limit pause
+    blocking to the compared weeks).
+    """
+    pausen = TrainingsPause.objects.filter(user=user)
+    fenster = letzte_iso_wochen_keys(heute.date(), fenster_wochen)
+    return bool(pausen_grenze_keys(pausen, heute.date(), fenster))
+
+
 def _get_volume_trend_score(user, heute) -> int:
     """Compute volume-trend form score (0-20) based on last 4 weeks."""
+    # §32.4: Nach einer dokumentierten Pause ist der Wochen-zu-Wochen-Trend nicht
+    # aussagekräftig (Comeback vs. Vor-Pause überquert die Lücke). Statt einer
+    # falschen „Volumen gestiegen/gehalten"-Bewertung (20) → neutral 0.
+    if _pause_blockiert_volumenvergleich(user, heute):
+        return 0
     user_kg = get_user_kg(user)
     last_4_weeks = []
     for i in range(4):
@@ -287,6 +337,13 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
     """
     block_start_date = active_block.start_datum if active_block else None
 
+    # §32.4/§9.2 (㉔): Pausen-Grenzen (≥ Mindestdauer) der betrachteten Wochen –
+    # markiert die Dashboard-Karte sonst unbeschriftete Null-Wochen als Lücke.
+    woche_keys = [_iso_week_key(_get_week_start(heute - timedelta(days=i * 7))) for i in range(4)]
+    pause_grenze_keys = pausen_grenze_keys(
+        TrainingsPause.objects.filter(user=user), heute.date(), woche_keys
+    )
+
     weekly_volumes = []
     for i in range(4):
         week_start = _get_week_start(heute - timedelta(days=i * 7))
@@ -340,6 +397,7 @@ def _calculate_weekly_volumes(user, heute, active_block=None) -> list[dict]:
                 "week_num": i,
                 "ist_deload": hat_deload,
                 "before_block": before_block,
+                "ist_pause": _iso_week_key(week_start) in pause_grenze_keys,
             }
         )
     return weekly_volumes
@@ -504,8 +562,13 @@ def _calculate_fatigue_index(
     fatigue_warnings: list[str] = []
 
     if gesamt_trainings >= 4:
+        spike_pts, spike_warns = _get_volume_spike_fatigue(weekly_volumes, block_age_weeks)
+        # §32.4 (⑧): Comeback-Volumen-Spike nach dokumentierter Pause unterdrücken,
+        # damit der Wiedereinstieg keine falsche „Volumen-Anstieg"-Ermüdung erzeugt.
+        if _pause_blockiert_volumenvergleich(user, heute):
+            spike_pts, spike_warns = 0, []
         for pts, warns in [
-            _get_volume_spike_fatigue(weekly_volumes, block_age_weeks),
+            (spike_pts, spike_warns),
             _get_rpe_fatigue(user, heute),
             _get_frequency_fatigue(user, heute),
         ]:
@@ -1859,6 +1922,7 @@ def _detect_volume_warnings(
     weekly_data: list,
     aktuelle_kw: str | None = None,
     plans_per_week: dict | None = None,
+    grenze_keys: set | None = None,
 ) -> list[dict]:
     """Flag weeks with >20 % volume spike or >30 % volume drop vs. prior week.
 
@@ -1872,6 +1936,7 @@ def _detect_volume_warnings(
     """
     warnings: list[dict] = []
     plans = plans_per_week or {}
+    grenze = grenze_keys or set()
     for i in range(1, len(weekly_data)):
         label = weekly_labels[i]
         prev_label = weekly_labels[i - 1]
@@ -1884,6 +1949,13 @@ def _detect_volume_warnings(
                     "type": "laufend",
                 }
             )
+            continue
+        # §32.4 (⑱): Liegt eine dokumentierte Pausen-Grenze auf einer der beiden
+        # verglichenen Wochen ODER zwischen ihnen, berührt/überquert der Vergleich
+        # die Pause → kein Warnsignal (sonst falscher Comeback-Spike). prev_label
+        # INKLUSIVE: auch eine pausenbehaftete Vorwoche mit Restvolumen blockt
+        # (Codex PR #201, P2: Suppress comparisons starting from a pause week).
+        if any(prev_label <= g <= label for g in grenze):
             continue
         prev = weekly_data[i - 1]
         if prev <= 0:
@@ -2323,7 +2395,11 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         einheit__user=request.user, ist_aufwaermsatz=False
     )
     weekly_overview = build_weekly_volume_overview(
-        alle_saetze_inkl_deload, trainings, user_kg=user_kg, heute=timezone.now()
+        alle_saetze_inkl_deload,
+        trainings,
+        user_kg=user_kg,
+        heute=timezone.now(),
+        pausen=TrainingsPause.objects.filter(user=request.user),
     )
     volume_diagnosis = weekly_overview[-1].get("diagnose") if weekly_overview else None
     muskelgruppen_sorted, mg_labels, mg_data, stats_code = _calc_muscle_balance(
@@ -2331,11 +2407,19 @@ def training_stats(request: HttpRequest) -> HttpResponse:
     )
     svg_muscle_data = _build_svg_muscle_data(stats_code)
     heute = timezone.now().date()
+    # §32.4 (⑱): Pausen-Grenzen (≥ Mindestdauer) der letzten Wochen → ein
+    # Volumen-Vergleich, der eine solche Woche überquert, wird nicht gewarnt.
+    grenze_keys = pausen_grenze_keys(
+        TrainingsPause.objects.filter(user=request.user),
+        heute,
+        letzte_iso_wochen_keys(heute, 14),
+    )
     deload_warnings = _detect_volume_warnings(
         weekly_labels,
         weekly_data,
         aktuelle_kw=f"{heute.isocalendar()[0]}-W{heute.isocalendar()[1]:02d}",
         plans_per_week=plans_per_week,
+        grenze_keys=grenze_keys,
     )
     heatmap_data = _build_90day_heatmap(trainings, heute)
 

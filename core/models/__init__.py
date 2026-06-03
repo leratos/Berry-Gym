@@ -41,6 +41,9 @@ from .ki_log import KIApiLog  # noqa: F401
 # ML
 from .ml import MLPredictionModel  # noqa: F401
 
+# Pause / Ausfallzeit
+from .pause import TrainingsPause  # noqa: F401
+
 # Plan
 from .plan import Plan, PlanUebung  # noqa: F401
 
@@ -88,6 +91,7 @@ __all__ = [
     "SiteSettings",
     "Trainingsblock",
     "Trainingseinheit",
+    "TrainingsPause",
     "TrainingSource",
     "Uebung",
     "UebungTag",
