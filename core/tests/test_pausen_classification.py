@@ -268,3 +268,43 @@ def test_generate_volume_chart_mit_pause_smoke():
     ]
     img = generate_volume_chart(wochen)
     assert isinstance(img, str) and len(img) > 0
+
+
+def test_generate_volume_chart_deload_null_label_smoke():
+    """Deload-Woche mit Volumen 0 → Label „Deload" (Coverage des Deload-Zweigs)."""
+    from core.chart_generator import generate_volume_chart
+
+    wochen = [
+        {"woche": "KW20", "volumen": 2000, "effektives_volumen": 1500},
+        {"woche": "KW21", "volumen": 0, "ist_deload": True},
+        {"woche": "KW22", "volumen": 1800, "effektives_volumen": 1400},
+    ]
+    img = generate_volume_chart(wochen)
+    assert isinstance(img, str) and len(img) > 0
+
+
+def test_clamp_pausen_ueberspringt_end_vor_start():
+    """Defensiver Zweig: end < start (vom DB-Constraint verhindert) wird übersprungen."""
+    from types import SimpleNamespace
+
+    from core.utils.week_classification import _clamp_pausen
+
+    p = SimpleNamespace(start_datum=date(2026, 2, 1), end_datum=date(2026, 1, 1))
+    assert _clamp_pausen([p], date(2026, 3, 1)) == []
+
+
+def test_calc_volume_trend_ueberspringt_teilweise_woche():
+    """calc_volume_trend_weekly überspringt eine teilweise_ausfall-Woche (kein Anker)."""
+    from core.export.stats_collector import calc_volume_trend_weekly
+
+    heute = datetime.combine(_monday(2026, 23), datetime.min.time())
+    wochen = [
+        {"woche": "KW20", "volumen": 1000},
+        {"woche": "KW21", "volumen": 900, "teilweise_ausfall": True},  # → continue
+        {"woche": "KW22", "volumen": 1100},
+    ]
+    result = calc_volume_trend_weekly(wochen, heute=heute)
+    # KW21 übersprungen → Vergleich KW22 vs KW20.
+    assert result is not None
+    assert result["diese_woche"] == 1100
+    assert result["letzte_woche"] == 1000

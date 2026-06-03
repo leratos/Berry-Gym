@@ -956,6 +956,17 @@ class TrainingsPauseAdmin(admin.ModelAdmin):
     ordering = ("-start_datum",)
     raw_id_fields = ("user",)
 
+    def save_model(self, request, obj, form, change):
+        """Auch Admin-Schreibpfade über den Service serialisieren (Codex PR #201,
+        P2): der Default-`ModelAdmin` würde `save()` direkt aufrufen und den
+        User-Row-Lock umgehen → zwei gleichzeitige Admin-Saves könnten beide den
+        Overlap-Check bestehen. `update_pause(obj)` sperrt die User-Zeile,
+        `full_clean()` läuft unter dem Lock, dann `save()` (Insert ODER Update).
+        """
+        from .services.pausen import update_pause
+
+        update_pause(obj)
+
     @admin.display(boolean=True, description="Laufend")
     def ist_laufend_display(self, obj):
         return obj.ist_laufend

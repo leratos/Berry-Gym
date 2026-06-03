@@ -131,10 +131,20 @@ class TestAnlegen:
 
     def test_overlap_mit_sessions_warnt_blockt_aber_nicht(self, client):
         """Pause über eine Woche mit bereits geloggter Session: Warnung, kein Block."""
+        from datetime import datetime, time
+
+        from core.models import Trainingseinheit
+
         user = UserFactory()
         client.force_login(user)
-        TrainingseinheitFactory(user=user)  # datum = heute (auto_now_add)
         heute = timezone.now().date()
+        # Session-Datum EXPLIZIT in den Pausenzeitraum legen (Codex PR #201, P2):
+        # TrainingseinheitFactory.datum ist zufällig; datum ist auto_now_add, daher
+        # per .update() forcen (Repo-Pattern), statt auf Zufall/auto_now_add zu bauen.
+        e = TrainingseinheitFactory(user=user)
+        Trainingseinheit.objects.filter(pk=e.pk).update(
+            datum=timezone.make_aware(datetime.combine(heute - timedelta(days=1), time(12, 0)))
+        )
         response = client.post(
             reverse("pausen_add"),
             {
@@ -171,6 +181,54 @@ class TestBearbeitenLoeschen:
         pause = TrainingsPauseFactory(user=user)
         client.post(reverse("pausen_delete", args=[pause.id]))
         assert not TrainingsPause.objects.filter(pk=pause.pk).exists()
+
+
+@pytest.mark.django_db
+class TestFormularRenderUndFehlerpfade:
+    """GET-Formulare + Fehlerpfade (Coverage der Render-/Except-Zweige)."""
+
+    def test_add_get_rendert_formular(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        resp = client.get(reverse("pausen_add"))
+        assert resp.status_code == 200
+
+    def test_add_ungueltiges_datumsformat_rerender(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        resp = client.post(reverse("pausen_add"), {"start_datum": "kaputt", "grund": "urlaub"})
+        assert resp.status_code == 200  # Re-Render mit Fehlermeldung (ValueError-Zweig)
+        assert not TrainingsPause.objects.filter(user=user).exists()
+
+    def test_edit_get_rendert_formular(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        p = TrainingsPauseFactory(
+            user=user, start_datum=date(2026, 1, 1), end_datum=date(2026, 1, 10)
+        )
+        resp = client.get(reverse("pausen_edit", args=[p.id]))
+        assert resp.status_code == 200
+
+    def test_edit_offene_pause_get_rendert(self, client):
+        """Edit-GET einer offenen Pause (end_datum=None) – deckt den ''-Zweig ab."""
+        user = UserFactory()
+        client.force_login(user)
+        p = TrainingsPauseFactory(user=user, start_datum=date(2026, 1, 1), end_datum=None)
+        resp = client.get(reverse("pausen_edit", args=[p.id]))
+        assert resp.status_code == 200
+
+    def test_edit_fehlendes_startdatum_rerender(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        p = TrainingsPauseFactory(
+            user=user, start_datum=date(2026, 1, 1), end_datum=date(2026, 1, 10)
+        )
+        resp = client.post(
+            reverse("pausen_edit", args=[p.id]), {"start_datum": "", "grund": "urlaub"}
+        )
+        assert resp.status_code == 200  # Re-Render (ValidationError-Zweig im Edit)
+        p.refresh_from_db()
+        assert p.start_datum == date(2026, 1, 1)  # unverändert
 
 
 @pytest.mark.django_db

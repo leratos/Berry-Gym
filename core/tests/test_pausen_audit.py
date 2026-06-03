@@ -229,3 +229,47 @@ class TestPositivkontrolle:
             labels, data, aktuelle_kw=aktuelle_kw, plans_per_week=plans, grenze_keys=set()
         )
         assert any(w.get("type") == "spike" for w in warnings)
+
+
+class TestCodexFixesPr201:
+    """Regressionen für die 4 Codex-P2-Anmerkungen aus PR #201."""
+
+    def test_pausenbehaftete_vorwoche_mit_restvolumen_blockt(self):
+        """P2 (⑱-Ergänzung): Ist die VORWOCHE selbst eine Pausen-Grenze (mit
+        Restvolumen), berührt der Vergleich die Pause → keine Spike-Warnung.
+        Früher schloss `prev_label < g` die Vorwoche fälschlich aus."""
+        labels = ["2026-W18", "2026-W19", "2026-W20"]
+        data = [1000, 900, 2000]  # W20 wäre ein Spike vs W19
+        warnings = _detect_volume_warnings(
+            labels, data, aktuelle_kw=None, plans_per_week=None, grenze_keys={"2026-W19"}
+        )
+        assert not any(w.get("type") == "spike" for w in warnings)
+
+    @pytest.mark.django_db
+    def test_distante_pause_unterdrueckt_aktuellen_vergleich_nicht(self):
+        """P2: Eine Pause 3 Wochen zurück darf einen ECHTEN aktuellen Spike nicht
+        unterdrücken, wenn die letzten beiden Wochen normal trainiert wurden."""
+        from core.views.training_stats import (
+            _get_volume_trend_score,
+            _pause_blockiert_volumenvergleich,
+        )
+
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        ue = UebungFactory()
+        now = timezone.now()
+        heute_d = now.date()
+
+        def _wk_mo(k):
+            d = heute_d - timedelta(weeks=k)
+            return d - timedelta(days=d.weekday())
+
+        # Normale Trainings in Wochen 0,1,2 (gleiches Volumen → Trend-Score 20).
+        for k in (0, 1, 2):
+            _session(user, plan, ue, _wk_mo(k), n_sets=2)
+        # Dokumentierte Pause 3 Wochen zurück (Woche 3, ausserhalb des 2-Wo-Fensters).
+        TrainingsPauseFactory(
+            user=user, start_datum=_wk_mo(3), end_datum=_wk_mo(3) + timedelta(days=6)
+        )
+        assert _pause_blockiert_volumenvergleich(user, now) is False
+        assert _get_volume_trend_score(user, now) == 20

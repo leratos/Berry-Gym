@@ -273,3 +273,49 @@ class TestFactoryUmgehtClean:
         # Kein Fehler – die Factory ruft kein clean() auf:
         TrainingsPauseFactory(user=user, start_datum=date(2026, 1, 5), end_datum=date(2026, 1, 15))
         assert TrainingsPause.objects.filter(user=user).count() == 2
+
+
+@pytest.mark.django_db
+class TestAdminSaveModel:
+    """Codex PR #201, P2: Admin-Schreibpfade laufen über den Service (User-Lock)."""
+
+    def _admin(self):
+        from django.contrib.admin.sites import site
+
+        from core.admin import TrainingsPauseAdmin
+
+        return TrainingsPauseAdmin(TrainingsPause, site)
+
+    def test_admin_save_model_legt_an(self):
+        ma = self._admin()
+        user = UserFactory()
+        obj = TrainingsPause(
+            user=user, start_datum=date(2026, 1, 1), end_datum=date(2026, 1, 5), grund="urlaub"
+        )
+        ma.save_model(request=None, obj=obj, form=None, change=False)
+        assert obj.pk is not None
+
+    def test_admin_save_model_lehnt_overlap_ab(self):
+        ma = self._admin()
+        user = UserFactory()
+        pausen_service.create_pause(
+            user=user, start_datum=date(2026, 1, 1), end_datum=date(2026, 1, 10), grund="krankheit"
+        )
+        obj = TrainingsPause(
+            user=user, start_datum=date(2026, 1, 5), end_datum=date(2026, 1, 15), grund="urlaub"
+        )
+        with pytest.raises(ValidationError):
+            ma.save_model(request=None, obj=obj, form=None, change=False)
+        assert TrainingsPause.objects.filter(user=user).count() == 1
+
+    def test_admin_save_model_sperrt_user_zeile(self):
+        ma = self._admin()
+        user = UserFactory()
+        obj = TrainingsPause(
+            user=user, start_datum=date(2026, 1, 1), end_datum=date(2026, 1, 5), grund="urlaub"
+        )
+        with mock.patch.object(
+            pausen_service, "_lock_user_row", wraps=pausen_service._lock_user_row
+        ) as locked:
+            ma.save_model(request=None, obj=obj, form=None, change=False)
+        locked.assert_called_once_with(user.pk)

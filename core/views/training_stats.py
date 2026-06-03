@@ -244,7 +244,7 @@ def _iso_week_key(d) -> str:
     return f"{iso[0]}-W{iso[1]:02d}"
 
 
-def _pause_blockiert_volumenvergleich(user, heute, fenster_wochen: int = 4) -> bool:
+def _pause_blockiert_volumenvergleich(user, heute, fenster_wochen: int = 2) -> bool:
     """§32.4: True, wenn in den letzten ``fenster_wochen`` ISO-Wochen eine
     dokumentierte Pausen-Grenze (≥ Mindestdauer) liegt.
 
@@ -252,6 +252,12 @@ def _pause_blockiert_volumenvergleich(user, heute, fenster_wochen: int = 4) -> b
     Form-Volumen-Trend): konsumiert ``pausen_grenze_keys`` (SoT-Klassifikation),
     keine Parallelstruktur. Ein Wochen-zu-Wochen-Volumenvergleich, der eine
     solche Woche berührt, wird unterdrückt (sonst falscher Comeback-Spike).
+
+    Fenster = **2** (laufende + Vorwoche), weil die Dashboard-Pfade nur
+    *current vs. previous* vergleichen. Eine Pause, die nur 3–4 Wochen zurück
+    liegt, während die letzten beiden Wochen normal trainiert wurden, darf einen
+    echten aktuellen Spike NICHT unterdrücken (Codex PR #201, P2: Limit pause
+    blocking to the compared weeks).
     """
     pausen = TrainingsPause.objects.filter(user=user)
     fenster = letzte_iso_wochen_keys(heute.date(), fenster_wochen)
@@ -1944,10 +1950,12 @@ def _detect_volume_warnings(
                 }
             )
             continue
-        # §32.4 (⑱): Liegt eine dokumentierte Pausen-Grenze zwischen den beiden
-        # verglichenen Wochen (oder berührt sie die Woche), überquert der Vergleich
-        # die Pause → kein Warnsignal (sonst falscher Comeback-Spike).
-        if label in grenze or any(prev_label < g <= label for g in grenze):
+        # §32.4 (⑱): Liegt eine dokumentierte Pausen-Grenze auf einer der beiden
+        # verglichenen Wochen ODER zwischen ihnen, berührt/überquert der Vergleich
+        # die Pause → kein Warnsignal (sonst falscher Comeback-Spike). prev_label
+        # INKLUSIVE: auch eine pausenbehaftete Vorwoche mit Restvolumen blockt
+        # (Codex PR #201, P2: Suppress comparisons starting from a pause week).
+        if any(prev_label <= g <= label for g in grenze):
             continue
         prev = weekly_data[i - 1]
         if prev <= 0:
