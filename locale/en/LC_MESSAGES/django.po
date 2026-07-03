@@ -3846,3 +3846,71 @@ msgstr "Breaks"
 
 msgid "Dokumentierte Trainingspause"
 msgstr "Documented training break"
+
+# Phase 33 – Wiedereinstieg nach Pause (return-to-training)
+
+msgid "Ärztliche Freigabe nötig"
+msgstr "Medical clearance required"
+
+msgid "Bei medizinischen Pausen (z.B. nach OP): Der Wiedereinstieg berücksichtigt dies konservativer und weist auf die nötige ärztliche Freigabe hin."
+msgstr "For medical breaks (e.g. after surgery), the return-to-training recommendation is more conservative and points out the required medical clearance."
+
+msgid "Medizinische Pause – ärztliche Freigabe nötig"
+msgstr "Medical break – medical clearance required"
+
+msgid "Ankreuzen bei OP, Verletzung oder Krankheit mit Belastungseinschränkung. Der Wiedereinstieg wird dann konservativer empfohlen."
+msgstr "Tick this for surgery, injury or illness with load restrictions. The return-to-training recommendation will then be more conservative."
+
+msgid "medizinisch"
+msgstr "medical"
+
+msgid "Willkommen zurück nach deiner Pause!"
+msgstr "Welcome back after your break!"
+
+msgid "Einstiegsgewichte ansehen"
+msgstr "View starting weights"
+
+msgid "Wiedereinstieg"
+msgstr "Return to training"
+
+msgid "Aktuell liegt keine frische Trainingspause vor, für die eine Einstiegsempfehlung sinnvoll wäre."
+msgstr "There is currently no recent training break for which a starting-weight recommendation would be useful."
+
+msgid "Trainingspausen verwalten"
+msgstr "Manage training breaks"
+
+msgid "Deine Pause"
+msgstr "Your break"
+
+#, python-format
+msgid "Dauer %(tage)s Tage. Empfohlener Start in Woche 1 des Wiedereinstiegs."
+msgstr "Duration %(tage)s days. Recommended start in week 1 of your return to training."
+
+#, python-format
+msgid "Du bist aktuell in Woche %(woche)s von %(gesamt)s."
+msgstr "You are currently in week %(woche)s of %(gesamt)s."
+
+msgid "Nur nach ärztlicher Freigabe."
+msgstr "Only with medical clearance."
+
+msgid "Diese Pause ist als medizinisch markiert (z.B. nach OP/Verletzung). Belaste dich nur im ärztlich freigegebenen Rahmen und beachte mögliche Belastungsgrenzen – die Werte hier sind Richtwerte, kein ärztlicher Rat."
+msgstr "This break is marked as medical (e.g. after surgery/injury). Only train within the range cleared by your doctor and mind any load limits – the values here are guideline figures, not medical advice."
+
+msgid "Richtwerte auf Basis deiner letzten Arbeitsgewichte und der Pausendauer – kein ärztlicher Rat. Höre auf deinen Körper und passe die Gewichte nach RPE an."
+msgstr "Guideline figures based on your last working weights and the break duration – not medical advice. Listen to your body and adjust the weights by RPE."
+
+msgid "Einstiegsgewichte pro Übung"
+msgstr "Starting weights per exercise"
+
+msgid "zuletzt"
+msgstr "last"
+
+#, python-format
+msgid "Wo. %(nr)s"
+msgstr "Wk %(nr)s"
+
+msgid "Danach zurück auf das volle Niveau deiner letzten Arbeitsgewichte – sofern sich der Wiedereinstieg gut anfühlt."
+msgstr "After that, back to the full level of your last working weights – provided the return to training feels good."
+
+msgid "Für die Zeit vor der Pause liegen keine Arbeitsgewichte vor, aus denen sich Einstiegswerte ableiten lassen. Starte bewusst leicht und taste dich nach RPE heran."
+msgstr "There are no working weights from before the break to derive starting values from. Start deliberately light and work up by RPE."

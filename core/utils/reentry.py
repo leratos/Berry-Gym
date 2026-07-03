@@ -217,12 +217,21 @@ def build_reentry_recommendation(user, *, today: date | None = None) -> dict | N
 
     uebungen = []
     for uebung, letztes_gewicht in _letzte_arbeitsgewichte(user, pause):
-        wochen_gewichte = [round_to_step(letztes_gewicht * r["faktor"]) for r in rampe]
+        wochen = [
+            {
+                "woche": r["woche"],
+                "prozent": r["prozent"],
+                "rpe_cap": r["rpe_cap"],
+                "gewicht": round_to_step(letztes_gewicht * r["faktor"]),
+                "ist_aktuell": r["woche"] == aktuelle_woche,
+            }
+            for r in rampe
+        ]
         uebungen.append(
             {
                 "uebung": uebung,
                 "letztes_gewicht": round(letztes_gewicht, 2),
-                "wochen_gewichte": wochen_gewichte,
+                "wochen": wochen,
             }
         )
 

@@ -167,6 +167,8 @@ urlpatterns = [
     path("pausen/add/", views.pausen_add, name="pausen_add"),
     path("pausen/<int:pause_id>/edit/", views.pausen_edit, name="pausen_edit"),
     path("pausen/<int:pause_id>/delete/", views.pausen_delete, name="pausen_delete"),
+    # Wiedereinstieg nach Pause (Phase 33)
+    path("wiedereinstieg/", views.reentry_detail, name="reentry_detail"),
     # Push Notifications
     path("api/push/subscribe/", views.subscribe_push, name="subscribe_push"),
     path("api/push/unsubscribe/", views.unsubscribe_push, name="unsubscribe_push"),

@@ -130,6 +130,9 @@ from .plan_management import (
 # Plan templates views
 from .plan_templates import create_plan_from_template, get_plan_templates, get_template_detail
 
+# Wiedereinstieg nach Pause (Phase 33)
+from .reentry import reentry_detail
+
 # Scientific sources
 from .sources import sources_list
 
@@ -246,6 +249,8 @@ __all__ = [
     "pausen_add",
     "pausen_edit",
     "pausen_delete",
+    # Wiedereinstieg nach Pause (Phase 33)
+    "reentry_detail",
     # Notifications
     "subscribe_push",
     "unsubscribe_push",

@@ -205,7 +205,7 @@ class TestBuildRecommendation:
         assert eintrag["letztes_gewicht"] == 90.0
         # 42 Tage → Rampe 0.80/0.85/0.90/0.95 auf 90 kg, gerundet auf 2.5-Schritte:
         # 72.0→72.5, 76.5→77.5, 81.0→80.0, 85.5→85.0
-        assert eintrag["wochen_gewichte"] == [72.5, 77.5, 80.0, 85.0]
+        assert [w["gewicht"] for w in eintrag["wochen"]] == [72.5, 77.5, 80.0, 85.0]
 
     def test_deload_und_lookback_werden_ausgeschlossen(self):
         user = UserFactory()

@@ -1402,6 +1402,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     offene_session = offene_sessions[0] if offene_sessions else None
     offene_sessions_anzahl = len(offene_sessions)
 
+    # Wiedereinstiegs-Hinweis (Phase 33) – immer frisch, außerhalb des Caches,
+    # damit Pausen-CRUD sofort wirkt (keine zusätzliche Cache-Invalidierung nötig).
+    from ..utils.reentry import get_active_reentry_pause
+
+    reentry_pause = get_active_reentry_pause(request.user, today=heute.date())
+
     # Wochenübersicht (immer frisch – ändert sich intraday)
     week_overview = _get_week_overview(request.user, heute)
     trainings_ziel = 3
@@ -1432,6 +1438,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "week_overview": week_overview,
         "trainings_ziel": trainings_ziel,
         "prs_diese_woche": prs_diese_woche,
+        "reentry_pause": reentry_pause,
         **computed,
     }
     _add_plan_group_context(request.user, context)
