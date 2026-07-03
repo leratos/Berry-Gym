@@ -234,3 +234,67 @@ class TestBuildRecommendation:
         reentry.build_reentry_recommendation(user, today=today)
         nachher = list(Satz.objects.values_list("gewicht", flat=True))
         assert vorher == nachher
+
+    def test_gegen_uebung_wird_ausgeschlossen(self):
+        # Codex-Review PR #203, P2: Gegengewicht-Übungen (niedriger = schwerer)
+        # dürfen nicht mit dem Detraining-Faktor skaliert werden.
+        user = UserFactory()
+        today = date(2026, 6, 1)
+        normal = UebungFactory(bezeichnung="Bankdrücken", gewichts_richtung="ZUSATZ")
+        assistiert = UebungFactory(bezeichnung="Assistierte Klimmzüge", gewichts_richtung="GEGEN")
+        _session(user, date(2026, 4, 18), normal, 100)
+        _session(user, date(2026, 4, 18), assistiert, 40)
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 4, 20), end_datum=date(2026, 5, 31))
+        rec = reentry.build_reentry_recommendation(user, today=today)
+        namen = {e["uebung"].bezeichnung for e in rec["uebungen"]}
+        assert namen == {"Bankdrücken"}
+
+
+@pytest.mark.django_db
+class TestReviewFixesPR203:
+    """Codex-Review PR #203 – Edge Cases in get_active_reentry_pause."""
+
+    def test_offene_pause_waehrend_rampe_unterdrueckt(self):
+        """P2 #1: neue offene Pause während der Rampe → kein Wiedereinstieg."""
+        user = UserFactory()
+        today = date(2026, 6, 1)
+        # Abgeschlossene qualifizierende Pause, deren Rampe noch liefe …
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 5, 17), end_datum=date(2026, 5, 27))
+        # … aber der User ist SEIT dem 30.05. wieder pausiert (offen).
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 5, 30), end_datum=None)
+        assert reentry.get_active_reentry_pause(user, today=today) is None
+
+    def test_pause_die_heute_endet_noch_keine_empfehlung(self):
+        """P2 #3: Range ist inklusiv – am letzten Pausentag noch kein Wiedereinstieg."""
+        user = UserFactory()
+        today = date(2026, 6, 1)
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 5, 22), end_datum=date(2026, 6, 1))
+        assert reentry.get_active_reentry_pause(user, today=today) is None
+
+    def test_juengste_pause_loest_aeltere_ab(self):
+        """P2 #2: eine spätere (kurze) Pause löst die Rampe einer älteren ab.
+
+        Ältere medizinische Pause (36 Tage, Rampe reicht rechnerisch bis heute),
+        aber danach gab es eine kurze Pause → die jüngste (nicht-qualifizierende)
+        Pause bestimmt das Segment, kein Rückfall auf veraltete Vor-Pausen-Gewichte.
+        """
+        user = UserFactory()
+        today = date(2026, 6, 1)
+        TrainingsPauseFactory(
+            user=user,
+            start_datum=date(2026, 4, 1),
+            end_datum=date(2026, 5, 6),
+            aerztliche_freigabe_noetig=True,
+        )
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 5, 20), end_datum=date(2026, 5, 22))
+        assert reentry.get_active_reentry_pause(user, today=today) is None
+
+    def test_juengste_qualifizierende_pause_gewinnt(self):
+        """Gegenprobe: ist die jüngste Pause selbst qualifizierend + in Rampe → sie zählt."""
+        user = UserFactory()
+        today = date(2026, 6, 1)
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 4, 1), end_datum=date(2026, 5, 6))
+        neuere = TrainingsPauseFactory(
+            user=user, start_datum=date(2026, 5, 18), end_datum=date(2026, 5, 29)
+        )
+        assert reentry.get_active_reentry_pause(user, today=today) == neuere

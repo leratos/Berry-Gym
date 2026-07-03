@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from django.db.models import Q
 from django.utils import timezone
 
 from core.models import Satz, TrainingsPause
@@ -120,29 +121,47 @@ def get_active_reentry_pause(user, *, today: date | None = None) -> TrainingsPau
     """Die aktuell 'frische' Pause, für die eine Wiedereinstiegs-Empfehlung gilt.
 
     Kriterien:
-    - abgeschlossen (`end_datum` gesetzt und ≤ heute; laufende Pause zählt nicht),
-    - Dauer ≥ `REENTRY_MIN_DAYS` (inklusiv gezählt),
-    - der Wiedereinstieg (Rampe) läuft noch: Tage seit Pausenende < Rampen-Länge.
+    - Der User ist **heute nicht** (mehr) pausiert: keine laufende (offene) Pause
+      und keine geschlossene Pause, deren inklusiver Range heute noch abdeckt.
+      Die **Rampe startet am Tag NACH dem Pausenende** (Range ist inklusiv, wie
+      der Overlap-Check in `core/views/pausen.py`).
+    - **Nur die jüngste abgeschlossene Pause** bestimmt das aktuelle Erholungs-
+      Segment. Eine spätere (auch kurze) Pause löst die Rampe einer älteren ab –
+      es wird nicht auf ältere Pausen zurückgefallen, deren längere Rampe zufällig
+      noch bis heute reicht (sonst Empfehlung auf veralteten Vor-Pausen-Gewichten).
+    - Diese Pause muss ≥ `REENTRY_MIN_DAYS` dauern und ihre Rampe noch laufen
+      (Tage seit Pausenende < Rampen-Länge).
 
-    Gibt die neueste passende Pause zurück oder None.
+    Gibt die passende Pause zurück oder None.
     """
     if today is None:
         today = timezone.localdate()
 
-    kandidaten = TrainingsPause.objects.filter(
-        user=user, end_datum__isnull=False, end_datum__lte=today
-    ).order_by("-end_datum")
+    # 1. Deckt heute noch eine Pause ab (laufend ODER geschlossen mit Ende ≥ heute)?
+    #    Dann ist der User noch pausiert → kein Wiedereinstieg.
+    if (
+        TrainingsPause.objects.filter(user=user, start_datum__lte=today)
+        .filter(Q(end_datum__isnull=True) | Q(end_datum__gte=today))
+        .exists()
+    ):
+        return None
 
-    for pause in kandidaten:
-        dauer_tage = (pause.end_datum - pause.start_datum).days + 1
-        if dauer_tage < REENTRY_MIN_DAYS:
-            continue
-        _, rampen_wochen, _ = _detraining_profil(dauer_tage, pause.aerztliche_freigabe_noetig)
-        tage_seit_ende = (today - pause.end_datum).days
-        if tage_seit_ende < rampen_wochen * 7:
-            return pause
-        # Neuere Pause ist zu alt für einen Wiedereinstieg → ältere wären es erst
-        # recht; Schleife bricht faktisch nach der neuesten relevanten ab.
+    # 2. Jüngste abgeschlossene Pause (Ende strikt vor heute) = aktuelles Segment.
+    pause = (
+        TrainingsPause.objects.filter(user=user, end_datum__isnull=False, end_datum__lt=today)
+        .order_by("-end_datum")
+        .first()
+    )
+    if pause is None:
+        return None
+
+    dauer_tage = (pause.end_datum - pause.start_datum).days + 1
+    if dauer_tage < REENTRY_MIN_DAYS:
+        return None
+    _, rampen_wochen, _ = _detraining_profil(dauer_tage, pause.aerztliche_freigabe_noetig)
+    tage_seit_ende = (today - pause.end_datum).days
+    if tage_seit_ende < rampen_wochen * 7:
+        return pause
     return None
 
 
@@ -152,6 +171,13 @@ def _letzte_arbeitsgewichte(user, pause: TrainingsPause) -> list[tuple]:
     'Arbeitsgewicht' = max. Gewicht der Nicht-Aufwärmsätze in der jüngsten Einheit
     (vor Pausenbeginn, kein Deload-Training), in der die Übung vorkam. Übungen ohne
     Daten im Lookback-Fenster werden ausgelassen (Konzept §33.2).
+
+    `GEGEN`-Übungen (assistierte Klimmzüge/Dips: `gewicht` = Gegengewicht,
+    niedriger = schwerer) werden ausgelassen: ein Detraining-Faktor auf das
+    Gegengewicht würde die Hilfe *reduzieren* und den Satz härter machen – das
+    Gegenteil einer konservativen Empfehlung. Diese Übungen bräuchten die
+    invertierte Semantik der Session-Progression und sind hier bewusst nicht
+    abgedeckt (Codex-Review PR #203, P2).
 
     Returns:
         Liste von (Uebung, letztes_gewicht_float), sortiert nach Übungsname.
@@ -166,6 +192,7 @@ def _letzte_arbeitsgewichte(user, pause: TrainingsPause) -> list[tuple]:
             einheit__datum__date__lt=pause.start_datum,
             gewicht__gt=0,
         )
+        .exclude(uebung__gewichts_richtung="GEGEN")
         .select_related("uebung", "einheit")
         .order_by("uebung_id", "-einheit__datum")
     )
