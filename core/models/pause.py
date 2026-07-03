@@ -54,6 +54,15 @@ class TrainingsPause(models.Model):
         verbose_name=_("Grund"),
     )
     notiz = models.TextField(blank=True, verbose_name=_("Notiz"))
+    aerztliche_freigabe_noetig = models.BooleanField(
+        default=False,
+        verbose_name=_("Ärztliche Freigabe nötig"),
+        help_text=_(
+            "Bei medizinischen Pausen (z.B. nach OP): Der Wiedereinstieg "
+            "berücksichtigt dies konservativer und weist auf die nötige "
+            "ärztliche Freigabe hin."
+        ),
+    )
     erstellt_am = models.DateTimeField(auto_now_add=True)
     geaendert_am = models.DateTimeField(auto_now=True)
 

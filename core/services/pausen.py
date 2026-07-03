@@ -36,7 +36,9 @@ def _lock_user_row(user_id: int) -> None:
 
 
 @transaction.atomic
-def create_pause(*, user, start_datum, grund, end_datum=None, notiz=""):
+def create_pause(
+    *, user, start_datum, grund, end_datum=None, notiz="", aerztliche_freigabe_noetig=False
+):
     """Legt eine TrainingsPause overlap-sicher an.
 
     Raises:
@@ -49,6 +51,7 @@ def create_pause(*, user, start_datum, grund, end_datum=None, notiz=""):
         end_datum=end_datum,
         grund=grund,
         notiz=notiz,
+        aerztliche_freigabe_noetig=aerztliche_freigabe_noetig,
     )
     pause.full_clean()  # clean() läuft jetzt unter dem User-Lock
     pause.save()
@@ -56,7 +59,15 @@ def create_pause(*, user, start_datum, grund, end_datum=None, notiz=""):
 
 
 @transaction.atomic
-def update_pause(pause, *, start_datum=_UNSET, end_datum=_UNSET, grund=_UNSET, notiz=_UNSET):
+def update_pause(
+    pause,
+    *,
+    start_datum=_UNSET,
+    end_datum=_UNSET,
+    grund=_UNSET,
+    notiz=_UNSET,
+    aerztliche_freigabe_noetig=_UNSET,
+):
     """Aktualisiert eine TrainingsPause overlap-sicher.
 
     Nur übergebene Felder werden geändert; `end_datum=None` setzt das Ende
@@ -74,6 +85,8 @@ def update_pause(pause, *, start_datum=_UNSET, end_datum=_UNSET, grund=_UNSET, n
         pause.grund = grund
     if notiz is not _UNSET:
         pause.notiz = notiz
+    if aerztliche_freigabe_noetig is not _UNSET:
+        pause.aerztliche_freigabe_noetig = aerztliche_freigabe_noetig
     pause.full_clean()
     pause.save()
     return pause
