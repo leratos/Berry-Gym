@@ -28,10 +28,14 @@ from core.tests.factories import (
 from core.utils import reentry
 
 
-def _session(user, when: date, uebung, gewicht, *, warmup=False, deload=False, rpe="8.0"):
+def _session(
+    user, when: date, uebung, gewicht, *, warmup=False, deload=False, rpe="8.0", abgeschlossen=True
+):
     """Eine Trainingseinheit am Tag `when` mit einem Satz (datum via update forcieren)."""
     aware = timezone.make_aware(datetime(when.year, when.month, when.day, 12, 0))
-    einheit = TrainingseinheitFactory(user=user, plan=None, ist_deload=deload)
+    einheit = TrainingseinheitFactory(
+        user=user, plan=None, ist_deload=deload, abgeschlossen=abgeschlossen
+    )
     Trainingseinheit.objects.filter(pk=einheit.pk).update(datum=aware)
     einheit.refresh_from_db()
     SatzFactory(
@@ -264,6 +268,33 @@ class TestBuildRecommendation:
         rec = reentry.build_reentry_recommendation(user, today=today)
         namen = {e["uebung"].bezeichnung for e in rec["uebungen"]}
         assert namen == {"Bankdrücken"}
+
+    def test_zeit_uebung_wird_ausgeschlossen(self):
+        # Codex-Review PR #203 R4, P2: bei ZEIT ist `gewicht` Sekunden, keine Last.
+        user = UserFactory()
+        today = date(2026, 6, 1)
+        normal = UebungFactory(bezeichnung="Bankdrücken", gewichts_typ="GESAMT")
+        plank = UebungFactory(bezeichnung="Plank", gewichts_typ="ZEIT")
+        _session(user, date(2026, 4, 18), normal, 100)
+        _session(user, date(2026, 4, 18), plank, 60)  # 60 Sekunden, nicht kg
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 4, 20), end_datum=date(2026, 5, 31))
+        rec = reentry.build_reentry_recommendation(user, today=today)
+        namen = {e["uebung"].bezeichnung for e in rec["uebungen"]}
+        assert namen == {"Bankdrücken"}
+
+    def test_unfertige_session_wird_ignoriert(self):
+        # Codex-Review PR #203 R4, P2: Ghost-Sätze in abgeschlossen=False-Sessions
+        # dürfen nicht als letztes Arbeitsgewicht zählen.
+        user = UserFactory()
+        today = date(2026, 6, 1)
+        bank = UebungFactory(bezeichnung="Bankdrücken", gewichts_typ="GESAMT")
+        _session(user, date(2026, 4, 15), bank, 100)  # abgeschlossenes Training
+        # Neuere, NICHT abgeschlossene Session mit höherem (Ghost-)Gewicht:
+        _session(user, date(2026, 4, 18), bank, 999, abgeschlossen=False)
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 4, 20), end_datum=date(2026, 5, 31))
+        rec = reentry.build_reentry_recommendation(user, today=today)
+        assert len(rec["uebungen"]) == 1
+        assert rec["uebungen"][0]["letztes_gewicht"] == 100.0  # nicht 999 (Ghost ignoriert)
 
 
 @pytest.mark.django_db

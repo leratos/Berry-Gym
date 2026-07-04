@@ -175,19 +175,23 @@ def _letzte_arbeitsgewichte(user, pause: TrainingsPause) -> list[tuple]:
     (vor Pausenbeginn, kein Deload-Training), in der die Übung vorkam. Übungen ohne
     Daten im Lookback-Fenster werden ausgelassen (Konzept §33.2).
 
-    Nur Übungen, deren `gewicht`-Feld die **tatsächlich skalierbare Last** ist
-    (`gewichts_typ=GESAMT`, auch `PRO_SEITE` – die Pro-Seite-Zahl skaliert
-    proportional), werden berücksichtigt. Bewusst **ausgelassen** (Codex-Review
-    PR #203, P2), weil der Detraining-Faktor auf `gewicht` dort die falsche Last
-    trifft:
-    - `gewichts_typ=KOERPERGEWICHT`: `gewicht` ist nur die Zusatzlast; die
-      effektive Last ist `Körpergewicht × Faktor ± Zusatz` (`helpers/volume.py`).
-      Nur die Zusatzlast zu senken unterreduziert die effektive Last stark
-      (80 kg + 20 kg dip, Faktor 0.8 → effektiv noch ~95 %).
-    - `gewichts_richtung=GEGEN` (assistiert, Gegengewicht: niedriger = schwerer):
-      Faktor würde die Hilfe reduzieren → härter statt konservativer.
-    Beide bräuchten die effektive-Last-/invertierte Semantik der Session-
-    Progression und sind hier bewusst nicht abgedeckt (ehrliche Grenze).
+    Nur **abgeschlossene** Trainings zählen (`einheit__abgeschlossen=True`) –
+    `_create_ghost_saetze` legt beim Trainingsstart Platzhalter-Sätze
+    (`ist_aufwaermsatz=False`, positives `gewicht`) in eine noch offene Session;
+    unfertige/abgebrochene Trainings dürfen die Empfehlung nicht speisen
+    (Codex-Review PR #203, P2).
+
+    **Whitelist** der skalierbaren Gewichtsarten (`GESAMT`, `PRO_SEITE` – die
+    Pro-Seite-Zahl skaliert proportional): nur dort ist `gewicht` eine Last, die
+    ein Detraining-Faktor sinnvoll trifft. Bewusst nicht abgedeckt (ehrliche
+    Grenze, Codex-Review PR #203, P2):
+    - `KOERPERGEWICHT`: `gewicht` ist nur die Zusatzlast; effektiv
+      `Körpergewicht × Faktor ± Zusatz` (`helpers/volume.py`). Faktor auf die
+      Zusatzlast unterreduziert die effektive Last stark.
+    - `ZEIT`: `gewicht` ist Dauer in Sekunden, keine Last – dürfte nie als „kg"
+      reduziert erscheinen.
+    - `gewichts_richtung=GEGEN` (assistiert): Faktor reduziert die Hilfe →
+      härter statt konservativer.
 
     Returns:
         Liste von (Uebung, letztes_gewicht_float), sortiert nach Übungsname.
@@ -196,13 +200,15 @@ def _letzte_arbeitsgewichte(user, pause: TrainingsPause) -> list[tuple]:
     saetze = (
         Satz.objects.filter(
             einheit__user=user,
+            einheit__abgeschlossen=True,
             ist_aufwaermsatz=False,
             einheit__ist_deload=False,
             einheit__datum__date__gte=fenster_start,
             einheit__datum__date__lt=pause.start_datum,
             gewicht__gt=0,
+            uebung__gewichts_typ__in=["GESAMT", "PRO_SEITE"],
         )
-        .exclude(Q(uebung__gewichts_typ="KOERPERGEWICHT") | Q(uebung__gewichts_richtung="GEGEN"))
+        .exclude(uebung__gewichts_richtung="GEGEN")
         .select_related("uebung", "einheit")
         .order_by("uebung_id", "-einheit__datum")
     )
