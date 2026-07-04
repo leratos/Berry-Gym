@@ -159,8 +159,11 @@ def get_active_reentry_pause(user, *, today: date | None = None) -> TrainingsPau
     if dauer_tage < REENTRY_MIN_DAYS:
         return None
     _, rampen_wochen, _ = _detraining_profil(dauer_tage, pause.aerztliche_freigabe_noetig)
+    # Rampe startet am Tag NACH dem Pausenende → `tage_seit_ende` ist 1-basiert
+    # (Tag 1 = erster Rampentag). Die Rampe umfasst die Tage 1..rampen_wochen*7
+    # inklusive, daher `<=` (sonst fiele der letzte Rampentag heraus).
     tage_seit_ende = (today - pause.end_datum).days
-    if tage_seit_ende < rampen_wochen * 7:
+    if tage_seit_ende <= rampen_wochen * 7:
         return pause
     return None
 
@@ -239,8 +242,10 @@ def build_reentry_recommendation(user, *, today: date | None = None) -> dict | N
     start_faktor, rampen_wochen, rpe_cap_start = _detraining_profil(dauer_tage, medizinisch)
     rampe = _baue_rampe(start_faktor, rampen_wochen, rpe_cap_start)
 
+    # `tage_seit_ende` ist 1-basiert (Rampe startet am Tag nach Pausenende):
+    # Tag 1..7 = Woche 1, 8..14 = Woche 2 → (tag - 1) // 7 + 1.
     tage_seit_ende = (today - pause.end_datum).days
-    aktuelle_woche = min(rampen_wochen, tage_seit_ende // 7 + 1)
+    aktuelle_woche = min(rampen_wochen, (tage_seit_ende - 1) // 7 + 1)
 
     uebungen = []
     for uebung, letztes_gewicht in _letzte_arbeitsgewichte(user, pause):

@@ -298,3 +298,22 @@ class TestReviewFixesPR203:
             user=user, start_datum=date(2026, 5, 18), end_datum=date(2026, 5, 29)
         )
         assert reentry.get_active_reentry_pause(user, today=today) == neuere
+
+    def test_siebter_rampentag_ist_noch_woche_1(self):
+        """P2: `tage_seit_ende` ist 1-basiert → 7. Rampentag ist Woche 1, nicht 2."""
+        user = UserFactory()
+        # 14-Tage-Pause (Rampe 2 Wochen). Ende 25.05., heute 01.06. = 7. Rampentag.
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 5, 12), end_datum=date(2026, 5, 25))
+        rec = reentry.build_reentry_recommendation(user, today=date(2026, 6, 1))
+        assert rec["rampen_wochen"] == 2
+        assert rec["aktuelle_woche"] == 1  # 7. Tag zählt noch zu Woche 1
+
+    def test_letzter_rampentag_noch_aktiv(self):
+        """P2: die Rampe umfasst Tag 1..N inklusive – am letzten Tag noch aktiv."""
+        user = UserFactory()
+        # 14-Tage-Pause → Rampe 2 Wochen = 14 Tage. Ende 18.05.
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 5, 5), end_datum=date(2026, 5, 18))
+        # heute 01.06. = 14. Rampentag → noch aktiv
+        assert reentry.get_active_reentry_pause(user, today=date(2026, 6, 1)) is not None
+        # heute 02.06. = 15. Tag → Rampe vorbei
+        assert reentry.get_active_reentry_pause(user, today=date(2026, 6, 2)) is None
