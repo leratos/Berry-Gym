@@ -71,6 +71,7 @@ def _values_from_post(request: HttpRequest) -> dict:
         "end_datum": request.POST.get("end_datum", "").strip(),
         "grund": request.POST.get("grund", TrainingsPause.Grund.SONSTIGES),
         "notiz": request.POST.get("notiz", "").strip(),
+        "aerztliche_freigabe_noetig": request.POST.get("aerztliche_freigabe_noetig") == "on",
     }
 
 
@@ -97,6 +98,7 @@ def pausen_add(request: HttpRequest) -> HttpResponse:
                 end_datum=end,
                 grund=values["grund"],
                 notiz=values["notiz"],
+                aerztliche_freigabe_noetig=values["aerztliche_freigabe_noetig"],
             )
         except (ValidationError, ValueError) as exc:
             messages.error(request, _error_text(exc))
@@ -126,6 +128,7 @@ def pausen_edit(request: HttpRequest, pause_id: int) -> HttpResponse:
                 end_datum=end,
                 grund=values["grund"],
                 notiz=values["notiz"],
+                aerztliche_freigabe_noetig=values["aerztliche_freigabe_noetig"],
             )
         except (ValidationError, ValueError) as exc:
             messages.error(request, _error_text(exc))
@@ -143,6 +146,7 @@ def pausen_edit(request: HttpRequest, pause_id: int) -> HttpResponse:
         "end_datum": pause.end_datum.isoformat() if pause.end_datum else "",
         "grund": pause.grund,
         "notiz": pause.notiz,
+        "aerztliche_freigabe_noetig": pause.aerztliche_freigabe_noetig,
     }
     return render(
         request, "core/pausen_form.html", _form_context(values, pause=pause, is_edit=True)

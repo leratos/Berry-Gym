@@ -167,6 +167,20 @@
   </div>
   {% endif %}
 
+  <!-- Wiedereinstieg nach Pause (Phase 33) -->
+  {% if reentry_pause %}
+  <a href="{% url 'reentry_detail' %}" class="text-decoration-none">
+    <div class="alert {% if reentry_pause.aerztliche_freigabe_noetig %}alert-danger{% else %}alert-info{% endif %} d-flex align-items-center mb-3 py-2">
+        <i class="bi bi-arrow-repeat me-2 flex-shrink-0"></i>
+        <div class="flex-grow-1 small">
+            {% trans "Willkommen zurück nach deiner Pause!" %}
+            <strong>{% trans "Einstiegsgewichte ansehen" %}</strong>
+        </div>
+        <i class="bi bi-chevron-right ms-2"></i>
+    </div>
+  </a>
+  {% endif %}
+
   <!-- Warnung: Trainingsblock zu alt (Phase 10) -->
   {% if block_age_warning %}
   <div class="alert alert-{{ block_age_warning.severity }} d-flex align-items-start mb-3 py-2">

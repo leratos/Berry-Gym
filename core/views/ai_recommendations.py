@@ -358,20 +358,52 @@ def _is_stagnating(max_gewichte: list[float], rpe_werte: list[float] | None = No
     return True
 
 
-def _get_stagnation_empfehlung(letzte_60_tage_saetze, block_typ: str | None = None) -> list:
+def _pausen_cutoff_datum(user):
+    """Späteste dokumentierte Pausen-Grenze (Dauer ≥ Schwelle, Ende ≤ heute).
+
+    Phase 33.4: per-Übung-Vergleiche dürfen **nicht über eine dokumentierte Pause
+    hinweg** laufen – sonst wird ein Plateau, das eine mehrwöchige Pause umspannt,
+    fälschlich als „Stagnation" gelabelt. Wiederverwendung der Phase-32-Schwelle
+    `PAUSE_BOUNDARY_MIN_DAYS` (keine Parallel-Logik). Laufende (offene) Pausen
+    setzen keine Grenze (dahinter gibt es noch keine Vergleichsdaten).
+
+    Returns:
+        date der jüngsten qualifizierenden Pausen-Grenze oder None.
+    """
+    from ..models import TrainingsPause
+    from ..utils.week_classification import PAUSE_BOUNDARY_MIN_DAYS
+
+    heute = timezone.now().date()
+    cutoff = None
+    for start, end in TrainingsPause.objects.filter(
+        user=user, end_datum__isnull=False, end_datum__lte=heute
+    ).values_list("start_datum", "end_datum"):
+        dauer_tage = (end - start).days + 1
+        if dauer_tage >= PAUSE_BOUNDARY_MIN_DAYS and (cutoff is None or end > cutoff):
+            cutoff = end
+    return cutoff
+
+
+def _get_stagnation_empfehlung(letzte_60_tage_saetze, user, block_typ: str | None = None) -> list:
     """Erkennt stagnierende Übungen (kein Fortschritt in 60 Tagen).
 
     Berücksichtigt RPE-Trend: sinkender RPE bei gleichem Gewicht
     wird nicht als Stagnation gewertet.
     Phase 12: Stagnation-Tipps sind modusabhängig; im Deload unterdrückt.
+    Phase 33.4: Trainings vor einer dokumentierten Pausen-Grenze werden
+    ausgeschlossen – kein Vergleich über die Pause hinweg.
     """
     profil = get_modus_profil(block_typ)
     stagnation_tipp = profil["stagnation_tipp"]
     if not stagnation_tipp:
         return []
 
+    pausen_cutoff = _pausen_cutoff_datum(user)
+
     uebung_trainings: dict = defaultdict(list)
     for satz in letzte_60_tage_saetze.select_related("uebung", "einheit"):
+        if pausen_cutoff is not None and satz.einheit.datum.date() <= pausen_cutoff:
+            continue  # Vor-Pause-Training – nicht über die Pause hinweg vergleichen
         if satz.gewicht and satz.gewicht > 0:
             uebung_trainings[satz.uebung_id].append(
                 {
@@ -616,7 +648,7 @@ def workout_recommendations(request: HttpRequest) -> HttpResponse:
     empfehlungen = (
         _get_muscle_balance_empfehlung(letzte_30_tage_saetze, block_typ)
         + _get_push_pull_empfehlung(letzte_30_tage_saetze)
-        + _get_stagnation_empfehlung(letzte_60_tage_saetze, block_typ)
+        + _get_stagnation_empfehlung(letzte_60_tage_saetze, request.user, block_typ)
         + _get_frequenz_empfehlung(request.user, heute)
         + _get_rpe_empfehlung(letzte_30_tage_saetze, block_typ)
         + _get_rep_range_empfehlung(letzte_30_tage_saetze, block_typ)

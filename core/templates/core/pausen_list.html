@@ -43,7 +43,15 @@
                     {% endif %}
                 </div>
                 <div>
-                    <h6 class="mb-0">{{ pause.get_grund_display }}</h6>
+                    <h6 class="mb-0">
+                        {{ pause.get_grund_display }}
+                        {% if pause.aerztliche_freigabe_noetig %}
+                        <span class="badge bg-danger-subtle text-danger-emphasis ms-1"
+                              title="{% trans 'Medizinische Pause – ärztliche Freigabe nötig' %}">
+                            <i class="bi bi-heart-pulse me-1"></i>{% trans "medizinisch" %}
+                        </span>
+                        {% endif %}
+                    </h6>
                     <small class="text-muted">
                         {{ pause.start_datum|date:"d.m.Y" }} –
                         {% if pause.end_datum %}{{ pause.end_datum|date:"d.m.Y" }}

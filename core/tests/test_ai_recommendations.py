@@ -115,7 +115,7 @@ class TestWorkoutRecommendations:
 
         monkeypatch.setattr(ai_views, "_get_muscle_balance_empfehlung", lambda _q, _b=None: [])
         monkeypatch.setattr(ai_views, "_get_push_pull_empfehlung", lambda _q: [])
-        monkeypatch.setattr(ai_views, "_get_stagnation_empfehlung", lambda _q, _b=None: [])
+        monkeypatch.setattr(ai_views, "_get_stagnation_empfehlung", lambda _q, _u, _b=None: [])
         monkeypatch.setattr(ai_views, "_get_frequenz_empfehlung", lambda _u, _h: [])
         monkeypatch.setattr(ai_views, "_get_rpe_empfehlung", lambda _q, _b=None: [])
         monkeypatch.setattr(ai_views, "_get_rep_range_empfehlung", lambda _q, _b=None: [])
@@ -143,7 +143,7 @@ class TestWorkoutRecommendations:
             "_get_push_pull_empfehlung",
             lambda _q: [{"typ": "b", "prioritaet": "hoch"}],
         )
-        monkeypatch.setattr(ai_views, "_get_stagnation_empfehlung", lambda _q, _b=None: [])
+        monkeypatch.setattr(ai_views, "_get_stagnation_empfehlung", lambda _q, _u, _b=None: [])
         monkeypatch.setattr(ai_views, "_get_frequenz_empfehlung", lambda _u, _h: [])
         monkeypatch.setattr(
             ai_views,
@@ -464,7 +464,7 @@ class TestAiRecommendationRemainingBranches:
         qs = ai_views.Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
         assert ai_views._get_push_pull_empfehlung(qs) == []
 
-    def test_stagnation_skips_missing_uebung(self, monkeypatch):
+    def test_stagnation_skips_missing_uebung(self, user, monkeypatch):
         class _DummyQS(list):
             def select_related(self, *_args, **_kwargs):
                 return self
@@ -498,7 +498,7 @@ class TestAiRecommendationRemainingBranches:
 
         monkeypatch.setattr(ai_views.Uebung.objects, "filter", lambda **_kwargs: [])
         monkeypatch.setattr(ai_views, "_is_stagnating", lambda _w, _r=None: True)
-        assert ai_views._get_stagnation_empfehlung(saetze) == []
+        assert ai_views._get_stagnation_empfehlung(saetze, user) == []
 
     def test_stagnation_appends_recommendation_when_uebung_exists(self, user, monkeypatch):
         uebung = UebungFactory(muskelgruppe="BRUST", bezeichnung="Bankdrücken")
@@ -520,7 +520,7 @@ class TestAiRecommendationRemainingBranches:
 
         monkeypatch.setattr(ai_views, "_is_stagnating", lambda _w, _r=None: True)
         qs = ai_views.Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
-        result = ai_views._get_stagnation_empfehlung(qs)
+        result = ai_views._get_stagnation_empfehlung(qs, user)
 
         assert result
         assert result[0]["typ"] == "stagnation"
@@ -1071,7 +1071,7 @@ class TestStagnationPhase12:
             )
 
         saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
-        result = ai_views._get_stagnation_empfehlung(saetze, "deload")
+        result = ai_views._get_stagnation_empfehlung(saetze, user, "deload")
         assert len(result) == 0
 
 

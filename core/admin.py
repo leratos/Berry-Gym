@@ -949,9 +949,10 @@ class TrainingsPauseAdmin(admin.ModelAdmin):
         "grund",
         "start_datum",
         "end_datum",
+        "aerztliche_freigabe_noetig",
         "ist_laufend_display",
     )
-    list_filter = ("grund", "user")
+    list_filter = ("grund", "aerztliche_freigabe_noetig", "user")
     search_fields = ("user__username", "notiz")
     ordering = ("-start_datum",)
     raw_id_fields = ("user",)

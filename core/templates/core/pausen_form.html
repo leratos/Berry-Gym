@@ -57,10 +57,22 @@
                             </select>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label for="notiz" class="form-label">{% trans "Notiz (optional)" %}</label>
                             <textarea class="form-control" id="notiz" name="notiz" rows="2"
                                       placeholder="{% trans 'z.B. Grippe, Knie-OP, Urlaub auf Mallorca' %}">{{ values.notiz }}</textarea>
+                        </div>
+
+                        <div class="mb-4 form-check">
+                            <input type="checkbox" class="form-check-input" id="aerztliche_freigabe_noetig"
+                                   name="aerztliche_freigabe_noetig"
+                                   {% if values.aerztliche_freigabe_noetig %}checked{% endif %}>
+                            <label class="form-check-label" for="aerztliche_freigabe_noetig">
+                                {% trans "Medizinische Pause – ärztliche Freigabe nötig" %}
+                            </label>
+                            <div class="form-text">
+                                {% trans "Ankreuzen bei OP, Verletzung oder Krankheit mit Belastungseinschränkung. Der Wiedereinstieg wird dann konservativer empfohlen." %}
+                            </div>
                         </div>
 
                         <div class="d-grid gap-2">
