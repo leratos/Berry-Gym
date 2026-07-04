@@ -249,6 +249,22 @@ class TestBuildRecommendation:
         namen = {e["uebung"].bezeichnung for e in rec["uebungen"]}
         assert namen == {"Bankdrücken"}
 
+    def test_koerpergewicht_uebung_wird_ausgeschlossen(self):
+        # Codex-Review PR #203 R3, P2: bei KOERPERGEWICHT ist `gewicht` nur die
+        # Zusatzlast; der Faktor auf die Rohlast unterreduziert die effektive Last.
+        user = UserFactory()
+        today = date(2026, 6, 1)
+        normal = UebungFactory(bezeichnung="Bankdrücken", gewichts_typ="GESAMT")
+        dips = UebungFactory(
+            bezeichnung="Dips +Zusatz", gewichts_typ="KOERPERGEWICHT", gewichts_richtung="ZUSATZ"
+        )
+        _session(user, date(2026, 4, 18), normal, 100)
+        _session(user, date(2026, 4, 18), dips, 20)
+        TrainingsPauseFactory(user=user, start_datum=date(2026, 4, 20), end_datum=date(2026, 5, 31))
+        rec = reentry.build_reentry_recommendation(user, today=today)
+        namen = {e["uebung"].bezeichnung for e in rec["uebungen"]}
+        assert namen == {"Bankdrücken"}
+
 
 @pytest.mark.django_db
 class TestReviewFixesPR203:
