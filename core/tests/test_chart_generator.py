@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase
 
 from core.chart_generator import (
+    _heatmap_grid_range,
     _rgba_to_hex,
     _status_to_rgba,
     generate_body_map_with_data,
@@ -176,6 +177,41 @@ class TestGenerateTrainingHeatmap(TestCase):
         """Kontrolle: ohne pause_ranges taucht die Markerfarbe nicht auf."""
         result = generate_training_heatmap(self._dates())
         self.assertFalse(self._png_enthaelt_farbe(result, (0xB9, 0xCF, 0xE2)))
+
+    def test_grid_anker_nur_training(self):
+        """Ohne Pausen/Report-Datum endet das Grid am Sonntag nach dem
+        letzten Trainingstag (Altverhalten)."""
+        _, grid_end, num_weeks = _heatmap_grid_range(date(2026, 6, 15))
+        self.assertEqual(grid_end, date(2026, 6, 21))  # Mo 15.06. → So 21.06.
+        self.assertEqual(num_weeks, 12)
+
+    def test_grid_anker_beruecksichtigt_pausen_ende(self):
+        """PR-#209-Codex R1: Pausen-Ende nach letztem Training verschiebt den Anker."""
+        _, grid_end, _ = _heatmap_grid_range(
+            date(2026, 6, 15), pause_ranges=[(date(2026, 6, 18), date(2026, 7, 19))]
+        )
+        self.assertEqual(grid_end, date(2026, 7, 19))  # So 19.07.
+
+    def test_grid_anker_beruecksichtigt_report_datum(self):
+        """PR-#209-Codex R3: Pause endet 01.07., Report am 21.07. ohne neues
+        Training – das Grid muss bis zum Report-Datum reichen, sonst fehlen
+        die trainingsfreien Tage 06.–21.07. im 12-Wochen-Fenster."""
+        _, grid_end, _ = _heatmap_grid_range(
+            date(2026, 6, 15),
+            pause_ranges=[(date(2026, 6, 18), date(2026, 7, 1))],
+            end_date=date(2026, 7, 21),
+        )
+        self.assertEqual(grid_end, date(2026, 7, 26))  # Di 21.07. → So 26.07.
+
+    def test_mit_end_date_liefert_png(self):
+        """Smoke: end_date-Anker bricht das Rendering nicht."""
+        result = generate_training_heatmap(
+            [{"datum": date(2026, 6, 15), "intensitaet": 0.8}],
+            pause_ranges=[(date(2026, 6, 18), date(2026, 7, 1))],
+            end_date=date(2026, 7, 21),
+        )
+        self.assertIsNotNone(result)
+        self.assertTrue(self._png_enthaelt_farbe(result, (0xB9, 0xCF, 0xE2)))
 
 
 class TestGenerateMuscleHeatmap(TestCase):

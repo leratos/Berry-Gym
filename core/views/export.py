@@ -165,6 +165,9 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     training_heatmap_chart = generate_training_heatmap(
         stats.get("training_heatmap_data", []),
         pause_ranges=heatmap_pausen["spannen"] if heatmap_pausen else None,
+        # PR-#209-Codex R3: Report-Datum als Grid-Anker, sonst fehlen
+        # trainingsfreie Tage zwischen Pausenende und Report-Erstellung.
+        end_date=heute.date(),
     )
 
     exercise_detail_charts = []
