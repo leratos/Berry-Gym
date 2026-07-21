@@ -584,7 +584,15 @@ def collect_pdf_stats(user, letzte_30_tage, heute) -> dict:
     plan_too_new = is_active_plan_too_new(user)
 
     top_uebungen = build_top_uebungen(alle_saetze, muskelgruppen_dict, active_uebung_ids)
-    plateau_analysis = calculate_plateau_analysis(alle_saetze, top_uebungen)
+    # Phase 35.1: laufende Wiedereinstiegs-Rampe an den Status-Klassifikator
+    # durchreichen ("Wiederaufbau nach Pause" statt "Rückschritt"). Funktions-
+    # lokaler Import wie im Dashboard-View (33.3-Idiom).
+    from core.utils.reentry import get_active_reentry_pause
+
+    reentry_pause = get_active_reentry_pause(user, today=heute.date())
+    plateau_analysis = calculate_plateau_analysis(
+        alle_saetze, top_uebungen, reentry_pause=reentry_pause
+    )
 
     # Kraftentwicklung: seit Plan-Start (Default), oder letzte 5 Sessions (Fallback)
     if active_uebung_ids is not None and not plan_too_new:

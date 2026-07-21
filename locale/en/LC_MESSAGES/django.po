@@ -3923,3 +3923,7 @@ msgstr "running for %(weeks)s weeks."
 #, python-format
 msgid "läuft seit %(weeks)s Wochen (%(netto)s Trainingswochen, %(pausen)s Wochen Pause)."
 msgstr "running for %(weeks)s weeks (%(netto)s training weeks, %(pausen)s weeks of break)."
+
+# === Phase 35.1: Wiederaufbau-Status (training_stats.html) ===
+msgid "Wiedereinstiegs-Rampe läuft – reduzierte Gewichte sind empfohlen, kein Rückschritt"
+msgstr "Return-to-training ramp active – reduced weights are recommended, not a regression"

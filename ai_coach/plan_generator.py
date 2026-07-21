@@ -1603,6 +1603,9 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             "plateau",
             "plateau_long",
             "regression",
+            # Phase 35.1: laufende Wiedereinstiegs-Rampe – Volumen-Push wäre
+            # während des Wiederaufbaus ebenso kontraproduktiv.
+            "reentry",
         }
     )
 
@@ -1629,6 +1632,7 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             from core.export.stats_collector import build_top_uebungen
             from core.models import MUSKELGRUPPEN, Satz
             from core.utils.advanced_stats import calculate_plateau_analysis
+            from core.utils.reentry import get_active_reentry_pause
 
             alle_saetze = Satz.objects.filter(
                 einheit__user_id=self.user_id,
@@ -1637,7 +1641,12 @@ Kopiere die Ersatz-Namen EXAKT aus der Liste – keine Variationen!"""
             )
             muskelgruppen_dict = dict(MUSKELGRUPPEN)
             top_uebungen = build_top_uebungen(alle_saetze, muskelgruppen_dict)
-            plateau = calculate_plateau_analysis(alle_saetze, top_uebungen)
+            # Phase 35.1: Rampe an den Klassifikator durchreichen – der
+            # "reentry"-Status landet damit auch im Plan-Prompt-Hint.
+            reentry_pause = get_active_reentry_pause(self.user_id)
+            plateau = calculate_plateau_analysis(
+                alle_saetze, top_uebungen, reentry_pause=reentry_pause
+            )
         except Exception as exc:  # noqa: BLE001
             print(f"   ⚠️ Plateau-Status nicht berechenbar: {exc}")
             return []

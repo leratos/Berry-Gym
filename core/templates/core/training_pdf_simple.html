@@ -949,7 +949,7 @@
     <div class="info-box">
         <p style="font-size: 8px; margin: 0;"><strong>Status-Legende:</strong>
         ✅ Aktive Progression · 👀 Beobachten · 💪 Konsolidierung · 📈 Aktive Progression (PR-Pause) ·
-        ⏸️ Pause · ⚠️ Leichtes Plateau · 🔴 Plateau · ❌ Langzeit-Plateau · ⚠️ Rückschritt.
+        ⏸️ Pause · △ Wiederaufbau nach Pause (Rampe) · ⚠️ Leichtes Plateau · 🔴 Plateau · ❌ Langzeit-Plateau · ⚠️ Rückschritt.
         Detail-Begründungen zu jeder Übung siehe Sektion „Übungsdetails — Gewichtsverlauf".</p>
     </div>
     {% else %}
@@ -996,6 +996,8 @@
             <br><span class="text-muted">RPE sank von {{ ex.rpe_first_half }} auf {{ ex.rpe_second_half }} in den letzten 4 W</span>
             {% elif ex.status == 'regression' and ex.weight_drop_pct %}
             <br><span class="text-muted">1RM-Drop {{ ex.weight_drop_pct }}% vs. PR</span>
+            {% elif ex.status == 'reentry' %}
+            <br><span class="text-muted">Wiedereinstiegs-Rampe läuft – reduzierte Gewichte empfohlen{% if ex.weight_drop_pct %} (aktuell {{ ex.weight_drop_pct }}% unter PR){% endif %}</span>
             {% elif ex.status == 'pause' %}
             <br><span class="text-muted">Letzte 4 W nicht trainiert</span>
             {% elif ex.status == 'active_progression_paused' and ex.progression_rate_pct %}

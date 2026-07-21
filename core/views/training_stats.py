@@ -2177,6 +2177,13 @@ def _calc_plateau_live(user) -> list[dict]:
     """
     heute = timezone.now()
 
+    # Phase 35.1: laufende Wiedereinstiegs-Rampe EINMAL ermitteln (bewusst
+    # außerhalb des Dashboard-Caches, 33.3-Entscheidung) – der Klassifikator
+    # zeigt dann "Wiederaufbau nach Pause" statt "Rückschritt".
+    from ..utils.reentry import get_active_reentry_pause
+
+    reentry_pause = get_active_reentry_pause(user, today=heute.date())
+
     # Phase 22: Filter auf aktive Planübungen
     active_uebung_ids = get_active_plan_exercise_ids(user)
 
@@ -2257,6 +2264,7 @@ def _calc_plateau_live(user) -> list[dict]:
             reference_date=heute,
             progression_pro_monat=progression_pro_monat,
             training_history_days=training_history_days,
+            reentry_pause=reentry_pause,
         )
 
         result.append(

@@ -331,6 +331,8 @@
                                     {% endif %}
                                     {% elif item.status == 'regression' and item.weight_drop_pct %}
                                     title="{% blocktrans with pct=item.weight_drop_pct %}1RM-Drop {{ pct }}% gegenüber PR{% endblocktrans %}"
+                                    {% elif item.status == 'reentry' %}
+                                    title="{% trans 'Wiedereinstiegs-Rampe läuft – reduzierte Gewichte sind empfohlen, kein Rückschritt' %}"
                                     {% elif item.status == 'pause' %}
                                     title="{% trans 'Diese Übung wurde in den letzten 4 Wochen nicht trainiert' %}"
                                     {% endif %}>
