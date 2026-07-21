@@ -95,7 +95,8 @@
                             </div>
                             {% if card.result %}
                             <div class="fw-bold" style="font-size: 1.5rem;">{{ card.result.failure_rate }}%</div>
-                            <div class="small text-muted">n={{ card.n_sets }}</div>
+                            {# Phase 35.2: insufficient_data-Flag sichtbar machen (Parität zum PDF) #}
+                            <div class="small text-muted">n={{ card.n_sets }}{% if card.insufficient_data %} ({% trans "zu wenig" %}){% endif %}</div>
                             {% else %}
                             <div class="text-muted" style="font-size: 1.25rem;">n.a.</div>
                             <div class="small text-muted">n={{ card.n_sets }}</div>
@@ -656,7 +657,8 @@
     // Phase 21.2: Push/Pull-Ratio Donut
     {% if push_pull %}
     const ppData = {{ push_pull_json|safe }};
-    const ppColor = ppData.farbe === 'success' ? '#4FB286' : ppData.farbe === 'warning' ? '#E0A93D' : '#E0685C';
+    {# Phase 35.2: 'secondary' = nicht bewertbar → neutrales Grau statt Alarm-Rot #}
+    const ppColor = ppData.farbe === 'success' ? '#4FB286' : ppData.farbe === 'warning' ? '#E0A93D' : ppData.farbe === 'secondary' ? '#A8A29A' : '#E0685C';
     new Chart(document.getElementById('pushPullChart'), {
         type: 'doughnut',
         data: {

@@ -92,24 +92,33 @@ def collect_muscle_balance(
             continue
         min_s, max_s = schwelle
         status, status_label, erklaerung = muscle_status(anzahl, min_s, max_s, wenig_daten)
+        # Phase 35.2 (#1059 d): auch Gruppen mit 0 Sätzen aufnehmen. Vorher
+        # erreichte der berechnete "nicht_trainiert"-Status die Liste nie –
+        # die Schwachstellen-Auswahl sah nur trainierte Gruppen ("wer nichts
+        # trainiert, hat keine Schwächen"), Push/Pull bekam die Seite als
+        # fehlend statt als 0 und die Körperkarte kannte die Gruppe nicht.
         if anzahl > 0:
-            volumen = calc_volume(gruppe_saetze, user_kg)
+            volumen = float(round(calc_volume(gruppe_saetze, user_kg), 0))
             avg_rpe_r = gruppe_saetze.aggregate(Avg("rpe"))["rpe__avg"]
-            result.append(
-                {
-                    "key": gruppe_key,
-                    "name": gruppe_name,
-                    "saetze": anzahl,
-                    "volumen": float(round(volumen, 0)),
-                    "avg_rpe": float(round(avg_rpe_r, 1)) if avg_rpe_r else 0.0,
-                    "status": status,
-                    "status_label": status_label,
-                    "erklaerung": erklaerung,
-                    "empfehlung_min": min_s,
-                    "empfehlung_max": max_s,
-                    "prozent_von_optimal": float(round((anzahl / ((min_s + max_s) / 2)) * 100, 0)),
-                }
-            )
+            avg_rpe = float(round(avg_rpe_r, 1)) if avg_rpe_r else 0.0
+        else:
+            volumen = 0.0
+            avg_rpe = 0.0
+        result.append(
+            {
+                "key": gruppe_key,
+                "name": gruppe_name,
+                "saetze": anzahl,
+                "volumen": volumen,
+                "avg_rpe": avg_rpe,
+                "status": status,
+                "status_label": status_label,
+                "erklaerung": erklaerung,
+                "empfehlung_min": min_s,
+                "empfehlung_max": max_s,
+                "prozent_von_optimal": float(round((anzahl / ((min_s + max_s) / 2)) * 100, 0)),
+            }
+        )
     return sorted(result, key=lambda x: x["saetze"], reverse=True)
 
 
@@ -229,7 +238,19 @@ def collect_push_pull(muskelgruppen_stats: list[dict]) -> dict:
             "Beginne mit ausgewogenem Push- und Pull-Training für optimale Muskelentwicklung.",
             False,
         )
-    elif pull > 0:
+    elif push == 0 or pull == 0:
+        # Phase 35.2 (#1059 c): eine Seite ohne Sätze → die Ratio degeneriert
+        # (0,00:1 bzw. rein einseitig). Vorher entstand daraus eine
+        # Gesundheitsaussage ("Pull-betont (gut) … überwiegt leicht"), obwohl
+        # 100 % der Sätze auf einer Seite lagen. Aus einseitigen Daten wird
+        # keine Balance bewertet: "nicht bewertbar" statt beschönigen.
+        seite = "Pull" if push == 0 else "Push"
+        ratio, bewertung, override = 0, "Nicht bewertbar", False
+        empfehlung = (
+            f"Im Zeitraum wurden ausschließlich {seite}-Sätze erfasst "
+            f"({max(push, pull)}). Die Push/Pull-Balance ist damit nicht bewertbar."
+        )
+    else:
         ratio = round(push / pull, 2)
         if 0.8 <= ratio <= 1.2:
             bewertung = "Ausgewogen"
@@ -240,17 +261,6 @@ def collect_push_pull(muskelgruppen_stats: list[dict]) -> dict:
         else:
             bewertung = "Pull-betont (gut)"
         empfehlung, override = _build_context_recommendation(bewertung, ratio, push_over, pull_over)
-    else:
-        ratio, bewertung, override = 0, "Nur Push", False
-        if push_over:
-            empfehlung = (
-                f"Push überwiegt komplett und Push-Muskeln "
-                f"({_format_short_labels(push_over)}) zeigen Übertraining-Status. "
-                f"Pull-Training einführen UND Push-Volumen prüfen."
-            )
-            override = True
-        else:
-            empfehlung = "Füge Pull-Training (Rücken, Bizeps) hinzu für ausgeglichene Entwicklung!"
 
     return {
         "push_saetze": push,

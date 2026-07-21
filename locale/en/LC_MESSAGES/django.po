@@ -3927,3 +3927,7 @@ msgstr "running for %(weeks)s weeks (%(netto)s training weeks, %(pausen)s weeks 
 # === Phase 35.1: Wiederaufbau-Status (training_stats.html) ===
 msgid "Wiedereinstiegs-Rampe läuft – reduzierte Gewichte sind empfohlen, kein Rückschritt"
 msgstr "Return-to-training ramp active – reduced weights are recommended, not a regression"
+
+# === Phase 35.2: RPE-Karten-Flag (training_stats.html) ===
+msgid "zu wenig"
+msgstr "too few"

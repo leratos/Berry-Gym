@@ -362,10 +362,11 @@ class TestFatigueIndex(StatsTestBase):
         self.assertIn("bewertung", result)
         self.assertIn("empfehlung", result)
 
-    def test_naechste_deload_string(self):
+    def test_naechste_deload_entfernt(self):
+        """Phase 35.2: der Pseudo-Wert (hartkodiert heute+6 Wochen) ist raus –
+        er darf nicht wieder auftauchen, ohne eine echte Heuristik zu sein."""
         result = calculate_fatigue_index([], self._get_rpe_saetze(), self._alle_trainings())
-        # Muss ein Datum-String sein (DD.MM.YYYY)
-        self.assertRegex(result["naechste_deload"], r"\d{2}\.\d{2}\.\d{4}")
+        self.assertNotIn("naechste_deload", result)
 
     # Phase 24.1b: Volumen-Spike-Komponente muss denselben Klassifikator wie
     # die 24.1-Volumen-Diagnose nutzen (Deload-/Plan-Wechsel-/Laufende-Woche-Skip).

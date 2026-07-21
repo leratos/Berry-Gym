@@ -678,7 +678,7 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     Returns dict with:
     - fatigue_index, bewertung, bewertung_farbe, empfehlung
     - volumen_spike, rpe_steigend, deload_empfohlen
-    - naechste_deload, warnungen
+    - warnungen
     """
     from core.utils.week_classification import select_comparable_weeks
     from core.views.training_stats import (
@@ -734,8 +734,10 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
         warnungen.extend(cardio_warns)
 
     # Deload-Empfehlung + Bewertung (identisch mit Dashboard)
+    # Phase 35.2: "naechste_deload" entfernt – der Wert war ein hartkodiertes
+    # ``heute + 6 Wochen`` ohne Bezug zu Blockdauer, Deload-Historie oder
+    # Pausen; er täuschte eine Heuristik vor, die nie existierte (#1061).
     deload_empfohlen = fatigue_index >= 50
-    naechste_deload = heute + timedelta(weeks=6)
 
     if fatigue_index >= 60:
         bewertung = "Hoch"
@@ -761,7 +763,6 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
         "volumen_spike": volumen_spike,
         "rpe_steigend": rpe_steigend,
         "deload_empfohlen": deload_empfohlen,
-        "naechste_deload": naechste_deload.strftime("%d.%m.%Y"),
         "warnungen": warnungen,
         "bewertung": bewertung,
         "bewertung_farbe": bewertung_farbe,

@@ -2145,7 +2145,19 @@ def _calc_push_pull_ratio(user) -> dict | None:
     if push == 0 and pull == 0:
         return None
 
-    ratio = round(push / pull, 2) if pull > 0 else (99.0 if push > 0 else 0.0)
+    # Phase 35.2 (#1059 c, Live-Zwilling): eine Seite ohne Sätze → Ratio
+    # degeneriert (0,0 galt als "Ausgeglichen" bzw. 99,0 als "Push-Dominanz").
+    # Aus einseitigen Daten wird keine Balance bewertet.
+    if push == 0 or pull == 0:
+        return {
+            "push": push,
+            "pull": pull,
+            "ratio": "–",
+            "farbe": "secondary",
+            "status_text": "Nicht bewertbar – nur eine Seite im Zeitraum trainiert",
+        }
+
+    ratio = round(push / pull, 2)
     if ratio <= 1.3:
         farbe = "success"
         status_text = "Ausgeglichen"

@@ -656,10 +656,15 @@
                 </td>
                 {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>
-                    {% if gewichts_rate > 1.0 %}&#9888; Schnelle Zunahme
-                    {% elif gewichts_rate > 0 %}Leichte Zunahme
-                    {% elif gewichts_rate > -0.5 %}Moderater Verlust
-                    {% elif gewichts_rate > -1.0 %}Guter Verlust
+                    {# Phase 35.2 (#1059 a): wertende Labels ("Guter Verlust",
+                       "Schnelle Zunahme") entfernt – sie bewerteten z. B.
+                       krankheitsbedingten Gewichtsverlust positiv und sind im
+                       Kern Ernährungsbewertungen (User-Entscheidung #1053/2).
+                       Die Spalte beschreibt jetzt nur noch die Richtung; der
+                       Muskelabbau-Risiko-Zweig (trainingsbezogen) bleibt. #}
+                    {% if gewichts_rate > 0.1 %}Zunahme
+                    {% elif gewichts_rate >= -0.1 %}Stabil
+                    {% elif gewichts_rate > -1.0 %}Verlust
                     {% else %}
                         {% if weight_loss_analysis %}
                             {% if weight_loss_analysis.risk_level == 'gering' %}
@@ -842,7 +847,8 @@
     <div class="info-box {% if push_pull_bewertung == 'Ausgewogen' %}success{% else %}warning{% endif %}">
         <strong>Push-Sätze:</strong> {{ push_saetze }}<br>
         <strong>Pull-Sätze:</strong> {{ pull_saetze }}<br>
-        <strong>Ratio:</strong> {{ push_pull_ratio|floatformat:2 }}:1<br>
+        {# Phase 35.2: bei einseitigen Daten keine degenerierte 0,00:1-Ratio zeigen #}
+        <strong>Ratio:</strong> {% if push_pull_bewertung == 'Nicht bewertbar' %}–{% else %}{{ push_pull_ratio|floatformat:2 }}:1{% endif %}<br>
         <strong>Bewertung:</strong> {{ push_pull_bewertung }}
         {% if push_pull_empfehlung %}
         <br><br><strong>Empfehlung:</strong> {{ push_pull_empfehlung }}
@@ -1161,7 +1167,9 @@
                 </div>
                 {% if card.result %}
                 <div style="font-size: 18px; font-weight: bold; margin: 4px 0;">{{ card.result.failure_rate }}%</div>
-                <div style="font-size: 8px; color: #6B6660;">RPE-10 · n={{ card.n_sets }}</div>
+                {# Phase 35.2 (#1059 f): das 4W-insufficient_data-Flag war bisher unsichtbar –
+                   die Karte zeigte einen Wert, den der Empfehlungstext zugleich für ungültig erklärte. #}
+                <div style="font-size: 8px; color: #6B6660;">RPE-10 · n={{ card.n_sets }}{% if card.insufficient_data %} (zu wenig – eingeschränkt aussagekräftig){% endif %}</div>
                 {% else %}
                 <div style="font-size: 14px; color: #6B6660; margin: 4px 0;">n.a.</div>
                 <div style="font-size: 8px; color: #6B6660;">n={{ card.n_sets }} (zu wenig)</div>
@@ -1199,7 +1207,12 @@
     </div>
     {% endif %}
 
-    {% if primary.empfehlungen %}
+    {# Phase 35.2 (#1059 f): fällt primary auf "Gesamt" zurück (insufficient_4w),
+       stammt die Empfehlungsliste aus der All-Time-Verteilung und trägt keinen
+       Zeitfenster-Kontext ("Zu oft bis zum Versagen (15,1 %)" an jemanden mit
+       32 Tagen Pause). Die Kontextzeile in der Bewertungs-Box bleibt; die
+       kontextfreie Liste wird nicht gerendert (Phase-23-Lektion). #}
+    {% if primary.empfehlungen and not rqw.insufficient_4w %}
     <div class="recommendation-box">
         <h3 style="margin-top: 0;">Empfehlungen:</h3>
         <ul style="margin: 5px 0; padding-left: 20px; font-size: 9px;">
@@ -1303,7 +1316,9 @@
 
     <div class="recommendation-box">
         <p><strong>Empfehlung:</strong> {{ fatigue_analysis.empfehlung }}</p>
-        <p><strong>Geschätzte Deload-Woche (Heuristik):</strong> {{ fatigue_analysis.naechste_deload }}</p>
+        {# Phase 35.2: "Geschätzte Deload-Woche" entfernt – der Wert war ein
+           hartkodiertes "heute + 6 Wochen" (keine Heuristik) und täuschte
+           Präzision vor (#1061, Deload-Prüfauftrag). #}
     </div>
     {% else %}
     <div class="info-box warning">
@@ -1338,7 +1353,14 @@
         </ul>
     </div>
     {% else %}
+    {# Phase 35.2 (#1059 e): Empty-State differenzieren – der Onboarding-Satz
+       ("Beginne mit regelmäßigem Training") ist bei vorhandener Historie falsch
+       und widersprach im Pausen-Report den Lifetime-Werten zwei Seiten weiter. #}
+    {% if gesamt_trainings %}
+    <div class="info-box">Im 30-Tage-Fenster liegt keine Muskelgruppe im optimalen Bereich.</div>
+    {% else %}
     <div class="info-box">Beginne mit regelmäßigem Training, um Stärken aufzubauen.</div>
+    {% endif %}
     {% endif %}
 
     <h2>Schwachstellen (Priorität)</h2>
@@ -1374,7 +1396,8 @@
             {% if schwachstellen %}
             <li style="margin: 4px 0;">Fokussiere auf <strong>{{ schwachstellen.0.name }}</strong> - {{ schwachstellen.0.erklaerung }}</li>
             {% endif %}
-            {% if push_pull_empfehlung %}
+            {# Phase 35.2: "nicht bewertbar" ist kein nächster Schritt #}
+            {% if push_pull_empfehlung and push_pull_bewertung != 'Nicht bewertbar' %}
             <li style="margin: 4px 0;">{{ push_pull_empfehlung }}</li>
             {% endif %}
             <li style="margin: 4px 0;">Erfasse regelmäßig Körperwerte für detaillierte Fortschrittsverfolgung</li>

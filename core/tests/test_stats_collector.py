@@ -4,7 +4,7 @@ Tests für core/export/stats_collector.py
 Abdeckung:
 - muscle_status: alle Branches (nicht trainiert, untertrainiert, übertrainiert, optimal, wenig Daten)
 - collect_muscle_balance: mit/ohne Trainingsdaten
-- collect_push_pull: alle Ratio-Branches (keine Daten, ausgewogen, push-betont, nur push, pull-betont)
+- collect_push_pull: alle Ratio-Branches (keine Daten, ausgewogen, push-betont, einseitig → nicht bewertbar, pull-betont)
 - collect_strength_progression: plan_start_date, fallback_session_count, backwards-compat
 - collect_intensity_data: mit/ohne RPE-Daten
 - collect_weight_trend: mit Daten, zu wenig Daten
@@ -141,11 +141,24 @@ class TestCollectPushPull:
         result = collect_push_pull(stats)
         assert "Pull" in result["bewertung"]
 
-    def test_nur_push_kein_pull(self):
+    def test_nur_push_kein_pull_nicht_bewertbar(self):
+        """Phase 35.2 (#1059 c): eine Seite ohne Sätze → keine Balance-Bewertung."""
         stats = self._mg_stats(BRUST=10)
         result = collect_push_pull(stats)
-        assert result["bewertung"] == "Nur Push"
+        assert result["bewertung"] == "Nicht bewertbar"
         assert result["ratio"] == 0
+        assert "nicht bewertbar" in result["empfehlung"]
+
+    def test_nur_pull_kein_push_nicht_bewertbar(self):
+        """Kernbug #1059 (c): push=0/pull=18 erzeugte 'Pull-betont (gut)' mit
+        'überwiegt leicht'-Gesundheitsaussage bei Ratio 0,00:1."""
+        stats = self._mg_stats(RUECKEN_LAT=18)
+        result = collect_push_pull(stats)
+        assert result["bewertung"] == "Nicht bewertbar"
+        assert result["ratio"] == 0
+        assert "nicht bewertbar" in result["empfehlung"]
+        assert "überwiegt" not in result["empfehlung"]
+        assert "positiv" not in result["empfehlung"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -243,12 +256,14 @@ class TestCollectPushPullContextAware:
         assert result["context_override"] is False
         assert "Perfekt" in result["empfehlung"]
 
-    def test_nur_push_mit_push_uebertraining_invertiert(self):
+    def test_nur_push_mit_uebertraining_bleibt_nicht_bewertbar(self):
+        """Phase 35.2: auch mit Übertraining-Status auf der einzigen Seite gibt
+        es keine Balance-Aussage aus einseitigen Daten – der Übertraining-Status
+        selbst bleibt in der Muskelgruppen-Tabelle sichtbar."""
         stats = self._stats(("BRUST", 25, "uebertrainiert"))
         result = collect_push_pull(stats)
-        assert result["bewertung"] == "Nur Push"
-        assert result["context_override"] is True
-        assert "Pull-Training einführen" in result["empfehlung"]
+        assert result["bewertung"] == "Nicht bewertbar"
+        assert result["context_override"] is False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -578,14 +593,21 @@ class TestCollectStrengthProgression:
 
 @pytest.mark.django_db
 class TestCollectMuscleBalance:
-    def test_leere_saetze_ergibt_leere_liste(self):
+    def test_leere_saetze_ergibt_alle_gruppen_als_nicht_trainiert(self):
+        """Phase 35.2 (#1059 d): 0-Satz-Gruppen erscheinen mit Status
+        'nicht_trainiert' in der Liste, statt komplett zu fehlen – vorher war
+        der berechnete Status toter Code und die Schwachstellen-Auswahl sah
+        nur trainierte Gruppen."""
         user = UserFactory()
         from core.models import Satz
 
         alle_saetze = Satz.objects.filter(einheit__user=user)
         letzte_30_tage = (timezone.now() - timedelta(days=30)).date()
         result = collect_muscle_balance(alle_saetze, letzte_30_tage, 0)
-        assert result == []
+        assert result, "0-Satz-Gruppen müssen emittiert werden"
+        assert all(r["saetze"] == 0 for r in result)
+        assert all(r["status"] == "nicht_trainiert" for r in result)
+        assert all(r["volumen"] == 0.0 and r["avg_rpe"] == 0.0 for r in result)
 
     def test_mit_saetzen(self):
         user = UserFactory()
