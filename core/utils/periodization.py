@@ -185,7 +185,10 @@ def get_block_age_warning(active_block, netto_weeks: int | None = None) -> dict 
     netto = weeks if netto_weeks is None else max(0, min(netto_weeks, weeks))
     # Phase 17.4: Nutze geplante Dauer wenn vorhanden, sonst Fallback
     threshold = getattr(active_block, "warning_threshold_weeks", BLOCK_AGE_WARNING_THRESHOLD)
-    if weeks < threshold:
+    # Phase 34.2: Schwellwert + Severity werten die NETTO-Dauer aus – ein Block
+    # „läuft" nur in trainierten Wochen; Kalenderwochen einer dokumentierten
+    # Pause dürfen die Phasenwechsel-Empfehlung nicht verfrüht auslösen.
+    if netto < threshold:
         return None
 
     recommendation = get_next_block_recommendation(active_block.typ)
@@ -199,7 +202,7 @@ def get_block_age_warning(active_block, netto_weeks: int | None = None) -> dict 
         "pausen_wochen": weeks - netto,
         "block_type_display": active_block.get_typ_display(),
         "recommendation": primary,
-        "severity": "danger" if weeks >= danger_threshold else "warning",
+        "severity": "danger" if netto >= danger_threshold else "warning",
     }
 
 

@@ -616,7 +616,8 @@
             </div>
             {% endfor %}
         </div>
-        {% if active_block and block_age_weeks is not None and block_age_weeks < 3 %}
+        {% comment %}Phase 34.2: Netto-Wochen – konsistent zum Fatigue-Gate{% endcomment %}
+        {% if active_block and block_netto_weeks is not None and block_netto_weeks < 3 %}
         <div class="mt-2 small text-muted">
           <i class="bi bi-info-circle me-1"></i>{% trans "Neuer Block – Volumen-Vergleiche erst ab Woche 3 aussagekräftig." %}
         </div>

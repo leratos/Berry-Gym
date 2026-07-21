@@ -1377,8 +1377,11 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             max(0, block_age_weeks - block_pausen_wochen) if block_age_weeks is not None else None
         )
         weekly_volumes = _calculate_weekly_volumes(request.user, heute, active_block)
+        # Phase 34.2: Fatigue-Gate („Block < 3 Wochen → keine Volumen-Warnung")
+        # auf Netto – sonst beendet eine Pause im jungen Block das Schutzfenster
+        # zu früh.
         fatigue_data = _calculate_fatigue_index(
-            request.user, heute, weekly_volumes, gesamt_trainings, block_age_weeks
+            request.user, heute, weekly_volumes, gesamt_trainings, block_netto_weeks
         )
         motivation_quote = _get_motivation_quote(form_index, fatigue_data["fatigue_index"])
         training_heatmap_json = _get_training_heatmap(request.user, heute)
@@ -1475,6 +1478,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "reentry_pause": reentry_pause,
         **computed,
     }
+    # Phase 34.2: Solange die Wiedereinstiegs-Rampe läuft (33.x), keine
+    # Phasenwechsel-Empfehlung – sonst widersprechen sich die beiden Karten.
+    # Bewusst NACH dem Cache-Read (reentry ist „immer frisch", 33.3) und ohne
+    # das gecachte Dict zu mutieren.
+    if reentry_pause is not None:
+        context["block_age_warning"] = None
     _add_plan_group_context(request.user, context)
     # Überschreibe gecachten Generic-Quote mit datenbasisiertem Text (4.3)
     context["motivation_quote"] = _get_smart_motivation_quote(
