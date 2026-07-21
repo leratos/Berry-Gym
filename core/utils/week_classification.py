@@ -167,6 +167,35 @@ def pausen_grenze_keys(pausen, heute_date: date, iso_keys) -> set[str]:
     return out
 
 
+def pausen_ausfall_wochen(
+    pausen, start_datum: date, heute_date: date, sessions_week_keys=frozenset()
+) -> int:
+    """Anzahl voll pausen-abgedeckter ISO-Wochen ohne Session in [start_datum, heute].
+
+    Phase 34.1 (Netto-Blockdauer): Brutto-Kalenderwochen minus dieser Zahl =
+    „Trainingswochen". Bewusst **Abdeckungs-Semantik** (``ist_ausfall``), NICHT
+    Grenz-Semantik (``ist_pausen_grenze``): eine nur teilweise überlappte
+    Rand-Woche oder eine trotz Pause trainierte Woche zählt als Trainingswoche.
+    (Beispiel Prod-Fall: Pause Do 18.06.–So 19.07. berührt 5 ISO-Wochen, deckt
+    4 voll ab → „4 Wochen Pause".) Konsumiert dieselbe SoT-Klassifikation wie
+    alle Vergleichspfade – keine Parallel-Logik.
+    """
+    pausen_clamped = _clamp_pausen(pausen, heute_date)
+    if not pausen_clamped or start_datum > heute_date:
+        return 0
+    montag_start = start_datum - timedelta(days=start_datum.weekday())
+    montag_heute = heute_date - timedelta(days=heute_date.weekday())
+    anzahl = (montag_heute - montag_start).days // 7 + 1
+    count = 0
+    for key in letzte_iso_wochen_keys(heute_date, anzahl):
+        ist_ausfall, _, _ = _classify_week_pause(
+            key, pausen_clamped, hat_sessions=key in sessions_week_keys
+        )
+        if ist_ausfall:
+            count += 1
+    return count
+
+
 def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict, set]:
     """Return (deload_weeks, deload_majority_weeks, routines_per_week) from sessions.
 

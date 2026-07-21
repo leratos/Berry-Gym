@@ -58,6 +58,7 @@ from ..utils.plan_helpers import (
 from ..utils.week_classification import (
     build_weekly_volume_overview,
     letzte_iso_wochen_keys,
+    pausen_ausfall_wochen,
     pausen_grenze_keys,
 )
 from .body_tracking import _prepare_body_chart_data
@@ -106,6 +107,22 @@ def _count_trainings_this_week(user, heute) -> int:
     """Count training sessions in the current ISO week (Mon–Sun)."""
     start_woche = _get_week_start(heute)
     return Trainingseinheit.objects.filter(user=user, datum__gte=start_woche).count()
+
+
+def _session_week_keys(user, seit_datum) -> set[str]:
+    """ISO-Wochen-Keys mit ≥1 abgeschlossener Session seit ``seit_datum``.
+
+    Phase 34.1: Quelle für ``hat_sessions`` in ``pausen_ausfall_wochen`` –
+    nur abgeschlossene Trainings zählen als Trainingswoche (33.x-Lektion).
+    """
+    keys: set[str] = set()
+    daten = Trainingseinheit.objects.filter(
+        user=user, abgeschlossen=True, datum__date__gte=seit_datum
+    ).values_list("datum", flat=True)
+    for dt in daten:
+        iso_year, iso_week, _ = dt.isocalendar()
+        keys.add(f"{iso_year}-W{iso_week:02d}")
+    return keys
 
 
 def _get_week_overview(user, heute) -> list[dict]:
@@ -815,7 +832,7 @@ def _check_regression_warnings(user, heute) -> list[dict]:
                     "severity": "danger",
                     "exercise": ex["uebung__bezeichnung"],
                     "message": f"Leistungsabfall von {drop_percent}%",
-                    "suggestion": "Prüfe Regeneration, Ernährung und Schlaf. Erwäge eine Deload-Woche.",
+                    "suggestion": "Prüfe Regeneration und Schlaf. Erwäge eine Deload-Woche.",
                     "icon": "bi-arrow-down-circle",
                     "color": "danger",
                     "training_ids": affected_trainings,
@@ -1344,9 +1361,27 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         )
         active_block = _get_active_trainingsblock(request.user)
         block_age_weeks = active_block.weeks_since_start if active_block else None
+        # Phase 34.1: Netto-Blockdauer = Brutto minus voll pausen-abgedeckte
+        # ISO-Wochen ohne abgeschlossene Session (Abdeckungs-Semantik, SoT aus
+        # week_classification). Liegt im Cache-Block – Pausen-CRUD invalidiert
+        # dashboard_computed seit 32.2 (signals.py).
+        block_pausen_wochen = 0
+        if active_block is not None:
+            block_pausen_wochen = pausen_ausfall_wochen(
+                TrainingsPause.objects.filter(user=request.user),
+                active_block.start_datum,
+                heute.date(),
+                sessions_week_keys=_session_week_keys(request.user, active_block.start_datum),
+            )
+        block_netto_weeks = (
+            max(0, block_age_weeks - block_pausen_wochen) if block_age_weeks is not None else None
+        )
         weekly_volumes = _calculate_weekly_volumes(request.user, heute, active_block)
+        # Phase 34.2: Fatigue-Gate („Block < 3 Wochen → keine Volumen-Warnung")
+        # auf Netto – sonst beendet eine Pause im jungen Block das Schutzfenster
+        # zu früh.
         fatigue_data = _calculate_fatigue_index(
-            request.user, heute, weekly_volumes, gesamt_trainings, block_age_weeks
+            request.user, heute, weekly_volumes, gesamt_trainings, block_netto_weeks
         )
         motivation_quote = _get_motivation_quote(form_index, fatigue_data["fatigue_index"])
         training_heatmap_json = _get_training_heatmap(request.user, heute)
@@ -1369,10 +1404,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "form_color": form_color,
             "form_factors": form_factors,
             "weekly_volumes": weekly_volumes,
-            # Trainingsblock-Kontext (Phase 3 + Phase 10)
+            # Trainingsblock-Kontext (Phase 3 + Phase 10; Netto seit Phase 34)
             "active_block": active_block,
             "block_age_weeks": block_age_weeks,
-            "block_age_warning": get_block_age_warning(active_block),
+            "block_pausen_wochen": block_pausen_wochen,
+            "block_netto_weeks": block_netto_weeks,
+            "block_age_warning": get_block_age_warning(active_block, netto_weeks=block_netto_weeks),
             **fatigue_data,
             "motivation_quote": motivation_quote,
             "training_heatmap_json": training_heatmap_json,
@@ -1441,6 +1478,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "reentry_pause": reentry_pause,
         **computed,
     }
+    # Phase 34.2: Solange die Wiedereinstiegs-Rampe läuft (33.x), keine
+    # Phasenwechsel-Empfehlung – sonst widersprechen sich die beiden Karten.
+    # Bewusst NACH dem Cache-Read (reentry ist „immer frisch", 33.3) und ohne
+    # das gecachte Dict zu mutieren.
+    if reentry_pause is not None:
+        context["block_age_warning"] = None
     _add_plan_group_context(request.user, context)
     # Überschreibe gecachten Generic-Quote mit datenbasisiertem Text (4.3)
     context["motivation_quote"] = _get_smart_motivation_quote(

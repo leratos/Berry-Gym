@@ -613,11 +613,11 @@ def _get_rep_range_empfehlung(letzte_30_tage_saetze, block_typ: str | None = Non
                 "titel": "Zu viele leichte Sätze im Definitionsmodus",
                 "beschreibung": (
                     f"{pct_ausdauer:.0f}% deiner Sätze sind im Ausdauerbereich (13+ Reps). "
-                    f"Im Defizit ist schweres Training effektiver zum Muskelerhalt."
+                    f"In der Definitionsphase ist schweres Training effektiver zum Muskelerhalt."
                 ),
                 "empfehlung": (
                     "Ersetze leichte Sätze durch schwere Compounds (6-8 Reps). "
-                    "Das erhält mehr Muskelmasse bei Kaloriendefizit."
+                    "Das erhält mehr Muskelmasse in der Definitionsphase."
                 ),
                 "uebungen": [{"id": u.id, "name": u.bezeichnung} for u in compound_uebungen],
             }

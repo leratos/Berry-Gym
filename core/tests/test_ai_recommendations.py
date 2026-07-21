@@ -1004,7 +1004,8 @@ class TestRpeEmpfehlungPhase12:
         saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
         result = ai_views._get_rpe_empfehlung(saetze, "definition")
         assert len(result) == 1
-        assert "Defizit" in result[0]["empfehlung"]
+        # Phase 34.3: Ernährungsbegriffe („Defizit") aus Empfehlungstexten entfernt
+        assert "Definitionsphase" in result[0]["empfehlung"]
 
     def test_deload_kein_zu_niedrig_warning(self):
         """Im Deload: Niedriger RPE erzeugt keine Warnung."""

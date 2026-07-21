@@ -187,7 +187,11 @@
       <i class="bi bi-clock-history me-2 flex-shrink-0 mt-1"></i>
       <div class="flex-grow-1 small">
           <strong>{{ block_age_warning.block_type_display }}</strong>
+          {% if block_age_warning.pausen_wochen %}
+          {% blocktrans with weeks=block_age_warning.weeks netto=block_age_warning.netto_weeks pausen=block_age_warning.pausen_wochen %}läuft seit {{ weeks }} Wochen ({{ netto }} Trainingswochen, {{ pausen }} Wochen Pause).{% endblocktrans %}
+          {% else %}
           {% blocktrans with weeks=block_age_warning.weeks %}läuft seit {{ weeks }} Wochen.{% endblocktrans %}
+          {% endif %}
           <br>
           <span class="text-body-secondary">
               {% trans "Empfehlung:" %} <strong>{{ block_age_warning.recommendation.label }}</strong>
@@ -612,7 +616,8 @@
             </div>
             {% endfor %}
         </div>
-        {% if active_block and block_age_weeks is not None and block_age_weeks < 3 %}
+        {% comment %}Phase 34.2: Netto-Wochen – konsistent zum Fatigue-Gate{% endcomment %}
+        {% if active_block and block_netto_weeks is not None and block_netto_weeks < 3 %}
         <div class="mt-2 small text-muted">
           <i class="bi bi-info-circle me-1"></i>{% trans "Neuer Block – Volumen-Vergleiche erst ab Woche 3 aussagekräftig." %}
         </div>

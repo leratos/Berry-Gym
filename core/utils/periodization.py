@@ -59,8 +59,8 @@ _BLOCK_RECOMMENDATIONS: dict[str, dict] = {
             "label": "Definition",
             "target_profile": "definition",
             "reason": (
-                "Alternativ: Definitionsphase – überschüssiges Körperfett "
-                "aus der Aufbauphase abbauen."
+                "Alternativ: Definitionsphase – in der Aufbauphase "
+                "angesammeltes Körperfett reduzieren."
             ),
         },
     },
@@ -71,7 +71,7 @@ _BLOCK_RECOMMENDATIONS: dict[str, dict] = {
             "target_profile": "hypertrophie",
             "reason": (
                 "Nach einer Definitionsphase ist Aufbau sinnvoll – "
-                "der Stoffwechsel ist bereit für einen Kalorienüberschuss."
+                "das gehaltene Kraftniveau mit neuen Muskelreizen ausbauen."
             ),
         },
         "alternative": {
@@ -163,23 +163,32 @@ def get_next_block_recommendation(current_type: str) -> dict:
     return recommendation
 
 
-def get_block_age_warning(active_block) -> dict | None:
+def get_block_age_warning(active_block, netto_weeks: int | None = None) -> dict | None:
     """Prüft ob der aktive Trainingsblock eine Alterswarnung braucht.
 
     Args:
         active_block: Trainingsblock-Instanz oder None.
+        netto_weeks: Pausenbereinigte Wochenzahl (Phase 34.1, Brutto minus voll
+            pausen-abgedeckte Wochen via ``pausen_ausfall_wochen``) oder None
+            (= keine Pausen-Info, Verhalten wie vor Phase 34).
 
     Returns:
         Warning-Dict für das Dashboard-Template oder None.
-        Keys: message, weeks, block_type_display, recommendation, severity
+        Keys: weeks (Brutto), netto_weeks, pausen_wochen, block_type_display,
+        recommendation, severity. ``weeks`` bleibt IMMER die Brutto-Kalenderdauer
+        (User-Entscheidung #1053: Brutto nicht überschreiben, beides anzeigen).
     """
     if active_block is None:
         return None
 
     weeks = active_block.weeks_since_start
+    netto = weeks if netto_weeks is None else max(0, min(netto_weeks, weeks))
     # Phase 17.4: Nutze geplante Dauer wenn vorhanden, sonst Fallback
     threshold = getattr(active_block, "warning_threshold_weeks", BLOCK_AGE_WARNING_THRESHOLD)
-    if weeks < threshold:
+    # Phase 34.2: Schwellwert + Severity werten die NETTO-Dauer aus – ein Block
+    # „läuft" nur in trainierten Wochen; Kalenderwochen einer dokumentierten
+    # Pause dürfen die Phasenwechsel-Empfehlung nicht verfrüht auslösen.
+    if netto < threshold:
         return None
 
     recommendation = get_next_block_recommendation(active_block.typ)
@@ -189,9 +198,11 @@ def get_block_age_warning(active_block) -> dict | None:
     danger_threshold = int(threshold * 1.5)
     return {
         "weeks": weeks,
+        "netto_weeks": netto,
+        "pausen_wochen": weeks - netto,
         "block_type_display": active_block.get_typ_display(),
         "recommendation": primary,
-        "severity": "danger" if weeks >= danger_threshold else "warning",
+        "severity": "danger" if netto >= danger_threshold else "warning",
     }
 
 
@@ -270,11 +281,11 @@ _TRAININGSMODUS_PROFILE: dict[str, dict] = {
             "trainiere mit RPE 7-9, um Muskelmasse zu erhalten."
         ),
         "rpe_zu_hoch_text": (
-            "RPE 9.5+ im Defizit erhöht das Verletzungsrisiko. "
+            "RPE 9.5+ in der Definitionsphase erhöht das Verletzungsrisiko. "
             "Behalte RPE 7-9 bei und setze auf schwere Compounds."
         ),
         "stagnation_tipp": (
-            "Im Defizit ist Stagnation normal. Halte das Gewicht – "
+            "In der Definitionsphase ist Stagnation normal. Halte das Gewicht – "
             "setze auf schwere Compounds (6-8 Reps) statt mehr Volumen."
         ),
         "volumen_faktor": 0.85,
