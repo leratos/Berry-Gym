@@ -15,6 +15,8 @@ behandeln; ein neu entdeckter Pfad gehört hier ergänzt):
 | 3 | Dashboard Form-Index Volumen | training_stats._get_volume_trend_score              |
 | 4 | Stats-Seite Volumen-Warnung  | training_stats._detect_volume_warnings              |
 | 5 | Export Volumen-Trend         | stats_collector.calc_volume_trend_weekly            |
+| 6 | Blockdauer/Phasenwechsel     | periodization.get_block_age_warning (Netto via      |
+|   | (Phase 34)                   | week_classification.pausen_ausfall_wochen)          |
 
 ``INVENTORY`` unten ist ein Importierbarkeits-Guard: wird eine Vergleichsstelle
 umbenannt/entfernt, schlägt der Test fehl und erzwingt ein Review.
@@ -23,6 +25,7 @@ umbenannt/entfernt, schlägt der Test fehl und erzwingt ein Review.
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+from django.core.cache import cache
 from django.db.models import Prefetch
 from django.utils import timezone
 
@@ -33,13 +36,15 @@ from core.models import Satz, Trainingseinheit, TrainingsPause
 from core.tests.factories import (
     PlanFactory,
     SatzFactory,
+    TrainingsblockFactory,
     TrainingseinheitFactory,
     TrainingsPauseFactory,
     UebungFactory,
     UserFactory,
 )
 from core.utils.advanced_stats import calculate_fatigue_index
-from core.utils.week_classification import build_weekly_volume_overview
+from core.utils.periodization import get_block_age_warning
+from core.utils.week_classification import build_weekly_volume_overview, pausen_ausfall_wochen
 from core.views.training_stats import (
     _calc_weekly_volume,
     _calculate_fatigue_index,
@@ -129,9 +134,12 @@ def test_inventory_alle_vergleichsstellen_importierbar():
         _get_volume_trend_score,
         _detect_volume_warnings,
         calc_volume_trend_weekly,
+        # Pfad 6 (Phase 34): Blockdauer/Phasenwechsel-Empfehlung
+        get_block_age_warning,
+        pausen_ausfall_wochen,
     ]
     assert all(callable(f) for f in inventory)
-    assert len(inventory) == 5
+    assert len(inventory) == 7
 
 
 @pytest.mark.django_db
@@ -273,3 +281,129 @@ class TestCodexFixesPr201:
         )
         assert _pause_blockiert_volumenvergleich(user, now) is False
         assert _get_volume_trend_score(user, now) == 20
+
+
+def _wk_mo_heute(heute_d: date, k: int) -> date:
+    """Montag der ISO-Woche ``k`` Wochen vor ``heute_d``."""
+    d = heute_d - timedelta(weeks=k)
+    return d - timedelta(days=d.weekday())
+
+
+def _iso_von(d: date) -> str:
+    iy, iw, _ = d.isocalendar()
+    return f"{iy}-W{iw:02d}"
+
+
+@pytest.mark.django_db
+class TestPfad6BlockdauerPhasenwechsel:
+    """Pfad 6 (Phase 34): Die Blockdauer-/Phasenwechsel-Empfehlung zählt keine
+    dokumentierten Pausenwochen mit (Kernbug: Karte „läuft seit 15 Wochen"
+    feuerte, WEIL der User pausiert hatte)."""
+
+    def test_netto_unterdrueckt_verfruehte_empfehlung(self):
+        """Brutto ≥ Schwelle, Netto < Schwelle → keine Empfehlung (Kernbug)."""
+        user = UserFactory()
+        heute_d = timezone.localdate()
+        start = _wk_mo_heute(heute_d, 10)
+        block = TrainingsblockFactory(user=user, typ="definition", start_datum=start)
+        # 4 volle ISO-Wochen dokumentierte Pause (Mo vor 6 Wo. bis So vor 3 Wo.)
+        TrainingsPauseFactory(
+            user=user,
+            start_datum=_wk_mo_heute(heute_d, 6),
+            end_datum=_wk_mo_heute(heute_d, 3) + timedelta(days=6),
+        )
+        pausen = TrainingsPause.objects.filter(user=user)
+        ausfall = pausen_ausfall_wochen(pausen, start, heute_d, sessions_week_keys=set())
+        assert ausfall == 4
+        brutto = block.weeks_since_start
+        assert brutto >= 8
+        # Brutto hätte gefeuert (IST-Zustand vor Phase 34) ...
+        assert get_block_age_warning(block) is not None
+        # ... Netto (10 − 4 = 6 < 8) feuert nicht.
+        assert get_block_age_warning(block, netto_weeks=brutto - ausfall) is None
+
+    def test_anzeige_brutto_und_netto_severity_auf_netto(self):
+        """Karte zeigt Brutto UND Netto (#1053); Severity wird auf Netto bewertet."""
+        user = UserFactory()
+        heute_d = timezone.localdate()
+        block = TrainingsblockFactory(
+            user=user, typ="definition", start_datum=_wk_mo_heute(heute_d, 15)
+        )
+        warning = get_block_age_warning(block, netto_weeks=11)
+        assert warning is not None
+        assert warning["weeks"] == block.weeks_since_start
+        assert warning["netto_weeks"] == 11
+        assert warning["pausen_wochen"] == warning["weeks"] - 11
+        # Brutto 15 ≥ 12 wäre „danger" – Netto 11 < 12 bleibt „warning".
+        assert warning["severity"] == "warning"
+
+    def test_abdeckungs_semantik_rand_und_trainierte_woche(self):
+        """Nur voll abgedeckte Wochen ohne Session zählen: eine ab Donnerstag
+        überlappte Rand-Woche und eine trotz Pause trainierte Woche nicht."""
+        user = UserFactory()
+        heute_d = timezone.localdate()
+        start = _wk_mo_heute(heute_d, 8)
+        # Pause Donnerstag (vor 6 Wo.) bis Sonntag (vor 3 Wo.):
+        # berührt 4 ISO-Wochen, deckt nur 3 voll ab (Prod-Fall-Muster).
+        TrainingsPauseFactory(
+            user=user,
+            start_datum=_wk_mo_heute(heute_d, 6) + timedelta(days=3),
+            end_datum=_wk_mo_heute(heute_d, 3) + timedelta(days=6),
+        )
+        pausen = TrainingsPause.objects.filter(user=user)
+        assert pausen_ausfall_wochen(pausen, start, heute_d, sessions_week_keys=set()) == 3
+        # Session in einer voll abgedeckten Woche → die Woche zählt als Trainingswoche.
+        key_wo4 = _iso_von(_wk_mo_heute(heute_d, 4))
+        assert pausen_ausfall_wochen(pausen, start, heute_d, sessions_week_keys={key_wo4}) == 2
+
+    def test_positivkontrolle_ohne_pause_feuert_weiter(self):
+        """Ohne Pause: Netto == Brutto, Empfehlung erscheint unverändert."""
+        user = UserFactory()
+        heute_d = timezone.localdate()
+        start = _wk_mo_heute(heute_d, 10)
+        block = TrainingsblockFactory(user=user, typ="definition", start_datum=start)
+        pausen = TrainingsPause.objects.filter(user=user)
+        assert pausen_ausfall_wochen(pausen, start, heute_d, sessions_week_keys=set()) == 0
+        warning = get_block_age_warning(block, netto_weeks=block.weeks_since_start)
+        assert warning is not None
+        assert warning["pausen_wochen"] == 0
+
+
+@pytest.mark.django_db
+class TestPfad6DashboardIntegration:
+    """Phase 34.2 (View-Verdrahtung): Während einer laufenden Wiedereinstiegs-
+    Rampe (33.x) wird die Phasenwechsel-Karte unterdrückt – die beiden Karten
+    dürfen sich nicht widersprechen."""
+
+    def test_laufende_rampe_unterdrueckt_karte(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        cache.clear()
+        heute_d = timezone.localdate()
+        TrainingsblockFactory(
+            user=user, typ="definition", start_datum=heute_d - timedelta(weeks=20)
+        )
+        # 14-Tage-Pause, vor 3 Tagen beendet → Rampe (2 Wochen) läuft.
+        end = heute_d - timedelta(days=3)
+        TrainingsPauseFactory(user=user, start_datum=end - timedelta(days=13), end_datum=end)
+        response = client.get("/")
+        assert response.status_code == 200
+        assert response.context["reentry_pause"] is not None
+        # Netto (≥ 18) läge über der Schwelle – unterdrückt wird wegen der Rampe.
+        assert response.context["block_age_warning"] is None
+
+    def test_ohne_rampe_erscheint_karte(self, client):
+        """Positivkontrolle Verdrahtung: alter Block ohne Pause → Karte da."""
+        user = UserFactory()
+        client.force_login(user)
+        cache.clear()
+        heute_d = timezone.localdate()
+        TrainingsblockFactory(
+            user=user, typ="definition", start_datum=heute_d - timedelta(weeks=20)
+        )
+        response = client.get("/")
+        assert response.status_code == 200
+        assert response.context["reentry_pause"] is None
+        warning = response.context["block_age_warning"]
+        assert warning is not None
+        assert warning["pausen_wochen"] == 0
