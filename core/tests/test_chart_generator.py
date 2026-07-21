@@ -148,6 +148,35 @@ class TestGenerateTrainingHeatmap(TestCase):
         )
         self.assertIsNotNone(result)
 
+    @staticmethod
+    def _png_enthaelt_farbe(b64_png: str, rgb: tuple) -> bool:
+        import io as _io
+
+        from PIL import Image
+
+        img = Image.open(_io.BytesIO(base64.b64decode(b64_png))).convert("RGB")
+        return any(farbe == rgb for _, farbe in img.getcolors(maxcolors=1_000_000))
+
+    def test_pause_nach_letztem_training_bleibt_im_grid(self):
+        """PR-#209-Codex (P2): letzte Session VOR Pausenbeginn (15.06.), Pause
+        18.06.–19.07. – das Grid darf nicht am letzten Trainingstag enden,
+        sonst verschwinden fast alle Pausen-Marker trotz Banner. Pixel-Check
+        auf die Markerfarbe #B9CFE2."""
+        result = generate_training_heatmap(
+            [{"datum": date(2026, 6, 15), "intensitaet": 0.8}],
+            pause_ranges=[(date(2026, 6, 18), date(2026, 7, 19))],
+        )
+        self.assertIsNotNone(result)
+        self.assertTrue(
+            self._png_enthaelt_farbe(result, (0xB9, 0xCF, 0xE2)),
+            "Pause-Markerfarbe fehlt im gerenderten Grid",
+        )
+
+    def test_ohne_pausen_keine_markerfarbe(self):
+        """Kontrolle: ohne pause_ranges taucht die Markerfarbe nicht auf."""
+        result = generate_training_heatmap(self._dates())
+        self.assertFalse(self._png_enthaelt_farbe(result, (0xB9, 0xCF, 0xE2)))
+
 
 class TestGenerateMuscleHeatmap(TestCase):
     def test_keine_daten_gibt_none(self):

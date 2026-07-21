@@ -704,7 +704,10 @@
                 ctx.fillStyle = ppColor;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(ppData.ratio.toFixed(2), cx, cy);
+                {# Phase 35.2 / PR-#209-Codex: ratio ist "–" (String), wenn nur eine
+                   Seite trainiert wurde – toFixed() darauf wirft einen TypeError und
+                   stoppt das restliche Stats-Script. #}
+                ctx.fillText(typeof ppData.ratio === 'number' ? ppData.ratio.toFixed(2) : ppData.ratio, cx, cy);
                 ctx.restore();
             }
         }]

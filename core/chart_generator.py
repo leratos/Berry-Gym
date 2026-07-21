@@ -1032,6 +1032,13 @@ def generate_training_heatmap(training_dates: list[dict], pause_ranges=None) -> 
 
     # Determine grid range: last 12 weeks ending on the most recent Sunday
     end_date = max(date_intensity.keys())
+    # PR-#209-Codex (Phase 35.3): das Grid nur am letzten Trainingstag zu
+    # verankern schneidet Pausen-Marker ab, wenn nach Pausenbeginn (noch)
+    # nicht trainiert wurde – z. B. letzte Session 15.06., Pause bis 19.07.,
+    # Report am 21.07. → Grid endete um den 21.06. Pausen-Spannen zählen
+    # deshalb mit in den Anker.
+    if pause_ranges:
+        end_date = max(end_date, max(e for _, e in pause_ranges))
     # Align to end-of-week (Sunday = 6 in weekday())
     days_to_sunday = (6 - end_date.weekday()) % 7
     grid_end = end_date + timedelta(days=days_to_sunday)
