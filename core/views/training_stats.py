@@ -832,7 +832,7 @@ def _check_regression_warnings(user, heute) -> list[dict]:
                     "severity": "danger",
                     "exercise": ex["uebung__bezeichnung"],
                     "message": f"Leistungsabfall von {drop_percent}%",
-                    "suggestion": "Prüfe Regeneration, Ernährung und Schlaf. Erwäge eine Deload-Woche.",
+                    "suggestion": "Prüfe Regeneration und Schlaf. Erwäge eine Deload-Woche.",
                     "icon": "bi-arrow-down-circle",
                     "color": "danger",
                     "training_ids": affected_trainings,

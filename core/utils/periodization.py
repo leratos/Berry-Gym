@@ -59,8 +59,8 @@ _BLOCK_RECOMMENDATIONS: dict[str, dict] = {
             "label": "Definition",
             "target_profile": "definition",
             "reason": (
-                "Alternativ: Definitionsphase – überschüssiges Körperfett "
-                "aus der Aufbauphase abbauen."
+                "Alternativ: Definitionsphase – in der Aufbauphase "
+                "angesammeltes Körperfett reduzieren."
             ),
         },
     },
@@ -71,7 +71,7 @@ _BLOCK_RECOMMENDATIONS: dict[str, dict] = {
             "target_profile": "hypertrophie",
             "reason": (
                 "Nach einer Definitionsphase ist Aufbau sinnvoll – "
-                "der Stoffwechsel ist bereit für einen Kalorienüberschuss."
+                "das gehaltene Kraftniveau mit neuen Muskelreizen ausbauen."
             ),
         },
         "alternative": {
@@ -281,11 +281,11 @@ _TRAININGSMODUS_PROFILE: dict[str, dict] = {
             "trainiere mit RPE 7-9, um Muskelmasse zu erhalten."
         ),
         "rpe_zu_hoch_text": (
-            "RPE 9.5+ im Defizit erhöht das Verletzungsrisiko. "
+            "RPE 9.5+ in der Definitionsphase erhöht das Verletzungsrisiko. "
             "Behalte RPE 7-9 bei und setze auf schwere Compounds."
         ),
         "stagnation_tipp": (
-            "Im Defizit ist Stagnation normal. Halte das Gewicht – "
+            "In der Definitionsphase ist Stagnation normal. Halte das Gewicht – "
             "setze auf schwere Compounds (6-8 Reps) statt mehr Volumen."
         ),
         "volumen_faktor": 0.85,

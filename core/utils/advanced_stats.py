@@ -1327,7 +1327,7 @@ _VOLUME_DIAGNOSIS_MAP = {
         "severity": "warning",
         "message": (
             "Tonnage und effektives Volumen sinken beide – echte Leistungs-Regression. "
-            "Recovery, Schlaf und Ernährung prüfen."
+            "Recovery und Schlaf prüfen."
         ),
     },
     ("sinkt", "stabil"): {

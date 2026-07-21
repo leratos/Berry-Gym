@@ -97,7 +97,7 @@ def analyze_weight_loss_context(stats: dict) -> dict | None:
         risk_level = "gering"
         erklaerung = (
             "Mehrere Indikatoren sprechen gegen Muskelabbau. "
-            "Der Gewichtsverlust ist am wahrscheinlichsten auf ein Kaloriendefizit zurückzuführen."
+            "Der Gewichtsverlust geht sehr wahrscheinlich nicht zu Lasten der Muskelmasse."
         )
     elif volumen_steigt and len(faktoren_dafuer) <= 1:
         # Steigendes Volumen + maximal 1 schwaches Gegenargument → kein echtes Risiko
@@ -110,7 +110,7 @@ def analyze_weight_loss_context(stats: dict) -> dict | None:
         risk_level = "mittel"
         erklaerung = (
             "Einige Indikatoren deuten auf möglichen Muskelabbau hin. "
-            "Proteinzufuhr prüfen und Volumen-Entwicklung beobachten."
+            "Volumen-Entwicklung beobachten und weitere Messungen abwarten."
         )
     else:
         risk_level = "beobachten"
