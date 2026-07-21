@@ -666,10 +666,10 @@
                 </td>
                 {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>
-                    {# Phase 35.2 (#1059 a): wertende Labels ("Guter Verlust",
-                       "Schnelle Zunahme") entfernt – sie bewerteten z. B.
-                       krankheitsbedingten Gewichtsverlust positiv und sind im
-                       Kern Ernährungsbewertungen (User-Entscheidung #1053/2).
+                    {# Phase 35.2 (#1059 a): wertende Gewichts-Labels entfernt –
+                       sie bewerteten z. B. krankheitsbedingten Gewichtsverlust
+                       positiv; solche Bewertungen fallen unter User-Entscheidung
+                       #1053/2 (Verbotsliste: test_empfehlung_textregeln).
                        Die Spalte beschreibt jetzt nur noch die Richtung; der
                        Muskelabbau-Risiko-Zweig (trainingsbezogen) bleibt. #}
                     {% if gewichts_rate > 0.1 %}Zunahme

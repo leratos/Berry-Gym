@@ -219,7 +219,8 @@ Phase-34-Helfer) konsumieren, keine Parallel-Logik.
 
 ### 35.4 – Audit-Erweiterung + Textregel-Test
 
-- **`test_pausen_audit.py`**: `INVENTORY` 7 → **13**; neue Pfade je mit
+- **`test_pausen_audit.py`**: `INVENTORY` 7 → **14** (v1 schätzte 13; Pfad 8
+  trägt zwei Callables: PDF- und Live-Push/Pull); neue Pfade je mit
   Kernbug-Test + Positivkontrolle:
   - Pfad 8 Rückschritt: Rampe aktiv + Drop > 5 % → `reentry`, nicht
     `regression`; Rampe aktiv ohne Drop → normale Klassifikation; keine
