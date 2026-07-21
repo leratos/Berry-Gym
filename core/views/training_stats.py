@@ -58,6 +58,7 @@ from ..utils.plan_helpers import (
 from ..utils.week_classification import (
     build_weekly_volume_overview,
     letzte_iso_wochen_keys,
+    pausen_ausfall_wochen,
     pausen_grenze_keys,
 )
 from .body_tracking import _prepare_body_chart_data
@@ -106,6 +107,22 @@ def _count_trainings_this_week(user, heute) -> int:
     """Count training sessions in the current ISO week (Mon–Sun)."""
     start_woche = _get_week_start(heute)
     return Trainingseinheit.objects.filter(user=user, datum__gte=start_woche).count()
+
+
+def _session_week_keys(user, seit_datum) -> set[str]:
+    """ISO-Wochen-Keys mit ≥1 abgeschlossener Session seit ``seit_datum``.
+
+    Phase 34.1: Quelle für ``hat_sessions`` in ``pausen_ausfall_wochen`` –
+    nur abgeschlossene Trainings zählen als Trainingswoche (33.x-Lektion).
+    """
+    keys: set[str] = set()
+    daten = Trainingseinheit.objects.filter(
+        user=user, abgeschlossen=True, datum__date__gte=seit_datum
+    ).values_list("datum", flat=True)
+    for dt in daten:
+        iso_year, iso_week, _ = dt.isocalendar()
+        keys.add(f"{iso_year}-W{iso_week:02d}")
+    return keys
 
 
 def _get_week_overview(user, heute) -> list[dict]:
@@ -1344,6 +1361,21 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         )
         active_block = _get_active_trainingsblock(request.user)
         block_age_weeks = active_block.weeks_since_start if active_block else None
+        # Phase 34.1: Netto-Blockdauer = Brutto minus voll pausen-abgedeckte
+        # ISO-Wochen ohne abgeschlossene Session (Abdeckungs-Semantik, SoT aus
+        # week_classification). Liegt im Cache-Block – Pausen-CRUD invalidiert
+        # dashboard_computed seit 32.2 (signals.py).
+        block_pausen_wochen = 0
+        if active_block is not None:
+            block_pausen_wochen = pausen_ausfall_wochen(
+                TrainingsPause.objects.filter(user=request.user),
+                active_block.start_datum,
+                heute.date(),
+                sessions_week_keys=_session_week_keys(request.user, active_block.start_datum),
+            )
+        block_netto_weeks = (
+            max(0, block_age_weeks - block_pausen_wochen) if block_age_weeks is not None else None
+        )
         weekly_volumes = _calculate_weekly_volumes(request.user, heute, active_block)
         fatigue_data = _calculate_fatigue_index(
             request.user, heute, weekly_volumes, gesamt_trainings, block_age_weeks
@@ -1369,10 +1401,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "form_color": form_color,
             "form_factors": form_factors,
             "weekly_volumes": weekly_volumes,
-            # Trainingsblock-Kontext (Phase 3 + Phase 10)
+            # Trainingsblock-Kontext (Phase 3 + Phase 10; Netto seit Phase 34)
             "active_block": active_block,
             "block_age_weeks": block_age_weeks,
-            "block_age_warning": get_block_age_warning(active_block),
+            "block_pausen_wochen": block_pausen_wochen,
+            "block_netto_weeks": block_netto_weeks,
+            "block_age_warning": get_block_age_warning(active_block, netto_weeks=block_netto_weeks),
             **fatigue_data,
             "motivation_quote": motivation_quote,
             "training_heatmap_json": training_heatmap_json,

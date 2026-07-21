@@ -163,20 +163,26 @@ def get_next_block_recommendation(current_type: str) -> dict:
     return recommendation
 
 
-def get_block_age_warning(active_block) -> dict | None:
+def get_block_age_warning(active_block, netto_weeks: int | None = None) -> dict | None:
     """Prüft ob der aktive Trainingsblock eine Alterswarnung braucht.
 
     Args:
         active_block: Trainingsblock-Instanz oder None.
+        netto_weeks: Pausenbereinigte Wochenzahl (Phase 34.1, Brutto minus voll
+            pausen-abgedeckte Wochen via ``pausen_ausfall_wochen``) oder None
+            (= keine Pausen-Info, Verhalten wie vor Phase 34).
 
     Returns:
         Warning-Dict für das Dashboard-Template oder None.
-        Keys: message, weeks, block_type_display, recommendation, severity
+        Keys: weeks (Brutto), netto_weeks, pausen_wochen, block_type_display,
+        recommendation, severity. ``weeks`` bleibt IMMER die Brutto-Kalenderdauer
+        (User-Entscheidung #1053: Brutto nicht überschreiben, beides anzeigen).
     """
     if active_block is None:
         return None
 
     weeks = active_block.weeks_since_start
+    netto = weeks if netto_weeks is None else max(0, min(netto_weeks, weeks))
     # Phase 17.4: Nutze geplante Dauer wenn vorhanden, sonst Fallback
     threshold = getattr(active_block, "warning_threshold_weeks", BLOCK_AGE_WARNING_THRESHOLD)
     if weeks < threshold:
@@ -189,6 +195,8 @@ def get_block_age_warning(active_block) -> dict | None:
     danger_threshold = int(threshold * 1.5)
     return {
         "weeks": weeks,
+        "netto_weeks": netto,
+        "pausen_wochen": weeks - netto,
         "block_type_display": active_block.get_typ_display(),
         "recommendation": primary,
         "severity": "danger" if weeks >= danger_threshold else "warning",

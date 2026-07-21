@@ -187,7 +187,11 @@
       <i class="bi bi-clock-history me-2 flex-shrink-0 mt-1"></i>
       <div class="flex-grow-1 small">
           <strong>{{ block_age_warning.block_type_display }}</strong>
+          {% if block_age_warning.pausen_wochen %}
+          {% blocktrans with weeks=block_age_warning.weeks netto=block_age_warning.netto_weeks pausen=block_age_warning.pausen_wochen %}läuft seit {{ weeks }} Wochen ({{ netto }} Trainingswochen, {{ pausen }} Wochen Pause).{% endblocktrans %}
+          {% else %}
           {% blocktrans with weeks=block_age_warning.weeks %}läuft seit {{ weeks }} Wochen.{% endblocktrans %}
+          {% endif %}
           <br>
           <span class="text-body-secondary">
               {% trans "Empfehlung:" %} <strong>{{ block_age_warning.recommendation.label }}</strong>

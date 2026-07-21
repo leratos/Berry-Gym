@@ -3914,3 +3914,12 @@ msgstr "After that, back to the full level of your last working weights – prov
 
 msgid "Für die Zeit vor der Pause liegen keine Arbeitsgewichte vor, aus denen sich Einstiegswerte ableiten lassen. Starte bewusst leicht und taste dich nach RPE heran."
 msgstr "There are no working weights from before the break to derive starting values from. Start deliberately light and work up by RPE."
+
+# === Phase 34: pausenbereinigte Blockdauer (dashboard.html) ===
+#, python-format
+msgid "läuft seit %(weeks)s Wochen."
+msgstr "running for %(weeks)s weeks."
+
+#, python-format
+msgid "läuft seit %(weeks)s Wochen (%(netto)s Trainingswochen, %(pausen)s Wochen Pause)."
+msgstr "running for %(weeks)s weeks (%(netto)s training weeks, %(pausen)s weeks of break)."
