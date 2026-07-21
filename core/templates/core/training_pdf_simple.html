@@ -449,6 +449,16 @@
             <strong>Berichtszeitraum:</strong> {{ start_datum|date:"d.m.Y" }} - {{ end_datum|date:"d.m.Y" }}<br>
             <strong>Erstellt am:</strong> {{ current_date|date:"d.m.Y H:i" }}
         </div>
+
+        {# Phase 35.3 (#1059 g): globaler Pausen-Kontext im Report-Kopf – eine
+           Stelle, alle zeitfenster-basierten Sektionen profitieren. #}
+        {% if pausen_banner %}
+        <div class="warning-box" style="margin-top: 12px; font-size: 10px;">
+            <strong>Hinweis:</strong> Der Berichtszeitraum enthält {{ pausen_banner.tage }} dokumentierte Pausentage{% if pausen_banner.medizinisch %} (medizinisch){% endif %}
+            ({% for s in pausen_banner.spannen %}{{ s.0|date:"d.m." }}–{{ s.1|date:"d.m.Y" }}{% if not forloop.last %}, {% endif %}{% endfor %}).
+            Zeitfenster-basierte Auswertungen (30-Tage-Analysen, Muskelgruppen, Körperkarte) sind dadurch eingeschränkt aussagekräftig.
+        </div>
+        {% endif %}
     </div>
 
     <pdf:nextpage />

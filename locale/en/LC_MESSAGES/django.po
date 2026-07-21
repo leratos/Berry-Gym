@@ -3931,3 +3931,8 @@ msgstr "Return-to-training ramp active – reduced weights are recommended, not 
 # === Phase 35.2: RPE-Karten-Flag (training_stats.html) ===
 msgid "zu wenig"
 msgstr "too few"
+
+# === Phase 35.3: Pausen-Banner (training_stats.html) ===
+#, python-format
+msgid "Die letzten 30 Tage enthalten %(tage)s dokumentierte Pausentage – zeitfenster-basierte Auswertungen sind eingeschränkt aussagekräftig."
+msgstr "The last 30 days include %(tage)s documented break days – time-window-based analyses have limited significance."

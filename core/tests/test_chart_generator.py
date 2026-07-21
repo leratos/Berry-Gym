@@ -25,6 +25,7 @@ from core.chart_generator import (
     generate_exercise_progression_chart,
     generate_muscle_heatmap,
     generate_push_pull_pie,
+    generate_training_heatmap,
     generate_volume_chart,
 )
 
@@ -110,6 +111,41 @@ class TestGenerateBodyMapWithData(TestCase):
     def test_einzelne_muskelgruppe(self):
         stats = [{"key": "BRUST", "name": "Brust", "saetze": 10, "status": "optimal"}]
         result = generate_body_map_with_data(stats)
+        self.assertIsNotNone(result)
+
+
+class TestGenerateTrainingHeatmap(TestCase):
+    """Phase 35.3: Trainings-Heatmap inkl. Pausen-Marker (#1059 g)."""
+
+    def _dates(self):
+        return [
+            {"datum": date(2026, 7, 20), "intensitaet": 0.8},
+            {"datum": date(2026, 6, 15), "intensitaet": 0.5},
+        ]
+
+    def test_leere_daten_gibt_none(self):
+        self.assertIsNone(generate_training_heatmap([]))
+
+    def test_ohne_pausen_liefert_png(self):
+        result = generate_training_heatmap(self._dates())
+        self.assertIsNotNone(result)
+        self.assertTrue(base64.b64decode(result).startswith(b"\x89PNG"))
+
+    def test_mit_pausen_liefert_png(self):
+        """Pause-Spannen (aus pausen_im_zeitraum) dürfen das Rendering nicht
+        brechen – Marker-Zellen + Legende werden gezeichnet."""
+        result = generate_training_heatmap(
+            self._dates(),
+            pause_ranges=[(date(2026, 6, 18), date(2026, 7, 19))],
+        )
+        self.assertIsNotNone(result)
+        self.assertTrue(base64.b64decode(result).startswith(b"\x89PNG"))
+
+    def test_pausen_ausserhalb_gridfensters_unproblematisch(self):
+        result = generate_training_heatmap(
+            self._dates(),
+            pause_ranges=[(date(2020, 1, 1), date(2020, 2, 1))],
+        )
         self.assertIsNotNone(result)
 
 

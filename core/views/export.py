@@ -41,7 +41,8 @@ from ..export.chart_orchestrator import generate_pdf_charts
 from ..export.pdf_renderer import render_training_pdf_response
 from ..export.stats_collector import calc_volume_trend_weekly, collect_pdf_stats
 from ..export.weight_analysis import analyze_weight_loss_context
-from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, Uebung
+from ..models import MUSKELGRUPPEN, Plan, PlanUebung, Satz, Trainingseinheit, TrainingsPause, Uebung
+from ..utils.week_classification import pausen_im_zeitraum
 
 logger = logging.getLogger(__name__)
 
@@ -151,8 +152,20 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
     body_trend_chart = generate_body_trend_chart(stats.get("koerperwerte_chart", []))
     rpe_donut_chart = generate_rpe_donut(stats.get("rpe_verteilung", {}), stats.get("avg_rpe", 0.0))
 
+    # Phase 35.3 (#1059 g): globaler Pausen-Kontext – EINE Datenquelle für den
+    # Report-Kopf-Banner (30-Tage-Berichtszeitraum) und die Heatmap-Marker
+    # (12-Wochen-Chartfenster).
+    pausen_qs = TrainingsPause.objects.filter(user=request.user)
+    pausen_banner = pausen_im_zeitraum(pausen_qs, letzte_30_tage.date(), heute.date())
+    heatmap_pausen = pausen_im_zeitraum(
+        pausen_qs, (heute - timedelta(days=84)).date(), heute.date()
+    )
+
     # Phase D: Heatmap + Übungsdetail-Charts
-    training_heatmap_chart = generate_training_heatmap(stats.get("training_heatmap_data", []))
+    training_heatmap_chart = generate_training_heatmap(
+        stats.get("training_heatmap_data", []),
+        pause_ranges=heatmap_pausen["spannen"] if heatmap_pausen else None,
+    )
 
     exercise_detail_charts = []
     for ex_data in stats.get("exercise_detail_data", []):
@@ -277,6 +290,7 @@ def export_training_pdf(request: HttpRequest) -> HttpResponse:
         "top_fortschritte": top_fortschritte,
         "handlungsfelder": handlungsfelder,
         "sections": sections,
+        "pausen_banner": pausen_banner,
         **stats,
     }
 

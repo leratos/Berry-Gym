@@ -38,6 +38,15 @@
 
 {% block content %}
 <div class="container pb-5 pt-3">
+    {# Phase 35.3 (#1059 g): globaler Pausen-Kontext für alle 30-Tage-Karten #}
+    {% if pausen_banner %}
+    <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-pause-circle me-2"></i>
+        <div>
+            {% blocktrans with tage=pausen_banner.tage %}Die letzten 30 Tage enthalten {{ tage }} dokumentierte Pausentage – zeitfenster-basierte Auswertungen sind eingeschränkt aussagekräftig.{% endblocktrans %}
+        </div>
+    </div>
+    {% endif %}
 
     {% if no_data %}
         <div class="text-center py-5 text-muted">

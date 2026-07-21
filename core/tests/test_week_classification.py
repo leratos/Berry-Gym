@@ -11,8 +11,9 @@ wurden. Umfasst:
   training_stats-View denselben Klassifikator nutzt wie der PDF-Pfad).
 """
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 from uuid import uuid4
 
 from django.urls import reverse
@@ -27,7 +28,66 @@ from core.tests.factories import (
     UebungFactory,
     UserFactory,
 )
-from core.utils.week_classification import build_weekly_volume_overview, select_comparable_weeks
+from core.utils.week_classification import (
+    build_weekly_volume_overview,
+    pausen_im_zeitraum,
+    select_comparable_weeks,
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 35.3: pausen_im_zeitraum (Report-Banner + Heatmap-Marker)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _pause_obj(start, end, medizinisch=False):
+    """Reines Attribut-Objekt – ``_clamp_pausen`` liest nur start/end_datum."""
+    return SimpleNamespace(start_datum=start, end_datum=end, aerztliche_freigabe_noetig=medizinisch)
+
+
+class TestPausenImZeitraum:
+    def test_keine_pausen_gibt_none(self):
+        assert pausen_im_zeitraum([], date(2026, 6, 21), date(2026, 7, 21)) is None
+
+    def test_prod_fall_ueberlappung_geclippt(self):
+        """Prod-Fall 21.07.2026: Pause 18.06.–19.07. (32 Tage), Berichtszeitraum
+        21.06.–21.07. → 29 Pausentage im Fenster, Spanne geclippt."""
+        pause = _pause_obj(date(2026, 6, 18), date(2026, 7, 19), medizinisch=True)
+        result = pausen_im_zeitraum([pause], date(2026, 6, 21), date(2026, 7, 21))
+        assert result is not None
+        assert result["spannen"] == [(date(2026, 6, 21), date(2026, 7, 19))]
+        assert result["tage"] == 29
+        assert result["medizinisch"] is True
+
+    def test_kurze_pause_unter_mindestdauer_ignoriert(self):
+        pause = _pause_obj(date(2026, 7, 1), date(2026, 7, 3))  # 3 Tage < Schwelle
+        assert pausen_im_zeitraum([pause], date(2026, 6, 21), date(2026, 7, 21)) is None
+
+    def test_pause_ausserhalb_zeitraum_ignoriert(self):
+        pause = _pause_obj(date(2026, 4, 1), date(2026, 4, 20))
+        assert pausen_im_zeitraum([pause], date(2026, 6, 21), date(2026, 7, 21)) is None
+
+    def test_offene_pause_auf_endedatum_geclampt(self):
+        pause = _pause_obj(date(2026, 7, 10), None)
+        result = pausen_im_zeitraum([pause], date(2026, 6, 21), date(2026, 7, 21))
+        assert result is not None
+        assert result["spannen"] == [(date(2026, 7, 10), date(2026, 7, 21))]
+        assert result["tage"] == 12
+        assert result["medizinisch"] is False
+
+    def test_ueberlappende_spannen_werden_gemerged(self):
+        p1 = _pause_obj(date(2026, 6, 25), date(2026, 7, 2))
+        p2 = _pause_obj(date(2026, 7, 1), date(2026, 7, 8))
+        result = pausen_im_zeitraum([p1, p2], date(2026, 6, 21), date(2026, 7, 21))
+        assert result["spannen"] == [(date(2026, 6, 25), date(2026, 7, 8))]
+        assert result["tage"] == 14
+
+    def test_getrennte_spannen_bleiben_getrennt(self):
+        p1 = _pause_obj(date(2026, 6, 22), date(2026, 6, 28))
+        p2 = _pause_obj(date(2026, 7, 10), date(2026, 7, 16))
+        result = pausen_im_zeitraum([p1, p2], date(2026, 6, 21), date(2026, 7, 21))
+        assert len(result["spannen"]) == 2
+        assert result["tage"] == 14
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # build_weekly_volume_overview – Basis

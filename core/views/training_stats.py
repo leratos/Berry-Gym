@@ -60,6 +60,7 @@ from ..utils.week_classification import (
     letzte_iso_wochen_keys,
     pausen_ausfall_wochen,
     pausen_grenze_keys,
+    pausen_im_zeitraum,
 )
 from .body_tracking import _prepare_body_chart_data
 
@@ -2513,6 +2514,14 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         plan_start=rpe_plan_start,
     )
 
+    # Phase 35.3 (#1059 g): globaler Pausen-Kontext für die 30-Tage-Karten –
+    # gleiche Datenquelle wie der PDF-Report-Banner (pausen_im_zeitraum).
+    pausen_banner = pausen_im_zeitraum(
+        TrainingsPause.objects.filter(user=request.user),
+        heute - timedelta(days=30),
+        heute,
+    )
+
     # Phase 21.1: Muskelgruppen-Balance Soll-Bereich
     muscle_soll = _calc_muscle_soll_bereiche(stats_code, request.user)
 
@@ -2557,6 +2566,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "svg_muscle_data_json": json.dumps(svg_muscle_data),
         "rpe10_anteil": rpe10_anteil,
         "rpe_quality_windowed": rpe_quality_windowed,
+        "pausen_banner": pausen_banner,
         # Phase 21
         "muscle_soll_json": json.dumps(muscle_soll),
         "push_pull": push_pull,
