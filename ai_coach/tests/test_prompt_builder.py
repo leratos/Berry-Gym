@@ -393,6 +393,56 @@ def test_build_plateau_hint_block_splits_pr_attempt_from_variation():
     assert "Trizeps OH (Kurzhantel)" in block
 
 
+def test_build_plateau_hint_block_reentry_ohne_variationsrat():
+    """Phase 35.1 / PR-#209-Codex: ``reentry`` (laufende Rampe) darf nicht im
+    generischen Variations-Bucket landen – der LLM soll die Übung unverändert
+    lassen und den Rampengewichten folgen, keine Tempo-/Winkel-Variation."""
+    builder = PromptBuilder()
+    hints = [
+        {
+            "uebung": "Langhantel-Rudern",
+            "muskelgruppe": "Rücken",
+            "status": "reentry",
+            "status_label": "Wiederaufbau nach Pause",
+        }
+    ]
+    block = builder._build_plateau_hint_block(hints)
+    assert block is not None
+    assert "Langhantel-Rudern" in block
+    assert "WIEDEREINSTIEGS-RAMPE" in block
+    assert "Rampengewichten" in block
+    # Reine reentry-Liste darf weder Variations- noch PR-Rat tragen.
+    assert "Frequenz-/Tempo-Variation" not in block
+    assert "PR-VERSUCH" not in block
+    assert "KEINE zusätzlichen Sätze" in block
+
+
+def test_build_plateau_hint_block_splits_reentry_von_variation():
+    """Mischfall: Plateau-Übung bekommt Variation, Rampen-Übung den
+    Wiedereinstiegs-Block – beide erscheinen mit ihren Übungen."""
+    builder = PromptBuilder()
+    hints = [
+        {
+            "uebung": "Bankdrücken (Langhantel)",
+            "muskelgruppe": "Brust",
+            "status": "plateau",
+            "status_label": "Plateau",
+        },
+        {
+            "uebung": "Hammer Curls (Kurzhantel)",
+            "muskelgruppe": "Bizeps",
+            "status": "reentry",
+            "status_label": "Wiederaufbau nach Pause",
+        },
+    ]
+    block = builder._build_plateau_hint_block(hints)
+    assert block is not None
+    assert "Frequenz-/Tempo-Variation" in block  # Plateau-Übung
+    assert "WIEDEREINSTIEGS-RAMPE" in block  # Rampen-Übung
+    assert "Bankdrücken (Langhantel)" in block
+    assert "Hammer Curls (Kurzhantel)" in block
+
+
 def test_build_user_prompt_inserts_plateau_block():
     """Phase 30.3: wird ``plateau_hints`` übergeben, taucht der
     Soft-Hint-Block im Prompt auf."""
