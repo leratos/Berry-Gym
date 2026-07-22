@@ -7,6 +7,15 @@
     <style>
         @page {
             margin: 2cm 1.5cm 2.5cm 1.5cm;
+            {% if pdf_engine == 'weasyprint' %}
+            /* #1060: WeasyPrint kennt die xhtml2pdf-Vendor-Tags im Footer
+               nicht – Seitenzahlen hier via CSS-Counter. */
+            @bottom-center {
+                content: "Seite " counter(page) " von " counter(pages);
+                font-size: 8px;
+                color: #6B6660;
+            }
+            {% endif %}
         }
 
         {% if pdf_engine == 'weasyprint' %}
@@ -414,9 +423,14 @@
     </style>
 </head>
 <body>
+    {% if pdf_engine != 'weasyprint' %}
+    {% comment %} #1060: xhtml2pdf-Pfad – Vendor-Tags liefern die Seitenzahlen.
+       Unter WeasyPrint werden die Tags ignoriert und der Footer zeigte
+       "Seite von" ohne Zahlen; dort übernimmt der @page-Counter (siehe CSS). {% endcomment %}
     <div id="page-footer">
         Seite <pdf:pagenumber/> von <pdf:pagecount/>
     </div>
+    {% endif %}
     <!-- DECKBLATT (Seite 1) -->
     <div class="cover-page">
         <div class="cover-title">Training Report</div>
@@ -450,8 +464,8 @@
             <strong>Erstellt am:</strong> {{ current_date|date:"d.m.Y H:i" }}
         </div>
 
-        {# Phase 35.3 (#1059 g): globaler Pausen-Kontext im Report-Kopf – eine
-           Stelle, alle zeitfenster-basierten Sektionen profitieren. #}
+        {% comment %} Phase 35.3 (#1059 g): globaler Pausen-Kontext im Report-Kopf – eine
+           Stelle, alle zeitfenster-basierten Sektionen profitieren. {% endcomment %}
         {% if pausen_banner %}
         <div class="warning-box" style="margin-top: 12px; font-size: 10px;">
             <strong>Hinweis:</strong> Der Berichtszeitraum enthält {{ pausen_banner.tage }} dokumentierte Pausentage{% if pausen_banner.medizinisch %} (medizinisch){% endif %}
@@ -464,9 +478,9 @@
     <pdf:nextpage />
 
     <!-- INHALTSVERZEICHNIS (Seite 2) -->
-    {# Phase 25.4: ToC wird aus der Sections-Liste im Context generiert (View),
+    {% comment %} Phase 25.4: ToC wird aus der Sections-Liste im Context generiert (View),
        die Numerierung folgt aus forloop.counter. Jeder Eintrag verlinkt auf den
-       <a name="..."></a>-Anker im jeweiligen Section-H1. #}
+       <a name="..."></a>-Anker im jeweiligen Section-H1. {% endcomment %}
     <h1>Inhaltsverzeichnis</h1>
     <table style="border: none; font-size: 11px; line-height: 2.2;">
         {% for sec in sections %}
@@ -666,12 +680,12 @@
                 </td>
                 {% if vormonats_delta %}<td>-</td>{% endif %}
                 <td>
-                    {# Phase 35.2 (#1059 a): wertende Gewichts-Labels entfernt –
+                    {% comment %} Phase 35.2 (#1059 a): wertende Gewichts-Labels entfernt –
                        sie bewerteten z. B. krankheitsbedingten Gewichtsverlust
                        positiv; solche Bewertungen fallen unter User-Entscheidung
                        #1053/2 (Verbotsliste: test_empfehlung_textregeln).
                        Die Spalte beschreibt jetzt nur noch die Richtung; der
-                       Muskelabbau-Risiko-Zweig (trainingsbezogen) bleibt. #}
+                       Muskelabbau-Risiko-Zweig (trainingsbezogen) bleibt. {% endcomment %}
                     {% if gewichts_rate > 0.1 %}Zunahme
                     {% elif gewichts_rate >= -0.1 %}Stabil
                     {% elif gewichts_rate > -1.0 %}Verlust
@@ -729,10 +743,10 @@
     </div>
     {% endif %}
 
-    {# Phase 25.7: Verlauf-Tabelle reduziert auf stabilere Werte.
+    {% comment %} Phase 25.7: Verlauf-Tabelle reduziert auf stabilere Werte.
        Entfernt: FFMI (aus Gewicht + KFA ableitbar), Wasser % (höchste BIA-
        Unzuverlässigkeit), BMR (erscheint bereits in der „Aktuell"-Tabelle).
-       BIA-Detailwerte bleiben für interessierte Nutzer in den Detail-Sichten. #}
+       BIA-Detailwerte bleiben für interessierte Nutzer in den Detail-Sichten. {% endcomment %}
     <h3>Verlauf</h3>
     <table repeat="1">
         <thead>
@@ -911,9 +925,9 @@
     <!-- TRAININGSFORTSCHRITT -->
     <h1><a name="trainingsfortschritt"></a>Trainingsfortschritt</h1>
 
-    {# Phase 25.3: Top-5-Tabelle ist jetzt die Übersicht über Kraft + Plateau-Status.
+    {% comment %} Phase 25.3: Top-5-Tabelle ist jetzt die Übersicht über Kraft + Plateau-Status.
        Die früher separate Plateau-Analyse-Sektion ist entfallen; ihre Begründungs-
-       Daten wandern als Annotationen in die Übungsdetails-Charts. #}
+       Daten wandern als Annotationen in die Übungsdetails-Charts. {% endcomment %}
     <h2>Kraftentwicklung Top 5</h2>
     {% if kraftentwicklung %}
     <table repeat="1">
@@ -1177,8 +1191,8 @@
                 </div>
                 {% if card.result %}
                 <div style="font-size: 18px; font-weight: bold; margin: 4px 0;">{{ card.result.failure_rate }}%</div>
-                {# Phase 35.2 (#1059 f): das 4W-insufficient_data-Flag war bisher unsichtbar –
-                   die Karte zeigte einen Wert, den der Empfehlungstext zugleich für ungültig erklärte. #}
+                {% comment %} Phase 35.2 (#1059 f): das 4W-insufficient_data-Flag war bisher unsichtbar –
+                   die Karte zeigte einen Wert, den der Empfehlungstext zugleich für ungültig erklärte. {% endcomment %}
                 <div style="font-size: 8px; color: #6B6660;">RPE-10 · n={{ card.n_sets }}{% if card.insufficient_data %} (zu wenig – eingeschränkt aussagekräftig){% endif %}</div>
                 {% else %}
                 <div style="font-size: 14px; color: #6B6660; margin: 4px 0;">n.a.</div>
@@ -1217,11 +1231,11 @@
     </div>
     {% endif %}
 
-    {# Phase 35.2 (#1059 f): fällt primary auf "Gesamt" zurück (insufficient_4w),
+    {% comment %} Phase 35.2 (#1059 f): fällt primary auf "Gesamt" zurück (insufficient_4w),
        stammt die Empfehlungsliste aus der All-Time-Verteilung und trägt keinen
        Zeitfenster-Kontext ("Zu oft bis zum Versagen (15,1 %)" an jemanden mit
        32 Tagen Pause). Die Kontextzeile in der Bewertungs-Box bleibt; die
-       kontextfreie Liste wird nicht gerendert (Phase-23-Lektion). #}
+       kontextfreie Liste wird nicht gerendert (Phase-23-Lektion). {% endcomment %}
     {% if primary.empfehlungen and not rqw.insufficient_4w %}
     <div class="recommendation-box">
         <h3 style="margin-top: 0;">Empfehlungen:</h3>
@@ -1326,9 +1340,9 @@
 
     <div class="recommendation-box">
         <p><strong>Empfehlung:</strong> {{ fatigue_analysis.empfehlung }}</p>
-        {# Phase 35.2: "Geschätzte Deload-Woche" entfernt – der Wert war ein
+        {% comment %} Phase 35.2: "Geschätzte Deload-Woche" entfernt – der Wert war ein
            hartkodiertes "heute + 6 Wochen" (keine Heuristik) und täuschte
-           Präzision vor (#1061, Deload-Prüfauftrag). #}
+           Präzision vor (#1061, Deload-Prüfauftrag). {% endcomment %}
     </div>
     {% else %}
     <div class="info-box warning">
@@ -1363,9 +1377,9 @@
         </ul>
     </div>
     {% else %}
-    {# Phase 35.2 (#1059 e): Empty-State differenzieren – der Onboarding-Satz
+    {% comment %} Phase 35.2 (#1059 e): Empty-State differenzieren – der Onboarding-Satz
        ("Beginne mit regelmäßigem Training") ist bei vorhandener Historie falsch
-       und widersprach im Pausen-Report den Lifetime-Werten zwei Seiten weiter. #}
+       und widersprach im Pausen-Report den Lifetime-Werten zwei Seiten weiter. {% endcomment %}
     {% if gesamt_trainings %}
     <div class="info-box">Im 30-Tage-Fenster liegt keine Muskelgruppe im optimalen Bereich.</div>
     {% else %}
