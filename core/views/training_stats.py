@@ -60,6 +60,7 @@ from ..utils.week_classification import (
     letzte_iso_wochen_keys,
     pausen_ausfall_wochen,
     pausen_grenze_keys,
+    pausen_im_zeitraum,
 )
 from .body_tracking import _prepare_body_chart_data
 
@@ -2145,7 +2146,19 @@ def _calc_push_pull_ratio(user) -> dict | None:
     if push == 0 and pull == 0:
         return None
 
-    ratio = round(push / pull, 2) if pull > 0 else (99.0 if push > 0 else 0.0)
+    # Phase 35.2 (#1059 c, Live-Zwilling): eine Seite ohne Sätze → Ratio
+    # degeneriert (0,0 galt als "Ausgeglichen" bzw. 99,0 als "Push-Dominanz").
+    # Aus einseitigen Daten wird keine Balance bewertet.
+    if push == 0 or pull == 0:
+        return {
+            "push": push,
+            "pull": pull,
+            "ratio": "–",
+            "farbe": "secondary",
+            "status_text": "Nicht bewertbar – nur eine Seite im Zeitraum trainiert",
+        }
+
+    ratio = round(push / pull, 2)
     if ratio <= 1.3:
         farbe = "success"
         status_text = "Ausgeglichen"
@@ -2176,6 +2189,13 @@ def _calc_plateau_live(user) -> list[dict]:
     altes Verhalten (alle Übungen) wenn kein aktiver Plan ermittelbar ist.
     """
     heute = timezone.now()
+
+    # Phase 35.1: laufende Wiedereinstiegs-Rampe EINMAL ermitteln (bewusst
+    # außerhalb des Dashboard-Caches, 33.3-Entscheidung) – der Klassifikator
+    # zeigt dann "Wiederaufbau nach Pause" statt "Rückschritt".
+    from ..utils.reentry import get_active_reentry_pause
+
+    reentry_pause = get_active_reentry_pause(user, today=heute.date())
 
     # Phase 22: Filter auf aktive Planübungen
     active_uebung_ids = get_active_plan_exercise_ids(user)
@@ -2257,6 +2277,7 @@ def _calc_plateau_live(user) -> list[dict]:
             reference_date=heute,
             progression_pro_monat=progression_pro_monat,
             training_history_days=training_history_days,
+            reentry_pause=reentry_pause,
         )
 
         result.append(
@@ -2493,6 +2514,14 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         plan_start=rpe_plan_start,
     )
 
+    # Phase 35.3 (#1059 g): globaler Pausen-Kontext für die 30-Tage-Karten –
+    # gleiche Datenquelle wie der PDF-Report-Banner (pausen_im_zeitraum).
+    pausen_banner = pausen_im_zeitraum(
+        TrainingsPause.objects.filter(user=request.user),
+        heute - timedelta(days=30),
+        heute,
+    )
+
     # Phase 21.1: Muskelgruppen-Balance Soll-Bereich
     muscle_soll = _calc_muscle_soll_bereiche(stats_code, request.user)
 
@@ -2537,6 +2566,7 @@ def training_stats(request: HttpRequest) -> HttpResponse:
         "svg_muscle_data_json": json.dumps(svg_muscle_data),
         "rpe10_anteil": rpe10_anteil,
         "rpe_quality_windowed": rpe_quality_windowed,
+        "pausen_banner": pausen_banner,
         # Phase 21
         "muscle_soll_json": json.dumps(muscle_soll),
         "push_pull": push_pull,

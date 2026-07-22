@@ -362,10 +362,11 @@ class TestFatigueIndex(StatsTestBase):
         self.assertIn("bewertung", result)
         self.assertIn("empfehlung", result)
 
-    def test_naechste_deload_string(self):
+    def test_naechste_deload_entfernt(self):
+        """Phase 35.2: der Pseudo-Wert (hartkodiert heute+6 Wochen) ist raus –
+        er darf nicht wieder auftauchen, ohne eine echte Heuristik zu sein."""
         result = calculate_fatigue_index([], self._get_rpe_saetze(), self._alle_trainings())
-        # Muss ein Datum-String sein (DD.MM.YYYY)
-        self.assertRegex(result["naechste_deload"], r"\d{2}\.\d{2}\.\d{4}")
+        self.assertNotIn("naechste_deload", result)
 
     # Phase 24.1b: Volumen-Spike-Komponente muss denselben Klassifikator wie
     # die 24.1-Volumen-Diagnose nutzen (Deload-/Plan-Wechsel-/Laufende-Woche-Skip).
@@ -972,6 +973,43 @@ class TestProgressionClassification(StatsTestBase):
             self._add_session(days_ago=days_ago, gewicht=80, rpe=rpe)
         result = self._classify()
         # Trotz sinkendem RPE: Regression schlägt vor, weil Gewicht massiv abgefallen ist
+        self.assertEqual(result["status"], "regression")
+
+    # ── Phase 35.1: Wiedereinstiegs-Rampe ────────────────────────────────────
+    def _classify_mit_rampe(self, reentry_pause):
+        _, pr = _find_best_1rm_satz(self._alle_saetze())
+        return classify_progression_status(self._alle_saetze(), pr, reentry_pause=reentry_pause)
+
+    def test_reentry_statt_regression_bei_laufender_rampe(self):
+        """Kernbug #1059 (b): Rampengewichte (Faktor 0,85 → Drop > 5 %) während
+        laufender Rampe → ``reentry`` ("Wiederaufbau nach Pause"), nicht
+        ``regression`` – der Report bestraft sonst die eigene Empfehlung."""
+        self._add_session(days_ago=40, gewicht=80, wdh=5)  # All-Time-PR vor Pause
+        self._add_session(days_ago=1, gewicht=68, wdh=5)  # 0,85-Rampengewicht
+        result = self._classify_mit_rampe(reentry_pause=object())
+        self.assertEqual(result["status"], "reentry")
+        self.assertEqual(result["status_label"], "Wiederaufbau nach Pause")
+        self.assertEqual(result["status_farbe"], "info")
+        self.assertEqual(result["status_icon"], "bi-arrow-repeat")
+        self.assertEqual(result["status_glyph"], "△")
+        # Diagnose-Feld bleibt gefüllt (Übungsdetail-Annotation)
+        self.assertGreater(result["weight_drop_pct"], 5)
+
+    def test_rampe_ohne_drop_klassifiziert_normal(self):
+        """Keine Übersuppression: Rampe aktiv, aber Übung auf PR-Niveau
+        (frischer PR) → normale Klassifikation, kein ``reentry``."""
+        self._add_session(days_ago=40, gewicht=70)
+        self._add_session(days_ago=2, gewicht=80)  # frischer PR
+        result = self._classify_mit_rampe(reentry_pause=object())
+        self.assertEqual(result["status"], "active_progression")
+
+    def test_ohne_rampe_bleibt_regression(self):
+        """Positivkontrolle: ohne Rampe (``reentry_pause=None``) bleibt der
+        Drop > 5 % weiterhin ``regression`` – echtes Detraining wird nicht
+        unterdrückt."""
+        self._add_session(days_ago=40, gewicht=80, wdh=5)
+        self._add_session(days_ago=1, gewicht=68, wdh=5)
+        result = self._classify_mit_rampe(reentry_pause=None)
         self.assertEqual(result["status"], "regression")
 
     def test_pause_when_no_current_data(self):

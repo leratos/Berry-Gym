@@ -3923,3 +3923,16 @@ msgstr "running for %(weeks)s weeks."
 #, python-format
 msgid "läuft seit %(weeks)s Wochen (%(netto)s Trainingswochen, %(pausen)s Wochen Pause)."
 msgstr "running for %(weeks)s weeks (%(netto)s training weeks, %(pausen)s weeks of break)."
+
+# === Phase 35.1: Wiederaufbau-Status (training_stats.html) ===
+msgid "Wiedereinstiegs-Rampe läuft – reduzierte Gewichte sind empfohlen, kein Rückschritt"
+msgstr "Return-to-training ramp active – reduced weights are recommended, not a regression"
+
+# === Phase 35.2: RPE-Karten-Flag (training_stats.html) ===
+msgid "zu wenig"
+msgstr "too few"
+
+# === Phase 35.3: Pausen-Banner (training_stats.html) ===
+#, python-format
+msgid "Die letzten 30 Tage enthalten %(tage)s dokumentierte Pausentage – zeitfenster-basierte Auswertungen sind eingeschränkt aussagekräftig."
+msgstr "The last 30 days include %(tage)s documented break days – time-window-based analyses have limited significance."

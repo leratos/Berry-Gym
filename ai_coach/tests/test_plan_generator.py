@@ -1956,6 +1956,8 @@ class TestComputePlateauHints:
         canonical = frozenset(
             {
                 "regression",
+                # Phase 35.1: Wiederaufbau nach Pause (laufende Rampe)
+                "reentry",
                 "active_progression",
                 "observe",
                 "pause",

@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase
 
 from core.chart_generator import (
+    _heatmap_grid_range,
     _rgba_to_hex,
     _status_to_rgba,
     generate_body_map_with_data,
@@ -25,6 +26,7 @@ from core.chart_generator import (
     generate_exercise_progression_chart,
     generate_muscle_heatmap,
     generate_push_pull_pie,
+    generate_training_heatmap,
     generate_volume_chart,
 )
 
@@ -111,6 +113,105 @@ class TestGenerateBodyMapWithData(TestCase):
         stats = [{"key": "BRUST", "name": "Brust", "saetze": 10, "status": "optimal"}]
         result = generate_body_map_with_data(stats)
         self.assertIsNotNone(result)
+
+
+class TestGenerateTrainingHeatmap(TestCase):
+    """Phase 35.3: Trainings-Heatmap inkl. Pausen-Marker (#1059 g)."""
+
+    def _dates(self):
+        return [
+            {"datum": date(2026, 7, 20), "intensitaet": 0.8},
+            {"datum": date(2026, 6, 15), "intensitaet": 0.5},
+        ]
+
+    def test_leere_daten_gibt_none(self):
+        self.assertIsNone(generate_training_heatmap([]))
+
+    def test_ohne_pausen_liefert_png(self):
+        result = generate_training_heatmap(self._dates())
+        self.assertIsNotNone(result)
+        self.assertTrue(base64.b64decode(result).startswith(b"\x89PNG"))
+
+    def test_mit_pausen_liefert_png(self):
+        """Pause-Spannen (aus pausen_im_zeitraum) dürfen das Rendering nicht
+        brechen – Marker-Zellen + Legende werden gezeichnet."""
+        result = generate_training_heatmap(
+            self._dates(),
+            pause_ranges=[(date(2026, 6, 18), date(2026, 7, 19))],
+        )
+        self.assertIsNotNone(result)
+        self.assertTrue(base64.b64decode(result).startswith(b"\x89PNG"))
+
+    def test_pausen_ausserhalb_gridfensters_unproblematisch(self):
+        result = generate_training_heatmap(
+            self._dates(),
+            pause_ranges=[(date(2020, 1, 1), date(2020, 2, 1))],
+        )
+        self.assertIsNotNone(result)
+
+    @staticmethod
+    def _png_enthaelt_farbe(b64_png: str, rgb: tuple) -> bool:
+        import io as _io
+
+        from PIL import Image
+
+        img = Image.open(_io.BytesIO(base64.b64decode(b64_png))).convert("RGB")
+        return any(farbe == rgb for _, farbe in img.getcolors(maxcolors=1_000_000))
+
+    def test_pause_nach_letztem_training_bleibt_im_grid(self):
+        """PR-#209-Codex (P2): letzte Session VOR Pausenbeginn (15.06.), Pause
+        18.06.–19.07. – das Grid darf nicht am letzten Trainingstag enden,
+        sonst verschwinden fast alle Pausen-Marker trotz Banner. Pixel-Check
+        auf die Markerfarbe #B9CFE2."""
+        result = generate_training_heatmap(
+            [{"datum": date(2026, 6, 15), "intensitaet": 0.8}],
+            pause_ranges=[(date(2026, 6, 18), date(2026, 7, 19))],
+        )
+        self.assertIsNotNone(result)
+        self.assertTrue(
+            self._png_enthaelt_farbe(result, (0xB9, 0xCF, 0xE2)),
+            "Pause-Markerfarbe fehlt im gerenderten Grid",
+        )
+
+    def test_ohne_pausen_keine_markerfarbe(self):
+        """Kontrolle: ohne pause_ranges taucht die Markerfarbe nicht auf."""
+        result = generate_training_heatmap(self._dates())
+        self.assertFalse(self._png_enthaelt_farbe(result, (0xB9, 0xCF, 0xE2)))
+
+    def test_grid_anker_nur_training(self):
+        """Ohne Pausen/Report-Datum endet das Grid am Sonntag nach dem
+        letzten Trainingstag (Altverhalten)."""
+        _, grid_end, num_weeks = _heatmap_grid_range(date(2026, 6, 15))
+        self.assertEqual(grid_end, date(2026, 6, 21))  # Mo 15.06. → So 21.06.
+        self.assertEqual(num_weeks, 12)
+
+    def test_grid_anker_beruecksichtigt_pausen_ende(self):
+        """PR-#209-Codex R1: Pausen-Ende nach letztem Training verschiebt den Anker."""
+        _, grid_end, _ = _heatmap_grid_range(
+            date(2026, 6, 15), pause_ranges=[(date(2026, 6, 18), date(2026, 7, 19))]
+        )
+        self.assertEqual(grid_end, date(2026, 7, 19))  # So 19.07.
+
+    def test_grid_anker_beruecksichtigt_report_datum(self):
+        """PR-#209-Codex R3: Pause endet 01.07., Report am 21.07. ohne neues
+        Training – das Grid muss bis zum Report-Datum reichen, sonst fehlen
+        die trainingsfreien Tage 06.–21.07. im 12-Wochen-Fenster."""
+        _, grid_end, _ = _heatmap_grid_range(
+            date(2026, 6, 15),
+            pause_ranges=[(date(2026, 6, 18), date(2026, 7, 1))],
+            end_date=date(2026, 7, 21),
+        )
+        self.assertEqual(grid_end, date(2026, 7, 26))  # Di 21.07. → So 26.07.
+
+    def test_mit_end_date_liefert_png(self):
+        """Smoke: end_date-Anker bricht das Rendering nicht."""
+        result = generate_training_heatmap(
+            [{"datum": date(2026, 6, 15), "intensitaet": 0.8}],
+            pause_ranges=[(date(2026, 6, 18), date(2026, 7, 1))],
+            end_date=date(2026, 7, 21),
+        )
+        self.assertIsNotNone(result)
+        self.assertTrue(self._png_enthaelt_farbe(result, (0xB9, 0xCF, 0xE2)))
 
 
 class TestGenerateMuscleHeatmap(TestCase):

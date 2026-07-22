@@ -94,3 +94,35 @@ def test_quelltexte_ohne_ernaehrungsbegriffe(relpfad):
         if treffer is not None:
             verstoesse.append(f"{relpfad}:{nr}: '{treffer.group(0)}': {zeile.strip()}")
     assert not verstoesse, "Ernährungsbegriffe gefunden:\n" + "\n".join(verstoesse)
+
+
+# Phase 35.4 (#1059 a): wertende Körpergewichts-Labels sind dieselbe
+# Bewertungsklasse (35.2 hat sie auf deskriptive Richtungs-Labels reduziert).
+# Der Wortstamm-Scan oben kann sie nicht fangen → eigene Verbotsliste.
+VERBOTENE_GEWICHTS_LABELS = [
+    "Guter Verlust",
+    "Moderater Verlust",
+    "Schnelle Zunahme",
+    "Leichte Zunahme",
+    "Guter Aufbau",
+]
+
+
+@pytest.mark.parametrize(
+    "relpfad",
+    [
+        "core/templates/core/training_pdf_simple.html",
+        "core/templates/core/dashboard.html",
+        "core/templates/core/training_stats.html",
+    ],
+)
+def test_templates_ohne_wertende_gewichts_labels(relpfad):
+    """Kein Template bewertet eine Körpergewichts-Rate mit Lob/Tadel-Labels –
+    z. B. „Guter Verlust" auf krankheitsbedingtem Gewichtsverlust (#1059 a)."""
+    quelle = (BASE_DIR / relpfad).read_text(encoding="utf-8")
+    verstoesse = []
+    for nr, zeile in enumerate(quelle.splitlines(), start=1):
+        for label in VERBOTENE_GEWICHTS_LABELS:
+            if label in zeile:
+                verstoesse.append(f"{relpfad}:{nr}: '{label}': {zeile.strip()}")
+    assert not verstoesse, "Wertende Gewichts-Labels gefunden:\n" + "\n".join(verstoesse)

@@ -176,6 +176,7 @@ _PROGRESSION_STATUS_ICON = {
     "active_progression_paused": "bi-graph-up-arrow",
     "observe": "bi-eye",
     "pause": "bi-pause-circle",
+    "reentry": "bi-arrow-repeat",
     "consolidation": "bi-arrow-left-right",
     "consolidation_ready": "bi-arrow-up-circle",
     "consolidation_overlong": "bi-hourglass-split",
@@ -190,6 +191,7 @@ _PROGRESSION_STATUS_GLYPH = {
     "active_progression_paused": "▲",
     "observe": "○",
     "pause": "‖",
+    "reentry": "△",
     "consolidation": "◇",
     "consolidation_ready": "◆",
     "consolidation_overlong": "◆",
@@ -217,12 +219,19 @@ def classify_progression_status(
     *,
     progression_pro_monat=None,
     training_history_days=None,
+    reentry_pause=None,
 ):
     """
     Klassifiziert den Progressions-Status einer einzelnen Übung (Phase 23.3).
 
     Status-Hierarchie (höchste Priorität zuerst):
-        1. ``regression``                  – >5 % 1RM-Drop im aktuellen 4w-Fenster vs. PR
+        1. ``regression``                  – >5 % 1RM-Drop im aktuellen 4w-Fenster vs. PR;
+                                             während einer laufenden Wiedereinstiegs-Rampe
+                                             (Phase 35.1, ``reentry_pause`` gesetzt)
+                                             stattdessen ``reentry`` („Wiederaufbau nach
+                                             Pause") – die reduzierten Rampengewichte
+                                             (reentry.py, Faktor ≤ 1) sind empfohlen,
+                                             kein Rückschritt
         2. ``active_progression``          – PR ≤ 7 Tage alt
         3. ``observe``                     – PR 8–14 Tage alt
         4. ``pause``                       – < 2 Sätze in den letzten 4w
@@ -254,6 +263,11 @@ def classify_progression_status(
         training_history_days: int oder None – Tage zwischen erstem Satz der Übung
             und dem PR-Satz. Optional; gemeinsam mit ``progression_pro_monat`` für
             den Override genutzt (Schutz vor zu kurzer Historie).
+        reentry_pause: ``TrainingsPause`` oder None – Ergebnis von
+            ``get_active_reentry_pause(user)``, vom Aufrufer EINMAL berechnet und
+            durchgereicht (Phase 35.1; reentry bleibt wie in 33.3 außerhalb des
+            Dashboard-Caches). Gesetzt = Rampe läuft → Regressions-Bedingung wird
+            als ``reentry`` klassifiziert statt als ``regression``.
 
     Returns:
         dict mit:
@@ -307,11 +321,22 @@ def classify_progression_status(
         )
         result["weight_drop_pct"] = round((pr_1rm - cur_best_1rm) / pr_1rm * 100, 2)
 
-    # 1) Regression schlägt alles
+    # 1) Regression schlägt alles – außer während einer laufenden
+    # Wiedereinstiegs-Rampe (Phase 35.1): dort trainiert der User die vom Tool
+    # selbst empfohlenen reduzierten Gewichte; der Drop vs. All-Time-PR ist dann
+    # gewollter Wiederaufbau, kein Rückschritt. Ohne Regressions-Bedingung läuft
+    # die normale Klassifikation weiter (keine Übersuppression).
     if (
         result["weight_drop_pct"] is not None
         and result["weight_drop_pct"] > REGRESSION_WEIGHT_DROP_PCT
     ):
+        if reentry_pause is not None:
+            result.update(
+                status="reentry",
+                status_label="Wiederaufbau nach Pause",
+                status_farbe="info",
+            )
+            return _finalize_progression(result)
         result.update(status="regression", status_label="Rückschritt", status_farbe="danger")
         return _finalize_progression(result)
 
@@ -410,9 +435,12 @@ def classify_progression_status(
     return _finalize_progression(result)
 
 
-def calculate_plateau_analysis(alle_saetze, top_uebungen):
+def calculate_plateau_analysis(alle_saetze, top_uebungen, *, reentry_pause=None):
     """
     Analyzes progression for top exercises to detect plateaus.
+
+    ``reentry_pause``: siehe :func:`classify_progression_status` (Phase 35.1) –
+    wird pro Übung unverändert durchgereicht.
 
     Returns list with:
     - uebung: Exercise name
@@ -458,6 +486,7 @@ def calculate_plateau_analysis(alle_saetze, top_uebungen):
             reference_date=heute,
             progression_pro_monat=progression_pro_monat,
             training_history_days=training_history_days,
+            reentry_pause=reentry_pause,
         )
 
         plateau_analysis.append(
@@ -649,7 +678,7 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
     Returns dict with:
     - fatigue_index, bewertung, bewertung_farbe, empfehlung
     - volumen_spike, rpe_steigend, deload_empfohlen
-    - naechste_deload, warnungen
+    - warnungen
     """
     from core.utils.week_classification import select_comparable_weeks
     from core.views.training_stats import (
@@ -705,8 +734,10 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
         warnungen.extend(cardio_warns)
 
     # Deload-Empfehlung + Bewertung (identisch mit Dashboard)
+    # Phase 35.2: "naechste_deload" entfernt – der Wert war ein hartkodiertes
+    # ``heute + 6 Wochen`` ohne Bezug zu Blockdauer, Deload-Historie oder
+    # Pausen; er täuschte eine Heuristik vor, die nie existierte (#1061).
     deload_empfohlen = fatigue_index >= 50
-    naechste_deload = heute + timedelta(weeks=6)
 
     if fatigue_index >= 60:
         bewertung = "Hoch"
@@ -732,7 +763,6 @@ def calculate_fatigue_index(weekly_volume_data, rpe_saetze, alle_trainings):
         "volumen_spike": volumen_spike,
         "rpe_steigend": rpe_steigend,
         "deload_empfohlen": deload_empfohlen,
-        "naechste_deload": naechste_deload.strftime("%d.%m.%Y"),
         "warnungen": warnungen,
         "bewertung": bewertung,
         "bewertung_farbe": bewertung_farbe,

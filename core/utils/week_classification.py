@@ -196,6 +196,52 @@ def pausen_ausfall_wochen(
     return count
 
 
+def pausen_im_zeitraum(pausen, start_datum: date, end_datum: date) -> dict | None:
+    """Dokumentierte Pausen (≥ ``PAUSE_BOUNDARY_MIN_DAYS``) mit Überlappung zu
+    ``[start_datum, end_datum]`` (beide inklusiv).
+
+    Phase 35.3 (#1059 g, Report-Banner): EINE Datenquelle für den globalen
+    Pausen-Hinweis in Live-Statistik und PDF-Report sowie für die
+    Heatmap-Pausenmarker. Komponiert ``_clamp_pausen`` (gleiche Clamp-/
+    Zukunfts-Semantik wie alle Wochen-Pfade) – keine Parallel-Logik.
+    Überlappende Spannen werden gemerged, damit ``tage`` nicht doppelt zählt.
+
+    Returns:
+        ``{"spannen": [(start, end), ...], "tage": int, "medizinisch": bool}``
+        oder ``None``, wenn keine qualifizierende Pause den Zeitraum berührt.
+    """
+    if start_datum > end_datum:
+        return None
+    roh: list[tuple[date, date]] = []
+    medizinisch = False
+    for p in pausen:
+        clamped = _clamp_pausen([p], end_datum)
+        if not clamped:
+            continue
+        s, e, dauer_tage = clamped[0]
+        if dauer_tage < PAUSE_BOUNDARY_MIN_DAYS:
+            continue
+        overlap_start = max(s, start_datum)
+        overlap_end = min(e, end_datum)
+        if overlap_start > overlap_end:
+            continue
+        roh.append((overlap_start, overlap_end))
+        if getattr(p, "aerztliche_freigabe_noetig", False):
+            medizinisch = True
+    if not roh:
+        return None
+    roh.sort()
+    spannen: list[tuple[date, date]] = [roh[0]]
+    for s, e in roh[1:]:
+        last_s, last_e = spannen[-1]
+        if s <= last_e + timedelta(days=1):
+            spannen[-1] = (last_s, max(last_e, e))
+        else:
+            spannen.append((s, e))
+    tage = sum((e - s).days + 1 for s, e in spannen)
+    return {"spannen": spannen, "tage": tage, "medizinisch": medizinisch}
+
+
 def _classify_weeks_from_sessions(alle_trainings) -> tuple[set, set, dict, set]:
     """Return (deload_weeks, deload_majority_weeks, routines_per_week) from sessions.
 

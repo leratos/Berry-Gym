@@ -999,11 +999,46 @@ def generate_body_trend_chart(koerperwerte: list) -> str | None:
     return image_base64
 
 
-def generate_training_heatmap(training_dates: list[dict]) -> str | None:
+def _heatmap_grid_range(last_activity, pause_ranges=None, end_date=None):
+    """Grid-Fenster der Trainings-Heatmap: 12 Wochen, endend am Sonntag des
+    jüngsten Ankers.
+
+    PR-#209-Codex (Runde 1+3): Anker = max(letzter Trainingstag, Pausen-Enden,
+    Report-Datum). Nur am Trainingstag verankert schnitt Pausen-Marker ab;
+    nur um Pausen-Enden ergänzt fehlten die trainingsfreien Tage zwischen
+    Pausenende und Report-Datum (z. B. Pause bis 01.07., Report 21.07. ohne
+    neues Training → Grid endete um den 05.07.).
+    """
+    from datetime import timedelta
+
+    anchor = last_activity
+    if pause_ranges:
+        anchor = max(anchor, max(e for _, e in pause_ranges))
+    if end_date is not None:
+        anchor = max(anchor, end_date)
+    days_to_sunday = (6 - anchor.weekday()) % 7
+    grid_end = anchor + timedelta(days=days_to_sunday)
+    num_weeks = 12
+    grid_start = grid_end - timedelta(days=num_weeks * 7 - 1)
+    return grid_start, grid_end, num_weeks
+
+
+def generate_training_heatmap(
+    training_dates: list[dict], pause_ranges=None, end_date=None
+) -> str | None:
     """GitHub-Contribution-Style Heatmap der Trainingsaktivität.
 
     Args:
         training_dates: Liste von dicts mit 'datum' (date) und 'intensitaet' (float 0-1).
+        pause_ranges: Optionale Liste von (start_date, end_date)-Spannen
+            dokumentierter Pausen (Phase 35.3, aus
+            ``week_classification.pausen_im_zeitraum``). Pausentage ohne
+            Training werden als eigene Zellfarbe markiert – gleiche
+            Pausen-Sichtbarkeit wie im Volumen-Chart (#1059 g), statt
+            stilles Grau "Kein Training".
+        end_date: Optionales Report-Datum als Grid-Anker (PR-#209-Codex R3):
+            ohne diesen Anker fehlen trainingsfreie Tage zwischen Pausenende
+            und Report-Erstellung im 12-Wochen-Fenster.
 
     Returns:
         Base64-encoded PNG oder None bei fehlenden Daten.
@@ -1024,13 +1059,11 @@ def generate_training_heatmap(training_dates: list[dict]) -> str | None:
     if not date_intensity:
         return None
 
-    # Determine grid range: last 12 weeks ending on the most recent Sunday
-    end_date = max(date_intensity.keys())
-    # Align to end-of-week (Sunday = 6 in weekday())
-    days_to_sunday = (6 - end_date.weekday()) % 7
-    grid_end = end_date + timedelta(days=days_to_sunday)
-    num_weeks = 12
-    grid_start = grid_end - timedelta(days=num_weeks * 7 - 1)
+    # Determine grid range: last 12 weeks ending on the most recent Sunday.
+    # Anker-Logik (Training/Pausen/Report-Datum) siehe _heatmap_grid_range.
+    grid_start, grid_end, num_weeks = _heatmap_grid_range(
+        max(date_intensity.keys()), pause_ranges=pause_ranges, end_date=end_date
+    )
 
     # Build grid: rows=weekdays (Mon-Sun), cols=weeks
     grid = np.zeros((7, num_weeks))
@@ -1065,6 +1098,25 @@ def generate_training_heatmap(training_dates: list[dict]) -> str | None:
 
     ax.set_title("Trainingsaktivität (12 Wochen)", fontsize=12, fontweight="bold", pad=10)
 
+    # Phase 35.3: Pausentage (ohne Training) als eigene Zellfarbe markieren –
+    # vorher war eine dokumentierte Pause hier nur ein grauer "Kein Training"-
+    # Fleck, während das Volumen-Chart daneben Pause-Marker trug.
+    pause_days_marked = False
+    if pause_ranges:
+        pause_color = "#B9CFE2"  # neutrales Blaugrau, bewusst außerhalb der Intensitäts-Skala
+        for p_start, p_end in pause_ranges:
+            current = max(p_start, grid_start)
+            last = min(p_end, grid_end)
+            while current <= last:
+                if current not in date_intensity:
+                    w = (current - grid_start).days // 7
+                    d = (current - grid_start).days % 7
+                    ax.add_patch(
+                        plt.Rectangle((w - 0.5, d - 0.5), 1, 1, linewidth=0, facecolor=pause_color)
+                    )
+                    pause_days_marked = True
+                current += timedelta(days=1)
+
     # Draw cell borders
     for i in range(7):
         for j in range(num_weeks):
@@ -1072,6 +1124,17 @@ def generate_training_heatmap(training_dates: list[dict]) -> str | None:
                 (j - 0.5, i - 0.5), 1, 1, linewidth=0.5, edgecolor="white", facecolor="none"
             )
             ax.add_patch(rect)
+
+    if pause_days_marked:
+        from matplotlib.patches import Patch
+
+        ax.legend(
+            handles=[Patch(facecolor=pause_color, label="Pause (dokumentiert)")],
+            loc="upper left",
+            bbox_to_anchor=(0, -0.15),
+            frameon=False,
+            fontsize=7,
+        )
 
     # Colorbar
     cbar = plt.colorbar(im, ax=ax, orientation="horizontal", fraction=0.08, pad=0.25)

@@ -8,15 +8,29 @@ Volumen-Anstiegs-Warnung/-Bewertung** erzeugt.
 Bekannte Vergleichsstellen (Stand Umsetzung – Liste bewusst als *unvollständig*
 behandeln; ein neu entdeckter Pfad gehört hier ergänzt):
 
-| # | Pfad                         | Funktion                                            |
-|---|------------------------------|-----------------------------------------------------|
-| 1 | Export/PDF Fatigue-Spike     | advanced_stats.calculate_fatigue_index              |
-| 2 | Dashboard Fatigue-Spike      | training_stats._calculate_fatigue_index             |
-| 3 | Dashboard Form-Index Volumen | training_stats._get_volume_trend_score              |
-| 4 | Stats-Seite Volumen-Warnung  | training_stats._detect_volume_warnings              |
-| 5 | Export Volumen-Trend         | stats_collector.calc_volume_trend_weekly            |
-| 6 | Blockdauer/Phasenwechsel     | periodization.get_block_age_warning (Netto via      |
-|   | (Phase 34)                   | week_classification.pausen_ausfall_wochen)          |
+| #  | Pfad                          | Funktion                                            |
+|----|-------------------------------|-----------------------------------------------------|
+| 1  | Export/PDF Fatigue-Spike      | advanced_stats.calculate_fatigue_index              |
+| 2  | Dashboard Fatigue-Spike       | training_stats._calculate_fatigue_index             |
+| 3  | Dashboard Form-Index Volumen  | training_stats._get_volume_trend_score              |
+| 4  | Stats-Seite Volumen-Warnung   | training_stats._detect_volume_warnings              |
+| 5  | Export Volumen-Trend          | stats_collector.calc_volume_trend_weekly            |
+| 6  | Blockdauer/Phasenwechsel      | periodization.get_block_age_warning (Netto via      |
+|    | (Phase 34)                    | week_classification.pausen_ausfall_wochen)          |
+| 7  | Rückschritt/Wiederaufbau      | advanced_stats.classify_progression_status          |
+|    | (Phase 35.1)                  | (reentry_pause → Status "reentry" statt Bestrafung  |
+|    |                               | der eigenen Rampen-Empfehlung)                      |
+| 8  | Push/Pull-Balance             | stats_collector.collect_push_pull (PDF) +           |
+|    | (Phase 35.2)                  | training_stats._calc_push_pull_ratio (Live) –       |
+|    |                               | einseitige Daten → "Nicht bewertbar"                |
+| 9  | Schwachstellen/Stärken        | stats_collector.collect_muscle_balance – 0-Satz-    |
+|    | (Phase 35.2)                  | Gruppen werden emittiert (keine Inversion)          |
+| 10 | RPE-All-Time-Fallback         | advanced_stats.calculate_rpe_quality_analysis_      |
+|    | (Phase 35.2)                  | windowed – insufficient_4w gated die Empfehlungen   |
+| 11 | Report-Pausen-Banner          | week_classification.pausen_im_zeitraum              |
+|    | (Phase 35.3)                  | (Live + PDF, eine Datenquelle)                      |
+| 12 | Heatmap-Pausenmarker          | chart_generator.generate_training_heatmap           |
+|    | (Phase 35.3)                  | (pause_ranges-Parameter)                            |
 
 ``INVENTORY`` unten ist ein Importierbarkeits-Guard: wird eine Vergleichsstelle
 umbenannt/entfernt, schlägt der Test fehl und erzwingt ein Review.
@@ -31,7 +45,13 @@ from django.utils import timezone
 
 import pytest
 
-from core.export.stats_collector import calc_volume_trend_weekly
+from core.chart_generator import generate_training_heatmap
+from core.export.stats_collector import (
+    calc_volume_trend_weekly,
+    collect_muscle_balance,
+    collect_pdf_stats,
+    collect_push_pull,
+)
 from core.models import Satz, Trainingseinheit, TrainingsPause
 from core.tests.factories import (
     PlanFactory,
@@ -42,10 +62,21 @@ from core.tests.factories import (
     UebungFactory,
     UserFactory,
 )
-from core.utils.advanced_stats import calculate_fatigue_index
+from core.utils.advanced_stats import (
+    calculate_fatigue_index,
+    calculate_plateau_analysis,
+    calculate_rpe_quality_analysis_windowed,
+    classify_progression_status,
+)
 from core.utils.periodization import get_block_age_warning
-from core.utils.week_classification import build_weekly_volume_overview, pausen_ausfall_wochen
+from core.utils.reentry import get_active_reentry_pause
+from core.utils.week_classification import (
+    build_weekly_volume_overview,
+    pausen_ausfall_wochen,
+    pausen_im_zeitraum,
+)
 from core.views.training_stats import (
+    _calc_push_pull_ratio,
     _calc_weekly_volume,
     _calculate_fatigue_index,
     _calculate_weekly_volumes,
@@ -137,9 +168,22 @@ def test_inventory_alle_vergleichsstellen_importierbar():
         # Pfad 6 (Phase 34): Blockdauer/Phasenwechsel-Empfehlung
         get_block_age_warning,
         pausen_ausfall_wochen,
+        # Pfad 7 (Phase 35.1): Status-Klassifikator rampen-aware
+        classify_progression_status,
+        # Pfad 8 (Phase 35.2): Push/Pull PDF + Live
+        collect_push_pull,
+        _calc_push_pull_ratio,
+        # Pfad 9 (Phase 35.2): Schwachstellen/Stärken-Quelle
+        collect_muscle_balance,
+        # Pfad 10 (Phase 35.2): RPE-Zeitfenster-Wrapper
+        calculate_rpe_quality_analysis_windowed,
+        # Pfad 11 (Phase 35.3): Pausen-Banner-Datenquelle
+        pausen_im_zeitraum,
+        # Pfad 12 (Phase 35.3): Heatmap-Pausenmarker
+        generate_training_heatmap,
     ]
     assert all(callable(f) for f in inventory)
-    assert len(inventory) == 7
+    assert len(inventory) == 14
 
 
 @pytest.mark.django_db
@@ -407,3 +451,164 @@ class TestPfad6DashboardIntegration:
         warning = response.context["block_age_warning"]
         assert warning is not None
         assert warning["pausen_wochen"] == 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 35: Pfade 7–12 (Report-Audit #1059/#1061)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestPfad7RueckschrittWiederaufbau:
+    """Pfad 7 (35.1): Der Status-Klassifikator bestraft nicht die eigene
+    Wiedereinstiegs-Rampe (Kernbug #1059 b: Rampengewichte Faktor 0,85 →
+    „Rückschritt" bei exakt den vom Tool empfohlenen Gewichten)."""
+
+    def _szenario(self, mit_pause: bool):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        ue = UebungFactory()
+        heute_d = timezone.localdate()
+        # All-Time-PR vor der Pause (außerhalb des 4W-Fensters)
+        _session(user, plan, ue, heute_d - timedelta(days=35), n_sets=2, gewicht=100)
+        if mit_pause:
+            # 14-Tage-Pause, vor 3 Tagen beendet → Rampe läuft (Muster Pfad 6)
+            end = heute_d - timedelta(days=3)
+            TrainingsPauseFactory(user=user, start_datum=end - timedelta(days=13), end_datum=end)
+        # Comeback heute mit Rampengewicht (−15 % → Drop > 5 %-Schwelle)
+        _session(user, plan, ue, heute_d, n_sets=2, gewicht=85)
+        return user, ue
+
+    def _plateau(self, user, ue, reentry_pause):
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        top = [{"uebung__bezeichnung": ue.bezeichnung, "muskelgruppe_display": "Brust"}]
+        return calculate_plateau_analysis(saetze, top, reentry_pause=reentry_pause)
+
+    def test_rampe_zeigt_wiederaufbau_statt_rueckschritt(self):
+        user, ue = self._szenario(mit_pause=True)
+        reentry = get_active_reentry_pause(user)
+        assert reentry is not None, "Rampe muss im Szenario aktiv sein"
+        result = self._plateau(user, ue, reentry)
+        assert result, "Übung muss klassifiziert werden"
+        assert result[0]["status"] == "reentry"
+        assert result[0]["status_label"] == "Wiederaufbau nach Pause"
+        # Diagnose-Feld bleibt für die Übungsdetail-Annotation erhalten.
+        assert result[0]["weight_drop_pct"] > 5
+
+    def test_positivkontrolle_ohne_pause_bleibt_rueckschritt(self):
+        """Echtes Detraining ohne dokumentierte Pause wird NICHT unterdrückt."""
+        user, ue = self._szenario(mit_pause=False)
+        assert get_active_reentry_pause(user) is None
+        result = self._plateau(user, ue, None)
+        assert result[0]["status"] == "regression"
+
+
+@pytest.mark.django_db
+class TestPfad8und9EinseitigkeitUndSchwachstellen:
+    """Pfad 8+9 (35.2), Integrationsebene ``collect_pdf_stats``: nach einer
+    Pause mit genau einer einseitigen Session (Prod-Report 21.07.: Push 0 /
+    Pull 18) liefert der Report „Nicht bewertbar" statt Gesundheitslob, und
+    0-Satz-Gruppen erscheinen als Schwachstellen (keine Inversion)."""
+
+    def test_einseitige_session_im_pdf_report(self):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        pull_ue = UebungFactory(bezeichnung="Rudern Audit", muskelgruppe="RUECKEN_LAT")
+        heute = timezone.now()
+        _session(user, plan, pull_ue, heute.date(), n_sets=18)
+        stats = collect_pdf_stats(user, heute - timedelta(days=30), heute)
+        # Pfad 8: keine degenerierte Balance-Bewertung
+        assert stats["push_pull_bewertung"] == "Nicht bewertbar"
+        assert "überwiegt" not in stats["push_pull_empfehlung"]
+        assert "positiv" not in stats["push_pull_empfehlung"]
+        # Pfad 9: 0-Satz-Gruppen sind die Top-Schwachstellen
+        schwachstellen = stats["schwachstellen"]
+        assert schwachstellen, "Schwachstellen dürfen nicht leer sein"
+        assert schwachstellen[0]["saetze"] == 0
+        assert any(s["status"] == "nicht_trainiert" for s in schwachstellen)
+        # Die trainierte Pull-Gruppe ist KEINE Top-Schwachstelle mehr.
+        assert all(s["key"] != "RUECKEN_LAT" for s in schwachstellen[:3])
+
+    def test_positivkontrolle_beidseitig_wird_bewertet(self):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        push_ue = UebungFactory(bezeichnung="Bank Audit", muskelgruppe="BRUST")
+        pull_ue = UebungFactory(bezeichnung="Rudern Audit 2", muskelgruppe="RUECKEN_LAT")
+        heute = timezone.now()
+        _session(user, plan, push_ue, heute.date(), n_sets=10)
+        _session(user, plan, pull_ue, heute.date() - timedelta(days=1), n_sets=10)
+        stats = collect_pdf_stats(user, heute - timedelta(days=30), heute)
+        assert stats["push_pull_bewertung"] != "Nicht bewertbar"
+
+
+@pytest.mark.django_db
+class TestPfad10RpeAllTimeFallback:
+    """Pfad 10 (35.2): Fällt die RPE-Bewertung mangels 4W-Daten auf All-Time
+    zurück, ist das als solches markiert (Kontextzeile + insufficient-Flag);
+    die 4W-Karte behält ihren Wert, trägt aber das Flag (Prod-Widerspruch:
+    2W „zu wenig" bei n=18, 4W-Wert unmarkiert bei demselben n=18)."""
+
+    def _saetze(self, user, plan, ue):
+        heute_d = timezone.localdate()
+        # All-Time-Historie außerhalb des 4W-Fensters (40 Sätze, RPE-10-lastig)
+        for tag in range(5):
+            _session(user, plan, ue, heute_d - timedelta(days=60 + tag), n_sets=8, gewicht=100)
+        Satz.objects.filter(einheit__user=user).update(rpe=Decimal("10.0"))
+        # Comeback: 18 Sätze mit moderatem RPE (unter MIN_SETS_FOR_WINDOW=30)
+        comeback = _session(user, plan, ue, heute_d, n_sets=18, gewicht=85)
+        Satz.objects.filter(einheit=comeback).update(rpe=Decimal("8.0"))
+        return Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+
+    def test_fallback_ist_markiert(self):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        ue = UebungFactory()
+        result = calculate_rpe_quality_analysis_windowed(
+            self._saetze(user, plan, ue), reference_date=timezone.now()
+        )
+        assert result is not None
+        assert result["insufficient_4w"] is True
+        assert result["primary_window"] == "all"
+        # Kontextzeile benennt den Fallback explizit …
+        assert "Gesamtzeitraum" in result["recommendation"]
+        # … und die 4W-Karte zeigt ihren Wert MIT insufficient-Flag
+        card_4w = next(c for c in result["cards"] if c["key"] == "4w")
+        assert card_4w["insufficient_data"] is True
+        assert card_4w["result"] is not None
+
+    def test_positivkontrolle_genug_4w_daten_kein_fallback(self):
+        user = UserFactory()
+        plan = PlanFactory(user=user)
+        ue = UebungFactory()
+        heute_d = timezone.localdate()
+        for tag in range(5):
+            _session(user, plan, ue, heute_d - timedelta(days=2 + tag), n_sets=8, gewicht=90)
+        Satz.objects.filter(einheit__user=user).update(rpe=Decimal("8.0"))
+        saetze = Satz.objects.filter(einheit__user=user, ist_aufwaermsatz=False)
+        result = calculate_rpe_quality_analysis_windowed(saetze, reference_date=timezone.now())
+        assert result["insufficient_4w"] is False
+        assert result["primary_window"] == "4w"
+
+
+@pytest.mark.django_db
+class TestPfad11ReportBanner:
+    """Pfad 11 (35.3): Der Pausen-Banner-Helfer erkennt den Report-Zeitraum-
+    Fall (Detail-Semantik in test_week_classification.TestPausenImZeitraum)."""
+
+    def test_comeback_szenario_liefert_banner(self, comeback_szenario):
+        ctx = comeback_szenario
+        heute_d = ctx["heute"].date()
+        banner = pausen_im_zeitraum(ctx["pausen"], heute_d - timedelta(days=30), heute_d)
+        assert banner is not None
+        assert banner["tage"] == 14  # 2 volle Pausenwochen im Fenster
+        assert banner["medizinisch"] is False
+
+    def test_positivkontrolle_ohne_pause_kein_banner(self):
+        user = UserFactory()
+        heute_d = timezone.localdate()
+        banner = pausen_im_zeitraum(
+            TrainingsPause.objects.filter(user=user),
+            heute_d - timedelta(days=30),
+            heute_d,
+        )
+        assert banner is None

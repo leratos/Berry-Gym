@@ -1112,6 +1112,32 @@ class TestPushPullRatio(StatsBase):
         result = _calc_push_pull_ratio(self.user)
         self.assertIsNone(result)
 
+    def test_einseitig_nicht_bewertbar(self):
+        """Phase 35.2 (#1059 c, Live-Zwilling): nur Pull-Sätze → Ratio 0,0
+        wurde vorher als 'Ausgeglichen' (success) bewertet."""
+        session = self._session(days_ago=5)
+        pull_uebung = Uebung.objects.create(
+            bezeichnung="Rudern einseitig", muskelgruppe="RUECKEN_LAT", bewegungstyp="COMPOUND"
+        )
+        for _ in range(18):
+            Satz.objects.create(
+                einheit=session,
+                uebung=pull_uebung,
+                satz_nr=1,
+                gewicht=60,
+                wiederholungen=8,
+                ist_aufwaermsatz=False,
+            )
+        result = _calc_push_pull_ratio(self.user)
+        self.assertIsNotNone(result)
+        self.assertEqual(
+            result["status_text"], "Nicht bewertbar – nur eine Seite im Zeitraum trainiert"
+        )
+        self.assertEqual(result["farbe"], "secondary")
+        self.assertEqual(result["ratio"], "–")
+        self.assertEqual(result["pull"], 18)
+        self.assertEqual(result["push"], 0)
+
 
 class TestPlateauLive(StatsBase):
     """21.3: Plateau-Tracking."""

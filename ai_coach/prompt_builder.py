@@ -298,6 +298,11 @@ Gruppen aufbauen – das Wochen-Volumen MUSS unter dem Cap bleiben, damit der
         Intensität bzw. PR-Versuch bei ``consolidation_ready``. Sonst bekäme
         der LLM für eine PR-reife Übung ein gegenläufiges Variations-Signal.
 
+        Phase 35.1 / PR-#209-Codex: ``reentry`` (laufende Wiedereinstiegs-
+        Rampe) bekommt einen eigenen Bucket – der generische Variations-Rat
+        (Tempo/Frequenz/Akzessoire-Winkel) wäre während der Rampe falsch;
+        die Übung soll schlicht den reduzierten Rampengewichten folgen.
+
         Gibt None zurück, wenn keine Übung den „kein Volumen-Push"-Status
         hat.
         """
@@ -311,9 +316,12 @@ Gruppen aufbauen – das Wochen-Volumen MUSS unter dem Cap bleiben, damit der
 
         variation_items = []
         pr_attempt_items = []
+        reentry_items = []
         for hint in plateau_hints:
             if hint.get("status") == "consolidation_ready":
                 pr_attempt_items.append(_line(hint))
+            elif hint.get("status") == "reentry":
+                reentry_items.append(_line(hint))
             else:
                 variation_items.append(_line(hint))
 
@@ -334,6 +342,14 @@ Gruppen aufbauen – das Wochen-Volumen MUSS unter dem Cap bleiben, damit der
                 "statt Variation die Intensität leicht erhöhen bzw. einen PR-Versuch\n"
                 "einplanen (z.B. schwereres Top-Set bei gleichem Volumen).\n\n"
                 + "\n".join(pr_attempt_items)
+            )
+        if reentry_items:
+            sections.append(
+                "Folgende Übungen sind in der WIEDEREINSTIEGS-RAMPE nach einer\n"
+                "dokumentierten Trainingspause. KEINE zusätzlichen Sätze und KEINE\n"
+                "Übungs-/Tempo-Variation – die Übungen unverändert im Plan lassen und\n"
+                "den reduzierten Rampengewichten folgen; volles Niveau erst nach\n"
+                "Rampenende wieder aufbauen.\n\n" + "\n".join(reentry_items)
             )
         body = "\n\n".join(sections)
 

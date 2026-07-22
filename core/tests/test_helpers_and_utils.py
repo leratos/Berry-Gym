@@ -664,7 +664,8 @@ class TestCalculateFatigueIndex:
         )
         assert result["deload_empfohlen"] is True
 
-    def test_naechste_deload_ist_string(self):
+    def test_naechste_deload_entfernt(self):
+        """Phase 35.2: Pseudo-Wert (hartkodiert heute+6 Wochen) entfernt."""
         from core.models import Satz, Trainingseinheit
         from core.utils.advanced_stats import calculate_fatigue_index
 
@@ -673,9 +674,7 @@ class TestCalculateFatigueIndex:
             rpe_saetze=Satz.objects.none(),
             alle_trainings=Trainingseinheit.objects.none(),
         )
-        assert isinstance(result["naechste_deload"], str)
-        # Format: DD.MM.YYYY
-        assert len(result["naechste_deload"]) == 10
+        assert "naechste_deload" not in result
 
 
 # ---------------------------------------------------------------------------
