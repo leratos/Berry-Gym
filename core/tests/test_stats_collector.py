@@ -68,6 +68,15 @@ class TestMuscleStatus:
         assert key == "nicht_trainiert"
         assert "nicht trainiert" in expl.lower()
 
+    def test_nicht_trainiert_wenig_daten_mit_historie_kein_onboarding_text(self):
+        """PR-#209-Codex R4: Bestandsnutzer, der die Gruppe nur im
+        30-Tage-Fenster ausgelassen hat (z. B. Pause), bekommt NICHT den
+        Onboarding-Text 'Noch keine Sätze erfasst'."""
+        key, label, expl = muscle_status(0, 10, 20, wenig_daten=True, hat_historie=True)
+        assert key == "nicht_trainiert"
+        assert "Noch keine" not in expl
+        assert "nicht trainiert" in expl.lower()
+
     def test_untertrainiert_wenig_daten(self):
         key, label, expl = muscle_status(5, 10, 20, wenig_daten=True)
         assert key == "untertrainiert"
@@ -608,6 +617,31 @@ class TestCollectMuscleBalance:
         assert all(r["saetze"] == 0 for r in result)
         assert all(r["status"] == "nicht_trainiert" for r in result)
         assert all(r["volumen"] == 0.0 and r["avg_rpe"] == 0.0 for r in result)
+        # Echter Neuling ohne jede Historie → Onboarding-Text ist hier korrekt.
+        assert all("Noch keine" in r["erklaerung"] for r in result)
+
+    def test_historie_ausserhalb_fenster_kein_onboarding_text(self):
+        """PR-#209-Codex R4: BRUST vor 60 Tagen trainiert, im 30-Tage-Fenster 0
+        Sätze, wenig_daten aktiv → Fenster-Text statt 'Noch keine Sätze
+        erfasst'; eine nie trainierte Gruppe behält den Onboarding-Text."""
+        user = UserFactory()
+        heute = timezone.now()
+        uebung = UebungFactory(bezeichnung="Bank Historie", muskelgruppe="BRUST")
+        einheit = TrainingseinheitFactory(user=user)
+        from core.models import Satz, Trainingseinheit
+
+        # Trainingseinheit.datum ist auto_now_add → explizit zurückdatieren.
+        Trainingseinheit.objects.filter(pk=einheit.pk).update(datum=heute - timedelta(days=60))
+        SatzFactory(einheit=einheit, uebung=uebung, gewicht=Decimal("80.0"), rpe=Decimal("7.0"))
+
+        alle_saetze = Satz.objects.filter(einheit__user=user)
+        letzte_30_tage = (heute - timedelta(days=30)).date()
+        result = collect_muscle_balance(alle_saetze, letzte_30_tage, 1)  # wenig_daten
+        by_key = {r["key"]: r for r in result}
+        assert by_key["BRUST"]["saetze"] == 0
+        assert "Noch keine" not in by_key["BRUST"]["erklaerung"]
+        assert "nicht trainiert" in by_key["BRUST"]["erklaerung"].lower()
+        assert "Noch keine" in by_key["BIZEPS"]["erklaerung"]  # nie trainiert
 
     def test_mit_saetzen(self):
         user = UserFactory()

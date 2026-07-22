@@ -31,12 +31,21 @@ from core.utils.plan_helpers import (
 from core.utils.week_classification import build_weekly_volume_overview
 
 
-def muscle_status(anzahl: int, min_s: int, max_s: int, wenig_daten: bool) -> tuple[str, str, str]:
-    """Return (status_key, status_label, erklaerung) for one muscle group."""
+def muscle_status(
+    anzahl: int, min_s: int, max_s: int, wenig_daten: bool, hat_historie: bool = False
+) -> tuple[str, str, str]:
+    """Return (status_key, status_label, erklaerung) for one muscle group.
+
+    ``hat_historie`` (PR-#209-Codex R4): True, wenn die Gruppe außerhalb des
+    30-Tage-Fensters jemals trainiert wurde. Seit 35.2 werden 0-Satz-Gruppen
+    als Schwachstellen gerendert – der Onboarding-Text „Noch keine Sätze
+    erfasst" gilt nur für Gruppen OHNE jede Historie, nicht für Bestandsnutzer,
+    die die Gruppe lediglich im Pausen-/Berichtsfenster ausgelassen haben.
+    """
     if anzahl == 0:
         expl = (
             f"Noch keine Sätze erfasst. Empfehlung: {min_s}-{max_s} Sätze/Monat"
-            if wenig_daten
+            if (wenig_daten and not hat_historie)
             else f"Diese Muskelgruppe wurde nicht trainiert. Empfehlung: {min_s}-{max_s} Sätze/Monat"
         )
         return "nicht_trainiert", "Nicht trainiert", expl
@@ -74,6 +83,11 @@ def collect_muscle_balance(
 ) -> list[dict]:
     """Build muscle group balance stats with evidence-based set recommendations."""
     wenig_daten = trainings_30_tage < 8
+    # PR-#209-Codex R4: Lifetime-Historie je Gruppe (EIN Query), damit der
+    # Onboarding-Text nur echte Erstnutzer-Gruppen trifft (siehe muscle_status).
+    gruppen_mit_historie = set(
+        alle_saetze.values_list("uebung__muskelgruppe", flat=True).distinct()
+    )
     result = []
     for gruppe_key, gruppe_name in MUSKELGRUPPEN:
         gruppe_saetze = alle_saetze.filter(
@@ -91,7 +105,9 @@ def collect_muscle_balance(
             # GANZKOERPER / spezial: kein Set-basierter Schwellenwert sinnvoll
             continue
         min_s, max_s = schwelle
-        status, status_label, erklaerung = muscle_status(anzahl, min_s, max_s, wenig_daten)
+        status, status_label, erklaerung = muscle_status(
+            anzahl, min_s, max_s, wenig_daten, hat_historie=gruppe_key in gruppen_mit_historie
+        )
         # Phase 35.2 (#1059 d): auch Gruppen mit 0 Sätzen aufnehmen. Vorher
         # erreichte der berechnete "nicht_trainiert"-Status die Liste nie –
         # die Schwachstellen-Auswahl sah nur trainierte Gruppen ("wer nichts
