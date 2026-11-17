@@ -33,6 +33,8 @@ try:
 except Exception:  # pragma: no cover -- ImportError o. fehlende native Libs (Pango/GLib)
     weasyprint = None
 
+_weasyprint_default_fetcher = weasyprint.URLFetcher() if weasyprint is not None else None
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +42,6 @@ def _weasyprint_url_fetcher(url: str):
     """Löst Django-Static-URLs (die Font-TTFs) für WeasyPrint auf das
     Dateisystem auf – ohne HTTP-Round-Trip. base64-``data:``-URIs (Charts,
     Body-Map) gehen unverändert an den Default-Fetcher."""
-    from weasyprint import default_url_fetcher
 
     try:
         path = unquote(urlparse(url).path or "")
@@ -54,10 +55,10 @@ def _weasyprint_url_fetcher(url: str):
                 if os.path.exists(candidate):
                     fs = candidate
             if fs and os.path.exists(fs):
-                return default_url_fetcher(Path(fs).as_uri())
+                return _weasyprint_default_fetcher(Path(fs).as_uri())
     except Exception:  # pragma: no cover -- defensiver Catch, Fallback auf Default-Fetcher
         pass
-    return default_url_fetcher(url)
+    return _weasyprint_default_fetcher(url)
 
 
 def _render_pdf_bytes(request: HttpRequest, context: dict) -> bytes:
